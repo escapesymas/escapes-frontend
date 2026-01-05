@@ -1,9 +1,20 @@
 import { GoogleGenAI } from "@google/genai";
 import { CATEGORIES, STORE_CONFIG } from '../storeData';
 
-// Initialize the client
-// NOTE: Ensure your .env file has API_KEY defined.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Initialize the client safely
+// If API_KEY is missing, we prevent the app from crashing.
+const apiKey = process.env.API_KEY;
+let ai: GoogleGenAI | null = null;
+
+if (apiKey) {
+  try {
+    ai = new GoogleGenAI({ apiKey });
+  } catch (error) {
+    console.error("Failed to initialize GoogleGenAI:", error);
+  }
+} else {
+  console.warn("GoogleGenAI API Key is missing. AI features will be disabled.");
+}
 
 // Construct a context-aware system instruction
 const SYSTEM_INSTRUCTION = `
@@ -32,6 +43,10 @@ export interface ChatMessage {
 }
 
 export const sendMessageToMechanic = async (history: ChatMessage[], newMessage: string): Promise<string> => {
+  if (!ai) {
+    return "El sistema de IA no está disponible en este momento (Falta configuración de API Key). Contacta con soporte.";
+  }
+
   try {
     // We create a new chat instance for statelessness in this helper, 
     // but we pass the history to maintain context.
