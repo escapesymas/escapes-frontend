@@ -6,9 +6,10 @@ import { User as UserType } from '../types';
 interface LoginProps {
   onLoginSuccess: (user: UserType) => void;
   onBack: () => void;
+  onRegisterClick: () => void;
 }
 
-export const Login: React.FC<LoginProps> = ({ onLoginSuccess, onBack }) => {
+export const Login: React.FC<LoginProps> = ({ onLoginSuccess, onBack, onRegisterClick }) => {
   // Credenciales reales pre-cargadas para facilitar pruebas
   const [username, setUsername] = useState('adsave');
   const [password, setPassword] = useState('Pedrito2011P!');
@@ -112,11 +113,14 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess, onBack }) => {
 
         <div className="mt-8 text-center border-t border-zinc-800 pt-6">
           <p className="text-zinc-500 text-sm">
-            ¿No tienes cuenta? <a href="#" className="text-white font-bold hover:text-racing-orange transition-colors">Regístrate Gratis</a>
+            ¿No tienes cuenta? 
+            <button 
+              onClick={onRegisterClick}
+              className="ml-2 text-white font-bold hover:text-racing-orange transition-colors uppercase text-xs"
+            >
+              Regístrate Gratis
+            </button>
           </p>
-          <div className="mt-4 bg-zinc-900 p-2 rounded text-xs text-zinc-500 font-mono">
-            Credenciales de prueba cargadas por defecto.
-          </div>
         </div>
       </div>
     </div>

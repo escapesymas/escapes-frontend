@@ -8,10 +8,11 @@ import { AIAdvisor } from './components/AIAdvisor';
 import { Cart } from './components/Cart';
 import { Checkout } from './components/Checkout';
 import { Login } from './components/Login';
+import { Register } from './components/Register';
 import { MyOrders } from './components/MyOrders';
 import { MyAccount } from './components/MyAccount';
 import { CategoryBrowser } from './components/CategoryBrowser';
-import { Forum } from './components/Forum'; // New Import
+import { Forum } from './components/Forum'; 
 import { STORE_CONFIG, FEATURES, BIKE_DATA } from './storeData';
 import { fetchProducts, isConfigValid } from './services/woocommerce';
 import { saveSession, getSession, logoutSession } from './services/auth';
@@ -68,7 +69,7 @@ const MOCK_PRODUCTS: Product[] = [
   }
 ];
 
-type ViewState = 'catalog' | 'product' | 'cart' | 'checkout' | 'login' | 'orders' | 'account' | 'categories' | 'forum';
+type ViewState = 'catalog' | 'product' | 'cart' | 'checkout' | 'login' | 'register' | 'orders' | 'account' | 'categories' | 'forum';
 
 function App() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -188,6 +189,11 @@ function App() {
     setCurrentView('login');
   };
 
+  const goToRegister = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setCurrentView('register');
+  };
+
   const goToOrders = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setCurrentView('orders');
@@ -203,7 +209,7 @@ function App() {
     saveSession(loggedInUser); // Save to LocalStorage
     
     // Return to previous view or Catalog if nothing stored
-    if (lastView === 'login') setCurrentView('catalog');
+    if (lastView === 'login' || lastView === 'register') setCurrentView('catalog');
     else setCurrentView(lastView);
   };
 
@@ -284,6 +290,15 @@ function App() {
           <Login 
             onLoginSuccess={handleLoginSuccess}
             onBack={() => setCurrentView(lastView)}
+            onRegisterClick={goToRegister}
+          />
+        )}
+
+        {currentView === 'register' && (
+          <Register
+            onRegisterSuccess={goToLogin}
+            onBack={() => setCurrentView('login')}
+            onGoToLogin={goToLogin}
           />
         )}
 
@@ -357,6 +372,8 @@ function App() {
                   src={STORE_CONFIG.heroImage}
                   alt="Taller Moto" 
                   className="w-full h-full object-cover grayscale opacity-40"
+                  fetchPriority="high"
+                  loading="eager"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/70 to-transparent"></div>
               </div>

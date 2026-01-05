@@ -25,6 +25,13 @@ export const logoutSession = () => {
   }
 };
 
+// --- Helper for Auth URL (Duplicated logic to avoid circular deps with woocommerce.ts) ---
+const getAuthUrl = (endpoint: string) => {
+  const cleanBaseUrl = WOO_CONFIG.baseUrl.replace(/\/$/, "");
+  const separator = endpoint.includes('?') ? '&' : '?';
+  return `${cleanBaseUrl}${endpoint}${separator}consumer_key=${WOO_CONFIG.consumerKey}&consumer_secret=${WOO_CONFIG.consumerSecret}`;
+};
+
 // --- API Logic ---
 
 export const loginUser = async (username: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
@@ -93,7 +100,6 @@ export const loginUser = async (username: string, password: string): Promise<{ s
 
     try {
         // Attempt 1: Try getting full Customer profile via 'me' endpoint
-        // This fails (404) for Admins who don't have a linked Customer record
         const userResponse = await fetch(`${cleanBaseUrl}/wp-json/wc/v3/customers/me`, {
           method: 'GET',
           headers: {
@@ -104,8 +110,7 @@ export const loginUser = async (username: string, password: string): Promise<{ s
         if (userResponse.ok) {
             userData = await userResponse.json();
         } else {
-            // Attempt 2: If 'me' failed (e.g. 404), try fetching by ID if we extracted it from token
-            // Sometimes specific roles can't access 'me' but can access their ID directly
+            // Attempt 2: If 'me' failed (e.g. 404), try fetching by ID
             if (userIdFromToken) {
                  try {
                      const idResponse = await fetch(`${cleanBaseUrl}/wp-json/wc/v3/customers/${userIdFromToken}`, {
@@ -119,9 +124,7 @@ export const loginUser = async (username: string, password: string): Promise<{ s
             }
 
             // Attempt 3: If still no data, fallback to generic WP User endpoint
-            // This works for Admins/Editors but won't return billing address fields usually
             if (!userData) {
-                // Only warn if it's NOT a 404 (which is expected for admins)
                 if (userResponse.status !== 404) {
                     console.warn(`Customer fetch failed (${userResponse.status}). Fallback to WP User.`);
                 }
@@ -136,11 +139,11 @@ export const loginUser = async (username: string, password: string): Promise<{ s
                     userData = {
                         id: wpUserData.id,
                         username: wpUserData.slug,
-                        email: tokenData.user_email, // Token usually has the email even if WP User endpoint hides it
+                        email: tokenData.user_email,
                         first_name: wpUserData.name,
                         last_name: '',
                         avatar_url: wpUserData.avatar_urls?.['96'],
-                        billing: {} // WP Users don't have billing in standard API
+                        billing: {} 
                     };
                 }
             }
@@ -149,7 +152,7 @@ export const loginUser = async (username: string, password: string): Promise<{ s
         console.error("Network error fetching profile, using token data fallback", err);
     }
 
-    // 3. Fallback final: Build user object from Token Response if endpoints failed completely
+    // 3. Fallback final
     if (!userData) {
         if (!userIdFromToken) console.warn("Logged in but could not retrieve User Profile");
         
@@ -171,7 +174,7 @@ export const loginUser = async (username: string, password: string): Promise<{ s
       firstName: userData.first_name || userData.username,
       lastName: userData.last_name || '',
       token: token,
-      avatarUrl: userData.avatar_url || undefined, // undefined lets the component show default icon
+      avatarUrl: userData.avatar_url || undefined,
       billing: {
         address_1: userData.billing?.address_1 || '',
         city: userData.billing?.city || '',
@@ -185,5 +188,53 @@ export const loginUser = async (username: string, password: string): Promise<{ s
   } catch (error: any) {
     console.error("Login Error:", error);
     return { success: false, error: error.message || 'Error de conexión con el servidor' };
+  }
+};
+
+/**
+ * Registers a new customer in WooCommerce
+ */
+export const registerUser = async (data: {
+  email: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  password?: string; // Optional depending on WP config, but usually required
+}): Promise<{ success: boolean; error?: string }> => {
+  
+  try {
+    const url = getAuthUrl('/wp-json/wc/v3/customers');
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email: data.email,
+        first_name: data.firstName,
+        last_name: data.lastName,
+        username: data.username,
+        password: data.password
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      if (result.code === 'registration-error-email-exists') {
+        throw new Error('El email ya está registrado.');
+      }
+      if (result.code === 'registration-error-username-exists') {
+        throw new Error('El nombre de usuario ya existe.');
+      }
+      throw new Error(result.message || 'Error al crear la cuenta.');
+    }
+
+    return { success: true };
+
+  } catch (error: any) {
+    console.error("Registration Error:", error);
+    return { success: false, error: error.message || "Error de conexión." };
   }
 };
