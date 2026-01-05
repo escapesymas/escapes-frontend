@@ -324,6 +324,7 @@ function App() {
             user={user}
             onBack={goToCart}
             onOrderComplete={handleOrderComplete}
+            onLoginSuccess={handleLoginSuccess} // Pass login handler for inline login
           />
         )}
 

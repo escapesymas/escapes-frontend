@@ -15,12 +15,14 @@ app.use(express.static(join(__dirname, 'dist')));
 app.post('/api/checkout', async (req, res) => {
   const { amount, orderRef, currency, merchantEmail } = req.body;
 
-  // IMPORTANTE: La clave secreta se lee de variables de entorno del servidor
-  const apiKey = process.env.SUMUP_SECRET_KEY;
+  // Clave proporcionada. 
+  // NOTA DE SEGURIDAD: Lo ideal es usar process.env.SUMUP_SECRET_KEY en un archivo .env,
+  // pero la definimos aquí para asegurar que funcione inmediatamente según tu solicitud.
+  const apiKey = process.env.SUMUP_SECRET_KEY || 'sup_sk_s1ekP4mYZVZvgbU52Df6AdjxEwbC98wmT';
 
   if (!apiKey) {
-    console.error("Falta la SUMUP_SECRET_KEY en las variables de entorno");
-    return res.status(500).json({ message: "Error de configuración del servidor" });
+    console.error("Falta la SUMUP_SECRET_KEY");
+    return res.status(500).json({ message: "Error de configuración del servidor: Falta API Key" });
   }
 
   try {

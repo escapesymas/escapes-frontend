@@ -2,7 +2,7 @@ import { ShieldCheck, Truck, Star } from 'lucide-react';
 
 // CONFIGURACIÓN DE CONEXIÓN WOOCOMMERCE
 export const WOO_CONFIG = {
-  // URL actualizada directa a producción (requiere CORS habilitado en WordPress)
+  // URL de Producción
   baseUrl: "https://backendescapes.com",
   consumerKey: "ck_1525ca6e68eadc50cd7b69ae408ebb05b93c78e9",
   consumerSecret: "cs_42b5d60e45d4f6e710fa0fa0b35f1ae21964981a"
@@ -11,22 +11,19 @@ export const WOO_CONFIG = {
 // CONFIGURACIÓN DE PAGOS (SUMUP)
 export const PAYMENT_CONFIG = {
   provider: 'sumup',
-  // NOTA: La secretKey ha sido eliminada por seguridad. 
-  // Se debe configurar como Variable de Entorno (SUMUP_SECRET_KEY) en Cloud Run.
-  
-  // Este email sigue siendo necesario para identificar la cuenta destino
+  // NOTA: La secretKey debe estar en variables de entorno (SUMUP_SECRET_KEY) en el servidor.
   merchantEmail: 'info@escapesymas.com' 
 };
 
 // CONFIGURACIÓN GENERAL DE LA TIENDA
 export const STORE_CONFIG = {
   name: "Escapes y Más", 
+  // Mantenemos la URL del logo si es externa, o asegúrate de alojarla en tu frontend/backend nuevo
   logoUrl: "https://escapesymas.com/wp-content/uploads/2026/01/cropped-logo1-sfw.png",
   currency: "EUR",
   contactEmail: "info@escapesymas.com",
   heroTitle: "Equipamiento Pro",
   heroSubtitle: "Para Pilotos Exigentes",
-  // Imagen actualizada: Plano detalle de motor/escape con estética oscura
   heroImage: "https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?q=80&w=1920&auto=format&fit=crop"
 };
 
@@ -39,7 +36,6 @@ export const FEATURES = [
 
 /**
  * CATEGORÍAS DEL CATÁLOGO
- * Estructura visual para la página de navegación por categorías
  */
 export const CATEGORIES = [
   {
