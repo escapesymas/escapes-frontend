@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShieldCheck, CreditCard, Wallet, Smartphone, ArrowLeft, Lock, CheckCircle, Loader2, AlertCircle, XCircle } from 'lucide-react';
+import { ShieldCheck, ArrowLeft, Lock, CheckCircle, Loader2, AlertCircle, XCircle } from 'lucide-react';
 import { CartItem, User } from '../types';
 import { createOrder } from '../services/woocommerce';
 import { createSumUpCheckout } from '../services/sumup';
@@ -11,8 +11,6 @@ interface CheckoutProps {
   onOrderComplete: () => void;
 }
 
-type PaymentMethod = 'sumup' | 'paypal' | 'bizum';
-
 // Declare SumUp global if typescript complains
 declare global {
   interface Window {
@@ -23,7 +21,6 @@ declare global {
 export const Checkout: React.FC<CheckoutProps> = (props) => {
   const [step, setStep] = useState<'form' | 'success'>('form');
   const [orderId, setOrderId] = useState<number | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('sumup');
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -74,12 +71,12 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
   const shippingCost = subtotal > shippingThreshold ? 0 : 9.95;
   const total = subtotal + shippingCost;
 
-  // Initialize SumUp when method is selected
+  // Initialize SumUp IMMEDIATELY on mount
   useEffect(() => {
-    if (paymentMethod === 'sumup' && !sumupCheckoutId) {
+    if (!sumupCheckoutId) {
       initializeSumUp();
     }
-  }, [paymentMethod]);
+  }, []);
 
   const initializeSumUp = async () => {
     setIsSumupLoading(true);
@@ -94,10 +91,10 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
     if (checkoutData && checkoutData.id) {
       setSumupCheckoutId(checkoutData.id);
       
-      // Mount Widget with a slight delay to ensure container exists
-      setTimeout(() => {
-        if (window.SumUpCard) {
-          try {
+      // Mount Widget with a robust retry mechanism for mobile
+      const mountWidget = (attemptsLeft = 5) => {
+        if (window.SumUpCard && document.getElementById('sumup-card')) {
+           try {
             window.SumUpCard.mount({
               id: 'sumup-card',
               checkoutId: checkoutData.id,
@@ -105,14 +102,10 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
                 console.log('SumUp Response:', type, body);
                 
                 if (type === 'success') {
-                  // Verificar estado real de la transacción
                   if (body.status === 'FAILED') {
                      setErrorMessage("El pago ha sido denegado por el banco.");
                      return;
                   }
-                  
-                  // Payment successful, now create WC Order
-                  // Usamos un timeout para asegurar que salimos del stack del iframe si es necesario
                   setTimeout(() => {
                     finalizeOrder('sumup', body.transaction_code || body.id || 'SUMUP_TX');
                   }, 100);
@@ -124,19 +117,28 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
               showFooter: false, 
               locale: 'es-ES'
             });
+            setIsSumupLoading(false);
           } catch (e) {
             console.error("Error mounting SumUp widget", e);
             setErrorMessage("Error cargando el widget de pago.");
+            setIsSumupLoading(false);
           }
         } else {
-            setErrorMessage("La librería de SumUp no se cargó correctamente. Refresca la página.");
+          if (attemptsLeft > 0) {
+            setTimeout(() => mountWidget(attemptsLeft - 1), 800);
+          } else {
+            setErrorMessage("La librería de pagos no cargó. Refresca la página.");
+            setIsSumupLoading(false);
+          }
         }
-        setIsSumupLoading(false);
-      }, 500);
+      };
+
+      // Start mounting process
+      mountWidget();
 
     } else {
       setIsSumupLoading(false);
-      setErrorMessage("No se pudo conectar con SumUp (Posible bloqueo CORS en localhost). Revisa la consola.");
+      setErrorMessage("No se pudo conectar con la pasarela de pago. Intenta más tarde.");
     }
   };
 
@@ -155,11 +157,9 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
   const finalizeOrder = async (method: string, transactionId: string) => {
     setIsProcessing(true);
     
-    // LEER DATOS DESDE EL REF PARA EVITAR STALE CLOSURE (Datos vacíos)
     const currentData = formDataRef.current;
     
-    // Validación de emergencia para Email (WooCommerce lo requiere sí o sí)
-    // Si el usuario pagó pero no puso email, inventamos uno para no perder el pedido.
+    // Fallback email logic
     let safeEmail = currentData.email;
     if (!safeEmail || !safeEmail.includes('@')) {
         console.warn("Email inválido detectado tras pago. Usando fallback.");
@@ -167,8 +167,8 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
     }
 
     const orderPayload = {
-      payment_method: method === 'sumup' ? 'sumup_gateway' : 'bacs',
-      payment_method_title: method === 'sumup' ? 'Tarjeta (SumUp)' : 'Otros',
+      payment_method: 'sumup_gateway',
+      payment_method_title: 'Tarjeta (SumUp)',
       set_paid: true,
       transaction_id: transactionId,
       customer_id: props.user?.id || 0,
@@ -206,16 +206,6 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
       setErrorMessage(result.error || "Pago correcto, pero error guardando el pedido. Contáctanos con Ref: " + transactionId);
     }
     setIsProcessing(false);
-  };
-
-  // Handle Manual Payment Buttons (PayPal/Bizum)
-  const handleManualSubmit = async () => {
-    // Para manual también usamos la referencia segura
-    if (!formData.email) {
-      setErrorMessage("Por favor, introduce un email válido.");
-      return;
-    }
-    finalizeOrder(paymentMethod, 'MANUAL');
   };
 
   // SUCCESS VIEW
@@ -259,7 +249,7 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* LEFT COLUMN: FORMS */}
+        {/* LEFT COLUMN: FORMS & PAYMENT */}
         <div className="lg:col-span-2 space-y-8">
           
           {/* 1. Shipping Info */}
@@ -289,113 +279,41 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
             </form>
           </section>
 
-          {/* 2. Payment Method */}
+          {/* 2. Payment Method (ONLY SUMUP) */}
           <section className="bg-racing-carbon border border-zinc-800 p-6 rounded-sm">
             <h3 className="text-white font-bold uppercase mb-6 tracking-wide border-b border-zinc-800 pb-2 flex items-center gap-2">
               <span className="bg-racing-orange text-white w-6 h-6 flex items-center justify-center rounded-full text-xs">2</span>
-              Método de Pago
+              Pago con Tarjeta
             </h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              <button 
-                type="button"
-                onClick={() => setPaymentMethod('sumup')}
-                className={`p-4 border rounded-sm flex flex-col items-center gap-3 transition-all relative overflow-hidden ${paymentMethod === 'sumup' ? 'bg-zinc-800 border-blue-500 ring-1 ring-blue-500 text-white' : 'bg-zinc-900 border-zinc-700 text-zinc-500 hover:border-zinc-500'}`}
-              >
-                {paymentMethod === 'sumup' && <div className="absolute top-0 right-0 w-3 h-3 bg-blue-500 rounded-bl-sm"></div>}
-                <div className="flex gap-1 items-center">
-                   <div className="w-5 h-5 rounded-sm border-2 border-current flex items-center justify-center font-bold text-[10px]">S</div>
-                   <span className="font-bold">SumUp</span>
-                </div>
-                <span className="text-xs font-bold uppercase">Tarjeta</span>
-              </button>
-
-              <button 
-                type="button"
-                onClick={() => setPaymentMethod('paypal')}
-                className={`p-4 border rounded-sm flex flex-col items-center gap-3 transition-all relative ${paymentMethod === 'paypal' ? 'bg-zinc-800 border-racing-orange ring-1 ring-racing-orange text-white' : 'bg-zinc-900 border-zinc-700 text-zinc-500 hover:border-zinc-500'}`}
-              >
-                <Wallet className="w-6 h-6" />
-                <span className="text-xs font-bold uppercase">PayPal</span>
-              </button>
-
-              <button 
-                type="button"
-                onClick={() => setPaymentMethod('bizum')}
-                className={`p-4 border rounded-sm flex flex-col items-center gap-3 transition-all relative ${paymentMethod === 'bizum' ? 'bg-zinc-800 border-racing-orange ring-1 ring-racing-orange text-white' : 'bg-zinc-900 border-zinc-700 text-zinc-500 hover:border-zinc-500'}`}
-              >
-                <Smartphone className="w-6 h-6" />
-                <span className="text-xs font-bold uppercase">Bizum</span>
-              </button>
-            </div>
-
             {/* PAYMENT CONTENT */}
-            <div className="bg-zinc-900 p-6 rounded-sm border border-zinc-800 min-h-[250px] flex flex-col justify-center relative">
+            <div className="bg-zinc-900 p-6 rounded-sm border border-zinc-800 min-h-[200px] flex flex-col justify-center relative">
               
-              {/* SUMUP WIDGET */}
-              {paymentMethod === 'sumup' && (
-                <div className="animate-fade-in w-full max-w-sm mx-auto">
-                   {isSumupLoading && (
-                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 z-10">
-                        <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
-                        <span className="text-xs text-zinc-400">Conectando con SumUp...</span>
-                     </div>
-                   )}
-                   
-                   {/* This div is where SumUp mounts */}
-                   <div id="sumup-card" className="bg-white rounded-md p-1 min-h-[150px]"></div>
-                   
-                   {!formData.email && !isSumupLoading && (
-                      <div className="text-center mt-4 p-2 bg-yellow-900/20 border border-yellow-800 rounded-sm">
-                        <p className="text-xs text-yellow-500">
-                          ⚠️ Por favor, rellena los <strong>Datos de Envío</strong> antes de pagar.
-                        </p>
-                      </div>
-                   )}
+              {/* SUMUP WIDGET CONTAINER */}
+              <div className="animate-fade-in w-full max-w-sm mx-auto">
+                 {isSumupLoading && (
+                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 z-10">
+                      <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
+                      <span className="text-xs text-zinc-400">Cargando pasarela segura...</span>
+                   </div>
+                 )}
+                 
+                 {/* This div is where SumUp mounts. Important: width full for mobile */}
+                 <div id="sumup-card" className="bg-white rounded-md p-1 min-h-[150px] w-full"></div>
+                 
+                 {!formData.email && !isSumupLoading && (
+                    <div className="text-center mt-4 p-2 bg-yellow-900/20 border border-yellow-800 rounded-sm">
+                      <p className="text-xs text-yellow-500">
+                        ⚠️ Rellena los <strong>Datos de Envío</strong> para recibir el recibo.
+                      </p>
+                    </div>
+                 )}
 
-                   <div className="flex items-center gap-2 text-[10px] text-zinc-500 justify-center pt-4">
-                    <Lock className="w-3 h-3" />
-                    Pasarela oficial <span className="text-zinc-300 font-bold">SumUp</span>
-                  </div>
+                 <div className="flex items-center gap-2 text-[10px] text-zinc-500 justify-center pt-4">
+                  <Lock className="w-3 h-3" />
+                  Transacción protegida por <span className="text-zinc-300 font-bold">SumUp</span>
                 </div>
-              )}
-
-              {/* PAYPAL */}
-              {paymentMethod === 'paypal' && (
-                <div className="text-center space-y-4 animate-fade-in">
-                  <div 
-                    onClick={handleManualSubmit}
-                    className="bg-[#0070BA] text-white p-4 rounded-sm font-bold flex items-center justify-center gap-2 cursor-pointer hover:bg-[#005ea6] transition-colors"
-                  >
-                    <Wallet className="w-5 h-5" /> Pagar con PayPal
-                  </div>
-                  <p className="text-xs text-zinc-500">
-                    Serás redirigido a la plataforma segura de PayPal para completar la transacción.
-                  </p>
-                </div>
-              )}
-
-              {/* BIZUM */}
-              {paymentMethod === 'bizum' && (
-                <div className="animate-fade-in space-y-4">
-                  <div className="bg-zinc-950 border border-zinc-700 p-4 rounded-sm flex items-center gap-3">
-                    <Smartphone className="w-5 h-5 text-racing-orange" />
-                    <input 
-                      placeholder="Nº Móvil (+34)" 
-                      className="bg-transparent w-full text-white focus:outline-none" 
-                    />
-                  </div>
-                  <button 
-                    onClick={handleManualSubmit}
-                    className="w-full bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase py-3 rounded-sm"
-                  >
-                    Pagar con Bizum
-                  </button>
-                  <p className="text-xs text-zinc-500 text-center">
-                    Recibirás una solicitud de pago en tu app bancaria.
-                  </p>
-                </div>
-              )}
+              </div>
             </div>
           </section>
         </div>
@@ -436,16 +354,6 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
                 <XCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                 {errorMessage}
               </div>
-            )}
-
-            {/* If SumUp is selected, the button is inside the widget, so we hide this main button or use it as trigger if widget isn't auto */}
-            {paymentMethod !== 'sumup' && (
-               <button 
-                 disabled={isProcessing}
-                 className="w-full bg-racing-orange hover:bg-orange-600 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white font-bold uppercase tracking-wide py-4 px-6 rounded-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-orange-900/20"
-               >
-                 Selecciona un método arriba
-               </button>
             )}
             
             {/* Trust Badges */}

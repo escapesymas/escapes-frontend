@@ -2,9 +2,10 @@ import { ShieldCheck, Truck, Star } from 'lucide-react';
 
 // CONFIGURACIÓN DE CONEXIÓN WOOCOMMERCE
 export const WOO_CONFIG = {
-  baseUrl: "https://escapesymas.com",
-  consumerKey: "ck_7a5a3d5398e8c283396dacd982dfe986f8afced4",
-  consumerSecret: "cs_f109cf550097261b46d360bbe7168241bae1e951"
+  // URL actualizada directa a producción (requiere CORS habilitado en WordPress)
+  baseUrl: "https://backendescapes.com",
+  consumerKey: "ck_1525ca6e68eadc50cd7b69ae408ebb05b93c78e9",
+  consumerSecret: "cs_42b5d60e45d4f6e710fa0fa0b35f1ae21964981a"
 };
 
 // CONFIGURACIÓN DE PAGOS (SUMUP)
