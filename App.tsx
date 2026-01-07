@@ -14,7 +14,6 @@ import { Product, BikeSelection, CartItem, User } from './types';
 import { optimizeImage } from './utils/imageOptimizer';
 
 // --- LAZY LOADED COMPONENTS (Performance Optimization) ---
-// These are not needed for the initial paint, so we load them on demand.
 const Checkout = React.lazy(() => import('./components/Checkout').then(module => ({ default: module.Checkout })));
 const Login = React.lazy(() => import('./components/Login').then(module => ({ default: module.Login })));
 const Register = React.lazy(() => import('./components/Register').then(module => ({ default: module.Register })));
@@ -22,7 +21,7 @@ const MyOrders = React.lazy(() => import('./components/MyOrders').then(module =>
 const MyAccount = React.lazy(() => import('./components/MyAccount').then(module => ({ default: module.MyAccount })));
 const Forum = React.lazy(() => import('./components/Forum').then(module => ({ default: module.Forum })));
 
-// Fallback Mock Data with PRE-OPTIMIZED Images
+// Fallback Mock Data
 const MOCK_PRODUCTS: Product[] = [
   {
     id: 1,
@@ -94,13 +93,9 @@ function App() {
 
   // Initial Load
   useEffect(() => {
-    // 1. Load Products
     loadFeaturedProducts();
-    
-    // 2. Check for saved session
     const savedUser = getSession();
     if (savedUser) {
-      console.log("Session restored for:", savedUser.username);
       setUser(savedUser);
     }
   }, []);
@@ -117,7 +112,6 @@ function App() {
         setUsingMockData(true);
       }
     } catch (e) {
-      console.error("Error loading products:", e);
       setProducts(MOCK_PRODUCTS);
       setUsingMockData(true);
     } finally {
@@ -149,10 +143,8 @@ function App() {
     loadFeaturedProducts();
   };
 
-  // --- NAVIGATION HANDLERS ---
   const handleNavClick = (view: ViewState, category?: string) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    
     if (view === 'catalog' && category) {
       handleCategorySelect(0, category); 
     } else {
@@ -211,7 +203,6 @@ function App() {
   const handleLoginSuccess = (loggedInUser: User) => {
     setUser(loggedInUser);
     saveSession(loggedInUser); 
-    
     if (lastView === 'login' || lastView === 'register') setCurrentView('catalog');
     else setCurrentView(lastView);
   };
@@ -226,9 +217,7 @@ function App() {
     setLoading(true);
     setCurrentView('catalog');
     setCurrentFilter(categoryName);
-    
     const matches = await fetchProducts(undefined, categoryId);
-    
     if (matches.length > 0) {
       setProducts(matches);
       setUsingMockData(false);
@@ -238,7 +227,6 @@ function App() {
     setLoading(false);
   };
 
-  // --- CART HANDLERS ---
   const addToCart = (product: Product, quantity: number = 1) => {
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
@@ -299,88 +287,23 @@ function App() {
       
       <main className="flex-grow">
         <Suspense fallback={<LoadingFallback />}>
-          {currentView === 'login' && (
-            <Login 
-              onLoginSuccess={handleLoginSuccess}
-              onBack={() => setCurrentView(lastView)}
-              onRegisterClick={goToRegister}
-            />
-          )}
-
-          {currentView === 'register' && (
-            <Register
-              onRegisterSuccess={goToLogin}
-              onBack={() => setCurrentView('login')}
-              onGoToLogin={goToLogin}
-            />
-          )}
-
-          {currentView === 'forum' && (
-            <Forum 
-              user={user}
-              onBack={goToCatalog}
-              onLoginRequest={goToLogin}
-            />
-          )}
-
-          {currentView === 'categories' && (
-            <CategoryBrowser 
-              onSelectCategory={handleCategorySelect}
-              onBack={goToCatalog}
-            />
-          )}
-
-          {currentView === 'checkout' && (
-            <Checkout 
-              cart={cart}
-              user={user}
-              onBack={goToCart}
-              onOrderComplete={handleOrderComplete}
-              onLoginSuccess={handleLoginSuccess} 
-            />
-          )}
-
-          {currentView === 'orders' && user && (
-            <MyOrders 
-              user={user}
-              onBack={goToCatalog}
-            />
-          )}
-
-          {currentView === 'account' && user && (
-            <MyAccount 
-              user={user}
-              onBack={goToCatalog}
-              onUpdateUser={setUser}
-            />
-          )}
+          {currentView === 'login' && <Login onLoginSuccess={handleLoginSuccess} onBack={() => setCurrentView(lastView)} onRegisterClick={goToRegister} />}
+          {currentView === 'register' && <Register onRegisterSuccess={goToLogin} onBack={() => setCurrentView('login')} onGoToLogin={goToLogin} />}
+          {currentView === 'forum' && <Forum user={user} onBack={goToCatalog} onLoginRequest={goToLogin} />}
+          {currentView === 'categories' && <CategoryBrowser onSelectCategory={handleCategorySelect} onBack={goToCatalog} />}
+          {currentView === 'checkout' && <Checkout cart={cart} user={user} onBack={goToCart} onOrderComplete={handleOrderComplete} onLoginSuccess={handleLoginSuccess} />}
+          {currentView === 'orders' && user && <MyOrders user={user} onBack={goToCatalog} />}
+          {currentView === 'account' && user && <MyAccount user={user} onBack={goToCatalog} onUpdateUser={setUser} />}
         </Suspense>
 
-        {currentView === 'cart' && (
-           <Cart 
-             items={cart}
-             onUpdateQuantity={updateCartQuantity}
-             onRemove={removeFromCart}
-             onCheckout={goToCheckout}
-             onContinueShopping={goToCatalog}
-           />
-        )}
-
-        {currentView === 'product' && selectedProduct && (
-          <ProductDetail 
-            product={selectedProduct} 
-            onBack={goToCatalog} 
-            onAddToCart={(qty) => {
-              addToCart(selectedProduct, qty);
-              goToCart(); 
-            }}
-          />
-        )}
+        {currentView === 'cart' && <Cart items={cart} onUpdateQuantity={updateCartQuantity} onRemove={removeFromCart} onCheckout={goToCheckout} onContinueShopping={goToCatalog} />}
+        {currentView === 'product' && selectedProduct && <ProductDetail product={selectedProduct} onBack={goToCatalog} onAddToCart={(qty) => { addToCart(selectedProduct, qty); goToCart(); }} />}
 
         {currentView === 'catalog' && (
           <>
-            {/* HERO SECTION - RESPONSIVE LCP OPTIMIZED */}
-            <section className="relative h-[500px] md:h-[600px] flex items-center justify-center bg-zinc-900 overflow-hidden">
+            {/* HERO SECTION - CRITICAL LCP OPTIMIZED */}
+            {/* Added 'hero-section' class for instant Critical CSS painting */}
+            <section className="hero-section">
               <div className="absolute inset-0 z-0">
                 <picture>
                   <source media="(max-width: 768px)" srcSet={heroMobile} />
@@ -413,14 +336,8 @@ function App() {
               </div>
             </section>
 
-            {/* BIKE SELECTOR */}
-            <BikeSelector 
-              onSearch={handleBikeSearch} 
-              isLoading={loading && !!currentFilter} 
-              bikeData={BIKE_DATA}
-            />
+            <BikeSelector onSearch={handleBikeSearch} isLoading={loading && !!currentFilter} bikeData={BIKE_DATA} />
 
-            {/* FEATURES BANNER */}
             <div className="bg-zinc-900 py-12 mt-12 border-b border-zinc-800">
               <div className="container mx-auto px-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -439,7 +356,6 @@ function App() {
               </div>
             </div>
 
-            {/* PRODUCT GRID */}
             <section className="py-20 bg-zinc-950">
               <div className="container mx-auto px-4">
                 <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
@@ -456,70 +372,44 @@ function App() {
                   
                   <div className="flex items-center gap-4">
                     {currentFilter && (
-                      <button 
-                        onClick={clearFilter}
-                        className="flex items-center gap-2 text-zinc-400 hover:text-white text-sm uppercase font-bold transition-colors"
-                      >
+                      <button onClick={clearFilter} className="flex items-center gap-2 text-zinc-400 hover:text-white text-sm uppercase font-bold transition-colors">
                         <XCircle className="w-4 h-4" /> Borrar filtro
                       </button>
                     )}
                     {!currentFilter && (
-                      <button 
-                        onClick={goToCategories}
-                        className="hidden md:flex items-center gap-2 text-racing-orange font-bold uppercase text-sm hover:text-white transition-colors"
-                      >
+                      <button onClick={goToCategories} className="hidden md:flex items-center gap-2 text-racing-orange font-bold uppercase text-sm hover:text-white transition-colors">
                         Ver todo el catálogo <ArrowRight className="w-4 h-4" />
                       </button>
                     )}
                   </div>
                 </div>
 
-                {/* API Status Alerts */}
                 {usingMockData && (
-                  <div className={`mb-8 p-4 border rounded-sm flex items-start md:items-center gap-3 text-sm ${
-                    isConfigValid() 
-                    ? "bg-red-900/20 border-red-700/50 text-red-200" 
-                    : "bg-yellow-900/20 border-yellow-700/50 text-yellow-200"
-                  }`}>
+                  <div className={`mb-8 p-4 border rounded-sm flex items-start md:items-center gap-3 text-sm ${isConfigValid() ? "bg-red-900/20 border-red-700/50 text-red-200" : "bg-yellow-900/20 border-yellow-700/50 text-yellow-200"}`}>
                     {isConfigValid() ? (
                       <>
                         <WifiOff className="w-5 h-5 flex-shrink-0 text-red-500" />
-                        <div>
-                          <strong>Error de conexión con {STORE_CONFIG.name}:</strong> No se pudieron descargar los productos reales. 
-                        </div>
+                        <div><strong>Error de conexión con {STORE_CONFIG.name}:</strong> No se pudieron descargar los productos reales.</div>
                       </>
                     ) : (
                       <>
                         <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                        <p>
-                          <strong>Modo Demo:</strong> No se detectó configuración válida de WooCommerce. Mostrando productos de ejemplo.
-                        </p>
+                        <p><strong>Modo Demo:</strong> No se detectó configuración válida de WooCommerce. Mostrando productos de ejemplo.</p>
                       </>
                     )}
                   </div>
                 )}
 
                 {loading ? (
-                  <div className="flex justify-center items-center h-64">
-                    <Loader2 className="w-12 h-12 text-racing-orange animate-spin" />
-                  </div>
+                  <div className="flex justify-center items-center h-64"><Loader2 className="w-12 h-12 text-racing-orange animate-spin" /></div>
                 ) : products.length === 0 ? (
                   <div className="text-center py-20 border border-zinc-800 border-dashed rounded-sm">
                     <p className="text-zinc-500 text-lg">No se encontraron productos para esta selección.</p>
-                    <button onClick={clearFilter} className="mt-4 text-racing-orange hover:text-white font-bold uppercase text-sm">
-                      Ver todos los productos
-                    </button>
+                    <button onClick={clearFilter} className="mt-4 text-racing-orange hover:text-white font-bold uppercase text-sm">Ver todos los productos</button>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {products.map(product => (
-                      <ProductCard 
-                        key={product.id} 
-                        product={product} 
-                        onClick={goToProduct}
-                        onAddToCart={() => addToCart(product, 1)}
-                      />
-                    ))}
+                    {products.map(product => <ProductCard key={product.id} product={product} onClick={goToProduct} onAddToCart={() => addToCart(product, 1)} />)}
                   </div>
                 )}
               </div>
@@ -527,21 +417,14 @@ function App() {
           </>
         )}
 
-        {/* AI ADVISOR BANNER (Visible on Catalog Only) */}
         {currentView === 'catalog' && (
           <section className="py-16 bg-zinc-900 border-t border-zinc-800 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-racing-orange/10 to-transparent pointer-events-none"></div>
             <div className="container mx-auto px-4 relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
               <div className="max-w-xl">
-                <h2 className="text-3xl font-bold text-white mb-4 uppercase">
-                  ¿No sabes qué pieza elegir?
-                </h2>
-                <p className="text-zinc-400 mb-6">
-                  Nuestro <strong className="text-racing-orange">Mecánico IA</strong> analiza la compatibilidad técnica de miles de referencias en segundos. Olvídate de devoluciones por piezas que no encajan.
-                </p>
-                <button className="bg-white text-black hover:bg-racing-orange hover:text-white px-6 py-3 font-bold uppercase tracking-wide rounded-sm transition-colors flex items-center gap-2">
-                  Consultar ahora
-                </button>
+                <h2 className="text-3xl font-bold text-white mb-4 uppercase">¿No sabes qué pieza elegir?</h2>
+                <p className="text-zinc-400 mb-6">Nuestro <strong className="text-racing-orange">Mecánico IA</strong> analiza la compatibilidad técnica de miles de referencias en segundos. Olvídate de devoluciones por piezas que no encajan.</p>
+                <button className="bg-white text-black hover:bg-racing-orange hover:text-white px-6 py-3 font-bold uppercase tracking-wide rounded-sm transition-colors flex items-center gap-2">Consultar ahora</button>
               </div>
               <div className="w-full md:w-1/3 aspect-video bg-zinc-800 rounded-sm border border-zinc-700 p-4 flex items-center justify-center relative">
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-30"></div>
@@ -555,19 +438,10 @@ function App() {
         )}
       </main>
 
-      {/* FOOTER */}
       <footer className="bg-black border-t border-zinc-800 text-zinc-500 py-12">
         <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           <div>
-            <div className="mb-6">
-              <img 
-                src={optimizeImage(STORE_CONFIG.logoUrl, 200)} 
-                alt={STORE_CONFIG.name} 
-                className="h-10 md:h-12 object-contain"
-                width="200"
-                height="48"
-              />
-            </div>
+            <div className="mb-6"><img src={optimizeImage(STORE_CONFIG.logoUrl, 200)} alt={STORE_CONFIG.name} className="h-10 md:h-12 object-contain" width="200" height="48" /></div>
             <p className="text-sm">Tu tienda de confianza para componentes de alto rendimiento. Envíos a toda la península.</p>
           </div>
           <div>
@@ -594,9 +468,7 @@ function App() {
             </div>
           </div>
         </div>
-        <div className="container mx-auto px-4 pt-8 border-t border-zinc-900 text-xs text-center">
-          &copy; {new Date().getFullYear()} {STORE_CONFIG.name}. Todos los derechos reservados.
-        </div>
+        <div className="container mx-auto px-4 pt-8 border-t border-zinc-900 text-xs text-center">&copy; {new Date().getFullYear()} {STORE_CONFIG.name}. Todos los derechos reservados.</div>
       </footer>
 
       <AIAdvisor />

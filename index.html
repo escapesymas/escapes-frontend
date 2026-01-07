@@ -24,63 +24,55 @@
     <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap"></noscript>
     
-    <!-- CRITICAL CSS & THEME CONFIG -->
+    <!-- CRITICAL CSS: Layout Skeleton for Instant Paint (Fixes "Broken Aesthetics" before JS loads) -->
     <style>
-      body { background-color: #09090b; color: #f4f4f5; font-family: sans-serif; }
-      /* Loader for Suspense */
+      :root { --racing-orange: #EA580C; --zinc-900: #18181b; --zinc-800: #27272a; }
+      body { background-color: #09090b; color: #f4f4f5; font-family: 'Inter', sans-serif; margin: 0; }
+      #root { display: flex; flex-direction: column; min-height: 100vh; }
+      
+      /* Header Critical Layout - Forces correct structure even without Tailwind */
+      header { position: sticky; top: 0; z-index: 50; width: 100%; height: 64px; background-color: rgba(24, 24, 27, 0.95); border-bottom: 1px solid var(--zinc-800); backdrop-filter: blur(8px); }
+      .header-container { max-width: 1280px; margin: 0 auto; padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; }
+      .nav-desktop { display: none; gap: 2rem; }
+      @media (min-width: 768px) { .nav-desktop { display: flex; } }
+      
+      /* Hero Critical Layout - Prevents LCP shift */
+      .hero-section { position: relative; height: 500px; display: flex; align-items: center; justify-content: center; background-color: var(--zinc-900); overflow: hidden; }
+      @media (min-width: 768px) { .hero-section { height: 600px; } }
+      
       .app-loader { display: flex; height: 100vh; justify-content: center; align-items: center; background: #09090b; }
-      .spinner { width: 40px; height: 40px; border: 3px solid rgba(234,88,12,0.3); border-radius: 50%; border-top-color: #EA580C; animation: spin 1s ease-in-out infinite; }
+      .spinner { width: 40px; height: 40px; border: 3px solid rgba(234,88,12,0.3); border-radius: 50%; border-top-color: var(--racing-orange); animation: spin 1s ease-in-out infinite; }
       @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 
-    <!-- ROBUST FAIL-SAFE: Pre-define Tailwind Config so CDN picks it up INSTANTLY if needed -->
+    <!-- TAILWIND CDN: The "Nuclear Option" for aesthetics stability in this environment -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
-      // Global config for Tailwind CDN fallback
-      window.tailwind = {
-        config: {
-          theme: {
-            extend: {
-              colors: {
-                racing: {
-                  red: '#DC2626',
-                  orange: '#EA580C',
-                  black: '#09090b',
-                  carbon: '#18181b',
-                  asphalt: '#27272a',
-                  metal: '#a1a1aa',
-                }
-              },
-              fontFamily: {
-                sans: ['Inter', 'system-ui', 'sans-serif'],
-              },
-              animation: {
-                'fade-in': 'fadeIn 0.5s ease-out forwards',
-                'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
-              },
-              keyframes: {
-                fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
-                fadeInUp: { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } }
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              racing: {
+                red: '#DC2626',
+                orange: '#EA580C',
+                black: '#09090b',
+                carbon: '#18181b',
+                asphalt: '#27272a',
+                metal: '#a1a1aa',
               }
+            },
+            fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+            animation: {
+              'fade-in': 'fadeIn 0.5s ease-out forwards',
+              'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
+            },
+            keyframes: {
+              fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+              fadeInUp: { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } }
             }
           }
         }
-      };
-
-      // Check build CSS immediately
-      window.addEventListener('DOMContentLoaded', () => {
-        const testDiv = document.createElement('div');
-        testDiv.className = 'hidden';
-        document.body.appendChild(testDiv);
-        const isHidden = window.getComputedStyle(testDiv).display === 'none';
-        document.body.removeChild(testDiv);
-
-        if (!isHidden) {
-          console.warn('⚠️ CSS Build Missing/Incomplete. Injecting CDN with Custom Theme.');
-          const script = document.createElement('script');
-          script.src = 'https://cdn.tailwindcss.com';
-          document.head.appendChild(script);
-        }
-      });
+      }
     </script>
 
     <script type="importmap">
