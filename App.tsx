@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { ArrowRight, Loader2, AlertCircle, WifiOff, XCircle } from 'lucide-react';
 import { Header } from './components/Header';
 import { BikeSelector } from './components/BikeSelector';
@@ -6,27 +6,29 @@ import { ProductCard } from './components/ProductCard';
 import { ProductDetail } from './components/ProductDetail';
 import { AIAdvisor } from './components/AIAdvisor';
 import { Cart } from './components/Cart';
-import { Checkout } from './components/Checkout';
-import { Login } from './components/Login';
-import { Register } from './components/Register';
-import { MyOrders } from './components/MyOrders';
-import { MyAccount } from './components/MyAccount';
 import { CategoryBrowser } from './components/CategoryBrowser';
-import { Forum } from './components/Forum'; 
 import { STORE_CONFIG, FEATURES, BIKE_DATA } from './storeData';
 import { fetchProducts, isConfigValid } from './services/woocommerce';
 import { saveSession, getSession, logoutSession } from './services/auth';
 import { Product, BikeSelection, CartItem, User } from './types';
 import { optimizeImage } from './utils/imageOptimizer';
 
-// Fallback Mock Data with PRE-OPTIMIZED Images to avoid chain requests
+// --- LAZY LOADED COMPONENTS (Performance Optimization) ---
+// These are not needed for the initial paint, so we load them on demand.
+const Checkout = React.lazy(() => import('./components/Checkout').then(module => ({ default: module.Checkout })));
+const Login = React.lazy(() => import('./components/Login').then(module => ({ default: module.Login })));
+const Register = React.lazy(() => import('./components/Register').then(module => ({ default: module.Register })));
+const MyOrders = React.lazy(() => import('./components/MyOrders').then(module => ({ default: module.MyOrders })));
+const MyAccount = React.lazy(() => import('./components/MyAccount').then(module => ({ default: module.MyAccount })));
+const Forum = React.lazy(() => import('./components/Forum').then(module => ({ default: module.Forum })));
+
+// Fallback Mock Data with PRE-OPTIMIZED Images
 const MOCK_PRODUCTS: Product[] = [
   {
     id: 1,
     title: "Escape Akrapovic Titanio Racing Line (Demo)",
     price: 849.99,
     regularPrice: 999.00, 
-    // Hardcoded optimization for mock data
     image: "https://wsrv.nl/?url=https%3A%2F%2Fbackendescapes.com%2Fwp-content%2Fuploads%2F2026%2F01%2Ficow-scaled.png&w=400&output=webp&q=80&l=5",
     inStock: true,
     category: "Escapes",
@@ -125,7 +127,7 @@ function App() {
 
   const handleBikeSearch = async (selection: BikeSelection) => {
     setLoading(true);
-    setCurrentView('catalog'); // Ensure we go to catalog results
+    setCurrentView('catalog'); 
     setSelectedProduct(null); 
     
     const searchQuery = `${selection.brand} ${selection.model}`;
@@ -267,16 +269,22 @@ function App() {
     goToCatalog();
   };
 
-  // --- OPTIMIZATION: Responsive Hero Image Construction ---
-  // Mobile: 600px width, Portrait crop (h=800), slightly lower quality for speed
+  // --- OPTIMIZATION: Responsive Hero Image ---
   const heroMobile = `https://wsrv.nl/?url=${encodeURIComponent(STORE_CONFIG.heroImage)}&w=600&h=800&fit=cover&output=webp&q=75`;
-  
-  // Desktop: 1920px width, Original Aspect Ratio
   const heroDesktop = `https://wsrv.nl/?url=${encodeURIComponent(STORE_CONFIG.heroImage)}&w=1920&output=webp&q=80`;
+
+  // --- LOADING FALLBACK ---
+  const LoadingFallback = () => (
+    <div className="flex justify-center items-center h-[50vh] w-full animate-fade-in">
+      <div className="text-center">
+        <Loader2 className="w-12 h-12 text-racing-orange animate-spin mx-auto mb-4" />
+        <p className="text-zinc-500 text-sm uppercase font-bold tracking-widest">Cargando...</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-black">
-      {/* Header */}
       <Header 
         cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)} 
         user={user}
@@ -290,62 +298,63 @@ function App() {
       />
       
       <main className="flex-grow">
-        {currentView === 'login' && (
-          <Login 
-            onLoginSuccess={handleLoginSuccess}
-            onBack={() => setCurrentView(lastView)}
-            onRegisterClick={goToRegister}
-          />
-        )}
+        <Suspense fallback={<LoadingFallback />}>
+          {currentView === 'login' && (
+            <Login 
+              onLoginSuccess={handleLoginSuccess}
+              onBack={() => setCurrentView(lastView)}
+              onRegisterClick={goToRegister}
+            />
+          )}
 
-        {currentView === 'register' && (
-          <Register
-            onRegisterSuccess={goToLogin}
-            onBack={() => setCurrentView('login')}
-            onGoToLogin={goToLogin}
-          />
-        )}
+          {currentView === 'register' && (
+            <Register
+              onRegisterSuccess={goToLogin}
+              onBack={() => setCurrentView('login')}
+              onGoToLogin={goToLogin}
+            />
+          )}
 
-        {/* FORUM VIEW */}
-        {currentView === 'forum' && (
-          <Forum 
-            user={user}
-            onBack={goToCatalog}
-            onLoginRequest={goToLogin}
-          />
-        )}
+          {currentView === 'forum' && (
+            <Forum 
+              user={user}
+              onBack={goToCatalog}
+              onLoginRequest={goToLogin}
+            />
+          )}
 
-        {currentView === 'categories' && (
-          <CategoryBrowser 
-            onSelectCategory={handleCategorySelect}
-            onBack={goToCatalog}
-          />
-        )}
+          {currentView === 'categories' && (
+            <CategoryBrowser 
+              onSelectCategory={handleCategorySelect}
+              onBack={goToCatalog}
+            />
+          )}
 
-        {currentView === 'checkout' && (
-          <Checkout 
-            cart={cart}
-            user={user}
-            onBack={goToCart}
-            onOrderComplete={handleOrderComplete}
-            onLoginSuccess={handleLoginSuccess} 
-          />
-        )}
+          {currentView === 'checkout' && (
+            <Checkout 
+              cart={cart}
+              user={user}
+              onBack={goToCart}
+              onOrderComplete={handleOrderComplete}
+              onLoginSuccess={handleLoginSuccess} 
+            />
+          )}
 
-        {currentView === 'orders' && user && (
-          <MyOrders 
-            user={user}
-            onBack={goToCatalog}
-          />
-        )}
+          {currentView === 'orders' && user && (
+            <MyOrders 
+              user={user}
+              onBack={goToCatalog}
+            />
+          )}
 
-        {currentView === 'account' && user && (
-          <MyAccount 
-            user={user}
-            onBack={goToCatalog}
-            onUpdateUser={setUser}
-          />
-        )}
+          {currentView === 'account' && user && (
+            <MyAccount 
+              user={user}
+              onBack={goToCatalog}
+              onUpdateUser={setUser}
+            />
+          )}
+        </Suspense>
 
         {currentView === 'cart' && (
            <Cart 
