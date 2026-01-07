@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Escapes y Más | Performance Parts</title>
     
-    <!-- PERFORMANCE: Preconnect to Critical Origins -->
+    <!-- PERFORMANCE: Preconnect -->
     <link rel="preconnect" href="https://backendescapes.com">
     <link rel="preconnect" href="https://wsrv.nl">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,49 +20,64 @@
     <link rel="preload" as="image" href="https://wsrv.nl/?url=https%3A%2F%2Fimages.unsplash.com%2Fphoto-1591637333184-19aa84b3e01f%3Fq%3D80%26w%3D1920%26auto%3Dformat%26fit%3Dcrop&w=600&h=800&fit=cover&output=webp&q=75" media="(max-width: 768px)" fetchpriority="high" />
     <link rel="preload" as="image" href="https://wsrv.nl/?url=https%3A%2F%2Fimages.unsplash.com%2Fphoto-1591637333184-19aa84b3e01f%3Fq%3D80%26w%3D1920%26auto%3Dformat%26fit%3Dcrop&w=1920&output=webp&q=80" media="(min-width: 769px)" fetchpriority="high" />
 
-    <!-- FONTS -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- PERFORMANCE: Non-blocking Font Loading -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap"></noscript>
     
-    <!-- CRITICAL CSS: Prevent white flash before styles load -->
+    <!-- CRITICAL CSS & THEME CONFIG -->
     <style>
-      body { background-color: #09090b; color: white; }
+      body { background-color: #09090b; color: #f4f4f5; font-family: sans-serif; }
+      /* Loader for Suspense */
+      .app-loader { display: flex; height: 100vh; justify-content: center; align-items: center; background: #09090b; }
+      .spinner { width: 40px; height: 40px; border: 3px solid rgba(234,88,12,0.3); border-radius: 50%; border-top-color: #EA580C; animation: spin 1s ease-in-out infinite; }
+      @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 
-    <!-- FAIL-SAFE: Check if Tailwind build worked. If not, load CDN. -->
+    <!-- ROBUST FAIL-SAFE: Pre-define Tailwind Config so CDN picks it up INSTANTLY if needed -->
     <script>
+      // Global config for Tailwind CDN fallback
+      window.tailwind = {
+        config: {
+          theme: {
+            extend: {
+              colors: {
+                racing: {
+                  red: '#DC2626',
+                  orange: '#EA580C',
+                  black: '#09090b',
+                  carbon: '#18181b',
+                  asphalt: '#27272a',
+                  metal: '#a1a1aa',
+                }
+              },
+              fontFamily: {
+                sans: ['Inter', 'system-ui', 'sans-serif'],
+              },
+              animation: {
+                'fade-in': 'fadeIn 0.5s ease-out forwards',
+                'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
+              },
+              keyframes: {
+                fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                fadeInUp: { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } }
+              }
+            }
+          }
+        }
+      };
+
+      // Check build CSS immediately
       window.addEventListener('DOMContentLoaded', () => {
-        // Create a test element with a Tailwind utility class
         const testDiv = document.createElement('div');
-        testDiv.className = 'hidden'; // 'hidden' should make display: none
+        testDiv.className = 'hidden';
         document.body.appendChild(testDiv);
-        
-        // Check if the style was applied
         const isHidden = window.getComputedStyle(testDiv).display === 'none';
         document.body.removeChild(testDiv);
 
         if (!isHidden) {
-          console.warn('⚠️ CSS Build Failed. Loading Tailwind CDN as fallback to fix aesthetics.');
+          console.warn('⚠️ CSS Build Missing/Incomplete. Injecting CDN with Custom Theme.');
           const script = document.createElement('script');
           script.src = 'https://cdn.tailwindcss.com';
-          script.onload = () => {
-             // Configure CDN to match our project theme
-             tailwind.config = {
-               theme: {
-                 extend: {
-                   colors: {
-                      racing: {
-                        red: '#DC2626',
-                        orange: '#EA580C',
-                        black: '#09090b',
-                        carbon: '#18181b',
-                        asphalt: '#27272a',
-                        metal: '#a1a1aa',
-                      }
-                   }
-                 }
-               }
-             }
-          };
           document.head.appendChild(script);
         }
       });
