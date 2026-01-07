@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Wrench, ShoppingCart, User, Menu, LogOut, Package, Settings, MessageSquare, X, ChevronRight } from 'lucide-react';
 import { STORE_CONFIG, NAV_LINKS } from '../storeData';
 import { User as UserType } from '../types';
+import { optimizeImage } from '../utils/imageOptimizer';
 
 interface HeaderProps {
   cartCount?: number;
@@ -34,6 +35,9 @@ export const Header: React.FC<HeaderProps> = ({
     onNavClick(view, category);
   };
 
+  // Optimize Logo (200px max width for retina displays)
+  const logoUrl = optimizeImage(STORE_CONFIG.logoUrl, 200);
+
   return (
     <>
       <header className="sticky top-0 z-40 w-full bg-racing-carbon/95 backdrop-blur-md border-b border-zinc-800">
@@ -46,7 +50,7 @@ export const Header: React.FC<HeaderProps> = ({
             {STORE_CONFIG.logoUrl ? (
               <div className="rounded-sm">
                 <img 
-                  src={STORE_CONFIG.logoUrl} 
+                  src={logoUrl} 
                   alt={STORE_CONFIG.name} 
                   className="h-10 object-contain"
                 />

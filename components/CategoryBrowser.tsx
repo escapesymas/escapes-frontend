@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ArrowRight, ArrowLeft, Layers, Loader2, FolderOpen } from 'lucide-react';
 import { fetchCategories } from '../services/woocommerce';
 import { Category } from '../types';
+import { optimizeImage } from '../utils/imageOptimizer';
 
 interface CategoryBrowserProps {
   onSelectCategory: (id: number, name: string) => void;
@@ -110,6 +111,9 @@ export const CategoryBrowser: React.FC<CategoryBrowserProps> = ({ onSelectCatego
             {displayedCategories.map((cat) => {
               const hasChildren = categories.some(c => c.parent === cat.id);
               
+              // Optimize category background image
+              const bgImage = optimizeImage(cat.image, 600);
+
               return (
                 <div 
                   key={cat.id}
@@ -119,7 +123,7 @@ export const CategoryBrowser: React.FC<CategoryBrowserProps> = ({ onSelectCatego
                   {/* Image Area */}
                   <div 
                     className="h-48 bg-cover bg-center relative overflow-hidden"
-                    style={{ backgroundImage: `url(${cat.image})` }}
+                    style={{ backgroundImage: `url(${bgImage})` }}
                   >
                     <div className="absolute inset-0 bg-black/60 group-hover:bg-black/40 transition-colors duration-300"></div>
                     <div className="absolute bottom-0 left-0 p-6 w-full">

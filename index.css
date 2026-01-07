@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Global Styles */
 body {
   font-family: 'Inter', sans-serif;
@@ -21,21 +25,6 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #ea580c;
-}
-
-/* Animations Fallback (Tailwind config handles most, but this is a safety net) */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.5s ease-out forwards;
-}
-
-/* Utility for text-shadows or specific overrides */
-.text-shadow-sm {
-  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 
 .custom-scrollbar::-webkit-scrollbar {

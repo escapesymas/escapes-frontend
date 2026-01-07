@@ -17,6 +17,7 @@ import { STORE_CONFIG, FEATURES, BIKE_DATA } from './storeData';
 import { fetchProducts, isConfigValid } from './services/woocommerce';
 import { saveSession, getSession, logoutSession } from './services/auth';
 import { Product, BikeSelection, CartItem, User } from './types';
+import { optimizeImage } from './utils/imageOptimizer';
 
 // Fallback Mock Data with Updated Images (icow-scaled.png)
 const MOCK_PRODUCTS: Product[] = [
@@ -270,6 +271,9 @@ function App() {
     goToCatalog();
   };
 
+  // OPTIMIZE HERO IMAGE (LCP Critical)
+  const heroImageOptimized = optimizeImage(STORE_CONFIG.heroImage, 1920);
+
   return (
     <div className="min-h-screen flex flex-col bg-black">
       {/* Header */}
@@ -370,11 +374,13 @@ function App() {
             <section className="relative h-[600px] flex items-center justify-center bg-zinc-900 overflow-hidden">
               <div className="absolute inset-0 z-0">
                 <img 
-                  src={STORE_CONFIG.heroImage}
+                  src={heroImageOptimized}
                   alt="Taller Moto" 
                   className="w-full h-full object-cover grayscale opacity-40"
                   fetchPriority="high"
                   loading="eager"
+                  width="1920"
+                  height="600"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/70 to-transparent"></div>
               </div>
@@ -543,7 +549,7 @@ function App() {
           <div>
             <div className="mb-6">
               <img 
-                src={STORE_CONFIG.logoUrl} 
+                src={optimizeImage(STORE_CONFIG.logoUrl, 200)} 
                 alt={STORE_CONFIG.name} 
                 className="h-10 md:h-12 object-contain"
               />

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Truck, ArrowLeft } from 'lucide-react';
 import { CartItem } from '../types';
+import { optimizeImage } from '../utils/imageOptimizer';
 
 interface CartProps {
   items: CartItem[];
@@ -66,7 +67,13 @@ export const Cart: React.FC<CartProps> = ({
             <div key={item.id} className="bg-racing-carbon border border-zinc-800 p-4 rounded-sm flex flex-col sm:flex-row gap-4 items-center sm:items-stretch group hover:border-zinc-700 transition-colors">
               {/* Image */}
               <div className="w-24 h-24 bg-white rounded-sm overflow-hidden flex-shrink-0 p-2">
-                <img src={item.image} alt={item.title} className="w-full h-full object-contain" />
+                <img 
+                  src={optimizeImage(item.image, 100)} 
+                  alt={item.title} 
+                  className="w-full h-full object-contain" 
+                  width="100" 
+                  height="100" 
+                />
               </div>
 
               {/* Details */}
