@@ -5,39 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Escapes y Más | Performance Parts</title>
     
-    <!-- SEO & SOCIAL MEDIA PREVIEWS (Open Graph) -->
+    <!-- PERFORMANCE: Preconnect to Critical Origins -->
+    <link rel="preconnect" href="https://backendescapes.com">
+    <link rel="preconnect" href="https://wsrv.nl"> <!-- Image Optimization Proxy -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <!-- SEO & SOCIAL MEDIA PREVIEWS -->
     <meta name="description" content="Tienda online especializada en repuestos de alto rendimiento para motocicletas. Escapes, frenos y accesorios racing con envío 24h.">
     
-    <!-- Facebook / WhatsApp / Instagram -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://www.escapesymas.com/">
     <meta property="og:title" content="Escapes y Más | Performance Parts">
     <meta property="og:description" content="El mayor catálogo de escapes, filtros y recambios técnicos para maximizar el rendimiento en pista y carretera.">
     
-    <!-- Using specific dimensions helps WhatsApp render the preview faster -->
-    <meta property="og:image" content="https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?q=80&w=1200&h=630&auto=format&fit=crop">
+    <meta property="og:image" content="https://wsrv.nl/?url=https://images.unsplash.com/photo-1591637333184-19aa84b3e01f&w=1200&h=630&fit=cover&output=webp">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
 
-    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
     <meta property="twitter:domain" content="escapesymas.com">
-    <meta property="twitter:url" content="https://www.escapesymas.com/">
-    <meta name="twitter:title" content="Escapes y Más | Performance Parts">
+    <meta property="twitter:title" content="Escapes y Más | Performance Parts">
     <meta name="twitter:description" content="Componentes de competición para tu moto. Envíos a toda la península.">
-    <meta name="twitter:image" content="https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?q=80&w=1200&h=630&auto=format&fit=crop">
+    <meta name="twitter:image" content="https://wsrv.nl/?url=https://images.unsplash.com/photo-1591637333184-19aa84b3e01f&w=1200&h=630&fit=cover&output=webp">
 
-    <!-- Google / Search Engine Tags -->
-    <meta itemprop="name" content="Escapes y Más | Performance Parts">
-    <meta itemprop="description" content="El mayor catálogo de escapes, filtros y recambios técnicos para maximizar el rendimiento en pista y carretera.">
-    <meta itemprop="image" content="https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?q=80&w=1200&h=630&auto=format&fit=crop">
-
-    <!-- LCP OPTIMIZATION: Preload Hero Image -->
-    <link rel="preload" as="image" href="https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?q=80&w=1920&auto=format&fit=crop" fetchpriority="high" />
+    <!-- LCP OPTIMIZATION: Preload Optimized Hero Image -->
+    <link rel="preload" as="image" href="https://wsrv.nl/?url=https://images.unsplash.com/photo-1591637333184-19aa84b3e01f&w=1920&q=80&output=webp" fetchpriority="high" />
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     
-    <!-- TAILWIND CSS CDN + CONFIG (Restore Aesthetics Immediately) -->
+    <!-- TAILWIND CDN (Fallback due to build issues) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -47,19 +44,19 @@
               racing: {
                 red: '#DC2626',
                 orange: '#EA580C',
-                black: '#09090b', // Zinc 950
-                carbon: '#18181b', // Zinc 900
-                asphalt: '#27272a', // Zinc 800
-                metal: '#a1a1aa', // Zinc 400
+                black: '#09090b',
+                carbon: '#18181b',
+                asphalt: '#27272a',
+                metal: '#a1a1aa',
               }
             },
             fontFamily: {
               sans: ['Inter', 'system-ui', 'sans-serif'],
             },
             animation: {
-              'fade-in': 'fadeIn 0.5s ease-out',
-              'fade-in-up': 'fadeInUp 0.5s ease-out',
-              'fade-in-right': 'fadeInRight 0.3s ease-out',
+              'fade-in': 'fadeIn 0.5s ease-out forwards',
+              'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
+              'fade-in-right': 'fadeInRight 0.3s ease-out forwards',
             },
             keyframes: {
               fadeIn: {
@@ -80,24 +77,24 @@
       }
     </script>
 
-    <!-- SUMUP SDK -->
-    <script src="https://gateway.sumup.com/gateway/ecom/card/v2/sdk.js"></script>
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "vite": "https://esm.sh/vite@^7.3.0",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "express": "https://esm.sh/express@^5.2.1",
-    "url": "https://esm.sh/url@^0.11.4",
-    "path": "https://esm.sh/path@^0.12.7",
-    "@google/genai": "https://esm.sh/@google/genai@^1.34.0"
-  }
-}
-</script>
+    <!-- SUMUP SDK (Deferred to not block render) -->
+    <script src="https://gateway.sumup.com/gateway/ecom/card/v2/sdk.js" defer></script>
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@^19.2.3",
+        "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+        "react/": "https://esm.sh/react@^19.2.3/",
+        "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+        "vite": "https://esm.sh/vite@^7.3.0",
+        "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+        "express": "https://esm.sh/express@^5.2.1",
+        "url": "https://esm.sh/url@^0.11.4",
+        "path": "https://esm.sh/path@^0.12.7",
+        "@google/genai": "https://esm.sh/@google/genai@^1.34.0"
+      }
+    }
+    </script>
 </head>
   <body>
     <div id="root"></div>

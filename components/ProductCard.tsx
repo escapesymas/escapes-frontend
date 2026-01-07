@@ -2,6 +2,7 @@ import React from 'react';
 import { ShoppingCart, CheckCircle } from 'lucide-react';
 import { Product } from '../types';
 import { STORE_CONFIG } from '../storeData';
+import { optimizeImage } from '../utils/imageOptimizer';
 
 interface ProductCardProps {
   product: Product;
@@ -22,6 +23,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
   // Check if this is the default fallback image
   const isDefaultImage = product.image === STORE_CONFIG.defaultProductImage;
 
+  // Optimize Image: Request 400px width, WebP
+  const displayImage = isDefaultImage ? product.image : optimizeImage(product.image, 400);
+
   return (
     <div 
       onClick={() => onClick?.(product)}
@@ -29,13 +33,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
     >
       {/* Image Container */}
       <div className={`relative aspect-square overflow-hidden ${isDefaultImage ? 'bg-zinc-800' : 'bg-white'}`}>
-        {/* Placeholder overlay for depth only on non-default images to avoid dimming the icon too much */}
+        {/* Placeholder overlay for depth only on non-default images */}
         {!isDefaultImage && (
            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10" />
         )}
         
         <img 
-          src={product.image} 
+          src={displayImage} 
           alt={product.title} 
           loading="lazy"
           width="400"

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, CheckCircle, Truck, ShieldCheck, Star, Minus, Plus, ShoppingCart } from 'lucide-react';
 import { Product } from '../types';
 import { STORE_CONFIG } from '../storeData';
+import { optimizeImage } from '../utils/imageOptimizer';
 
 interface ProductDetailProps {
   product: Product;
@@ -31,6 +32,10 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
 
   // Check if default image
   const isDefaultImage = product.image === STORE_CONFIG.defaultProductImage;
+  
+  // Optimize Images
+  const mainImage = isDefaultImage ? product.image : optimizeImage(product.image, 800);
+  const thumbImage = isDefaultImage ? product.image : optimizeImage(product.image, 150);
 
   return (
     <div className="bg-zinc-950 min-h-screen animate-fade-in pb-20">
@@ -51,10 +56,12 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
           <div className="space-y-4">
             <div className={`aspect-square rounded-sm overflow-hidden border border-zinc-700 relative group ${isDefaultImage ? 'bg-zinc-800' : 'bg-white'}`}>
                <img 
-                 src={product.image} 
+                 src={mainImage} 
                  alt={product.title} 
                  loading="eager" 
                  fetchPriority="high"
+                 width="800"
+                 height="800"
                  className={`w-full h-full transition-transform duration-500 ${
                    isDefaultImage 
                     ? 'object-contain p-12 group-hover:scale-105' 
@@ -72,9 +79,12 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
               {[1, 2, 3].map((_, idx) => (
                 <div key={idx} className={`aspect-square border ${idx === 0 ? 'border-racing-orange' : 'border-zinc-700'} rounded-sm cursor-pointer hover:border-zinc-600 ${isDefaultImage ? 'bg-zinc-800' : 'bg-white'}`}>
                    <img 
-                     src={product.image} 
+                     src={thumbImage} 
+                     width="150"
+                     height="150"
                      className={`w-full h-full ${isDefaultImage ? 'object-contain p-2' : 'object-cover'} opacity-70 hover:opacity-100 transition-opacity`} 
                      loading="lazy" 
+                     alt={`Vista ${idx + 1}`}
                    />
                 </div>
               ))}
