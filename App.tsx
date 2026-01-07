@@ -18,14 +18,14 @@ import { fetchProducts, isConfigValid } from './services/woocommerce';
 import { saveSession, getSession, logoutSession } from './services/auth';
 import { Product, BikeSelection, CartItem, User } from './types';
 
-// Fallback Mock Data
+// Fallback Mock Data with Updated Images (icow-scaled.png)
 const MOCK_PRODUCTS: Product[] = [
   {
     id: 1,
     title: "Escape Akrapovic Titanio Racing Line (Demo)",
     price: 849.99,
     regularPrice: 999.00, // Example of discounted product
-    image: "https://picsum.photos/seed/moto1/400/400",
+    image: "https://backendescapes.com/wp-content/uploads/2026/01/icow-scaled.png",
     inStock: true,
     category: "Escapes",
     attributes: [
@@ -39,7 +39,7 @@ const MOCK_PRODUCTS: Product[] = [
     title: "Filtro de Alto Flujo K&N Race Spec (Demo)",
     price: 64.50,
     regularPrice: 64.50,
-    image: "https://picsum.photos/seed/moto2/400/400",
+    image: "https://backendescapes.com/wp-content/uploads/2026/01/icow-scaled.png",
     inStock: true,
     category: "Admisión",
     attributes: [{ name: "Tipo", options: ["Lavable"] }],
@@ -50,7 +50,7 @@ const MOCK_PRODUCTS: Product[] = [
     title: "Kit Transmisión DID Oro Reforzado (Demo)",
     price: 129.95,
     regularPrice: 145.00, // Example of discounted product
-    image: "https://picsum.photos/seed/moto3/400/400",
+    image: "https://backendescapes.com/wp-content/uploads/2026/01/icow-scaled.png",
     inStock: true,
     category: "Transmisión",
     attributes: [{ name: "Pasos", options: ["520", "525"] }],
@@ -61,7 +61,7 @@ const MOCK_PRODUCTS: Product[] = [
     title: "Caballete Hidráulico Universal Pro (Demo)",
     price: 95.00,
     regularPrice: 95.00,
-    image: "https://picsum.photos/seed/moto4/400/400",
+    image: "https://backendescapes.com/wp-content/uploads/2026/01/icow-scaled.png",
     inStock: false,
     category: "Taller",
     attributes: [],
@@ -541,7 +541,13 @@ function App() {
       <footer className="bg-black border-t border-zinc-800 text-zinc-500 py-12">
         <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           <div>
-            <h4 className="text-white font-bold uppercase mb-4 tracking-wider">{STORE_CONFIG.name}</h4>
+            <div className="mb-6">
+              <img 
+                src={STORE_CONFIG.logoUrl} 
+                alt={STORE_CONFIG.name} 
+                className="h-10 md:h-12 object-contain"
+              />
+            </div>
             <p className="text-sm">Tu tienda de confianza para componentes de alto rendimiento. Envíos a toda la península.</p>
           </div>
           <div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, CheckCircle, Truck, ShieldCheck, Star, Minus, Plus, ShoppingCart } from 'lucide-react';
 import { Product } from '../types';
+import { STORE_CONFIG } from '../storeData';
 
 interface ProductDetailProps {
   product: Product;
@@ -28,6 +29,9 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
     ? Math.round(((product.regularPrice - product.price) / product.regularPrice) * 100) 
     : 0;
 
+  // Check if default image
+  const isDefaultImage = product.image === STORE_CONFIG.defaultProductImage;
+
   return (
     <div className="bg-zinc-950 min-h-screen animate-fade-in pb-20">
       {/* Breadcrumb & Back */}
@@ -45,11 +49,17 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
           
           {/* LEFT: Image Gallery */}
           <div className="space-y-4">
-            <div className="aspect-square bg-white rounded-sm overflow-hidden border border-zinc-800 relative group">
+            <div className={`aspect-square rounded-sm overflow-hidden border border-zinc-700 relative group ${isDefaultImage ? 'bg-zinc-800' : 'bg-white'}`}>
                <img 
                  src={product.image} 
                  alt={product.title} 
-                 className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-500"
+                 loading="eager" 
+                 fetchPriority="high"
+                 className={`w-full h-full transition-transform duration-500 ${
+                   isDefaultImage 
+                    ? 'object-contain p-12 group-hover:scale-105' 
+                    : 'object-cover group-hover:scale-105'
+                 }`}
                />
                {product.inStock && (
                 <div className="absolute top-4 left-4 bg-green-500 text-black px-3 py-1 text-xs font-bold uppercase rounded-sm flex items-center gap-1 shadow-lg">
@@ -60,8 +70,12 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
             {/* Thumbnail Placeholder (if we had multiple images) */}
             <div className="grid grid-cols-4 gap-4">
               {[1, 2, 3].map((_, idx) => (
-                <div key={idx} className={`aspect-square bg-zinc-900 border ${idx === 0 ? 'border-racing-orange' : 'border-zinc-800'} rounded-sm cursor-pointer hover:border-zinc-600`}>
-                   <img src={product.image} className="w-full h-full object-cover opacity-70 hover:opacity-100 transition-opacity" />
+                <div key={idx} className={`aspect-square border ${idx === 0 ? 'border-racing-orange' : 'border-zinc-700'} rounded-sm cursor-pointer hover:border-zinc-600 ${isDefaultImage ? 'bg-zinc-800' : 'bg-white'}`}>
+                   <img 
+                     src={product.image} 
+                     className={`w-full h-full ${isDefaultImage ? 'object-contain p-2' : 'object-cover'} opacity-70 hover:opacity-100 transition-opacity`} 
+                     loading="lazy" 
+                   />
                 </div>
               ))}
             </div>

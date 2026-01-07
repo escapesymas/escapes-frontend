@@ -88,8 +88,8 @@ export const fetchProducts = async (searchQuery?: string, categoryId?: number): 
       title: p.name,
       price: parseFloat(p.price || p.regular_price || "0"),
       regularPrice: parseFloat(p.regular_price || p.price || "0"),
-      // Fallback a imagen genérica de moto en Unsplash para evitar errores con dominios antiguos
-      image: p.images.length > 0 ? p.images[0].src : 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&q=80&w=600',
+      // Fallback a imagen predefinida solicitada (sin fondo)
+      image: p.images.length > 0 ? p.images[0].src : 'https://backendescapes.com/wp-content/uploads/2026/01/icow-scaled.png',
       inStock: p.stock_status === 'instock',
       category: p.categories.length > 0 ? p.categories[0].name : 'General',
       permalink: p.permalink,

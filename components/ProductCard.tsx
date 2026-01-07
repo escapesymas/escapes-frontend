@@ -1,6 +1,7 @@
 import React from 'react';
 import { ShoppingCart, CheckCircle } from 'lucide-react';
 import { Product } from '../types';
+import { STORE_CONFIG } from '../storeData';
 
 interface ProductCardProps {
   product: Product;
@@ -18,24 +19,38 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
 
   const hasDiscount = product.regularPrice > product.price;
 
+  // Check if this is the default fallback image
+  const isDefaultImage = product.image === STORE_CONFIG.defaultProductImage;
+
   return (
     <div 
       onClick={() => onClick?.(product)}
       className="group bg-racing-carbon border border-zinc-800 hover:border-racing-orange/50 transition-all duration-300 rounded-sm overflow-hidden flex flex-col cursor-pointer"
     >
       {/* Image Container */}
-      <div className="relative aspect-square overflow-hidden bg-white">
-        {/* Placeholder overlay for stock effect */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60 z-10" />
+      <div className={`relative aspect-square overflow-hidden ${isDefaultImage ? 'bg-zinc-800' : 'bg-white'}`}>
+        {/* Placeholder overlay for depth only on non-default images to avoid dimming the icon too much */}
+        {!isDefaultImage && (
+           <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10" />
+        )}
+        
         <img 
           src={product.image} 
           alt={product.title} 
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+          loading="lazy"
+          width="400"
+          height="400"
+          className={`w-full h-full transition-transform duration-500 ${
+            isDefaultImage 
+              ? 'object-contain p-8 group-hover:scale-110 opacity-80 group-hover:opacity-100' 
+              : 'object-cover group-hover:scale-105'
+          }`}
         />
+        
         <div className="absolute top-3 left-3 z-20 flex flex-col gap-2">
           {product.inStock && (
-            <span className="bg-green-500/90 text-black text-xs font-bold px-2 py-1 uppercase rounded-sm flex items-center gap-1 backdrop-blur-sm w-fit">
-              <CheckCircle className="w-3 h-3" /> En Stock
+            <span className="bg-green-500/90 text-black text-xs font-bold px-2 py-1 uppercase rounded-sm flex items-center gap-1 backdrop-blur-sm w-fit shadow-md">
+              <CheckCircle className="w-3 h-3" /> Stock
             </span>
           )}
         </div>
@@ -82,7 +97,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
               e.stopPropagation(); // Prevent opening detail
               onAddToCart?.();
             }}
-            className="bg-zinc-800 hover:bg-racing-orange text-white p-3 rounded-sm transition-colors duration-200"
+            className="bg-zinc-800 hover:bg-racing-orange text-white p-3 rounded-sm transition-colors duration-200 shadow-lg"
             title="Añadir al carrito"
           >
             <ShoppingCart className="w-5 h-5" />
