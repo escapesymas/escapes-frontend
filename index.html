@@ -7,72 +7,67 @@
     
     <!-- PERFORMANCE: Preconnect to Critical Origins -->
     <link rel="preconnect" href="https://backendescapes.com">
-    <link rel="preconnect" href="https://wsrv.nl"> <!-- Image Optimization Proxy -->
+    <link rel="preconnect" href="https://wsrv.nl">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-    <!-- SEO & SOCIAL MEDIA PREVIEWS -->
+    <!-- SEO -->
     <meta name="description" content="Tienda online especializada en repuestos de alto rendimiento para motocicletas. Escapes, frenos y accesorios racing con envío 24h.">
-    
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://www.escapesymas.com/">
     <meta property="og:title" content="Escapes y Más | Performance Parts">
-    <meta property="og:description" content="El mayor catálogo de escapes, filtros y recambios técnicos para maximizar el rendimiento en pista y carretera.">
     
-    <!-- LCP OPTIMIZATION: Exact Match Preloads for App.tsx Logic -->
-    <!-- Mobile: 600x800, quality 75 -->
+    <!-- LCP OPTIMIZATION: Critical Image Preloads -->
     <link rel="preload" as="image" href="https://wsrv.nl/?url=https%3A%2F%2Fimages.unsplash.com%2Fphoto-1591637333184-19aa84b3e01f%3Fq%3D80%26w%3D1920%26auto%3Dformat%26fit%3Dcrop&w=600&h=800&fit=cover&output=webp&q=75" media="(max-width: 768px)" fetchpriority="high" />
-    <!-- Desktop: 1920, quality 80 -->
     <link rel="preload" as="image" href="https://wsrv.nl/?url=https%3A%2F%2Fimages.unsplash.com%2Fphoto-1591637333184-19aa84b3e01f%3Fq%3D80%26w%3D1920%26auto%3Dformat%26fit%3Dcrop&w=1920&output=webp&q=80" media="(min-width: 769px)" fetchpriority="high" />
 
+    <!-- FONTS -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     
-    <!-- TAILWIND CDN: Required to fix aesthetics immediately. Using inline config to ensure theme colors load. -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- CRITICAL CSS: Prevent white flash before styles load -->
+    <style>
+      body { background-color: #09090b; color: white; }
+    </style>
+
+    <!-- FAIL-SAFE: Check if Tailwind build worked. If not, load CDN. -->
     <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              racing: {
-                red: '#DC2626',
-                orange: '#EA580C',
-                black: '#09090b', // Zinc 950
-                carbon: '#18181b', // Zinc 900
-                asphalt: '#27272a', // Zinc 800
-                metal: '#a1a1aa', // Zinc 400
-              }
-            },
-            fontFamily: {
-              sans: ['Inter', 'system-ui', 'sans-serif'],
-            },
-            animation: {
-              'fade-in': 'fadeIn 0.5s ease-out forwards',
-              'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
-              'fade-in-right': 'fadeInRight 0.3s ease-out forwards',
-              'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-            },
-            keyframes: {
-              fadeIn: {
-                '0%': { opacity: '0' },
-                '100%': { opacity: '1' },
-              },
-              fadeInUp: {
-                '0%': { opacity: '0', transform: 'translateY(20px)' },
-                '100%': { opacity: '1', transform: 'translateY(0)' },
-              },
-              fadeInRight: {
-                '0%': { opacity: '0', transform: 'translateX(100%)' },
-                '100%': { opacity: '1', transform: 'translateX(0)' },
-              }
-            }
-          }
+      window.addEventListener('DOMContentLoaded', () => {
+        // Create a test element with a Tailwind utility class
+        const testDiv = document.createElement('div');
+        testDiv.className = 'hidden'; // 'hidden' should make display: none
+        document.body.appendChild(testDiv);
+        
+        // Check if the style was applied
+        const isHidden = window.getComputedStyle(testDiv).display === 'none';
+        document.body.removeChild(testDiv);
+
+        if (!isHidden) {
+          console.warn('⚠️ CSS Build Failed. Loading Tailwind CDN as fallback to fix aesthetics.');
+          const script = document.createElement('script');
+          script.src = 'https://cdn.tailwindcss.com';
+          script.onload = () => {
+             // Configure CDN to match our project theme
+             tailwind.config = {
+               theme: {
+                 extend: {
+                   colors: {
+                      racing: {
+                        red: '#DC2626',
+                        orange: '#EA580C',
+                        black: '#09090b',
+                        carbon: '#18181b',
+                        asphalt: '#27272a',
+                        metal: '#a1a1aa',
+                      }
+                   }
+                 }
+               }
+             }
+          };
+          document.head.appendChild(script);
         }
-      }
+      });
     </script>
 
-    <!-- SUMUP SDK (Deferred) -->
-    <script src="https://gateway.sumup.com/gateway/ecom/card/v2/sdk.js" defer></script>
     <script type="importmap">
     {
       "imports": {

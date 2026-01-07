@@ -90,9 +90,28 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
   // Initialize SumUp ONLY when user is logged in
   useEffect(() => {
     if (props.user && !sumupCheckoutId) {
-      initializeSumUp();
+      loadSumUpScriptAndInit();
     }
   }, [props.user]);
+
+  // DYNAMIC SCRIPT LOADING
+  const loadSumUpScriptAndInit = () => {
+    if (window.SumUpCard) {
+      initializeSumUp();
+      return;
+    }
+
+    setIsSumupLoading(true);
+    const script = document.createElement('script');
+    script.src = "https://gateway.sumup.com/gateway/ecom/card/v2/sdk.js";
+    script.async = true;
+    script.onload = () => initializeSumUp();
+    script.onerror = () => {
+      setIsSumupLoading(false);
+      setErrorMessage("Error cargando la librería de pagos. Revisa tu conexión.");
+    };
+    document.body.appendChild(script);
+  };
 
   const initializeSumUp = async () => {
     if (!props.user) return;
