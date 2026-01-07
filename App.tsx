@@ -19,14 +19,15 @@ import { saveSession, getSession, logoutSession } from './services/auth';
 import { Product, BikeSelection, CartItem, User } from './types';
 import { optimizeImage } from './utils/imageOptimizer';
 
-// Fallback Mock Data with Updated Images (icow-scaled.png)
+// Fallback Mock Data with PRE-OPTIMIZED Images to avoid chain requests
 const MOCK_PRODUCTS: Product[] = [
   {
     id: 1,
     title: "Escape Akrapovic Titanio Racing Line (Demo)",
     price: 849.99,
-    regularPrice: 999.00, // Example of discounted product
-    image: "https://backendescapes.com/wp-content/uploads/2026/01/icow-scaled.png",
+    regularPrice: 999.00, 
+    // Hardcoded optimization for mock data
+    image: "https://wsrv.nl/?url=https%3A%2F%2Fbackendescapes.com%2Fwp-content%2Fuploads%2F2026%2F01%2Ficow-scaled.png&w=400&output=webp&q=80&l=5",
     inStock: true,
     category: "Escapes",
     attributes: [
@@ -40,7 +41,7 @@ const MOCK_PRODUCTS: Product[] = [
     title: "Filtro de Alto Flujo K&N Race Spec (Demo)",
     price: 64.50,
     regularPrice: 64.50,
-    image: "https://backendescapes.com/wp-content/uploads/2026/01/icow-scaled.png",
+    image: "https://wsrv.nl/?url=https%3A%2F%2Fbackendescapes.com%2Fwp-content%2Fuploads%2F2026%2F01%2Ficow-scaled.png&w=400&output=webp&q=80&l=5",
     inStock: true,
     category: "Admisión",
     attributes: [{ name: "Tipo", options: ["Lavable"] }],
@@ -50,8 +51,8 @@ const MOCK_PRODUCTS: Product[] = [
     id: 3,
     title: "Kit Transmisión DID Oro Reforzado (Demo)",
     price: 129.95,
-    regularPrice: 145.00, // Example of discounted product
-    image: "https://backendescapes.com/wp-content/uploads/2026/01/icow-scaled.png",
+    regularPrice: 145.00, 
+    image: "https://wsrv.nl/?url=https%3A%2F%2Fbackendescapes.com%2Fwp-content%2Fuploads%2F2026%2F01%2Ficow-scaled.png&w=400&output=webp&q=80&l=5",
     inStock: true,
     category: "Transmisión",
     attributes: [{ name: "Pasos", options: ["520", "525"] }],
@@ -62,7 +63,7 @@ const MOCK_PRODUCTS: Product[] = [
     title: "Caballete Hidráulico Universal Pro (Demo)",
     price: 95.00,
     regularPrice: 95.00,
-    image: "https://backendescapes.com/wp-content/uploads/2026/01/icow-scaled.png",
+    image: "https://wsrv.nl/?url=https%3A%2F%2Fbackendescapes.com%2Fwp-content%2Fuploads%2F2026%2F01%2Ficow-scaled.png&w=400&output=webp&q=80&l=5",
     inStock: false,
     category: "Taller",
     attributes: [],
@@ -81,7 +82,7 @@ function App() {
   // Navigation State
   const [currentView, setCurrentView] = useState<ViewState>('catalog');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [lastView, setLastView] = useState<ViewState>('catalog'); // For login back navigation
+  const [lastView, setLastView] = useState<ViewState>('catalog'); 
 
   // User State
   const [user, setUser] = useState<User | null>(null);
@@ -151,7 +152,7 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
     if (view === 'catalog' && category) {
-      handleCategorySelect(0, category); // Use 0 for ID when clicking header links for now, or update logic
+      handleCategorySelect(0, category); 
     } else {
       setCurrentView(view);
       setSelectedProduct(null);
@@ -186,7 +187,7 @@ function App() {
 
   const goToLogin = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    setLastView(currentView); // Remember where we came from
+    setLastView(currentView);
     setCurrentView('login');
   };
 
@@ -207,35 +208,30 @@ function App() {
 
   const handleLoginSuccess = (loggedInUser: User) => {
     setUser(loggedInUser);
-    saveSession(loggedInUser); // Save to LocalStorage
+    saveSession(loggedInUser); 
     
-    // Return to previous view or Catalog if nothing stored
     if (lastView === 'login' || lastView === 'register') setCurrentView('catalog');
     else setCurrentView(lastView);
   };
 
   const handleLogout = () => {
     setUser(null);
-    logoutSession(); // Clear LocalStorage
+    logoutSession(); 
     goToCatalog();
   };
 
-  // Called when a category is selected in the CategoryBrowser
-  // UPDATED: Now accepts ID and Name for precise filtering
   const handleCategorySelect = async (categoryId: number, categoryName: string) => {
     setLoading(true);
     setCurrentView('catalog');
     setCurrentFilter(categoryName);
     
-    // We treat category as a search term to find relevant products
-    // Pass undefined for search string, and categoryId for filter
     const matches = await fetchProducts(undefined, categoryId);
     
     if (matches.length > 0) {
       setProducts(matches);
       setUsingMockData(false);
     } else {
-      setProducts([]); // Or handle empty state
+      setProducts([]); 
     }
     setLoading(false);
   };
@@ -271,8 +267,12 @@ function App() {
     goToCatalog();
   };
 
-  // OPTIMIZE HERO IMAGE (LCP Critical)
-  const heroImageOptimized = optimizeImage(STORE_CONFIG.heroImage, 1920);
+  // --- OPTIMIZATION: Responsive Hero Image Construction ---
+  // Mobile: 600px width, Portrait crop (h=800), slightly lower quality for speed
+  const heroMobile = `https://wsrv.nl/?url=${encodeURIComponent(STORE_CONFIG.heroImage)}&w=600&h=800&fit=cover&output=webp&q=75`;
+  
+  // Desktop: 1920px width, Original Aspect Ratio
+  const heroDesktop = `https://wsrv.nl/?url=${encodeURIComponent(STORE_CONFIG.heroImage)}&w=1920&output=webp&q=80`;
 
   return (
     <div className="min-h-screen flex flex-col bg-black">
@@ -286,7 +286,7 @@ function App() {
         onLogoutClick={handleLogout}
         onOrdersClick={goToOrders}
         onAccountClick={goToAccount}
-        onNavClick={handleNavClick} // New handler for Forum link
+        onNavClick={handleNavClick} 
       />
       
       <main className="flex-grow">
@@ -328,7 +328,7 @@ function App() {
             user={user}
             onBack={goToCart}
             onOrderComplete={handleOrderComplete}
-            onLoginSuccess={handleLoginSuccess} // Pass login handler for inline login
+            onLoginSuccess={handleLoginSuccess} 
           />
         )}
 
@@ -370,18 +370,21 @@ function App() {
 
         {currentView === 'catalog' && (
           <>
-            {/* HERO SECTION */}
-            <section className="relative h-[600px] flex items-center justify-center bg-zinc-900 overflow-hidden">
+            {/* HERO SECTION - RESPONSIVE LCP OPTIMIZED */}
+            <section className="relative h-[500px] md:h-[600px] flex items-center justify-center bg-zinc-900 overflow-hidden">
               <div className="absolute inset-0 z-0">
-                <img 
-                  src={heroImageOptimized}
-                  alt="Taller Moto" 
-                  className="w-full h-full object-cover grayscale opacity-40"
-                  fetchPriority="high"
-                  loading="eager"
-                  width="1920"
-                  height="600"
-                />
+                <picture>
+                  <source media="(max-width: 768px)" srcSet={heroMobile} />
+                  <img 
+                    src={heroDesktop}
+                    alt="Taller Moto" 
+                    className="w-full h-full object-cover grayscale opacity-40"
+                    fetchPriority="high"
+                    loading="eager"
+                    width="1920"
+                    height="600"
+                  />
+                </picture>
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/70 to-transparent"></div>
               </div>
 
@@ -552,6 +555,8 @@ function App() {
                 src={optimizeImage(STORE_CONFIG.logoUrl, 200)} 
                 alt={STORE_CONFIG.name} 
                 className="h-10 md:h-12 object-contain"
+                width="200"
+                height="48"
               />
             </div>
             <p className="text-sm">Tu tienda de confianza para componentes de alto rendimiento. Envíos a toda la península.</p>

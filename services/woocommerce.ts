@@ -88,8 +88,10 @@ export const fetchProducts = async (searchQuery?: string, categoryId?: number): 
       title: p.name,
       price: parseFloat(p.price || p.regular_price || "0"),
       regularPrice: parseFloat(p.regular_price || p.price || "0"),
-      // Fallback a imagen predefinida solicitada (sin fondo)
-      image: p.images.length > 0 ? p.images[0].src : 'https://backendescapes.com/wp-content/uploads/2026/01/icow-scaled.png',
+      // Fallback a imagen predefinida solicitada (sin fondo), OPTIMIZED via wsrv.nl
+      image: p.images.length > 0 
+        ? p.images[0].src 
+        : 'https://wsrv.nl/?url=https%3A%2F%2Fbackendescapes.com%2Fwp-content%2Fuploads%2F2026%2F01%2Ficow-scaled.png&w=400&output=webp&q=80&l=5',
       inStock: p.stock_status === 'instock',
       category: p.categories.length > 0 ? p.categories[0].name : 'General',
       permalink: p.permalink,
