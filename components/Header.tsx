@@ -53,6 +53,8 @@ export const Header: React.FC<HeaderProps> = ({
                   src={logoUrl} 
                   alt={STORE_CONFIG.name} 
                   className="h-10 object-contain"
+                  width="160"
+                  height="40"
                 />
               </div>
             ) : (
