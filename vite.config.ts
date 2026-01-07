@@ -6,7 +6,6 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     define: {
-      // Use fallback to empty string to prevent "undefined" being injected into the code, causing syntax errors or crashes
       'process.env.API_KEY': JSON.stringify(env.API_KEY || ""),
     },
     server: {
@@ -25,7 +24,18 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       outDir: 'dist',
-      emptyOutDir: true
+      emptyOutDir: true,
+      sourcemap: false, // Disable sourcemaps for production speed
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            // Split vendor code to reduce main bundle size
+            'vendor-react': ['react', 'react-dom'],
+            'vendor-icons': ['lucide-react'],
+            'vendor-utils': ['@google/genai']
+          }
+        }
+      }
     }
   };
 });

@@ -41,7 +41,7 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <>
       <header className="sticky top-0 z-40 w-full bg-racing-carbon/95 backdrop-blur-md border-b border-zinc-800">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="header-container container mx-auto px-4 h-16 flex items-center justify-between">
           {/* Logo Section */}
           <div 
             onClick={onLogoClick}
@@ -69,8 +69,8 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
 
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-8 text-sm font-semibold tracking-wide uppercase text-zinc-400">
+          {/* Desktop Nav - Added 'nav-desktop' class for Critical CSS */}
+          <nav className="nav-desktop hidden md:flex items-center gap-8 text-sm font-semibold tracking-wide uppercase text-zinc-400">
             {NAV_LINKS.map((link, index) => (
               <a 
                 key={index} 
