@@ -18,8 +18,10 @@ export const PAYMENT_CONFIG = {
 // CONFIGURACIÓN GENERAL DE LA TIENDA
 export const STORE_CONFIG = {
   name: "Escapes y Más", 
-  // Mantenemos la URL del logo si es externa, o asegúrate de alojarla en tu frontend/backend nuevo
-  logoUrl: "https://escapesymas.com/wp-content/uploads/2026/01/cropped-logo1-sfw.png",
+  // URL del logo actualizada (Versión Cabecera/Footer)
+  logoUrl: "https://backendescapes.com/wp-content/uploads/2026/01/logo1-cab.png",
+  // URL de la imagen por defecto para productos sin foto
+  defaultProductImage: "https://backendescapes.com/wp-content/uploads/2026/01/icow-scaled.png",
   currency: "EUR",
   contactEmail: "info@escapesymas.com",
   heroTitle: "Equipamiento Pro",
