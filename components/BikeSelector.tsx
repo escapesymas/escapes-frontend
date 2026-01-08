@@ -30,18 +30,18 @@ export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, isLoading 
     }
   };
 
-  // Get models based on selected brand from the passed prop
   const currentModels = selection.brand ? bikeData.models[selection.brand] || [] : [];
 
   return (
     <div className="w-full max-w-4xl mx-auto -mt-16 relative z-20 px-4">
-      <div className="bg-racing-carbon border border-zinc-700 p-6 rounded-md shadow-2xl shadow-black/50">
+      {/* Reduced padding p-4 on mobile */}
+      <div className="bg-racing-carbon border border-zinc-700 p-4 md:p-6 rounded-md shadow-2xl shadow-black/50">
         <div className="flex items-center gap-2 mb-4 text-racing-orange font-bold uppercase tracking-wider text-sm">
           <Bike className="w-5 h-5" />
           <span>Buscador de Piezas Compatibles</span>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4">
           {/* Brand */}
           <div className="relative">
             <select 

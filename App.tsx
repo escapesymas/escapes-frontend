@@ -62,7 +62,6 @@ function App() {
 
   /**
    * Lógica inteligente para verificar si un producto es compatible con el año seleccionado.
-   * Maneja formatos como: "2017-20", "17-20", "2018", "20/21", "2020-2024" y guiones largos.
    */
   const isYearCompatible = (title: string, targetYearStr: string): boolean => {
     if (!targetYearStr || targetYearStr === 'General') return true;
@@ -70,18 +69,13 @@ function App() {
     const targetYear = parseInt(targetYearStr);
     const titleLower = title.toLowerCase();
     
-    // 1. Coincidencia Exacta (Ej: "2018" en el título)
-    // Usamos word boundary (\b) para evitar coincidencias parciales con números de parte
     const exactRegex = new RegExp(`\\b${targetYearStr}\\b`);
     if (exactRegex.test(titleLower)) return true;
     
-    // También buscar año corto: " 18 " para 2018 (con espacios alrededor)
     const shortYearStr = targetYearStr.slice(2);
     const shortRegex = new RegExp(`\\s${shortYearStr}\\s`);
     if (shortRegex.test(titleLower)) return true;
 
-    // 2. Coincidencia de Rangos (Regex para buscar patrones como YYYY-YYYY, YY-YY, YYYY/YYYY)
-    // Soporta guión (-), guión largo (–) y barra (/)
     const rangeRegex = /(\d{2,4})\s*[-/–]\s*(\d{2,4})/g;
     let match;
 
@@ -89,11 +83,9 @@ function App() {
       let start = parseInt(match[1]);
       let end = parseInt(match[2]);
 
-      // Normalizar años de 2 dígitos (Ej: 17 -> 2017)
       if (start < 100) start += 2000;
       if (end < 100) end += 2000;
 
-      // Verificar si el año objetivo está en el rango [start, end]
       if (targetYear >= start && targetYear <= end) {
         return true;
       }
@@ -108,16 +100,12 @@ function App() {
     setSelectedProduct(null); 
     setError(null);
     
-    // Buscamos primero por Marca + Modelo en el backend
     const backendQuery = `${selection.brand} ${selection.model}`;
     setCurrentFilter(`${selection.brand} ${selection.model} ${selection.year}`);
     
     try {
-      // 1. Fetch amplio
       const matches = await fetchProducts(backendQuery);
       
-      // 2. Filtrado fino por año en el cliente
-      // Si el usuario seleccionó un año, filtramos los resultados que no coincidan
       let filteredMatches = matches;
       if (selection.year && selection.year !== 'General') {
          filteredMatches = matches.filter(p => isYearCompatible(p.title, selection.year));
@@ -134,8 +122,6 @@ function App() {
 
   const handleClearFilters = () => {
     loadFeaturedProducts();
-    // Opcional: Resetear el BikeSelector si tuviéramos acceso a su estado interno, 
-    // pero al recargar productos volvemos al estado inicial de listado.
   };
 
   const handleNavClick = (view: ViewState, category?: string) => {
@@ -144,7 +130,6 @@ function App() {
       handleCategorySelect(0, category); 
     } else if (view === 'contact') {
        setCurrentView('catalog');
-       // Scroll al footer
        setTimeout(() => {
           document.getElementById('contact-section')?.scrollIntoView({ behavior: 'smooth' });
        }, 100);
@@ -231,7 +216,7 @@ function App() {
 
         {currentView === 'catalog' && (
           <>
-            <section className="relative h-[500px] md:h-[600px] flex items-center justify-center bg-zinc-900 overflow-hidden w-full">
+            <section className="relative h-[400px] sm:h-[500px] md:h-[600px] flex items-center justify-center bg-zinc-900 overflow-hidden w-full">
               <div className="absolute inset-0 z-0">
                 <picture>
                   <source media="(max-width: 768px)" srcSet={heroMobile} />
@@ -243,10 +228,10 @@ function App() {
                 <span className="inline-block border border-racing-orange text-racing-orange px-4 py-1 text-xs font-bold uppercase tracking-[0.2em] mb-4 bg-black/50 backdrop-blur-sm">
                   Racing Store
                 </span>
-                {/* Hero Title with extra padding to prevent italic cut-off */}
-                <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-4 uppercase italic leading-tight">
-                  <span className="inline-block py-1 pr-3">{STORE_CONFIG.heroTitle}</span> <br/>
-                  <span className="inline-block text-transparent bg-clip-text bg-gradient-to-r from-racing-orange to-red-600 py-2 pr-6 pb-2">
+                {/* Responsive Typography: 3xl for mobile, 5xl for tablet, 7xl for desktop */}
+                <h1 className="text-3xl sm:text-5xl md:text-7xl font-extrabold text-white mb-4 uppercase italic leading-tight">
+                  <span className="inline-block py-1 pr-1 md:pr-3">{STORE_CONFIG.heroTitle}</span> <br/>
+                  <span className="inline-block text-transparent bg-clip-text bg-gradient-to-r from-racing-orange to-red-600 py-2 pr-2 md:pr-6 pb-2">
                     {STORE_CONFIG.heroSubtitle}
                   </span>
                 </h1>
@@ -257,10 +242,9 @@ function App() {
 
             <section className="py-20 bg-zinc-950 w-full">
               <div className="container mx-auto px-4">
-                <div className="flex flex-wrap justify-between items-end mb-12 gap-4">
+                <div className="flex flex-wrap justify-between items-end mb-8 md:mb-12 gap-4">
                   <div className="flex items-center gap-4">
-                     {/* PR-2 to title */}
-                     <h2 className="text-3xl font-extrabold text-white uppercase italic pr-2">
+                     <h2 className="text-2xl md:text-3xl font-extrabold text-white uppercase italic pr-2">
                        {currentFilter ? `Resultados: ${currentFilter}` : "Destacados"}
                      </h2>
                      {currentFilter && (
@@ -298,7 +282,8 @@ function App() {
                       </button>
                    </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  // Mobile Grid: 2 columns (gap-3), Desktop: 4 columns
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
                     {products.length > 0 ? products.map(product => (
                       <ProductCard key={product.id} product={product} onClick={(p) => { setSelectedProduct(p); setCurrentView('product'); }} onAddToCart={() => addToCart(product, 1)} />
                     )) : (
