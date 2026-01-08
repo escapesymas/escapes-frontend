@@ -1,184 +1,187 @@
-import { WOO_CONFIG } from '../storeData';
+import { WOO_CONFIG, STORE_CONFIG } from '../storeData';
 import { Product, WooProduct, OrderPayload, Order, User, WooCategory, Category } from '../types';
 
-/**
- * Checks if the configuration seems valid
- */
 export const isConfigValid = () => {
-  return !WOO_CONFIG.baseUrl.includes("tutienda.com") && !WOO_CONFIG.consumerKey.includes("XXXX");
+  return WOO_CONFIG.baseUrl && WOO_CONFIG.consumerKey;
 };
 
 /**
- * Helper: Add Authentication parameters to URL (Query String Auth)
- * This avoids using the Authorization header, which is often stripped by server configs or triggers strict CORS preflights.
- * Recommended for client-side fetching where header manipulation is restricted.
+ * Helper: Genera Headers con Basic Auth
+ * Esto es más seguro y evita problemas con algunos firewalls que bloquean query params largos.
  */
-const getAuthUrl = (endpoint: string) => {
-  const cleanBaseUrl = WOO_CONFIG.baseUrl.replace(/\/$/, "");
-  const separator = endpoint.includes('?') ? '&' : '?';
-  return `${cleanBaseUrl}${endpoint}${separator}consumer_key=${WOO_CONFIG.consumerKey}&consumer_secret=${WOO_CONFIG.consumerSecret}`;
+const getAuthHeaders = () => {
+  // Codificamos las credenciales en Base64 para el estándar Basic Auth
+  const credentials = btoa(`${WOO_CONFIG.consumerKey}:${WOO_CONFIG.consumerSecret}`);
+  return {
+    'Authorization': `Basic ${credentials}`,
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  };
 };
 
 /**
- * Fetches all categories from WooCommerce
+ * CORE: Realiza peticiones a la API con validación robusta y sistema de rescate
  */
-export const fetchCategories = async (): Promise<Category[]> => {
-  if (!isConfigValid()) return [];
+const makeRequest = async (path: string, options: RequestInit = {}) => {
+  const isBrowser = typeof window !== 'undefined';
+  
+  // Limpiamos la URL base
+  let baseUrl = WOO_CONFIG.baseUrl.replace(/\/$/, "");
+
+  // Si estamos en entorno navegador y usamos proxy (vite.config), ajustamos si es necesario.
+  // Sin embargo, para esta refactorización, usaremos la URL completa para asegurar el fallback correcto.
+  
+  // 1. Construir URL Principal (Pretty Permalinks)
+  // Ej: https://tudominio.com/wp-json/wc/v3/products
+  let url = `${baseUrl}/wp-json${path}`;
+
+  // Combinar headers
+  const headers = {
+    ...getAuthHeaders(),
+    ...options.headers
+  };
 
   try {
-    // hide_empty=true to avoid showing empty categories
-    // Using Query String Auth
-    const url = getAuthUrl('/wp-json/wc/v3/products/categories?per_page=100&hide_empty=true');
-    const response = await fetch(url);
-
-    if (!response.ok) throw new Error('Failed to fetch categories');
+    console.log(`[API] Request: ${url}`);
     
-    const data: WooCategory[] = await response.json();
+    let response = await fetch(url, { ...options, headers });
 
+    // 2. PROTOCOLO DE RESCATE (FALLBACK)
+    // Si la ruta amigable falla con 404, intentamos la ruta paramétrica nativa de WP.
+    if (response.status === 404) {
+      console.warn(`[API] 404 en ruta estándar. Activando Fallback (?rest_route=)...`);
+      
+      // Descomponemos el path para mantener query strings (ej: ?search=...)
+      const [route, query] = path.split('?');
+      
+      // Construimos la URL de rescate: /?rest_route=/wc/v3/products&search=...
+      const fallbackUrl = `${baseUrl}/?rest_route=${route}${query ? '&' + query : ''}`;
+      
+      console.log(`[API] Fallback URL: ${fallbackUrl}`);
+      response = await fetch(fallbackUrl, { ...options, headers });
+    }
+
+    // 3. VALIDACIÓN DE CONTENT-TYPE (Robustez)
+    // Antes de hacer .json(), verificamos que el servidor no nos haya devuelto una página de error HTML.
+    const contentType = response.headers.get("content-type");
+    
+    if (!contentType || !contentType.includes("application/json")) {
+      // Si llegamos aquí, el servidor devolvió HTML (error 500, página de maintenance, firewall, etc.)
+      const text = await response.text();
+      console.error(`[API CRITICAL] La respuesta no es JSON. Status: ${response.status}`);
+      console.error(`[API URL] ${response.url}`);
+      // Mostramos los primeros 200 caracteres para debug
+      console.error(`[API RESPONSE PREVIEW] ${text.substring(0, 200)}...`);
+      
+      throw new Error(`Error del Servidor (${response.status}): Recibimos HTML en lugar de datos. Verifica Permalinks o Firewall.`);
+    }
+
+    // 4. Procesar JSON
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || `API Error: ${response.status}`);
+    }
+    
+    return data;
+
+  } catch (error: any) {
+    console.error("[API FETCH ERROR]", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetches all categories
+ */
+export const fetchCategories = async (): Promise<Category[]> => {
+  if (!isConfigValid()) throw new Error("Configuración incompleta");
+  
+  try {
+    const data: WooCategory[] = await makeRequest('/wc/v3/products/categories?per_page=100&hide_empty=true');
     return data.map(c => ({
       id: c.id,
       name: c.name,
       parent: c.parent,
       description: c.description,
-      // Use category image, fallback to a placeholder if missing
-      image: c.image ? c.image.src : 'https://images.unsplash.com/photo-1552306062-29a5560e1c31?auto=format&fit=crop&q=80&w=600',
+      image: c.image ? c.image.src : '',
       count: c.count
     }));
-
-  } catch (error: any) {
-    if (error.message === 'Failed to fetch') {
-      console.warn("⚠️ Error CORS o de Red detectado al cargar categorías. Revisa que tu WordPress tenga habilitado 'Access-Control-Allow-Origin'.");
-    } else {
-      console.error("Failed to fetch categories:", error);
-    }
-    return [];
+  } catch (error) {
+    console.error("Categories Fetch Error:", error);
+    throw error;
   }
 };
 
 /**
- * Fetches products from WooCommerce API
- * Updated to support filtering by Category ID and using Query String Auth
+ * Fetches products
  */
 export const fetchProducts = async (searchQuery?: string, categoryId?: number): Promise<Product[]> => {
-  if (!isConfigValid()) {
-    console.warn("WooCommerce config not set. Using mock data.");
-    return [];
-  }
+  if (!isConfigValid()) throw new Error("Configuración inválida");
   
-  try {
-    let endpoint = `/wp-json/wc/v3/products?per_page=20&status=publish`;
-    
-    if (searchQuery) {
-      endpoint += `&search=${encodeURIComponent(searchQuery)}`;
-    }
-    
-    // Filter by Category ID
-    if (categoryId) {
-      endpoint += `&category=${categoryId}`;
-    }
+  let path = `/wc/v3/products?per_page=20&status=publish`;
+  
+  if (searchQuery) path += `&search=${encodeURIComponent(searchQuery)}`;
+  if (categoryId) path += `&category=${categoryId}`;
 
-    const url = getAuthUrl(endpoint);
-    const response = await fetch(url);
-
-    if (!response.ok) throw new Error(`WooCommerce API Error: ${response.status}`);
-    const data: WooProduct[] = await response.json();
-
-    return data.map(p => ({
-      id: p.id,
-      title: p.name,
-      price: parseFloat(p.price || p.regular_price || "0"),
-      regularPrice: parseFloat(p.regular_price || p.price || "0"),
-      // Fallback a imagen predefinida solicitada (sin fondo), OPTIMIZED via wsrv.nl
-      image: p.images.length > 0 
-        ? p.images[0].src 
-        : 'https://wsrv.nl/?url=https%3A%2F%2Fbackendescapes.com%2Fwp-content%2Fuploads%2F2026%2F01%2Ficow-scaled.png&w=400&output=webp&q=80&l=5',
-      inStock: p.stock_status === 'instock',
-      category: p.categories.length > 0 ? p.categories[0].name : 'General',
-      permalink: p.permalink,
-      attributes: p.attributes.map(attr => ({ name: attr.name, options: attr.options })),
-      description: p.description,
-      shortDescription: p.short_description
-    }));
-
-  } catch (error: any) {
-    if (error.message === 'Failed to fetch') {
-      console.warn("⚠️ Error CORS detectado al cargar productos. Asegúrate de añadir las cabeceras Access-Control-Allow-Origin en tu functions.php.");
-    } else {
-      console.error("Failed to fetch products:", error);
-    }
-    return [];
-  }
-};
-
-/**
- * Creates an order in WooCommerce
- */
-export const createOrder = async (orderData: OrderPayload | any): Promise<{ success: boolean; id?: number; error?: string }> => {
-  if (!isConfigValid()) {
-    return { success: false, error: "Configuración de API inválida" };
-  }
+  // URL específica que se debe tratar como "sin imagen"
+  const BROKEN_IMG_URL = "https://backendescapes.com/wp-content/uploads/2026/01/Sprint20Filter20P1420Filtro20de20Aire20Yamaha20T-150202015-.jpg";
 
   try {
-    const url = getAuthUrl('/wp-json/wc/v3/orders');
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-        // Auth is now in URL, no Authorization header needed
-      },
-      body: JSON.stringify(orderData)
-    });
+    const data: WooProduct[] = await makeRequest(path);
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      // Specific error handling for permissions
-      if (data.code === 'woocommerce_rest_authentication_error' || 
-          (data.message && (data.message.includes('permisos') || data.message.includes('permissions')))) {
-         throw new Error('PERMISSIONS_ERROR');
+    return data.map(p => {
+      // Lógica de validación de imagen
+      let imageUrl = p.images.length > 0 ? p.images[0].src : '';
+      
+      // Si la imagen coincide con la rota o está vacía, usamos el placeholder
+      if (!imageUrl || imageUrl === BROKEN_IMG_URL) {
+        imageUrl = STORE_CONFIG.defaultProductImage;
       }
 
-      console.error("WooCommerce Order Error:", data);
-      throw new Error(data.message || `Error ${response.status}: ${data.code || 'Unknown'}`);
-    }
-
-    return { success: true, id: data.id };
-
-  } catch (error: any) {
-    console.error("Failed to create order:", error);
-    
-    // Fallback logic for permissions error
-    if (error.message === 'PERMISSIONS_ERROR' || error.message.includes('permisos')) {
-      console.warn("⚠️ API Permissions Error. Using fallback simulation.");
-      return { success: true, id: Math.floor(Math.random() * 9000) + 1000 };
-    }
-    
-    if (error.message === 'Failed to fetch') {
-       return { success: false, error: "Error de conexión (CORS). Contacta con soporte." };
-    }
-
-    return { success: false, error: error.message || "Error de conexión con la tienda" }; 
+      return {
+        id: p.id,
+        title: p.name,
+        price: parseFloat(p.price || p.regular_price || "0"),
+        regularPrice: parseFloat(p.regular_price || p.price || "0"),
+        image: imageUrl,
+        inStock: p.stock_status === 'instock',
+        category: p.categories.length > 0 ? p.categories[0].name : 'General',
+        permalink: p.permalink,
+        attributes: p.attributes.map(attr => ({ name: attr.name, options: attr.options })),
+        description: p.description,
+        shortDescription: p.short_description
+      };
+    });
+  } catch (error) {
+    console.error("Products Fetch Error:", error);
+    throw error;
   }
 };
 
 /**
- * Fetches orders for a specific customer
+ * Creates an order
+ */
+export const createOrder = async (orderData: OrderPayload | any): Promise<{ success: boolean; id?: number; error?: string }> => {
+  if (!isConfigValid()) return { success: false, error: "Configuración inválida" };
+
+  try {
+    const data = await makeRequest('/wc/v3/orders', {
+      method: 'POST',
+      body: JSON.stringify(orderData)
+    });
+    return { success: true, id: data.id };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Fetches orders for customer
  */
 export const fetchCustomerOrders = async (customerId: number): Promise<Order[]> => {
-  if (!isConfigValid()) {
-    return []; // Empty if invalid config, avoiding mock data here as per request
-  }
-  
-  try {
-    const url = getAuthUrl(`/wp-json/wc/v3/orders?customer=${customerId}`);
-    const response = await fetch(url);
-
-    if (!response.ok) throw new Error('Error fetching orders');
-    return await response.json();
-  } catch (error) {
-    console.error("Failed to fetch orders", error);
-    return [];
-  }
+  if (!isConfigValid()) throw new Error("Configuración inválida");
+  return await makeRequest(`/wc/v3/orders?customer=${customerId}`);
 };
 
 /**
@@ -186,26 +189,21 @@ export const fetchCustomerOrders = async (customerId: number): Promise<Order[]> 
  */
 export const updateCustomer = async (userId: number, data: Partial<User>): Promise<boolean> => {
   if (!isConfigValid()) return false;
-
-  const payload = {
-    first_name: data.firstName,
-    last_name: data.lastName,
-    email: data.email,
-    billing: data.billing
-  };
-
+  
   try {
-    const url = getAuthUrl(`/wp-json/wc/v3/customers/${userId}`);
-    const response = await fetch(url, {
+    const payload = {
+      first_name: data.firstName,
+      last_name: data.lastName,
+      email: data.email,
+      billing: data.billing
+    };
+    await makeRequest(`/wc/v3/customers/${userId}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
       body: JSON.stringify(payload)
     });
-    return response.ok;
+    return true;
   } catch (error) {
-    console.error("Failed to update customer", error);
+    console.error("Customer Update Error:", error);
     return false;
   }
 };

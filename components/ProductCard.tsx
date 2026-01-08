@@ -32,7 +32,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
       className="group bg-racing-carbon border border-zinc-800 hover:border-racing-orange/50 transition-all duration-300 rounded-sm overflow-hidden flex flex-col cursor-pointer"
     >
       {/* Image Container */}
-      <div className={`relative aspect-square overflow-hidden ${isDefaultImage ? 'bg-zinc-800' : 'bg-white'}`}>
+      <div className="relative aspect-square overflow-hidden bg-white">
         {/* Placeholder overlay for depth only on non-default images */}
         {!isDefaultImage && (
            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10" />
@@ -46,7 +46,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
           height="400"
           className={`w-full h-full transition-transform duration-500 ${
             isDefaultImage 
-              ? 'object-contain p-8 group-hover:scale-110 opacity-80 group-hover:opacity-100' 
+              ? 'object-contain p-8 group-hover:scale-110 opacity-100' 
               : 'object-cover group-hover:scale-105'
           }`}
         />

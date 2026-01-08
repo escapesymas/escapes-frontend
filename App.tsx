@@ -1,230 +1,173 @@
 import React, { useEffect, useState, Suspense } from 'react';
-import { ArrowRight, Loader2, AlertCircle, WifiOff, XCircle } from 'lucide-react';
+import { ArrowRight, Loader2, AlertCircle, WifiOff, XCircle, RefreshCw, Trash2 } from 'lucide-react';
 import { Header } from './components/Header';
+import { Footer } from './components/Footer';
 import { BikeSelector } from './components/BikeSelector';
 import { ProductCard } from './components/ProductCard';
 import { ProductDetail } from './components/ProductDetail';
-import { AIAdvisor } from './components/AIAdvisor';
 import { Cart } from './components/Cart';
 import { CategoryBrowser } from './components/CategoryBrowser';
 import { STORE_CONFIG, FEATURES, BIKE_DATA } from './storeData';
 import { fetchProducts, isConfigValid } from './services/woocommerce';
 import { saveSession, getSession, logoutSession } from './services/auth';
 import { Product, BikeSelection, CartItem, User } from './types';
-import { optimizeImage } from './utils/imageOptimizer';
 
-// --- LAZY LOADED COMPONENTS (Performance Optimization) ---
+// Lazy Components
 const Checkout = React.lazy(() => import('./components/Checkout').then(module => ({ default: module.Checkout })));
 const Login = React.lazy(() => import('./components/Login').then(module => ({ default: module.Login })));
 const Register = React.lazy(() => import('./components/Register').then(module => ({ default: module.Register })));
 const MyOrders = React.lazy(() => import('./components/MyOrders').then(module => ({ default: module.MyOrders })));
 const MyAccount = React.lazy(() => import('./components/MyAccount').then(module => ({ default: module.MyAccount })));
 const Forum = React.lazy(() => import('./components/Forum').then(module => ({ default: module.Forum })));
+const Warranty = React.lazy(() => import('./components/Warranty').then(module => ({ default: module.Warranty })));
 
-// Fallback Mock Data
-const MOCK_PRODUCTS: Product[] = [
-  {
-    id: 1,
-    title: "Escape Akrapovic Titanio Racing Line (Demo)",
-    price: 849.99,
-    regularPrice: 999.00, 
-    image: "https://wsrv.nl/?url=https%3A%2F%2Fbackendescapes.com%2Fwp-content%2Fuploads%2F2026%2F01%2Ficow-scaled.png&w=400&output=webp&q=80&l=5",
-    inStock: true,
-    category: "Escapes",
-    attributes: [
-      { name: "Material", options: ["Titanio"] },
-      { name: "Homologación", options: ["Racing (No road legal)"] }
-    ],
-    shortDescription: "<p>Sistema de escape completo diseñado para reducir peso y aumentar potencia en altas RPM.</p>"
-  },
-  {
-    id: 2,
-    title: "Filtro de Alto Flujo K&N Race Spec (Demo)",
-    price: 64.50,
-    regularPrice: 64.50,
-    image: "https://wsrv.nl/?url=https%3A%2F%2Fbackendescapes.com%2Fwp-content%2Fuploads%2F2026%2F01%2Ficow-scaled.png&w=400&output=webp&q=80&l=5",
-    inStock: true,
-    category: "Admisión",
-    attributes: [{ name: "Tipo", options: ["Lavable"] }],
-    shortDescription: "<p>Filtro de aire de algodón de alto flujo. Lavable y reutilizable.</p>"
-  },
-  {
-    id: 3,
-    title: "Kit Transmisión DID Oro Reforzado (Demo)",
-    price: 129.95,
-    regularPrice: 145.00, 
-    image: "https://wsrv.nl/?url=https%3A%2F%2Fbackendescapes.com%2Fwp-content%2Fuploads%2F2026%2F01%2Ficow-scaled.png&w=400&output=webp&q=80&l=5",
-    inStock: true,
-    category: "Transmisión",
-    attributes: [{ name: "Pasos", options: ["520", "525"] }],
-    shortDescription: "<p>Cadena reforzada X-Ring color oro con piñón y corona aligerados.</p>"
-  },
-  {
-    id: 4,
-    title: "Caballete Hidráulico Universal Pro (Demo)",
-    price: 95.00,
-    regularPrice: 95.00,
-    image: "https://wsrv.nl/?url=https%3A%2F%2Fbackendescapes.com%2Fwp-content%2Fuploads%2F2026%2F01%2Ficow-scaled.png&w=400&output=webp&q=80&l=5",
-    inStock: false,
-    category: "Taller",
-    attributes: [],
-    shortDescription: "<p>Soporta hasta 400kg. Ideal para mantenimiento en garaje.</p>"
-  }
-];
-
-type ViewState = 'catalog' | 'product' | 'cart' | 'checkout' | 'login' | 'register' | 'orders' | 'account' | 'categories' | 'forum';
+type ViewState = 'catalog' | 'product' | 'cart' | 'checkout' | 'login' | 'register' | 'orders' | 'account' | 'categories' | 'forum' | 'contact' | 'warranty';
 
 function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [usingMockData, setUsingMockData] = useState(false);
-  const [currentFilter, setCurrentFilter] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
   
-  // Navigation State
+  const [currentFilter, setCurrentFilter] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<ViewState>('catalog');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [lastView, setLastView] = useState<ViewState>('catalog'); 
-
-  // User State
   const [user, setUser] = useState<User | null>(null);
-
-  // Cart State
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  // Initial Load
   useEffect(() => {
     loadFeaturedProducts();
     const savedUser = getSession();
-    if (savedUser) {
-      setUser(savedUser);
-    }
+    if (savedUser) setUser(savedUser);
   }, []);
 
   const loadFeaturedProducts = async () => {
     setLoading(true);
+    setCurrentFilter(null);
+    setError(null);
+    setErrorDetail(null);
     try {
       const fetchedProducts = await fetchProducts();
-      if (fetchedProducts.length > 0) {
-        setProducts(fetchedProducts);
-        setUsingMockData(false);
-      } else {
-        setProducts(MOCK_PRODUCTS);
-        setUsingMockData(true);
-      }
-    } catch (e) {
-      setProducts(MOCK_PRODUCTS);
-      setUsingMockData(true);
+      setProducts(fetchedProducts);
+    } catch (e: any) {
+      console.error("App Fetch Error:", e);
+      setError("Error de conexión con el catálogo.");
+      setErrorDetail(e.message || "Error desconocido");
+      setProducts([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  /**
+   * Lógica inteligente para verificar si un producto es compatible con el año seleccionado.
+   * Maneja formatos como: "2017-20", "17-20", "2018", "20/21", "2020-2024" y guiones largos.
+   */
+  const isYearCompatible = (title: string, targetYearStr: string): boolean => {
+    if (!targetYearStr || targetYearStr === 'General') return true;
+    
+    const targetYear = parseInt(targetYearStr);
+    const titleLower = title.toLowerCase();
+    
+    // 1. Coincidencia Exacta (Ej: "2018" en el título)
+    // Usamos word boundary (\b) para evitar coincidencias parciales con números de parte
+    const exactRegex = new RegExp(`\\b${targetYearStr}\\b`);
+    if (exactRegex.test(titleLower)) return true;
+    
+    // También buscar año corto: " 18 " para 2018 (con espacios alrededor)
+    const shortYearStr = targetYearStr.slice(2);
+    const shortRegex = new RegExp(`\\s${shortYearStr}\\s`);
+    if (shortRegex.test(titleLower)) return true;
+
+    // 2. Coincidencia de Rangos (Regex para buscar patrones como YYYY-YYYY, YY-YY, YYYY/YYYY)
+    // Soporta guión (-), guión largo (–) y barra (/)
+    const rangeRegex = /(\d{2,4})\s*[-/–]\s*(\d{2,4})/g;
+    let match;
+
+    while ((match = rangeRegex.exec(titleLower)) !== null) {
+      let start = parseInt(match[1]);
+      let end = parseInt(match[2]);
+
+      // Normalizar años de 2 dígitos (Ej: 17 -> 2017)
+      if (start < 100) start += 2000;
+      if (end < 100) end += 2000;
+
+      // Verificar si el año objetivo está en el rango [start, end]
+      if (targetYear >= start && targetYear <= end) {
+        return true;
+      }
+    }
+
+    return false;
   };
 
   const handleBikeSearch = async (selection: BikeSelection) => {
     setLoading(true);
     setCurrentView('catalog'); 
     setSelectedProduct(null); 
+    setError(null);
     
-    const searchQuery = `${selection.brand} ${selection.model}`;
+    // Buscamos primero por Marca + Modelo en el backend
+    const backendQuery = `${selection.brand} ${selection.model}`;
     setCurrentFilter(`${selection.brand} ${selection.model} ${selection.year}`);
     
-    const matches = await fetchProducts(searchQuery);
-    
-    if (matches.length > 0) {
-      setProducts(matches);
-      setUsingMockData(false);
-    } else {
-      setProducts([]); 
+    try {
+      // 1. Fetch amplio
+      const matches = await fetchProducts(backendQuery);
+      
+      // 2. Filtrado fino por año en el cliente
+      // Si el usuario seleccionó un año, filtramos los resultados que no coincidan
+      let filteredMatches = matches;
+      if (selection.year && selection.year !== 'General') {
+         filteredMatches = matches.filter(p => isYearCompatible(p.title, selection.year));
+      }
+
+      setProducts(filteredMatches);
+    } catch (e: any) {
+      setError("Error en la búsqueda");
+      setErrorDetail(e.message);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  const clearFilter = async () => {
-    setCurrentFilter(null);
+  const handleClearFilters = () => {
     loadFeaturedProducts();
+    // Opcional: Resetear el BikeSelector si tuviéramos acceso a su estado interno, 
+    // pero al recargar productos volvemos al estado inicial de listado.
   };
 
   const handleNavClick = (view: ViewState, category?: string) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (view === 'catalog' && category) {
       handleCategorySelect(0, category); 
+    } else if (view === 'contact') {
+       setCurrentView('catalog');
+       // Scroll al footer
+       setTimeout(() => {
+          document.getElementById('contact-section')?.scrollIntoView({ behavior: 'smooth' });
+       }, 100);
     } else {
       setCurrentView(view);
       setSelectedProduct(null);
     }
   };
 
-  const goToProduct = (product: Product) => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setSelectedProduct(product);
-    setCurrentView('product');
-  };
-
-  const goToCatalog = () => {
-    setSelectedProduct(null);
-    setCurrentView('catalog');
-  };
-
-  const goToCategories = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setCurrentView('categories');
-  };
-
-  const goToCart = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setCurrentView('cart');
-  };
-
-  const goToCheckout = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setCurrentView('checkout');
-  };
-
-  const goToLogin = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setLastView(currentView);
-    setCurrentView('login');
-  };
-
-  const goToRegister = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setCurrentView('register');
-  };
-
-  const goToOrders = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setCurrentView('orders');
-  };
-
-  const goToAccount = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setCurrentView('account');
-  };
-
-  const handleLoginSuccess = (loggedInUser: User) => {
-    setUser(loggedInUser);
-    saveSession(loggedInUser); 
-    if (lastView === 'login' || lastView === 'register') setCurrentView('catalog');
-    else setCurrentView(lastView);
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    logoutSession(); 
-    goToCatalog();
-  };
-
   const handleCategorySelect = async (categoryId: number, categoryName: string) => {
     setLoading(true);
     setCurrentView('catalog');
     setCurrentFilter(categoryName);
-    const matches = await fetchProducts(undefined, categoryId);
-    if (matches.length > 0) {
+    setError(null);
+    try {
+      const matches = await fetchProducts(undefined, categoryId);
       setProducts(matches);
-      setUsingMockData(false);
-    } else {
-      setProducts([]); 
+    } catch (e: any) {
+      setError("Error cargando categoría");
+      setErrorDetail(e.message);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const addToCart = (product: Product, quantity: number = 1) => {
@@ -239,239 +182,144 @@ function App() {
     });
   };
 
-  const removeFromCart = (productId: number) => {
-    setCart(prev => prev.filter(item => item.id !== productId));
-  };
-
-  const updateCartQuantity = (productId: number, delta: number) => {
-    setCart(prev => prev.map(item => {
-      if (item.id === productId) {
-        return { ...item, quantity: Math.max(1, item.quantity + delta) };
-      }
-      return item;
-    }));
-  };
-
-  const handleOrderComplete = () => {
-    setCart([]);
-    goToCatalog();
-  };
-
-  // --- OPTIMIZATION: Responsive Hero Image ---
   const heroMobile = `https://wsrv.nl/?url=${encodeURIComponent(STORE_CONFIG.heroImage)}&w=600&h=800&fit=cover&output=webp&q=75`;
   const heroDesktop = `https://wsrv.nl/?url=${encodeURIComponent(STORE_CONFIG.heroImage)}&w=1920&output=webp&q=80`;
 
-  // --- LOADING FALLBACK ---
-  const LoadingFallback = () => (
-    <div className="flex justify-center items-center h-[50vh] w-full animate-fade-in">
-      <div className="text-center">
-        <Loader2 className="w-12 h-12 text-racing-orange animate-spin mx-auto mb-4" />
-        <p className="text-zinc-500 text-sm uppercase font-bold tracking-widest">Cargando...</p>
-      </div>
-    </div>
-  );
-
   return (
-    <div className="min-h-screen flex flex-col bg-black">
+    <div className="min-h-screen flex flex-col bg-black w-full overflow-x-hidden">
       <Header 
         cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)} 
         user={user}
-        onCartClick={goToCart}
-        onLogoClick={goToCatalog}
-        onLoginClick={goToLogin}
-        onLogoutClick={handleLogout}
-        onOrdersClick={goToOrders}
-        onAccountClick={goToAccount}
+        onCartClick={() => setCurrentView('cart')}
+        onLogoClick={() => { setCurrentView('catalog'); setSelectedProduct(null); loadFeaturedProducts(); }}
+        onLoginClick={() => { setLastView(currentView); setCurrentView('login'); }}
+        onLogoutClick={() => { setUser(null); logoutSession(); setCurrentView('catalog'); }}
+        onOrdersClick={() => setCurrentView('orders')}
+        onAccountClick={() => setCurrentView('account')}
         onNavClick={handleNavClick} 
       />
       
-      <main className="flex-grow">
-        <Suspense fallback={<LoadingFallback />}>
-          {currentView === 'login' && <Login onLoginSuccess={handleLoginSuccess} onBack={() => setCurrentView(lastView)} onRegisterClick={goToRegister} />}
-          {currentView === 'register' && <Register onRegisterSuccess={goToLogin} onBack={() => setCurrentView('login')} onGoToLogin={goToLogin} />}
-          {currentView === 'forum' && <Forum user={user} onBack={goToCatalog} onLoginRequest={goToLogin} />}
-          {currentView === 'categories' && <CategoryBrowser onSelectCategory={handleCategorySelect} onBack={goToCatalog} />}
-          {currentView === 'checkout' && <Checkout cart={cart} user={user} onBack={goToCart} onOrderComplete={handleOrderComplete} onLoginSuccess={handleLoginSuccess} />}
-          {currentView === 'orders' && user && <MyOrders user={user} onBack={goToCatalog} />}
-          {currentView === 'account' && user && <MyAccount user={user} onBack={goToCatalog} onUpdateUser={setUser} />}
+      <main className="flex-grow w-full">
+        <Suspense fallback={<div className="h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 text-racing-orange animate-spin" /></div>}>
+          {currentView === 'login' && <Login onLoginSuccess={(u) => { setUser(u); saveSession(u); setCurrentView(lastView); }} onBack={() => setCurrentView(lastView)} onRegisterClick={() => setCurrentView('register')} />}
+          {currentView === 'register' && <Register onRegisterSuccess={() => setCurrentView('login')} onBack={() => setCurrentView('login')} onGoToLogin={() => setCurrentView('login')} />}
+          {currentView === 'forum' && <Forum user={user} onBack={() => setCurrentView('catalog')} onLoginRequest={() => setCurrentView('login')} />}
+          {currentView === 'categories' && <CategoryBrowser onSelectCategory={handleCategorySelect} onBack={() => setCurrentView('catalog')} />}
+          {currentView === 'checkout' && <Checkout cart={cart} user={user} onBack={() => setCurrentView('cart')} onOrderComplete={() => { setCart([]); setCurrentView('catalog'); }} onLoginSuccess={(u) => { setUser(u); saveSession(u); }} />}
+          {currentView === 'orders' && user && <MyOrders user={user} onBack={() => setCurrentView('catalog')} />}
+          {currentView === 'account' && user && <MyAccount user={user} onBack={() => setCurrentView('catalog')} onUpdateUser={setUser} />}
+          {currentView === 'warranty' && <Warranty onBack={() => setCurrentView('catalog')} />}
         </Suspense>
 
-        {currentView === 'cart' && <Cart items={cart} onUpdateQuantity={updateCartQuantity} onRemove={removeFromCart} onCheckout={goToCheckout} onContinueShopping={goToCatalog} />}
-        {currentView === 'product' && selectedProduct && <ProductDetail product={selectedProduct} onBack={goToCatalog} onAddToCart={(qty) => { addToCart(selectedProduct, qty); goToCart(); }} />}
+        {currentView === 'cart' && (
+          <Cart 
+            items={cart} 
+            onUpdateQuantity={(id, delta) => setCart(p => p.map(i => i.id === id ? {...i, quantity: Math.max(1, i.quantity + delta)} : i))} 
+            onRemove={(id) => setCart(p => p.filter(i => i.id !== id))} 
+            onCheckout={() => setCurrentView('checkout')} 
+            onContinueShopping={() => setCurrentView('catalog')}
+          />
+        )}
+
+        {currentView === 'product' && selectedProduct && (
+          <ProductDetail 
+            product={selectedProduct} 
+            onBack={() => setCurrentView('catalog')} 
+            onAddToCart={(qty) => { addToCart(selectedProduct, qty); setCurrentView('cart'); }} 
+          />
+        )}
 
         {currentView === 'catalog' && (
           <>
-            {/* HERO SECTION - CRITICAL LCP OPTIMIZED */}
-            {/* Added 'hero-section' class for instant Critical CSS painting */}
-            <section className="hero-section">
+            <section className="relative h-[500px] md:h-[600px] flex items-center justify-center bg-zinc-900 overflow-hidden w-full">
               <div className="absolute inset-0 z-0">
                 <picture>
                   <source media="(max-width: 768px)" srcSet={heroMobile} />
-                  <img 
-                    src={heroDesktop}
-                    alt="Taller Moto" 
-                    className="w-full h-full object-cover grayscale opacity-40"
-                    fetchPriority="high"
-                    loading="eager"
-                    width="1920"
-                    height="600"
-                  />
+                  <img src={heroDesktop} alt="Taller Moto" className="w-full h-full object-cover grayscale opacity-40" />
                 </picture>
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/70 to-transparent"></div>
               </div>
-
-              <div className="relative z-10 container mx-auto px-4 text-center mt-[-60px]">
+              <div className="relative z-10 text-center px-4 mt-[-40px] w-full max-w-[100vw]">
                 <span className="inline-block border border-racing-orange text-racing-orange px-4 py-1 text-xs font-bold uppercase tracking-[0.2em] mb-4 bg-black/50 backdrop-blur-sm">
-                  Performance Parts Store
+                  Racing Store
                 </span>
-                <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-6 tracking-tight leading-tight uppercase italic">
-                  {STORE_CONFIG.heroTitle} <br/>
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-racing-orange to-red-600 pr-4">
+                {/* PR-4 added directly to H1, also keeping span padding. Flex box or block needed for padding to take effect on right correctly if text is long */}
+                <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-4 uppercase italic leading-tight pr-4">
+                  <span className="inline-block py-1 pr-2">{STORE_CONFIG.heroTitle}</span> <br/>
+                  <span className="inline-block text-transparent bg-clip-text bg-gradient-to-r from-racing-orange to-red-600 py-2 pr-4">
                     {STORE_CONFIG.heroSubtitle}
                   </span>
                 </h1>
-                <p className="text-xl text-zinc-300 max-w-2xl mx-auto mb-8 font-light">
-                  El mayor catálogo de escapes, filtros y recambios técnicos para maximizar el rendimiento en pista y carretera.
-                </p>
               </div>
             </section>
 
             <BikeSelector onSearch={handleBikeSearch} isLoading={loading && !!currentFilter} bikeData={BIKE_DATA} />
 
-            <div className="bg-zinc-900 py-12 mt-12 border-b border-zinc-800">
+            <section className="py-20 bg-zinc-950 w-full">
               <div className="container mx-auto px-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  {FEATURES.map((feat, idx) => (
-                    <div key={idx} className="flex items-center gap-4 p-4 border border-zinc-800 rounded-sm hover:border-zinc-700 transition-colors">
-                      <div className="p-3 bg-zinc-800 rounded-full text-racing-orange">
-                        <feat.icon className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <h3 className="text-white font-bold uppercase text-sm">{feat.title}</h3>
-                        <p className="text-zinc-500 text-sm">{feat.desc}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <section className="py-20 bg-zinc-950">
-              <div className="container mx-auto px-4">
-                <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
-                  <div>
-                    <h2 className="text-3xl font-extrabold text-white uppercase italic tracking-wide">
-                      {currentFilter ? (
-                        <>Resultados para <span className="text-racing-orange">{currentFilter}</span></>
-                      ) : (
-                        <>Destacados <span className="text-racing-orange">Semana</span></>
-                      )}
-                    </h2>
-                    <div className="h-1 w-24 bg-racing-orange mt-2"></div>
-                  </div>
-                  
+                <div className="flex flex-wrap justify-between items-end mb-12 gap-4">
                   <div className="flex items-center gap-4">
-                    {currentFilter && (
-                      <button onClick={clearFilter} className="flex items-center gap-2 text-zinc-400 hover:text-white text-sm uppercase font-bold transition-colors">
-                        <XCircle className="w-4 h-4" /> Borrar filtro
-                      </button>
-                    )}
-                    {!currentFilter && (
-                      <button onClick={goToCategories} className="hidden md:flex items-center gap-2 text-racing-orange font-bold uppercase text-sm hover:text-white transition-colors">
-                        Ver todo el catálogo <ArrowRight className="w-4 h-4" />
-                      </button>
-                    )}
+                     {/* PR-2 to title */}
+                     <h2 className="text-3xl font-extrabold text-white uppercase italic pr-2">
+                       {currentFilter ? `Resultados: ${currentFilter}` : "Destacados"}
+                     </h2>
+                     {currentFilter && (
+                       <button 
+                        onClick={handleClearFilters}
+                        className="bg-zinc-800 hover:bg-red-900/50 text-zinc-400 hover:text-red-400 p-2 rounded-sm transition-colors"
+                        title="Borrar filtros"
+                       >
+                         <Trash2 className="w-5 h-5" />
+                       </button>
+                     )}
                   </div>
                 </div>
-
-                {usingMockData && (
-                  <div className={`mb-8 p-4 border rounded-sm flex items-start md:items-center gap-3 text-sm ${isConfigValid() ? "bg-red-900/20 border-red-700/50 text-red-200" : "bg-yellow-900/20 border-yellow-700/50 text-yellow-200"}`}>
-                    {isConfigValid() ? (
-                      <>
-                        <WifiOff className="w-5 h-5 flex-shrink-0 text-red-500" />
-                        <div><strong>Error de conexión con {STORE_CONFIG.name}:</strong> No se pudieron descargar los productos reales.</div>
-                      </>
-                    ) : (
-                      <>
-                        <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                        <p><strong>Modo Demo:</strong> No se detectó configuración válida de WooCommerce. Mostrando productos de ejemplo.</p>
-                      </>
-                    )}
-                  </div>
-                )}
 
                 {loading ? (
-                  <div className="flex justify-center items-center h-64"><Loader2 className="w-12 h-12 text-racing-orange animate-spin" /></div>
-                ) : products.length === 0 ? (
-                  <div className="text-center py-20 border border-zinc-800 border-dashed rounded-sm">
-                    <p className="text-zinc-500 text-lg">No se encontraron productos para esta selección.</p>
-                    <button onClick={clearFilter} className="mt-4 text-racing-orange hover:text-white font-bold uppercase text-sm">Ver todos los productos</button>
-                  </div>
+                  <div className="flex justify-center h-64"><Loader2 className="w-12 h-12 text-racing-orange animate-spin" /></div>
+                ) : error ? (
+                   <div className="flex flex-col items-center justify-center py-20 bg-red-900/10 border border-red-900/50 rounded-sm p-8 text-center">
+                      <WifiOff className="w-16 h-16 text-red-500 mb-4" />
+                      <h3 className="text-xl font-bold text-white mb-2">{error}</h3>
+                      
+                      <div className="bg-black/30 p-4 rounded text-left text-xs font-mono text-red-300 mb-6 max-w-lg overflow-auto">
+                        <p className="font-bold border-b border-red-800/50 pb-2 mb-2">Detalle Técnico:</p>
+                        {errorDetail}
+                        <p className="mt-2 text-zinc-500 italic">
+                          Si persiste, verifica que la REST API de WooCommerce no esté desactivada por un plugin de seguridad.
+                        </p>
+                      </div>
+
+                      <button 
+                        onClick={loadFeaturedProducts}
+                        className="bg-red-600 hover:bg-red-700 text-white font-bold uppercase py-3 px-8 rounded-sm flex items-center gap-2"
+                      >
+                        <RefreshCw className="w-4 h-4" /> Reintentar Conexión
+                      </button>
+                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {products.map(product => <ProductCard key={product.id} product={product} onClick={goToProduct} onAddToCart={() => addToCart(product, 1)} />)}
+                    {products.length > 0 ? products.map(product => (
+                      <ProductCard key={product.id} product={product} onClick={(p) => { setSelectedProduct(p); setCurrentView('product'); }} onAddToCart={() => addToCart(product, 1)} />
+                    )) : (
+                      <div className="col-span-full py-20 text-center">
+                         <div className="bg-zinc-900 inline-block p-8 rounded-sm border border-zinc-800">
+                            <p className="text-zinc-400 text-lg mb-4">No se encontraron productos compatibles con tu búsqueda.</p>
+                            <button onClick={handleClearFilters} className="text-racing-orange font-bold uppercase text-sm hover:text-white">
+                              Ver todo el catálogo
+                            </button>
+                         </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             </section>
           </>
         )}
-
-        {currentView === 'catalog' && (
-          <section className="py-16 bg-zinc-900 border-t border-zinc-800 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-racing-orange/10 to-transparent pointer-events-none"></div>
-            <div className="container mx-auto px-4 relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-              <div className="max-w-xl">
-                <h2 className="text-3xl font-bold text-white mb-4 uppercase">¿No sabes qué pieza elegir?</h2>
-                <p className="text-zinc-400 mb-6">Nuestro <strong className="text-racing-orange">Mecánico IA</strong> analiza la compatibilidad técnica de miles de referencias en segundos. Olvídate de devoluciones por piezas que no encajan.</p>
-                <button className="bg-white text-black hover:bg-racing-orange hover:text-white px-6 py-3 font-bold uppercase tracking-wide rounded-sm transition-colors flex items-center gap-2">Consultar ahora</button>
-              </div>
-              <div className="w-full md:w-1/3 aspect-video bg-zinc-800 rounded-sm border border-zinc-700 p-4 flex items-center justify-center relative">
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-30"></div>
-                <div className="text-center">
-                  <div className="text-5xl font-mono text-racing-orange mb-2 font-bold animate-pulse">98%</div>
-                  <div className="text-zinc-500 text-sm uppercase tracking-widest">Precisión Compatibilidad</div>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
       </main>
 
-      <footer className="bg-black border-t border-zinc-800 text-zinc-500 py-12">
-        <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-          <div>
-            <div className="mb-6"><img src={optimizeImage(STORE_CONFIG.logoUrl, 200)} alt={STORE_CONFIG.name} className="h-10 md:h-12 object-contain" width="200" height="48" /></div>
-            <p className="text-sm">Tu tienda de confianza para componentes de alto rendimiento. Envíos a toda la península.</p>
-          </div>
-          <div>
-            <h4 className="text-white font-bold uppercase mb-4 tracking-wider">Ayuda</h4>
-            <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-racing-orange">Envíos y Devoluciones</a></li>
-              <li><a href="#" className="hover:text-racing-orange">Garantías</a></li>
-              <li><a href={`mailto:${STORE_CONFIG.contactEmail}`} className="hover:text-racing-orange">Contacto</a></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="text-white font-bold uppercase mb-4 tracking-wider">Catálogo</h4>
-            <ul className="space-y-2 text-sm">
-              <li><a href="#" onClick={(e) => { e.preventDefault(); handleCategorySelect(1, 'Escapes'); }} className="hover:text-racing-orange">Escapes</a></li>
-              <li><a href="#" onClick={(e) => { e.preventDefault(); handleCategorySelect(2, 'Frenos'); }} className="hover:text-racing-orange">Frenos</a></li>
-              <li><a href="#" onClick={(e) => { e.preventDefault(); handleCategorySelect(3, 'Neumáticos'); }} className="hover:text-racing-orange">Neumáticos</a></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="text-white font-bold uppercase mb-4 tracking-wider">Newsletter</h4>
-            <div className="flex gap-2">
-              <input type="email" placeholder="Email..." className="bg-zinc-900 border border-zinc-800 px-3 py-2 w-full text-sm rounded-sm" />
-              <button className="bg-racing-orange text-white px-3 py-2 rounded-sm font-bold">→</button>
-            </div>
-          </div>
-        </div>
-        <div className="container mx-auto px-4 pt-8 border-t border-zinc-900 text-xs text-center">&copy; {new Date().getFullYear()} {STORE_CONFIG.name}. Todos los derechos reservados.</div>
-      </footer>
-
-      <AIAdvisor />
+      <Footer onNavClick={handleNavClick} />
     </div>
   );
 }
