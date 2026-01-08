@@ -68,31 +68,10 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick }) => {
             </ul>
           </div>
 
-          {/* CONTACT */}
+          {/* CONTACT / SUPPORT */}
           <div id="contact-section">
-            <h3 className="text-white font-bold uppercase mb-6 tracking-wide border-b border-zinc-800 pb-2 inline-block">Contacto</h3>
+            <h3 className="text-white font-bold uppercase mb-6 tracking-wide border-b border-zinc-800 pb-2 inline-block">Soporte</h3>
             <ul className="space-y-4">
-              <li className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-racing-orange flex-shrink-0 mt-0.5" />
-                <div>
-                   <span className="block text-white font-bold text-xs uppercase mb-1">Dirección</span>
-                   <span className="text-zinc-500 block">Polígono Industrial MotorLand<br/>44600 Alcañiz, Teruel</span>
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <Mail className="w-5 h-5 text-racing-orange flex-shrink-0 mt-0.5" />
-                <div>
-                   <span className="block text-white font-bold text-xs uppercase mb-1">Email</span>
-                   <a href={`mailto:${STORE_CONFIG.contactEmail}`} className="text-zinc-500 hover:text-white transition-colors">{STORE_CONFIG.contactEmail}</a>
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <Phone className="w-5 h-5 text-racing-orange flex-shrink-0 mt-0.5" />
-                <div>
-                   <span className="block text-white font-bold text-xs uppercase mb-1">Teléfono</span>
-                   <span className="text-zinc-500">+34 900 123 456</span>
-                </div>
-              </li>
               <li className="pt-2">
                  <button onClick={() => onNavClick('warranty')} className="text-racing-orange hover:text-white transition-colors flex items-center gap-2 uppercase font-bold text-xs border border-racing-orange px-3 py-2 rounded-sm w-fit">
                     Gestión de Garantías
