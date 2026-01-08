@@ -1,4 +1,4 @@
-import { ShieldCheck, Truck, Star } from 'lucide-react';
+import { ShieldCheck, Truck, Trophy, CheckCircle2 } from 'lucide-react';
 
 // CONFIGURACIÓN DE CONEXIÓN WOOCOMMERCE
 export const WOO_CONFIG = {
@@ -29,11 +29,12 @@ export const STORE_CONFIG = {
   heroImage: "https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?q=80&w=1920&auto=format&fit=crop"
 };
 
-// CARACTERÍSTICAS DESTACADAS
+// CARACTERÍSTICAS DESTACADAS (TRUST SIGNALS)
 export const FEATURES = [
-  { icon: ShieldCheck, title: "Garantía Oficial", desc: "3 años en todas las piezas" },
-  { icon: Truck, title: "Envío 24H/48H", desc: "Tiempo de entrega según destino" },
-  { icon: Star, title: "Calidad Pro", desc: "Marcas certificadas Moto GP" },
+  { icon: CheckCircle2, title: "100% Original", desc: "Material auténtico. Cero imitaciones." },
+  { icon: ShieldCheck, title: "Garantía Oficial", desc: "Cobertura directa del fabricante." },
+  { icon: Truck, title: "Envío Seguro", desc: "Entrega asegurada en 24/48h." },
+  { icon: Trophy, title: "Solo Top Brands", desc: "Akrapovič, Brembo, Öhlins..." },
 ];
 
 /**
@@ -125,6 +126,6 @@ export const NAV_LINKS: {
 }[] = [
   { label: "Comunidad", href: "#", view: "forum" }, 
   { label: "Categorías", href: "#", view: "categories" },
-  { label: "Productos", href: "#", view: "catalog" },
+  { label: "Para tu moto", href: "#", view: "catalog" }, // Renombrado
   { label: "Contacto", href: "#", view: "contact" }
 ];
