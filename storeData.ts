@@ -18,10 +18,10 @@ export const PAYMENT_CONFIG = {
 // CONFIGURACIÓN GENERAL DE LA TIENDA
 export const STORE_CONFIG = {
   name: "Escapes y Más", 
-  // URL del logo actualizada (Versión Cabecera/Footer)
+  // URL del logo actualizada
   logoUrl: "https://backendescapes.com/wp-content/uploads/2026/01/logo1-cab.png",
-  // URL de la imagen por defecto para productos sin foto
-  defaultProductImage: "https://backendescapes.com/wp-content/uploads/2026/01/icow-scaled.png",
+  // URL de la imagen por defecto actualizada (ico.png)
+  defaultProductImage: "https://backendescapes.com/wp-content/uploads/2026/01/ico.png",
   currency: "EUR",
   contactEmail: "info@escapesymas.com",
   heroTitle: "Equipamiento Pro",
@@ -115,10 +115,16 @@ export const BIKE_DATA = {
   ]
 };
 
-// ENLACES DEL MENÚ
-export const NAV_LINKS = [
+// ENLACES DEL MENÚ ACTUALIZADOS
+export const NAV_LINKS: { 
+  label: string; 
+  href: string; 
+  view: string; 
+  category?: string; 
+  highlight?: boolean 
+}[] = [
   { label: "Comunidad", href: "#", view: "forum" }, 
-  { label: "Escapes", href: "#", category: "Escapes" },
-  { label: "Frenos", href: "#", category: "Frenos" },
-  { label: "Ofertas", href: "#", highlight: true, category: "Ofertas" }
+  { label: "Categorías", href: "#", view: "categories" },
+  { label: "Productos", href: "#", view: "catalog" },
+  { label: "Contacto", href: "#", view: "contact" }
 ];

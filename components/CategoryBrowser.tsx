@@ -68,7 +68,7 @@ export const CategoryBrowser: React.FC<CategoryBrowserProps> = ({ onSelectCatego
             <ArrowLeft className="w-4 h-4" /> {history.length === 0 ? 'Volver al inicio' : 'Atrás'}
           </button>
           
-          <h1 className="text-4xl md:text-5xl font-extrabold text-white uppercase italic tracking-tight">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-white uppercase italic tracking-tight pr-4">
             {currentParentCat ? currentParentCat.name : 'Catálogo'} <span className="text-racing-orange">Completo</span>
           </h1>
           
