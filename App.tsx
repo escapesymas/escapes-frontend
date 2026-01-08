@@ -243,10 +243,10 @@ function App() {
                 <span className="inline-block border border-racing-orange text-racing-orange px-4 py-1 text-xs font-bold uppercase tracking-[0.2em] mb-4 bg-black/50 backdrop-blur-sm">
                   Racing Store
                 </span>
-                {/* PR-4 added directly to H1, also keeping span padding. Flex box or block needed for padding to take effect on right correctly if text is long */}
-                <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-4 uppercase italic leading-tight pr-4">
-                  <span className="inline-block py-1 pr-2">{STORE_CONFIG.heroTitle}</span> <br/>
-                  <span className="inline-block text-transparent bg-clip-text bg-gradient-to-r from-racing-orange to-red-600 py-2 pr-4">
+                {/* Hero Title with extra padding to prevent italic cut-off */}
+                <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-4 uppercase italic leading-tight">
+                  <span className="inline-block py-1 pr-3">{STORE_CONFIG.heroTitle}</span> <br/>
+                  <span className="inline-block text-transparent bg-clip-text bg-gradient-to-r from-racing-orange to-red-600 py-2 pr-6 pb-2">
                     {STORE_CONFIG.heroSubtitle}
                   </span>
                 </h1>
