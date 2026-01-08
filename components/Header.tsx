@@ -40,7 +40,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           
           {/* LOGO & MOBILE MENU TOGGLE */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
             <button 
               className="md:hidden text-zinc-400 hover:text-white"
               onClick={() => setIsMobileMenuOpen(true)}
@@ -49,10 +49,11 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             <div onClick={onLogoClick} className="cursor-pointer group flex items-center">
+              {/* Responsive Logo Height */}
               <img 
                 src={STORE_CONFIG.logoUrl} 
                 alt={STORE_CONFIG.name} 
-                className="h-10 md:h-12 w-auto object-contain transition-transform group-hover:scale-105" 
+                className="h-8 md:h-12 w-auto object-contain transition-transform group-hover:scale-105" 
               />
             </div>
           </div>
@@ -72,7 +73,7 @@ export const Header: React.FC<HeaderProps> = ({
           </nav>
 
           {/* ACTIONS */}
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-3 md:gap-5">
             <button 
               onClick={() => user ? setIsUserMenuOpen(!isUserMenuOpen) : onLoginClick?.()}
               className="text-zinc-400 hover:text-white transition-colors flex items-center gap-2"
