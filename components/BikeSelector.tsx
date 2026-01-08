@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Search, ChevronDown, ChevronUp, Bike, SlidersHorizontal } from 'lucide-react';
 import { BikeSelection, BikeDataStructure } from '../types';
+import { MODEL_YEARS } from '../storeData';
 
 interface BikeSelectorProps {
   onSearch?: (selection: BikeSelection) => void;
@@ -21,7 +22,11 @@ export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTextSear
 
   const handleChange = (field: keyof BikeSelection, value: string) => {
     if (field === 'brand') {
-      setSelection(prev => ({ ...prev, brand: value, model: '' }));
+      // Al cambiar marca, resetear modelo y año
+      setSelection(prev => ({ ...prev, brand: value, model: '', year: '' }));
+    } else if (field === 'model') {
+      // Al cambiar modelo, resetear año
+      setSelection(prev => ({ ...prev, model: value, year: '' }));
     } else {
       setSelection(prev => ({ ...prev, [field]: value }));
     }
@@ -41,6 +46,11 @@ export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTextSear
   };
 
   const currentModels = selection.brand ? bikeData.models[selection.brand] || [] : [];
+  
+  // Calcular años disponibles para el modelo seleccionado
+  const availableYears = selection.model 
+    ? (MODEL_YEARS[selection.model] || bikeData.years) // Si no hay mapping específico, usa genéricos
+    : [];
 
   return (
     <div className="w-full max-w-4xl mx-auto -mt-16 relative z-20 px-4">
@@ -101,7 +111,7 @@ export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTextSear
             {/* Model */}
             <div className="relative">
               <select 
-                className="w-full h-12 bg-zinc-900 border border-zinc-700 text-zinc-300 px-4 rounded-sm appearance-none focus:border-racing-orange focus:ring-1 focus:ring-racing-orange outline-none font-medium disabled:opacity-50"
+                className="w-full h-12 bg-zinc-900 border border-zinc-700 text-zinc-300 px-4 rounded-sm appearance-none focus:border-racing-orange focus:ring-1 focus:ring-racing-orange outline-none font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={!selection.brand}
                 value={selection.model}
                 onChange={(e) => handleChange('model', e.target.value)}
@@ -112,7 +122,7 @@ export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTextSear
                     <option key={model} value={model}>{model}</option>
                   ))
                 ) : (
-                  <option value="" disabled>Sin modelos</option>
+                  <option value="" disabled>Selecciona Marca</option>
                 )}
               </select>
               <ChevronDown className="absolute right-3 top-3.5 w-5 h-5 text-zinc-500 pointer-events-none" />
@@ -121,19 +131,21 @@ export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTextSear
             {/* Year */}
             <div className="relative">
               <select 
-                className="w-full h-12 bg-zinc-900 border border-zinc-700 text-zinc-300 px-4 rounded-sm appearance-none focus:border-racing-orange focus:ring-1 focus:ring-racing-orange outline-none font-medium disabled:opacity-50"
+                className="w-full h-12 bg-zinc-900 border border-zinc-700 text-zinc-300 px-4 rounded-sm appearance-none focus:border-racing-orange focus:ring-1 focus:ring-racing-orange outline-none font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={!selection.model}
                 value={selection.year}
                 onChange={(e) => handleChange('year', e.target.value)}
               >
                 <option value="">Año</option>
-                {bikeData.years.length > 0 ? (
-                  bikeData.years.map(year => (
+                {availableYears.length > 0 ? (
+                  availableYears.map(year => (
                     <option key={year} value={year}>{year}</option>
                   ))
                 ) : (
-                  <option value="General">Todos</option>
+                  <option value="" disabled>Selecciona Modelo</option>
                 )}
+                {/* Fallback option if needed */}
+                {availableYears.length > 0 && <option value="General">Todos los años</option>}
               </select>
               <ChevronDown className="absolute right-3 top-3.5 w-5 h-5 text-zinc-500 pointer-events-none" />
             </div>
