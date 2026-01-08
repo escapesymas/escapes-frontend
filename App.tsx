@@ -1,5 +1,5 @@
 import React, { useEffect, useState, Suspense } from 'react';
-import { ArrowRight, Loader2, AlertCircle, WifiOff, XCircle, RefreshCw, Trash2 } from 'lucide-react';
+import { ArrowRight, Loader2, AlertCircle, WifiOff, XCircle, RefreshCw, Trash2, Zap, Shield, Trophy, Users, MessageSquare } from 'lucide-react';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { BikeSelector } from './components/BikeSelector';
@@ -21,7 +21,7 @@ const MyAccount = React.lazy(() => import('./components/MyAccount').then(module 
 const Forum = React.lazy(() => import('./components/Forum').then(module => ({ default: module.Forum })));
 const Warranty = React.lazy(() => import('./components/Warranty').then(module => ({ default: module.Warranty })));
 
-type ViewState = 'catalog' | 'product' | 'cart' | 'checkout' | 'login' | 'register' | 'orders' | 'account' | 'categories' | 'forum' | 'contact' | 'warranty';
+type ViewState = 'home' | 'catalog' | 'product' | 'cart' | 'checkout' | 'login' | 'register' | 'orders' | 'account' | 'categories' | 'forum' | 'contact' | 'warranty';
 
 function App() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -30,13 +30,14 @@ function App() {
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
   
   const [currentFilter, setCurrentFilter] = useState<string | null>(null);
-  const [currentView, setCurrentView] = useState<ViewState>('catalog');
+  const [currentView, setCurrentView] = useState<ViewState>('home');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [lastView, setLastView] = useState<ViewState>('catalog'); 
+  const [lastView, setLastView] = useState<ViewState>('home'); 
   const [user, setUser] = useState<User | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
 
   useEffect(() => {
+    // Initial load for Home Page featured products
     loadFeaturedProducts();
     const savedUser = getSession();
     if (savedUser) setUser(savedUser);
@@ -49,7 +50,15 @@ function App() {
     setErrorDetail(null);
     try {
       const fetchedProducts = await fetchProducts();
-      setProducts(fetchedProducts);
+      
+      // FILTRO DE CALIDAD Y LIMITE:
+      // 1. Excluir productos que tengan la imagen por defecto (solo fotos reales).
+      // 2. Limitar a solo 4 productos para la portada.
+      const curatedProducts = fetchedProducts
+        .filter(p => p.image !== STORE_CONFIG.defaultProductImage)
+        .slice(0, 4);
+
+      setProducts(curatedProducts);
     } catch (e: any) {
       console.error("App Fetch Error:", e);
       setError("Error de conexión con el catálogo.");
@@ -96,7 +105,8 @@ function App() {
 
   const handleBikeSearch = async (selection: BikeSelection) => {
     setLoading(true);
-    setCurrentView('catalog'); 
+    // Ensure we stay in catalog view when searching
+    if (currentView !== 'catalog') setCurrentView('catalog');
     setSelectedProduct(null); 
     setError(null);
     
@@ -120,8 +130,38 @@ function App() {
     }
   };
 
+  const handleTextSearch = async (query: string) => {
+    setLoading(true);
+    if (currentView !== 'catalog') setCurrentView('catalog');
+    setSelectedProduct(null);
+    setError(null);
+    setCurrentFilter(`Búsqueda: "${query}"`);
+
+    try {
+      // fetchProducts acepta el query y busca en Título y Descripción via WooCommerce API
+      const matches = await fetchProducts(query);
+      setProducts(matches);
+    } catch (e: any) {
+      setError("Error en la búsqueda");
+      setErrorDetail(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleClearFilters = () => {
-    loadFeaturedProducts();
+    if (currentView === 'home') {
+       loadFeaturedProducts();
+    } else {
+       // Reset catalog to default fetch (all items or recent items)
+       setLoading(true);
+       setCurrentFilter(null);
+       fetchProducts().then(data => {
+         // In catalog we might want to show more items, but for consistency let's just load defaults
+         setProducts(data);
+         setLoading(false);
+       }).catch(() => setLoading(false));
+    }
   };
 
   const handleNavClick = (view: ViewState, category?: string) => {
@@ -129,13 +169,27 @@ function App() {
     if (view === 'catalog' && category) {
       handleCategorySelect(0, category); 
     } else if (view === 'contact') {
-       setCurrentView('catalog');
+       // If contact is clicked, we might want to go home then scroll
+       if (currentView !== 'home') setCurrentView('home');
        setTimeout(() => {
           document.getElementById('contact-section')?.scrollIntoView({ behavior: 'smooth' });
        }, 100);
     } else {
       setCurrentView(view);
       setSelectedProduct(null);
+      
+      // Refresh products if navigating home to ensure featured logic
+      if (view === 'home') {
+        loadFeaturedProducts();
+      }
+      // If navigating to catalog without category, maybe load general products?
+      if (view === 'catalog' && !category) {
+        // Option: keep previous search or reset. Let's keep for now unless explicitly cleared.
+        if (products.length <= 4 && !currentFilter) {
+           // Probably coming from home, load more?
+           handleClearFilters();
+        }
+      }
     }
   };
 
@@ -170,15 +224,56 @@ function App() {
   const heroMobile = `https://wsrv.nl/?url=${encodeURIComponent(STORE_CONFIG.heroImage)}&w=600&h=800&fit=cover&output=webp&q=75`;
   const heroDesktop = `https://wsrv.nl/?url=${encodeURIComponent(STORE_CONFIG.heroImage)}&w=1920&output=webp&q=80`;
 
+  // Render Grid Helper inline to access state
+  const renderProductGrid = () => {
+    if (loading) {
+      return <div className="flex justify-center h-64"><Loader2 className="w-12 h-12 text-racing-orange animate-spin" /></div>;
+    }
+    if (error) {
+       return (
+          <div className="flex flex-col items-center justify-center py-20 bg-red-900/10 border border-red-900/50 rounded-sm p-8 text-center">
+            <WifiOff className="w-16 h-16 text-red-500 mb-4" />
+            <h3 className="text-xl font-bold text-white mb-2">{error}</h3>
+            <div className="bg-black/30 p-4 rounded text-left text-xs font-mono text-red-300 mb-6 max-w-lg overflow-auto">
+              <p className="font-bold border-b border-red-800/50 pb-2 mb-2">Detalle Técnico:</p>
+              {errorDetail}
+            </div>
+            <button onClick={handleClearFilters} className="bg-red-600 hover:bg-red-700 text-white font-bold uppercase py-3 px-8 rounded-sm flex items-center gap-2">
+              <RefreshCw className="w-4 h-4" /> Reintentar
+            </button>
+          </div>
+       );
+    }
+    if (products.length === 0) {
+       return (
+          <div className="col-span-full py-20 text-center">
+              <div className="bg-zinc-900 inline-block p-8 rounded-sm border border-zinc-800">
+                <p className="text-zinc-400 text-lg mb-4">No se encontraron productos compatibles.</p>
+                <button onClick={handleClearFilters} className="text-racing-orange font-bold uppercase text-sm hover:text-white">
+                  Ver todo el catálogo
+                </button>
+              </div>
+          </div>
+       );
+    }
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+        {products.map(product => (
+          <ProductCard key={product.id} product={product} onClick={(p) => { setSelectedProduct(p); setCurrentView('product'); }} onAddToCart={() => addToCart(product, 1)} />
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-black w-full overflow-x-hidden">
       <Header 
         cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)} 
         user={user}
         onCartClick={() => setCurrentView('cart')}
-        onLogoClick={() => { setCurrentView('catalog'); setSelectedProduct(null); loadFeaturedProducts(); }}
+        onLogoClick={() => { setCurrentView('home'); setSelectedProduct(null); loadFeaturedProducts(); }}
         onLoginClick={() => { setLastView(currentView); setCurrentView('login'); }}
-        onLogoutClick={() => { setUser(null); logoutSession(); setCurrentView('catalog'); }}
+        onLogoutClick={() => { setUser(null); logoutSession(); setCurrentView('home'); }}
         onOrdersClick={() => setCurrentView('orders')}
         onAccountClick={() => setCurrentView('account')}
         onNavClick={handleNavClick} 
@@ -188,12 +283,12 @@ function App() {
         <Suspense fallback={<div className="h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 text-racing-orange animate-spin" /></div>}>
           {currentView === 'login' && <Login onLoginSuccess={(u) => { setUser(u); saveSession(u); setCurrentView(lastView); }} onBack={() => setCurrentView(lastView)} onRegisterClick={() => setCurrentView('register')} />}
           {currentView === 'register' && <Register onRegisterSuccess={() => setCurrentView('login')} onBack={() => setCurrentView('login')} onGoToLogin={() => setCurrentView('login')} />}
-          {currentView === 'forum' && <Forum user={user} onBack={() => setCurrentView('catalog')} onLoginRequest={() => setCurrentView('login')} />}
-          {currentView === 'categories' && <CategoryBrowser onSelectCategory={handleCategorySelect} onBack={() => setCurrentView('catalog')} />}
-          {currentView === 'checkout' && <Checkout cart={cart} user={user} onBack={() => setCurrentView('cart')} onOrderComplete={() => { setCart([]); setCurrentView('catalog'); }} onLoginSuccess={(u) => { setUser(u); saveSession(u); }} />}
-          {currentView === 'orders' && user && <MyOrders user={user} onBack={() => setCurrentView('catalog')} />}
-          {currentView === 'account' && user && <MyAccount user={user} onBack={() => setCurrentView('catalog')} onUpdateUser={setUser} />}
-          {currentView === 'warranty' && <Warranty onBack={() => setCurrentView('catalog')} />}
+          {currentView === 'forum' && <Forum user={user} onBack={() => setCurrentView('home')} onLoginRequest={() => setCurrentView('login')} />}
+          {currentView === 'categories' && <CategoryBrowser onSelectCategory={handleCategorySelect} onBack={() => setCurrentView('home')} />}
+          {currentView === 'checkout' && <Checkout cart={cart} user={user} onBack={() => setCurrentView('cart')} onOrderComplete={() => { setCart([]); setCurrentView('home'); }} onLoginSuccess={(u) => { setUser(u); saveSession(u); }} />}
+          {currentView === 'orders' && user && <MyOrders user={user} onBack={() => setCurrentView('home')} />}
+          {currentView === 'account' && user && <MyAccount user={user} onBack={() => setCurrentView('home')} onUpdateUser={setUser} />}
+          {currentView === 'warranty' && <Warranty onBack={() => setCurrentView('home')} />}
         </Suspense>
 
         {currentView === 'cart' && (
@@ -214,7 +309,8 @@ function App() {
           />
         )}
 
-        {currentView === 'catalog' && (
+        {/* --- HOME PAGE VIEW --- */}
+        {currentView === 'home' && (
           <>
             <section className="relative h-[400px] sm:h-[500px] md:h-[600px] flex items-center justify-center bg-zinc-900 overflow-hidden w-full">
               <div className="absolute inset-0 z-0">
@@ -226,9 +322,8 @@ function App() {
               </div>
               <div className="relative z-10 text-center px-4 mt-[-40px] w-full max-w-[100vw]">
                 <span className="inline-block border border-racing-orange text-racing-orange px-4 py-1 text-xs font-bold uppercase tracking-[0.2em] mb-4 bg-black/50 backdrop-blur-sm">
-                  Racing Store
+                  {STORE_CONFIG.name}
                 </span>
-                {/* Responsive Typography: 3xl for mobile, 5xl for tablet, 7xl for desktop */}
                 <h1 className="text-3xl sm:text-5xl md:text-7xl font-extrabold text-white mb-4 uppercase italic leading-tight">
                   <span className="inline-block py-1 pr-1 md:pr-3">{STORE_CONFIG.heroTitle}</span> <br/>
                   <span className="inline-block text-transparent bg-clip-text bg-gradient-to-r from-racing-orange to-red-600 py-2 pr-2 md:pr-6 pb-2">
@@ -238,66 +333,118 @@ function App() {
               </div>
             </section>
 
-            <BikeSelector onSearch={handleBikeSearch} isLoading={loading && !!currentFilter} bikeData={BIKE_DATA} />
+            {/* FEATURES BANNER */}
+            <section className="bg-zinc-900 w-full border-y border-zinc-800 shadow-xl relative z-10">
+               <div className="container mx-auto px-4 py-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                     {FEATURES.map((feat, idx) => (
+                        <div key={idx} className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-3">
+                           <div className="text-racing-orange p-2 bg-zinc-950 rounded-full border border-zinc-800">
+                             <feat.icon className="w-6 h-6" />
+                           </div>
+                           <div>
+                              <p className="font-bold text-white uppercase italic text-sm leading-tight mb-1">{feat.title}</p>
+                              <p className="text-zinc-500 text-xs font-medium leading-tight">{feat.desc}</p>
+                           </div>
+                        </div>
+                     ))}
+                  </div>
+               </div>
+            </section>
 
+             {/* COMMUNITY SECTION (HOME ONLY) */}
+             <section className="py-16 bg-gradient-to-r from-zinc-900 to-black border-b border-zinc-800">
+                <div className="container mx-auto px-4">
+                  <div className="bg-zinc-900/50 border border-zinc-800 rounded-sm p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden group">
+                     {/* Decorative background element */}
+                     <div className="absolute top-0 right-0 w-64 h-64 bg-racing-orange/5 rounded-full blur-3xl group-hover:bg-racing-orange/10 transition-colors"></div>
+                     
+                     <div className="flex items-start gap-6 relative z-10 max-w-2xl">
+                        <div className="hidden md:block p-4 bg-black border border-zinc-800 rounded-full">
+                           <Users className="w-10 h-10 text-racing-orange" />
+                        </div>
+                        <div>
+                           <div className="flex items-center gap-2 mb-2">
+                             <MessageSquare className="w-5 h-5 text-racing-orange md:hidden" />
+                             <span className="text-racing-orange font-bold uppercase tracking-widest text-xs">Comunidad Paddock</span>
+                           </div>
+                           <h2 className="text-3xl md:text-4xl font-extrabold text-white uppercase italic mb-4">
+                              ¿Dudas sobre tu setup?
+                           </h2>
+                           <p className="text-zinc-400 text-sm md:text-base leading-relaxed">
+                              Únete a nuestra comunidad de pilotos y mecánicos. Comparte tus experiencias, resuelve dudas sobre compatibilidad y encuentra el mejor material para tu moto.
+                           </p>
+                        </div>
+                     </div>
+                     
+                     <div className="relative z-10">
+                        <button 
+                          onClick={() => setCurrentView('forum')}
+                          className="bg-white hover:bg-zinc-200 text-black font-black uppercase py-4 px-8 rounded-sm transition-transform hover:scale-105 flex items-center gap-2 shadow-xl"
+                        >
+                           Entrar al Foro <ArrowRight className="w-5 h-5" />
+                        </button>
+                     </div>
+                  </div>
+                </div>
+             </section>
+
+            {/* FEATURED PRODUCTS */}
             <section className="py-20 bg-zinc-950 w-full">
               <div className="container mx-auto px-4">
                 <div className="flex flex-wrap justify-between items-end mb-8 md:mb-12 gap-4">
                   <div className="flex items-center gap-4">
                      <h2 className="text-2xl md:text-3xl font-extrabold text-white uppercase italic pr-2">
-                       {currentFilter ? `Resultados: ${currentFilter}` : "Destacados"}
+                       Destacados
                      </h2>
-                     {currentFilter && (
+                  </div>
+                  <button onClick={() => setCurrentView('catalog')} className="text-racing-orange font-bold uppercase text-xs flex items-center gap-1 hover:text-white transition-colors">
+                     Ver todo el catálogo <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+                
+                {renderProductGrid()}
+              </div>
+            </section>
+          </>
+        )}
+
+        {/* --- CATALOG VIEW (SEARCH) --- */}
+        {currentView === 'catalog' && (
+          <>
+            <section className="pt-24 pb-8 bg-zinc-950">
+               <div className="container mx-auto px-4 mb-8 text-center">
+                  <h1 className="text-2xl md:text-4xl font-extrabold text-white uppercase italic">
+                     Buscador de Piezas
+                  </h1>
+                  <p className="text-zinc-500 text-sm mt-2">Encuentra exactamente lo que necesitas para tu máquina.</p>
+               </div>
+
+               <BikeSelector 
+                  onSearch={handleBikeSearch} 
+                  onTextSearch={handleTextSearch}
+                  isLoading={loading && !!currentFilter} 
+                  bikeData={BIKE_DATA} 
+               />
+            </section>
+
+            <section className="py-12 bg-zinc-950 min-h-screen w-full border-t border-zinc-900">
+              <div className="container mx-auto px-4">
+                <div className="flex flex-wrap justify-between items-end mb-8 gap-4">
+                   <h2 className="text-xl font-bold text-white uppercase italic">
+                     {currentFilter ? `Resultados: ${currentFilter}` : "Catálogo Completo"}
+                   </h2>
+                   {currentFilter && (
                        <button 
                         onClick={handleClearFilters}
-                        className="bg-zinc-800 hover:bg-red-900/50 text-zinc-400 hover:text-red-400 p-2 rounded-sm transition-colors"
-                        title="Borrar filtros"
+                        className="bg-zinc-800 hover:bg-red-900/50 text-zinc-400 hover:text-red-400 p-2 rounded-sm transition-colors flex items-center gap-2 text-xs font-bold uppercase px-4"
                        >
-                         <Trash2 className="w-5 h-5" />
+                         <Trash2 className="w-4 h-4" /> Limpiar Filtros
                        </button>
-                     )}
-                  </div>
+                   )}
                 </div>
 
-                {loading ? (
-                  <div className="flex justify-center h-64"><Loader2 className="w-12 h-12 text-racing-orange animate-spin" /></div>
-                ) : error ? (
-                   <div className="flex flex-col items-center justify-center py-20 bg-red-900/10 border border-red-900/50 rounded-sm p-8 text-center">
-                      <WifiOff className="w-16 h-16 text-red-500 mb-4" />
-                      <h3 className="text-xl font-bold text-white mb-2">{error}</h3>
-                      
-                      <div className="bg-black/30 p-4 rounded text-left text-xs font-mono text-red-300 mb-6 max-w-lg overflow-auto">
-                        <p className="font-bold border-b border-red-800/50 pb-2 mb-2">Detalle Técnico:</p>
-                        {errorDetail}
-                        <p className="mt-2 text-zinc-500 italic">
-                          Si persiste, verifica que la REST API de WooCommerce no esté desactivada por un plugin de seguridad.
-                        </p>
-                      </div>
-
-                      <button 
-                        onClick={loadFeaturedProducts}
-                        className="bg-red-600 hover:bg-red-700 text-white font-bold uppercase py-3 px-8 rounded-sm flex items-center gap-2"
-                      >
-                        <RefreshCw className="w-4 h-4" /> Reintentar Conexión
-                      </button>
-                   </div>
-                ) : (
-                  // Mobile Grid: 2 columns (gap-3), Desktop: 4 columns
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
-                    {products.length > 0 ? products.map(product => (
-                      <ProductCard key={product.id} product={product} onClick={(p) => { setSelectedProduct(p); setCurrentView('product'); }} onAddToCart={() => addToCart(product, 1)} />
-                    )) : (
-                      <div className="col-span-full py-20 text-center">
-                         <div className="bg-zinc-900 inline-block p-8 rounded-sm border border-zinc-800">
-                            <p className="text-zinc-400 text-lg mb-4">No se encontraron productos compatibles con tu búsqueda.</p>
-                            <button onClick={handleClearFilters} className="text-racing-orange font-bold uppercase text-sm hover:text-white">
-                              Ver todo el catálogo
-                            </button>
-                         </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                {renderProductGrid()}
               </div>
             </section>
           </>
