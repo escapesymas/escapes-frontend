@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, Eye, Clock, Hash, ChevronRight, ArrowLeft, Send, ThumbsUp, Pin, User, Search, Loader2, PlusCircle, X, Quote, AlertCircle } from 'lucide-react';
+import { MessageSquare, Clock, Hash, ChevronRight, ArrowLeft, Send, User, Loader2, PlusCircle, Quote, AlertCircle } from 'lucide-react';
 import { ForumTopic, ForumCategory, ForumReply, User as UserType } from '../types';
 import { fetchForumCategories, fetchTopics, fetchReplies, createTopic, createReply } from '../services/forum';
 import { RichTextEditor } from './RichTextEditor';
@@ -214,26 +214,29 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
                 <Loader2 className="w-10 h-10 text-racing-orange animate-spin" />
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
                 {categories.map((cat) => {
                   const IconComponent = cat.icon;
                   return (
                     <div 
                       key={cat.id} 
                       onClick={() => handleCategoryClick(cat)}
-                      className="group bg-zinc-900 border border-zinc-800 hover:border-racing-orange p-6 rounded-sm cursor-pointer transition-all duration-300 flex items-start gap-4"
+                      className="group bg-zinc-900 border border-zinc-800 hover:border-racing-orange p-6 rounded-sm cursor-pointer transition-all duration-300 flex items-start gap-4 relative overflow-hidden"
                     >
-                      <div className="p-4 bg-zinc-950 rounded-full group-hover:bg-racing-orange transition-colors">
+                      <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                         <IconComponent className="w-24 h-24 text-racing-orange transform rotate-12" />
+                      </div>
+
+                      <div className="p-4 bg-zinc-950 rounded-full group-hover:bg-racing-orange transition-colors z-10">
                         <IconComponent className="w-8 h-8 text-zinc-400 group-hover:text-white" />
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 z-10">
                         <h3 className="text-xl font-bold text-white uppercase italic mb-1">{cat.title}</h3>
-                        <p className="text-zinc-500 text-sm mb-4">{cat.description}</p>
+                        <p className="text-zinc-500 text-sm mb-4 leading-relaxed">{cat.description}</p>
                         <div className="flex items-center text-xs text-zinc-600 font-bold uppercase tracking-wider">
-                          <MessageSquare className="w-3 h-3 mr-1" /> {cat.topicCount} Temas
+                          <MessageSquare className="w-3 h-3 mr-1" /> {cat.topicCount} Temas Activos
                         </div>
                       </div>
-                      <ChevronRight className="w-6 h-6 text-zinc-700 group-hover:text-racing-orange self-center" />
                     </div>
                   );
                 })}
@@ -246,7 +249,10 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
         {currentView === 'category_topics' && (
           <div className="max-w-5xl mx-auto space-y-4">
              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-white uppercase italic">{selectedCategory?.title}</h2>
+                <div>
+                   <h2 className="text-2xl font-bold text-white uppercase italic">{selectedCategory?.title}</h2>
+                   <p className="text-zinc-500 text-sm">{selectedCategory?.description}</p>
+                </div>
                 <button 
                   onClick={() => user ? setCurrentView('create_topic') : onLoginRequest()} 
                   className="bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase text-xs py-2 px-4 rounded-sm flex items-center gap-2"
@@ -258,20 +264,28 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
              {loading ? (
                 <div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-racing-orange"/></div>
              ) : topics.length === 0 ? (
-                <div className="text-center py-10 bg-zinc-900 border border-zinc-800 rounded-sm">
-                   <p className="text-zinc-500">No hay temas en esta categoría aún.</p>
+                <div className="text-center py-12 bg-zinc-900 border border-zinc-800 rounded-sm">
+                   <MessageSquare className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
+                   <p className="text-zinc-400 font-bold mb-2">Esta pista está vacía</p>
+                   <p className="text-zinc-600 text-sm mb-6">Sé el primero en arrancar la conversación.</p>
+                   <button 
+                     onClick={() => user ? setCurrentView('create_topic') : onLoginRequest()}
+                     className="text-racing-orange hover:text-white text-sm font-bold uppercase"
+                   >
+                     Crear primer tema
+                   </button>
                 </div>
              ) : (
                topics.map(topic => (
                 <div key={topic.id} onClick={() => handleTopicClick(topic)} className="bg-zinc-900 border border-zinc-800 p-4 rounded-sm cursor-pointer hover:border-racing-orange transition-colors flex justify-between items-center group">
                   <div className="flex items-center gap-4">
-                     <div className="w-10 h-10 bg-zinc-950 rounded-full flex items-center justify-center border border-zinc-800 group-hover:border-racing-orange/50">
+                     <div className="w-10 h-10 bg-zinc-950 rounded-full flex items-center justify-center border border-zinc-800 group-hover:border-racing-orange/50 flex-shrink-0">
                         <MessageSquare className="w-5 h-5 text-zinc-600 group-hover:text-racing-orange transition-colors" />
                      </div>
                      <div>
-                       <h3 className="text-white font-bold group-hover:text-racing-orange transition-colors" dangerouslySetInnerHTML={{__html: topic.title}}></h3>
+                       <h3 className="text-white font-bold group-hover:text-racing-orange transition-colors text-sm md:text-base line-clamp-1" dangerouslySetInnerHTML={{__html: topic.title}}></h3>
                        <div className="flex items-center gap-2 text-zinc-500 text-xs mt-1">
-                          <span className="flex items-center gap-1"><User className="w-3 h-3" /> {topic.author}</span>
+                          <span className="flex items-center gap-1 font-bold text-zinc-400"><User className="w-3 h-3" /> {topic.author}</span>
                           <span>•</span>
                           <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {topic.date}</span>
                        </div>
@@ -314,16 +328,18 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
                                     <User className="w-full h-full p-2 text-zinc-500" />
                                   )}
                                </div>
-                               <span className="text-zinc-400 text-xs font-bold block">{reply.author}</span>
-                               <span className="text-[10px] text-racing-orange bg-racing-orange/10 px-1 rounded-sm uppercase">{reply.authorRole || 'Racer'}</span>
+                               <span className="text-zinc-400 text-xs font-bold block truncate max-w-[80px]">{reply.author}</span>
+                               <span className={`text-[10px] px-1 rounded-sm uppercase ${idx === 0 ? 'text-racing-orange bg-racing-orange/10' : 'text-zinc-500 bg-zinc-800'}`}>
+                                  {idx === 0 ? 'OP' : (reply.authorRole || 'Racer')}
+                               </span>
                             </div>
                             
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                                <div className="flex justify-between items-start mb-4">
                                   <span className="text-zinc-600 text-xs flex items-center gap-1"><Clock className="w-3 h-3" /> {reply.date}</span>
                                   <button className="text-zinc-600 hover:text-white"><Quote className="w-4 h-4" /></button>
                                </div>
-                               <div className="prose prose-invert prose-sm max-w-none text-zinc-300" dangerouslySetInnerHTML={{__html: reply.content}}></div>
+                               <div className="prose prose-invert prose-sm max-w-none text-zinc-300 break-words" dangerouslySetInnerHTML={{__html: reply.content}}></div>
                             </div>
                          </div>
                       </div>

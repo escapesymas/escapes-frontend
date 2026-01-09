@@ -142,6 +142,7 @@ export interface ForumTopic {
   replies: number;
   isPinned?: boolean;
   tags?: string[];
+  content?: string;
 }
 
 export interface ForumReply {
