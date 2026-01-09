@@ -10,6 +10,7 @@ import { CategoryBrowser } from './components/CategoryBrowser';
 import { STORE_CONFIG, FEATURES, BIKE_DATA } from './storeData';
 import { fetchProducts, isConfigValid } from './services/woocommerce';
 import { saveSession, getSession, logoutSession } from './services/auth';
+import { pageview } from './services/analytics'; // Importar Analytics
 import { Product, BikeSelection, CartItem, User } from './types';
 
 // Lazy Components
@@ -42,6 +43,18 @@ function App() {
     const savedUser = getSession();
     if (savedUser) setUser(savedUser);
   }, []);
+
+  // ANALYTICS: Trackear cambios de vista (Virtual Page Views)
+  useEffect(() => {
+    let path = `/${currentView}`;
+    
+    // Si estamos viendo un producto, añadir su ID a la URL virtual
+    if (currentView === 'product' && selectedProduct) {
+      path = `/product/${selectedProduct.id}-${selectedProduct.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+    }
+    
+    pageview(path);
+  }, [currentView, selectedProduct]);
 
   const loadFeaturedProducts = async () => {
     setLoading(true);
