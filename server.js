@@ -1,6 +1,7 @@
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import nodemailer from 'nodemailer';
 
 const app = express();
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -55,9 +56,7 @@ app.use('/wp-json', async (req, res) => {
 });
 
 // 2. Proxy de Rescate (Ruta Fallback ?rest_route=)
-// Esto permite conectar a la API aunque los permalinks de WP estén rotos.
 app.use('/wp-fallback', async (req, res) => {
-  // req.url aquí ya incluye la query string (e.g. /?rest_route=/wc/v3/...)
   await handleProxyResponse(`https://backendescapes.com${req.url}`, req, res);
 });
 
@@ -89,30 +88,74 @@ app.post('/api/checkout', async (req, res) => {
   }
 });
 
-// Endpoint para procesar Garantías (Simulación de Envío)
-app.post('/api/warranty', (req, res) => {
+// Endpoint para procesar Garantías y Devoluciones (SMTP Real)
+app.post('/api/warranty', async (req, res) => {
   const { invoiceNumber, purchaseDate, buyerName, email, phone, products, images } = req.body;
 
-  // Validación básica
   if (!invoiceNumber || !email) {
     return res.status(400).json({ message: "Faltan datos obligatorios." });
   }
 
-  // Aquí iría la integración con Nodemailer o un servicio externo (SendGrid, Mailgun)
-  // Como no tenemos credenciales SMTP configuradas, simulamos el éxito.
-  
-  console.log("--- SOLICITUD DE GARANTÍA RECIBIDA ---");
-  console.log(`Para: garantias@escapesymas.com`);
-  console.log(`Cliente: ${buyerName} (${email})`);
-  console.log(`Factura: ${invoiceNumber}`);
-  console.log(`Productos:`, products);
-  console.log(`Imágenes adjuntas: ${images ? images.length : 0}`);
-  console.log("---------------------------------------");
+  // Configuración del Transporter SMTP
+  const transporter = nodemailer.createTransport({
+    host: "smtp.buzondecorreo.com",
+    port: 465,
+    secure: true, // SSL/TLS
+    auth: {
+      user: "garantiasydevoluciones@escapesymas.com",
+      pass: "Pedrito2011P!"
+    }
+  });
 
-  // Simulamos un delay de red
-  setTimeout(() => {
-    res.status(200).json({ success: true, message: "Garantía procesada correctamente." });
-  }, 1500);
+  // Preparar contenido HTML del correo
+  const productRows = products.map(p => `
+    <tr>
+      <td style="padding: 8px; border: 1px solid #ddd;">${p.name}</td>
+      <td style="padding: 8px; border: 1px solid #ddd;">${p.issue}</td>
+    </tr>
+  `).join('');
+
+  const mailOptions = {
+    from: '"Escapes y Más - Garantías" <garantiasydevoluciones@escapesymas.com>',
+    to: "garantiasydevoluciones@escapesymas.com", // Se envía a sí mismo como indicaste
+    replyTo: email, // Responder al cliente
+    subject: `Nueva Solicitud: ${buyerName} - Ref: ${invoiceNumber}`,
+    html: `
+      <h2>Nueva Solicitud de Garantía / Devolución</h2>
+      <p><strong>Cliente:</strong> ${buyerName}</p>
+      <p><strong>Email:</strong> ${email}</p>
+      <p><strong>Teléfono:</strong> ${phone}</p>
+      <p><strong>Nº Factura:</strong> ${invoiceNumber}</p>
+      <p><strong>Fecha Compra:</strong> ${purchaseDate}</p>
+      
+      <h3>Productos Afectados:</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background-color: #f2f2f2;">
+            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Producto</th>
+            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Incidencia</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${productRows}
+        </tbody>
+      </table>
+      <p><em>Este correo ha sido generado automáticamente desde el formulario web.</em></p>
+    `,
+    attachments: images ? images.map((img, idx) => ({
+      filename: `imagen-${idx + 1}.jpg`,
+      path: img // Nodemailer maneja Data URIs automáticamente
+    })) : []
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Correo enviado: %s", info.messageId);
+    res.status(200).json({ success: true, message: "Solicitud enviada correctamente." });
+  } catch (error) {
+    console.error("Error enviando email:", error);
+    res.status(500).json({ message: "Error al enviar el correo. Por favor contacta por teléfono." });
+  }
 });
 
 // Manejar cualquier otra ruta devolviendo el index.html (SPA)

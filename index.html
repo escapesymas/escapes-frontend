@@ -6,6 +6,16 @@
     <meta name="description" content="Tienda online especializada en repuestos de alto rendimiento para motocicletas. Escapes, frenos, transmisión y electrónica para Aprilia, BMW, Ducati, Honda, Kawasaki, KTM, Suzuki, Triumph y Yamaha." />
     <title>Escapes y Más | Performance Parts</title>
     
+    <!-- Google Analytics (GA4) -->
+    <!-- REEMPLAZA G-XXXXXXXXXX CON TU ID DE MEDICIÓN REAL -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XXXXXXXXXX');
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
@@ -54,7 +64,8 @@
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
     "express": "https://esm.sh/express@^5.2.1",
     "url": "https://esm.sh/url@^0.11.4",
-    "path": "https://esm.sh/path@^0.12.7"
+    "path": "https://esm.sh/path@^0.12.7",
+    "nodemailer": "https://esm.sh/nodemailer@^7.0.12"
   }
 }
 </script>

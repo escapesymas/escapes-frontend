@@ -1,5 +1,7 @@
-import React, { useState, useRef } from 'react';
-import { ArrowLeft, ShieldCheck, Plus, Trash2, Upload, Loader2, CheckCircle, AlertCircle, Camera } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, ShieldCheck, Plus, Trash2, Upload, Loader2, CheckCircle, AlertCircle, Camera, RefreshCw } from 'lucide-react';
+import { fetchProducts } from '../services/woocommerce';
+import { Product } from '../types';
 
 interface WarrantyProps {
   onBack: () => void;
@@ -25,7 +27,28 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Estado para el catálogo
+  const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
+  const [isLoadingCatalog, setIsLoadingCatalog] = useState(true);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Cargar productos al montar el componente
+  useEffect(() => {
+    const loadCatalog = async () => {
+      try {
+        // Pedimos productos genéricos para llenar el combo. 
+        // En una app real con miles de productos, esto debería ser un buscador asíncrono.
+        const items = await fetchProducts(); 
+        setCatalogProducts(items);
+      } catch (e) {
+        console.error("Error cargando catálogo para garantías", e);
+      } finally {
+        setIsLoadingCatalog(false);
+      }
+    };
+    loadCatalog();
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -77,7 +100,7 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
 
     // Validation
     if (products.some(p => !p.name || !p.issue)) {
-      setError("Por favor, completa la información de todos los productos afectados.");
+      setError("Por favor, selecciona el producto y describe la incidencia.");
       setLoading(false);
       return;
     }
@@ -119,7 +142,7 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
           </div>
           <h2 className="text-3xl font-bold text-white uppercase italic mb-2">Solicitud Enviada</h2>
           <p className="text-zinc-400 mb-8">
-            Hemos recibido tu solicitud de garantía. Nuestro equipo técnico revisará la incidencia y te contactará en <strong>garantias@escapesymas.com</strong> en un plazo máximo de 48h.
+            Hemos recibido tu solicitud de <strong>Garantía / Devolución</strong>. Nuestro equipo técnico revisará la incidencia y te contactará en <strong>garantiasydevoluciones@escapesymas.com</strong> en un plazo máximo de 48h.
           </p>
           <button 
             onClick={onBack}
@@ -145,8 +168,8 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
              <ShieldCheck className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl md:text-4xl font-extrabold text-white uppercase italic leading-none">
-              Gestión de Garantías
+            <h1 className="text-2xl md:text-4xl font-extrabold text-white uppercase italic leading-none">
+              Garantías y Devoluciones
             </h1>
             <p className="text-zinc-500 text-sm mt-1">
               Resolución de incidencias técnicas y devoluciones
@@ -201,7 +224,7 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
             <div className="flex justify-between items-center mb-6">
                <h3 className="text-white font-bold uppercase text-sm tracking-wider flex items-center gap-2">
                  <span className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-xs">2</span>
-                 Productos Afectados
+                 Productos a Devolver / Garantía
                </h3>
                <button type="button" onClick={addProductRow} className="text-racing-orange text-xs font-bold uppercase flex items-center gap-1 hover:text-white transition-colors">
                  <Plus className="w-4 h-4" /> Añadir otro producto
@@ -224,21 +247,45 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
                   
                   <div className="grid grid-cols-1 gap-4">
                     <div>
-                       <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Producto {index + 1}</label>
-                       <input 
-                         value={prod.name}
-                         onChange={(e) => handleProductChange(index, 'name', e.target.value)}
-                         className="w-full bg-black border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none"
-                         placeholder="Ej: Escape Akrapovic Carbono..."
-                       />
+                       <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Seleccionar Producto del Catálogo</label>
+                       {isLoadingCatalog ? (
+                          <div className="flex items-center gap-2 text-zinc-500 p-3 border border-zinc-700 rounded-sm">
+                             <Loader2 className="w-4 h-4 animate-spin" /> Cargando catálogo...
+                          </div>
+                       ) : (
+                          <select
+                            value={prod.name}
+                            onChange={(e) => handleProductChange(index, 'name', e.target.value)}
+                            className="w-full bg-black border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none appearance-none"
+                          >
+                            <option value="">-- Selecciona un artículo --</option>
+                            {catalogProducts.map((p) => (
+                               <option key={p.id} value={p.title}>{p.title}</option>
+                            ))}
+                            <option value="Otro">Otro / No aparece en la lista</option>
+                          </select>
+                       )}
                     </div>
+                    
+                    {/* Fallback si selecciona "Otro" */}
+                    {prod.name === 'Otro' && (
+                       <div>
+                          <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Nombre del Producto (Manual)</label>
+                          <input 
+                            onChange={(e) => handleProductChange(index, 'name', e.target.value)}
+                            className="w-full bg-black border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none"
+                            placeholder="Escribe el nombre del artículo..."
+                          />
+                       </div>
+                    )}
+
                     <div>
-                       <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Descripción de la Incidencia</label>
+                       <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Motivo de Devolución / Incidencia</label>
                        <input 
                          value={prod.issue}
                          onChange={(e) => handleProductChange(index, 'issue', e.target.value)}
                          className="w-full bg-black border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none"
-                         placeholder="Describe el defecto o problema..."
+                         placeholder="Ej: Defecto de fábrica, talla incorrecta, no compatible..."
                        />
                     </div>
                   </div>
@@ -251,7 +298,7 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
           <section className="bg-racing-carbon border border-zinc-800 p-6 rounded-sm">
             <h3 className="text-white font-bold uppercase mb-6 text-sm tracking-wider flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-xs">3</span>
-              Fotos de la Incidencia
+              Fotos de la Incidencia (Opcional)
             </h3>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
