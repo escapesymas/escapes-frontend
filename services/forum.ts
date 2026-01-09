@@ -1,6 +1,6 @@
 import { WOO_CONFIG } from '../storeData';
 import { ForumCategory, ForumTopic, ForumReply } from '../types';
-import { MessageSquare, Wrench, Gauge, Compass, Headphones, Aperture } from 'lucide-react';
+import { MessageSquare, Wrench, Bike, Shield, Compass, LifeBuoy, Flag } from 'lucide-react';
 
 // BASE URL NATIVA DE WORDPRESS
 const WP_API_BASE = WOO_CONFIG.baseUrl.replace(/\/$/, "") + '/wp-json/wp/v2';
@@ -11,50 +11,58 @@ const WP_API_BASE = WOO_CONFIG.baseUrl.replace(/\/$/, "") + '/wp-json/wp/v2';
  */
 const FORUM_SCHEMA: ForumCategory[] = [
   {
+    id: 'start_zone',
+    title: 'La Zona de Salida',
+    description: 'Bienvenidas, presentaciones, normas y charla general off-topic.',
+    icon: Flag,
+    topicCount: 12
+  },
+  {
     id: 'mechanic',
-    title: 'Mecánica y Taller',
-    description: 'Dudas técnicas, montajes, reparaciones y mantenimiento.',
+    title: 'El Taller',
+    description: 'Mecánica, dudas técnicas, bricos, reparaciones y mantenimiento.',
     icon: Wrench,
-    topicCount: 15
+    topicCount: 45
   },
   {
-    id: 'showroom',
-    title: 'Showroom & Sound',
-    description: 'Enseña tu máquina. Fotos, videos de escapes y modificaciones.',
-    icon: Aperture,
-    topicCount: 42
+    id: 'brands',
+    title: 'Por Marcas y Modelos',
+    description: 'Espacio dedicado por fabricante: Aprilia, BMW, Ducati, Yamaha, etc.',
+    icon: Bike,
+    topicCount: 89
   },
   {
-    id: 'racing',
-    title: 'Racing & Circuito',
-    description: 'Tiempos, técnicas de pilotaje, tandas y competición.',
-    icon: Gauge,
-    topicCount: 8
-  },
-  {
-    id: 'community',
-    title: 'Rutas y Paddock',
-    description: 'Quedadas, viajes, experiencias y charla general.',
-    icon: Compass,
+    id: 'gear',
+    title: 'Equipamiento y Accesorios',
+    description: 'Cascos, monos, guantes, chuches para la moto y reviews de material.',
+    icon: Shield,
     topicCount: 23
   },
   {
+    id: 'routes',
+    title: 'Rutas y Encuentros',
+    description: 'Organización de quedadas, rutas, viajes, circuitos y crónicas.',
+    icon: Compass,
+    topicCount: 34
+  },
+  {
     id: 'support',
-    title: 'Soporte Tienda',
-    description: 'Ayuda con pedidos, devoluciones y preguntas preventa.',
-    icon: Headphones,
-    topicCount: 5
+    title: 'Soporte y Sugerencias',
+    description: 'Ayuda con la web, atención al cliente y buzón de sugerencias.',
+    icon: LifeBuoy,
+    topicCount: 7
   }
 ];
 
 // Mapeo avanzado de iconos por si vienen de WP real
 const getIconForForum = (slug: string = '', id: string | number) => {
   const s = slug.toLowerCase();
+  if (s.includes('bienvenid') || s.includes('general') || s.includes('salida')) return Flag;
   if (s.includes('taller') || s.includes('mecanic') || s.includes('tecni')) return Wrench;
-  if (s.includes('racing') || s.includes('circuito') || s.includes('competi')) return Gauge;
-  if (s.includes('foto') || s.includes('video') || s.includes('show')) return Aperture;
-  if (s.includes('ruta') || s.includes('quedada') || s.includes('viaje')) return Compass;
-  if (s.includes('soporte') || s.includes('ayuda') || s.includes('tienda')) return Headphones;
+  if (s.includes('marca') || s.includes('modelo') || s.includes('bike')) return Bike;
+  if (s.includes('equip') || s.includes('accesori') || s.includes('casco')) return Shield;
+  if (s.includes('ruta') || s.includes('quedada') || s.includes('viaje') || s.includes('circuit')) return Compass;
+  if (s.includes('soporte') || s.includes('ayuda') || s.includes('sugerencia')) return LifeBuoy;
   return MessageSquare;
 };
 
@@ -249,18 +257,32 @@ export const createReply = async (
 const getMockTopics = (catId: string): ForumTopic[] => {
   const common = { author: 'Marc M.', date: 'Hoy', views: 120, replies: 5, authorAvatar: '', isPinned: false };
   
+  if (catId === 'start_zone') return [
+    { ...common, id: 501, categoryId: catId, title: 'Bienvenidos a Escapes y Más', content: 'Normas de la comunidad y presentaciones.', isPinned: true },
+    { ...common, id: 502, categoryId: catId, title: 'Me presento desde Madrid', content: 'Hola a todos, acabo de adquirir una Z900...' }
+  ];
+
   if (catId === 'mechanic') return [
     { ...common, id: 101, categoryId: catId, title: '¿Par de apriete colectores MT-09?', content: 'Hola, alguien tiene el manual de taller...', isPinned: true },
     { ...common, id: 102, categoryId: catId, title: 'Ruido metálico al reducir en S1000RR', content: 'Suena como una lata...' }
   ];
-  if (catId === 'showroom') return [
-    { ...common, id: 201, categoryId: catId, title: 'Mi Panigale V4 con línea completa Akrapovic', content: 'Os dejo unas fotos del montaje...', isPinned: true },
-    { ...common, id: 202, categoryId: catId, title: 'Antes y después: Z900 Full Black', content: 'Vinilado completo...' }
+
+  if (catId === 'brands') return [
+    { ...common, id: 601, categoryId: catId, title: '[Yamaha] Hilo Oficial MT-09 2024', content: 'Opiniones, configs y experiencias.', isPinned: true },
+    { ...common, id: 602, categoryId: catId, title: '[Ducati] Problema con el quickshifter', content: 'A veces no entra la tercera...' }
   ];
-  if (catId === 'racing') return [
-    { ...common, id: 301, categoryId: catId, title: 'Tandas Motorland Abril', content: '¿Quién se apunta?', isPinned: true }
+
+  if (catId === 'gear') return [
+    { ...common, id: 701, categoryId: catId, title: 'Review: Casco AGV Pista GP RR', content: 'Vale cada euro...', isPinned: true },
+    { ...common, id: 702, categoryId: catId, title: '¿Mejores guantes para invierno?', content: 'Busco tacto pero que no se congelen las manos.' }
   ];
+
+  if (catId === 'routes') return [
+    { ...common, id: 801, categoryId: catId, title: 'Ruta Pirineos - Junio 2025', content: 'Estamos organizando grupo...', isPinned: true },
+    { ...common, id: 802, categoryId: catId, title: 'Tandas en Cheste', content: '¿Alguien va el próximo finde?' }
+  ];
+
   return [
-    { ...common, id: 999, categoryId: catId, title: 'Bienvenido al foro Escapes y Más', content: 'Preséntate aquí.', isPinned: true }
+    { ...common, id: 999, categoryId: catId, title: 'Bienvenido al foro', content: 'Participa con respeto.', isPinned: true }
   ];
 };
