@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ShoppingCart, User, Menu, LogOut, Package, Settings, MessageSquare, X, ChevronRight } from 'lucide-react';
 import { STORE_CONFIG, NAV_LINKS } from '../storeData';
@@ -47,6 +48,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button 
               className="md:hidden text-zinc-400 hover:text-white"
               onClick={() => setIsMobileMenuOpen(true)}
+              aria-label="Abrir menú"
             >
               <Menu className="w-6 h-6" />
             </button>
@@ -55,6 +57,8 @@ export const Header: React.FC<HeaderProps> = ({
               <img 
                 src={STORE_CONFIG.logoUrl} 
                 alt={STORE_CONFIG.name} 
+                width="150"
+                height="48"
                 className="h-8 md:h-12 w-auto object-contain transition-transform group-hover:scale-105" 
               />
             </div>
@@ -79,6 +83,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button 
               onClick={() => user ? setIsUserMenuOpen(!isUserMenuOpen) : onLoginClick?.()}
               className="text-zinc-400 hover:text-white transition-colors flex items-center gap-2"
+              aria-label="Perfil de usuario"
             >
               {user?.avatarUrl ? (
                 <img src={user.avatarUrl} className="w-6 h-6 rounded-full border border-zinc-700 object-cover" alt="Avatar" />
@@ -86,7 +91,7 @@ export const Header: React.FC<HeaderProps> = ({
               {user && <span className="text-xs font-bold hidden lg:block">{user.firstName}</span>}
             </button>
 
-            <button onClick={onCartClick} className="relative text-zinc-400 hover:text-white transition-colors">
+            <button onClick={onCartClick} className="relative text-zinc-400 hover:text-white transition-colors" aria-label="Carrito">
               <ShoppingCart className="w-5 h-5" />
               {cartCount > 0 && (
                 <span className="absolute -top-2 -right-2 bg-racing-orange text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
@@ -117,7 +122,7 @@ export const Header: React.FC<HeaderProps> = ({
             
             <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-racing-carbon">
               <span className="text-lg font-black uppercase italic text-white">Menú</span>
-              <button onClick={() => setIsMobileMenuOpen(false)} className="text-zinc-400 hover:text-white">
+              <button onClick={() => setIsMobileMenuOpen(false)} className="text-zinc-400 hover:text-white" aria-label="Cerrar menú">
                 <X className="w-6 h-6" />
               </button>
             </div>
@@ -126,7 +131,7 @@ export const Header: React.FC<HeaderProps> = ({
               {user && (
                 <div className="mb-6 p-4 bg-zinc-900 rounded-sm border border-zinc-800 flex items-center gap-3">
                    <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden">
-                      {user.avatarUrl ? <img src={user.avatarUrl} className="w-full h-full object-cover" /> : <User className="w-full h-full p-2 text-zinc-500" />}
+                      {user.avatarUrl ? <img src={user.avatarUrl} className="w-full h-full object-cover" alt="Avatar" /> : <User className="w-full h-full p-2 text-zinc-500" />}
                    </div>
                    <div>
                      <p className="text-white font-bold text-sm">{user.firstName}</p>
