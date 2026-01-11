@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Truck, ArrowLeft } from 'lucide-react';
+import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Truck, ArrowLeft, AlertCircle } from 'lucide-react';
 import { CartItem } from '../types';
 import { optimizeImage } from '../utils/imageOptimizer';
 
@@ -145,13 +146,13 @@ export const Cart: React.FC<CartProps> = ({
                 <span className="text-white font-medium">{formatPrice(subtotal)}</span>
               </div>
               <div className="flex justify-between text-zinc-400 text-sm">
-                <span>Envío</span>
+                <span>Envío (Despacho 24/48h)</span>
                 <span className="text-white font-medium">{formatPrice(shippingCost)}</span>
               </div>
               <div className="bg-zinc-900/50 p-3 rounded-sm border border-zinc-800 flex gap-2 items-start mt-2">
-                <Truck className="w-4 h-4 text-racing-orange flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-zinc-400">
-                  Gastos de envío calculados para la península.
+                <AlertCircle className="w-4 h-4 text-racing-orange flex-shrink-0 mt-0.5" />
+                <p className="text-[10px] text-zinc-500 leading-tight">
+                  Nota: El despacho se realiza en 24/48h. El plazo de entrega final depende del transportista.
                 </p>
               </div>
             </div>
@@ -162,18 +163,6 @@ export const Cart: React.FC<CartProps> = ({
                 <span className="text-3xl font-bold text-white block leading-none">{formatPrice(total)}</span>
                 <span className="text-zinc-500 text-xs">IVA incluido</span>
               </div>
-            </div>
-
-            <div className="mb-6">
-               <label className="text-zinc-500 text-xs uppercase font-bold mb-2 block">Código Promocional</label>
-               <div className="flex gap-2">
-                 <input 
-                   type="text" 
-                   placeholder="CUPÓN" 
-                   className="bg-zinc-900 border border-zinc-700 rounded-sm w-full px-3 py-2 text-sm text-white focus:outline-none focus:border-racing-orange"
-                 />
-                 <button className="bg-zinc-800 text-white px-3 py-2 rounded-sm font-bold text-xs uppercase hover:bg-zinc-700 border border-zinc-700">Aplicar</button>
-               </div>
             </div>
 
             <button 

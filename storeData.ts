@@ -1,9 +1,9 @@
+
 import { ShieldCheck, Truck, Trophy, CheckCircle2 } from 'lucide-react';
 
 // CONFIGURACIÓN DE CONEXIÓN WOOCOMMERCE
 export const WOO_CONFIG = {
-  // URL de Producción
-  baseUrl: "https://backendescapes.com",
+  baseUrl: "https://www.backendescapes.com",
   consumerKey: "ck_1525ca6e68eadc50cd7b69ae408ebb05b93c78e9",
   consumerSecret: "cs_42b5d60e45d4f6e710fa0fa0b35f1ae21964981a"
 };
@@ -18,9 +18,7 @@ export const PAYMENT_CONFIG = {
 // CONFIGURACIÓN GENERAL DE LA TIENDA
 export const STORE_CONFIG = {
   name: "Escapes y Más", 
-  // URL del logo actualizada
   logoUrl: "https://backendescapes.com/wp-content/uploads/2026/01/logo1-cab.png",
-  // URL de la imagen por defecto actualizada (ico.png)
   defaultProductImage: "https://backendescapes.com/wp-content/uploads/2026/01/ico.png",
   currency: "EUR",
   contactEmail: "info@escapesymas.com",
@@ -33,8 +31,20 @@ export const STORE_CONFIG = {
 export const FEATURES = [
   { icon: CheckCircle2, title: "100% Original", desc: "Material auténtico. Cero imitaciones." },
   { icon: ShieldCheck, title: "Garantía Oficial", desc: "Cobertura directa del fabricante." },
-  { icon: Truck, title: "Envío Seguro", desc: "Entrega asegurada en 24/48h." },
+  { icon: Truck, title: "Envío 24/48h", desc: "Despacho rápido desde almacén." },
   { icon: Trophy, title: "Solo Top Brands", desc: "Akrapovič, Brembo, Öhlins..." },
+];
+
+/**
+ * NAVEGACIÓN PRINCIPAL
+ */
+export const NAV_LINKS: { label: string; view: string; category?: string; highlight?: boolean }[] = [
+  { label: 'Inicio', view: 'home' },
+  { label: 'Catálogo', view: 'catalog' },
+  { label: 'Categorías', view: 'categories' },
+  { label: 'Paddock', view: 'forum', highlight: true },
+  { label: 'Garantías', view: 'warranty' },
+  { label: 'Contacto', view: 'contact' },
 ];
 
 /**
@@ -89,89 +99,45 @@ export const CATEGORIES = [
  * MAPA DE AÑOS POR MODELO (Para filtrado preciso)
  */
 export const MODEL_YEARS: Record<string, string[]> = {
-  // Aprilia
   "RS 660": ["2024", "2023", "2022", "2021", "2020"],
   "Tuono 660": ["2024", "2023", "2022", "2021"],
   "RSV4": ["2024", "2023", "2022", "2021", "2020", "2019", "2018", "2017", "2016", "2015"],
-  
-  // BMW
   "S 1000 RR": ["2024", "2023", "2022", "2021", "2020", "2019", "2018", "2017", "2016", "2015", "2014", "2013", "2012", "2011", "2010"],
   "M 1000 RR": ["2024", "2023", "2022", "2021"],
   "R 1250 GS": ["2024", "2023", "2022", "2021", "2020", "2019"],
   "R 1300 GS": ["2025", "2024"],
-  
-  // Ducati
   "Panigale V4": ["2024", "2023", "2022", "2021", "2020", "2019", "2018"],
   "Panigale V2": ["2024", "2023", "2022", "2021", "2020"],
   "Monster 937": ["2024", "2023", "2022", "2021"],
-  
-  // Honda
   "CBR1000RR-R Fireblade": ["2024", "2023", "2022", "2021", "2020"],
   "CBR650R": ["2024", "2023", "2022", "2021", "2020", "2019"],
   "CB750 Hornet": ["2024", "2023"],
   "XL750 Transalp": ["2024", "2023"],
   "Africa Twin": ["2024", "2023", "2022", "2021", "2020", "2019", "2018", "2017", "2016"],
-
-  // Kawasaki
   "Z900": ["2024", "2023", "2022", "2021", "2020", "2019", "2018", "2017"],
   "Ninja ZX-10R": ["2024", "2023", "2022", "2021", "2016-2020", "2011-2015"],
   "Ninja ZX-6R": ["2024", "2023", "2019-2022", "2013-2018"],
-
-  // KTM
   "Duke 390": ["2024", "2023", "2022", "2021", "2020", "2017-2019", "2013-2016"],
   "Duke 890": ["2023", "2022", "2021", "2020"],
   "1290 Super Duke R": ["2023", "2022", "2021", "2020", "2017-2019", "2014-2016"],
-
-  // Yamaha
   "MT-07": ["2024", "2023", "2022", "2021", "2018-2020", "2014-2017"],
   "MT-09": ["2024", "2023", "2022", "2021", "2017-2020", "2013-2016"],
-  "YZF-R1": ["2024", "2023", "2022", "2021", "2020", "2015-2019", "2009-2014"],
-  "Ténéré 700": ["2024", "2023", "2022", "2021", "2020", "2019"],
-  "TMAX 560": ["2024", "2023", "2022", "2021", "2020"]
+  "YZF-R1": ["2024", "2023", "2022", "2021", "2020", "2015-2019"]
 };
 
 /**
- * BASE DE DATOS ESTÁTICA
+ * DATOS ESTRUCTURADOS PARA SELECTORES
  */
 export const BIKE_DATA = {
-  brands: [
-    "Aprilia", "BMW", "Ducati", "Harley-Davidson", "Honda", "Husqvarna", 
-    "Indian", "Kawasaki", "KTM", "MV Agusta", "Royal Enfield", "Suzuki", "Triumph", "Yamaha"
-  ],
+  brands: ["Aprilia", "BMW", "Ducati", "Honda", "Kawasaki", "KTM", "Yamaha"],
   models: {
-    "Aprilia": ["RS 660", "Tuono 660", "RSV4", "Tuono V4", "Dorsoduro 900", "Shiver 900", "SR GT 125"],
-    "BMW": ["S 1000 RR", "M 1000 RR", "R 1250 GS", "R 1300 GS", "F 900 R", "F 900 XR", "F 850 GS", "S 1000 XR", "R nineT", "G 310 R"],
-    "Ducati": ["Panigale V4", "Panigale V2", "Streetfighter V4", "Streetfighter V2", "Monster 937", "Monster 821", "Multistrada V4", "Hypermotard 950", "Scrambler 800", "Diavel V4"],
-    "Harley-Davidson": ["Sportster S", "Pan America 1250", "Iron 883", "Softail Standard", "Fat Bob 114", "Street Bob 114"],
-    "Honda": ["CBR1000RR-R Fireblade", "CBR650R", "CB650R", "CB1000R", "CB750 Hornet", "XL750 Transalp", "CRF1100L Africa Twin", "X-ADV 750", "Forza 750", "CB500F", "CB500X", "Rebel 500", "Rebel 1100"],
-    "Husqvarna": ["Svartpilen 401", "Vitpilen 401", "701 Supermoto", "Norden 901"],
-    "Indian": ["Scout", "Scout Bobber", "FTR 1200", "Chief"],
-    "Kawasaki": ["Z900", "Z900RS", "Z650", "Z400", "Ninja ZX-10R", "Ninja ZX-6R", "Ninja 650", "Ninja 400", "Versys 650", "Versys 1000", "Vulcan S"],
-    "KTM": ["Duke 125", "Duke 390", "Duke 790", "Duke 890", "Duke 990", "1290 Super Duke R", "RC 390", "Adventure 390", "890 Adventure", "1290 Super Adventure"],
-    "MV Agusta": ["Brutale 800", "Dragster 800", "F3 800", "Superveloce 800", "Turismo Veloce"],
-    "Royal Enfield": ["Interceptor 650", "Continental GT 650", "Himalayan 411", "Himalayan 450", "Meteor 350", "Classic 350"],
-    "Suzuki": ["GSX-R1000", "GSX-S1000", "GSX-8S", "V-Strom 650", "V-Strom 800DE", "V-Strom 1050", "SV650", "Hayabusa"],
-    "Triumph": ["Street Triple 765", "Speed Triple 1200", "Trident 660", "Tiger 900", "Tiger 1200", "Bonneville T100", "Bonneville T120", "Speed Twin", "Thruxton RS"],
-    "Yamaha": ["MT-07", "MT-09", "MT-10", "MT-03", "MT-125", "YZF-R1", "YZF-R6", "YZF-R7", "YZF-R3", "YZF-R125", "Tracer 7", "Tracer 9", "Ténéré 700", "XSR 700", "XSR 900", "TMAX 560", "XMAX 300"]
+    "Aprilia": ["RS 660", "Tuono 660", "RSV4"],
+    "BMW": ["S 1000 RR", "M 1000 RR", "R 1250 GS", "R 1300 GS"],
+    "Ducati": ["Panigale V4", "Panigale V2", "Monster 937"],
+    "Honda": ["CBR1000RR-R Fireblade", "CBR650R", "CB750 Hornet", "XL750 Transalp", "Africa Twin"],
+    "Kawasaki": ["Z900", "Ninja ZX-10R", "Ninja ZX-6R"],
+    "KTM": ["Duke 390", "Duke 890", "1290 Super Duke R"],
+    "Yamaha": ["MT-07", "MT-09", "YZF-R1"]
   },
-  // Lista genérica de respaldo
-  years: [
-    "2025", "2024", "2023", "2022", "2021", "2020", 
-    "2019", "2018", "2017", "2016", "2015", "2014", 
-    "2013", "2012", "2011", "2010"
-  ]
+  years: ["2025", "2024", "2023", "2022", "2021", "2020", "2019", "2018", "2017", "2016", "2015"]
 };
-
-// ENLACES DEL MENÚ ACTUALIZADOS
-export const NAV_LINKS: { 
-  label: string; 
-  href: string; 
-  view: string; 
-  category?: string; 
-  highlight?: boolean 
-}[] = [
-  { label: "Comunidad", href: "#", view: "forum" }, 
-  { label: "Categorías", href: "#", view: "categories" },
-  { label: "Para tu moto", href: "#", view: "catalog" }, // Renombrado
-  { label: "Contacto", href: "#", view: "contact" }
-];

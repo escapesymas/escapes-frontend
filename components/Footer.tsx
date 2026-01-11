@@ -1,5 +1,5 @@
 import React from 'react';
-import { Facebook, Instagram, Twitter } from 'lucide-react';
+import { Instagram } from 'lucide-react';
 import { STORE_CONFIG, NAV_LINKS } from '../storeData';
 
 interface FooterProps {
@@ -7,6 +7,9 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ onNavClick }) => {
+  // Filtramos los enlaces para evitar redundancia con el botón de garantías
+  const footerNavLinks = NAV_LINKS.filter(link => link.view !== 'warranty');
+
   return (
     <footer className="bg-zinc-950 border-t border-zinc-800 pt-16 pb-8 text-sm">
       <div className="container mx-auto px-4">
@@ -26,14 +29,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick }) => {
               Elevamos tu experiencia en pista y carretera con las mejores marcas del mercado.
             </p>
             <div className="flex gap-4 pt-2">
-              <a href="#" className="w-10 h-10 bg-zinc-900 rounded-sm flex items-center justify-center text-zinc-400 hover:bg-racing-orange hover:text-white transition-colors">
+              <a 
+                href="https://www.instagram.com/escapesymas" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="w-10 h-10 bg-zinc-900 rounded-sm flex items-center justify-center text-zinc-400 hover:bg-racing-orange hover:text-white transition-colors"
+                title="Síguenos en Instagram @escapesymas"
+              >
                 <Instagram className="w-5 h-5" />
-              </a>
-              <a href="#" className="w-10 h-10 bg-zinc-900 rounded-sm flex items-center justify-center text-zinc-400 hover:bg-racing-orange hover:text-white transition-colors">
-                <Facebook className="w-5 h-5" />
-              </a>
-              <a href="#" className="w-10 h-10 bg-zinc-900 rounded-sm flex items-center justify-center text-zinc-400 hover:bg-racing-orange hover:text-white transition-colors">
-                <Twitter className="w-5 h-5" />
               </a>
             </div>
           </div>
@@ -42,7 +45,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick }) => {
           <div>
             <h3 className="text-white font-bold uppercase mb-6 tracking-wide border-b border-zinc-800 pb-2 inline-block">Navegación</h3>
             <ul className="space-y-3">
-              {NAV_LINKS.map((link, idx) => (
+              {footerNavLinks.map((link, idx) => (
                 <li key={idx}>
                   <button 
                     onClick={() => onNavClick(link.view)}
@@ -73,8 +76,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick }) => {
             <h3 className="text-white font-bold uppercase mb-6 tracking-wide border-b border-zinc-800 pb-2 inline-block">Soporte</h3>
             <ul className="space-y-4">
               <li className="pt-2">
-                 <button onClick={() => onNavClick('warranty')} className="text-racing-orange hover:text-white transition-colors flex items-center gap-2 uppercase font-bold text-xs border border-racing-orange px-3 py-2 rounded-sm w-fit">
-                    Gestión de Garantías
+                 <button 
+                    onClick={() => onNavClick('warranty')} 
+                    className="text-racing-orange hover:bg-racing-orange hover:text-white transition-all flex items-center gap-2 uppercase font-black text-sm border-2 border-racing-orange px-10 py-4 rounded-sm w-full md:w-fit text-center justify-center shadow-lg shadow-orange-900/30 hover:scale-[1.02] active:scale-95 transition-all"
+                 >
+                    Gestión de garantías y devoluciones
                  </button>
               </li>
             </ul>

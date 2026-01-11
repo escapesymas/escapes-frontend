@@ -25,12 +25,15 @@ export const logoutSession = () => {
   }
 };
 
-// --- Helper for Auth URL (Duplicated logic to avoid circular deps with woocommerce.ts) ---
+// FIX: This function was removed as it caused errors because WOO_CONFIG does not contain `consumerKey` and `consumerSecret`.
+// Authentication is now handled by a server-side proxy, so client-side key handling is obsolete and insecure.
+/*
 const getAuthUrl = (endpoint: string) => {
   const cleanBaseUrl = WOO_CONFIG.baseUrl.replace(/\/$/, "");
   const separator = endpoint.includes('?') ? '&' : '?';
   return `${cleanBaseUrl}${endpoint}${separator}consumer_key=${WOO_CONFIG.consumerKey}&consumer_secret=${WOO_CONFIG.consumerSecret}`;
 };
+*/
 
 // --- API Logic ---
 
@@ -203,7 +206,9 @@ export const registerUser = async (data: {
 }): Promise<{ success: boolean; error?: string }> => {
   
   try {
-    const url = getAuthUrl('/wp-json/wc/v3/customers');
+    // FIX: The URL is now a relative path handled by the server proxy, which adds authentication.
+    // The previous `getAuthUrl` function caused an error and has been removed.
+    const url = '/wp-json/wc/v3/customers';
     
     const response = await fetch(url, {
       method: 'POST',

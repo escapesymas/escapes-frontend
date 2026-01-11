@@ -1,8 +1,10 @@
+
 export interface Product {
   id: number;
   title: string;
   price: number;
   regularPrice: number; // Added: Original price before discount
+  sku: string; // Added: Product reference
   image: string;
   inStock: boolean;
   category: string;
@@ -51,6 +53,7 @@ export interface WooProduct {
   name: string;
   price: string;
   regular_price: string;
+  sku: string; // Added
   stock_status: string;
   categories: { id: number; name: string }[];
   images: { id: number; src: string; alt: string }[];

@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, ShieldCheck, Plus, Trash2, Upload, Loader2, CheckCircle, AlertCircle, Camera, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, Plus, Trash2, Upload, Loader2, CheckCircle, AlertCircle, Camera, Search } from 'lucide-react';
 import { fetchProducts } from '../services/woocommerce';
 import { Product } from '../types';
 
@@ -12,6 +13,96 @@ interface WarrantyProduct {
   issue: string;
 }
 
+// Sub-componente para el buscador predictivo
+const ProductSearchInput = ({ 
+  value, 
+  onChange, 
+  placeholder 
+}: { 
+  value: string; 
+  onChange: (val: string) => void;
+  placeholder: string; 
+}) => {
+  const [suggestions, setSuggestions] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (value.length > 2 && showDropdown) {
+        setLoading(true);
+        try {
+          // Destructure products from fetchProducts result
+          const results = await fetchProducts(value);
+          setSuggestions(results.products);
+        } catch (e) {
+          console.error("Error buscando productos", e);
+        } finally {
+          setLoading(false);
+        }
+      }
+    }, 600); 
+
+    return () => clearTimeout(timer);
+  }, [value, showDropdown]);
+
+  return (
+    <div ref={wrapperRef} className="relative w-full">
+      <div className="relative">
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => {
+            onChange(e.target.value);
+            setShowDropdown(true);
+          }}
+          onFocus={() => setShowDropdown(true)}
+          className="w-full bg-black border border-zinc-700 p-3 pl-10 text-white rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500"
+          placeholder={placeholder}
+        />
+        <Search className="absolute left-3 top-3.5 w-4 h-4 text-zinc-500" />
+        {loading && <Loader2 className="absolute right-3 top-3.5 w-4 h-4 text-racing-orange animate-spin" />}
+      </div>
+
+      {showDropdown && value.length > 2 && (
+        <div className="absolute z-50 w-full bg-zinc-900 border border-zinc-700 mt-1 rounded-sm shadow-xl max-h-60 overflow-y-auto custom-scrollbar">
+          {suggestions.length > 0 ? (
+            suggestions.map((product) => (
+              <button
+                key={product.id}
+                type="button"
+                onClick={() => {
+                  onChange(product.title);
+                  setShowDropdown(false);
+                }}
+                className="w-full text-left p-3 hover:bg-zinc-800 text-sm text-zinc-300 border-b border-zinc-800 last:border-0 flex items-center gap-3 transition-colors group"
+              >
+                <div className="w-8 h-8 bg-white rounded-sm overflow-hidden flex-shrink-0 border border-zinc-700">
+                   <img src={product.image} className="w-full h-full object-contain" alt="" />
+                </div>
+                <span className="truncate group-hover:text-white transition-colors">{product.title}</span>
+              </button>
+            ))
+          ) : (
+            !loading && <div className="p-3 text-zinc-500 text-xs italic">No se encontraron productos. Puedes seguir escribiendo manualmente.</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
   const [formData, setFormData] = useState({
     invoiceNumber: '',
@@ -22,33 +113,12 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
   });
 
   const [products, setProducts] = useState<WarrantyProduct[]>([{ name: '', issue: '' }]);
-  const [images, setImages] = useState<string[]>([]); // Base64 strings
+  const [images, setImages] = useState<string[]>([]); 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Estado para el catálogo
-  const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
-  const [isLoadingCatalog, setIsLoadingCatalog] = useState(true);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Cargar productos al montar el componente
-  useEffect(() => {
-    const loadCatalog = async () => {
-      try {
-        // Pedimos productos genéricos para llenar el combo. 
-        // En una app real con miles de productos, esto debería ser un buscador asíncrono.
-        const items = await fetchProducts(); 
-        setCatalogProducts(items);
-      } catch (e) {
-        console.error("Error cargando catálogo para garantías", e);
-      } finally {
-        setIsLoadingCatalog(false);
-      }
-    };
-    loadCatalog();
-  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -72,10 +142,11 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const files = Array.from(e.target.files);
+      const files: File[] = Array.from(e.target.files);
+      const MAX_SIZE = 5 * 1024 * 1024; // 5MB
       
       files.forEach(file => {
-        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        if (file.size > MAX_SIZE) {
            alert(`La imagen ${file.name} supera el límite de 5MB.`);
            return;
         }
@@ -98,7 +169,6 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
     setLoading(true);
     setError(null);
 
-    // Validation
     if (products.some(p => !p.name || !p.issue)) {
       setError("Por favor, selecciona el producto y describe la incidencia.");
       setLoading(false);
@@ -106,7 +176,8 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
     }
 
     try {
-      const response = await fetch('/api/warranty', {
+      // Ahora enviamos directamente a WordPress a través del proxy /wp-json
+      const response = await fetch('/wp-json/escapes/v1/warranty', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -116,17 +187,24 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
         })
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get("content-type");
+      let data;
+      
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        data = await response.json();
+      } else {
+        throw new Error("El servidor no devolvió una respuesta válida (JSON).");
+      }
 
-      if (response.ok) {
+      if (response.ok && data.success) {
         setSuccess(true);
-        // Scroll to top
         window.scrollTo(0,0);
       } else {
         throw new Error(data.message || "Error al enviar la solicitud.");
       }
 
     } catch (err: any) {
+      console.error(err);
       setError(err.message || "Error de conexión. Inténtalo de nuevo.");
     } finally {
       setLoading(false);
@@ -140,9 +218,11 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
           <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/50">
             <CheckCircle className="w-10 h-10 text-green-500" />
           </div>
-          <h2 className="text-3xl font-bold text-white uppercase italic mb-2">Solicitud Enviada</h2>
+          <h2 className="text-3xl font-bold text-white uppercase italic mb-2">Solicitud Recibida</h2>
           <p className="text-zinc-400 mb-8">
-            Hemos recibido tu solicitud de <strong>Garantía / Devolución</strong>. Nuestro equipo técnico revisará la incidencia y te contactará en <strong>garantiasydevoluciones@escapesymas.com</strong> en un plazo máximo de 48h.
+            Tu caso ha sido registrado en nuestro sistema de <strong>Garantías</strong>.
+            <br/><br/>
+            Te hemos enviado un correo de confirmación y nuestro equipo técnico revisará las pruebas adjuntas.
           </p>
           <button 
             onClick={onBack}
@@ -180,7 +260,10 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
         {error && (
           <div className="mb-6 bg-red-900/20 border border-red-800 p-4 rounded-sm flex items-start gap-3">
              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-             <p className="text-red-200 text-sm">{error}</p>
+             <div className="text-sm">
+                <p className="text-red-200 font-bold mb-1">Hubo un problema:</p>
+                <p className="text-red-300">{error}</p>
+             </div>
           </div>
         )}
 
@@ -247,38 +330,14 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
                   
                   <div className="grid grid-cols-1 gap-4">
                     <div>
-                       <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Seleccionar Producto del Catálogo</label>
-                       {isLoadingCatalog ? (
-                          <div className="flex items-center gap-2 text-zinc-500 p-3 border border-zinc-700 rounded-sm">
-                             <Loader2 className="w-4 h-4 animate-spin" /> Cargando catálogo...
-                          </div>
-                       ) : (
-                          <select
-                            value={prod.name}
-                            onChange={(e) => handleProductChange(index, 'name', e.target.value)}
-                            className="w-full bg-black border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none appearance-none"
-                          >
-                            <option value="">-- Selecciona un artículo --</option>
-                            {catalogProducts.map((p) => (
-                               <option key={p.id} value={p.title}>{p.title}</option>
-                            ))}
-                            <option value="Otro">Otro / No aparece en la lista</option>
-                          </select>
-                       )}
+                       <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Producto del Catálogo</label>
+                       <ProductSearchInput 
+                         value={prod.name}
+                         onChange={(val) => handleProductChange(index, 'name', val)}
+                         placeholder="Escribe para buscar (Ej: Escape Akrapovic...)"
+                       />
                     </div>
                     
-                    {/* Fallback si selecciona "Otro" */}
-                    {prod.name === 'Otro' && (
-                       <div>
-                          <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Nombre del Producto (Manual)</label>
-                          <input 
-                            onChange={(e) => handleProductChange(index, 'name', e.target.value)}
-                            className="w-full bg-black border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none"
-                            placeholder="Escribe el nombre del artículo..."
-                          />
-                       </div>
-                    )}
-
                     <div>
                        <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Motivo de Devolución / Incidencia</label>
                        <input 
@@ -333,7 +392,8 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
               />
             </div>
             <p className="text-zinc-500 text-xs mt-4">
-              * Formatos aceptados: JPG, PNG. Máx 5MB por foto.
+              * Formatos: JPG, PNG. Máx 5MB por foto. <br/>
+              * Recomendamos no adjuntar más de 3-4 fotos para asegurar el envío rápido.
             </p>
           </section>
 
