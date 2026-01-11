@@ -6,27 +6,21 @@
     <meta name="description" content="Tienda online especializada en repuestos de alto rendimiento para motocicletas. Escapes, frenos, transmisión y electrónica para Aprilia, BMW, Ducati, Honda, Kawasaki, KTM, Suzuki, Triumph y Yamaha." />
     <title>Escapes y Más | Performance Parts</title>
     
-    <!-- Pre-conexión a orígenes críticos para reducir latencia -->
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="https://backendescapes.com/wp-content/uploads/2026/01/icow4.png">
+
+    <!-- Pre-conexión a orígenes críticos -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://wsrv.nl">
     <link rel="preconnect" href="https://backendescapes.com">
 
-    <!-- Pre-carga de la fuente crítica para evitar flash de texto invisible -->
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" media="print" onload="this.media='all'">
-
-    <!-- Pre-carga de la imagen de LCP con prioridad alta para mejorar el tiempo de carga visual -->
+    <!-- Pre-carga de la imagen LCP con la URL exacta que usará el componente -->
     <link rel="preload" as="image" href="https://wsrv.nl/?url=https%3A%2F%2Fimages.unsplash.com%2Fphoto-1591637333184-19aa84b3e01f&w=800&output=webp&q=80&l=5" fetchpriority="high">
 
-    <!-- Google Analytics (GA4) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-XXXXXXXXXX');
-    </script>
+    <!-- Carga de fuentes optimizada (no bloqueante) -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" media="print" onload="this.media='all'">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>

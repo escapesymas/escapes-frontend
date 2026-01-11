@@ -30,7 +30,6 @@ export const Header: React.FC<HeaderProps> = ({
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Filtramos los enlaces para quitar "Garantías" de la cabecera
   const filteredNavLinks = NAV_LINKS.filter(link => link.view !== 'warranty');
 
   const handleMobileNavClick = (view: any, category?: string) => {
@@ -43,7 +42,6 @@ export const Header: React.FC<HeaderProps> = ({
       <header className="sticky top-0 z-50 w-full bg-racing-carbon/95 backdrop-blur-md border-b border-zinc-800">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           
-          {/* LOGO & MOBILE MENU TOGGLE */}
           <div className="flex items-center gap-2 md:gap-4">
             <button 
               className="md:hidden text-zinc-400 hover:text-white"
@@ -64,7 +62,6 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* DESKTOP NAVIGATION */}
           <nav className="hidden md:flex items-center gap-6">
             {filteredNavLinks.map((link, idx) => (
               <button 
@@ -78,7 +75,6 @@ export const Header: React.FC<HeaderProps> = ({
             ))}
           </nav>
 
-          {/* ACTIONS */}
           <div className="flex items-center gap-3 md:gap-5">
             <button 
               onClick={() => user ? setIsUserMenuOpen(!isUserMenuOpen) : onLoginClick?.()}
@@ -86,7 +82,7 @@ export const Header: React.FC<HeaderProps> = ({
               aria-label="Perfil de usuario"
             >
               {user?.avatarUrl ? (
-                <img src={user.avatarUrl} className="w-6 h-6 rounded-full border border-zinc-700 object-cover" alt="Avatar" />
+                <img src={user.avatarUrl} className="w-6 h-6 rounded-full border border-zinc-700 object-cover" width="24" height="24" alt="Avatar" />
               ) : <User className="w-5 h-5" />}
               {user && <span className="text-xs font-bold hidden lg:block">{user.firstName}</span>}
             </button>
@@ -100,7 +96,6 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </button>
 
-            {/* User Dropdown (Desktop) */}
             {isUserMenuOpen && user && (
               <div className="absolute right-4 top-16 w-48 bg-zinc-900 border border-zinc-800 shadow-2xl rounded-sm py-2 animate-fade-in hidden md:block">
                 <button onClick={() => { setIsUserMenuOpen(false); onOrdersClick?.(); }} className="w-full text-left px-4 py-2 text-xs font-bold uppercase text-zinc-400 hover:bg-zinc-800 hover:text-white flex items-center gap-2"><Package className="w-4 h-4" /> Mis Pedidos</button>
@@ -114,7 +109,6 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </header>
 
-      {/* MOBILE MENU OVERLAY */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-[60] flex md:hidden">
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)}></div>
@@ -131,7 +125,7 @@ export const Header: React.FC<HeaderProps> = ({
               {user && (
                 <div className="mb-6 p-4 bg-zinc-900 rounded-sm border border-zinc-800 flex items-center gap-3">
                    <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden">
-                      {user.avatarUrl ? <img src={user.avatarUrl} className="w-full h-full object-cover" alt="Avatar" /> : <User className="w-full h-full p-2 text-zinc-500" />}
+                      {user.avatarUrl ? <img src={user.avatarUrl} className="w-full h-full object-cover" width="40" height="40" alt="Avatar" /> : <User className="w-full h-full p-2 text-zinc-500" />}
                    </div>
                    <div>
                      <p className="text-white font-bold text-sm">{user.firstName}</p>
@@ -156,18 +150,6 @@ export const Header: React.FC<HeaderProps> = ({
                   </button>
                 ))}
               </div>
-
-              {user && (
-                <div className="space-y-1 mt-6">
-                  <p className="text-zinc-600 text-[10px] font-bold uppercase tracking-widest mb-2 px-2">Mi Cuenta</p>
-                  <button onClick={() => { setIsMobileMenuOpen(false); onOrdersClick?.(); }} className="w-full text-left p-3 rounded-sm flex items-center gap-3 text-sm font-bold uppercase text-zinc-400 hover:bg-zinc-900 hover:text-white">
-                    <Package className="w-4 h-4" /> Mis Pedidos
-                  </button>
-                  <button onClick={() => { setIsMobileMenuOpen(false); onAccountClick?.(); }} className="w-full text-left p-3 rounded-sm flex items-center gap-3 text-sm font-bold uppercase text-zinc-400 hover:bg-zinc-900 hover:text-white">
-                    <Settings className="w-4 h-4" /> Configuración
-                  </button>
-                </div>
-              )}
             </div>
 
             <div className="p-4 border-t border-zinc-800 bg-zinc-900">
