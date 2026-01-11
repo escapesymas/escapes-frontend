@@ -19,7 +19,7 @@ export const PAYMENT_CONFIG = {
 export const STORE_CONFIG = {
   name: "Escapes y Más", 
   logoUrl: "https://backendescapes.com/wp-content/uploads/2026/01/logo1-cab.png",
-  defaultProductImage: "https://backendescapes.com/wp-content/uploads/2026/01/ico.png",
+  defaultProductImage: "https://backendescapes.com/wp-content/uploads/2026/01/ico-1.png",
   currency: "EUR",
   contactEmail: "info@escapesymas.com",
   heroTitle: "Equipamiento Pro",
