@@ -22,7 +22,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
   const hasDiscount = product.regularPrice > product.price;
   const isDefaultImage = product.image === STORE_CONFIG.defaultProductImage;
   
-  // Siempre optimizamos para asegurar formato WebP y tamaño ajustado al contenedor
   const displayImage = optimizeImage(product.image, 400, 400);
 
   return (
@@ -30,7 +29,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
       onClick={() => onClick?.(product)}
       className="group bg-racing-carbon border border-zinc-800 hover:border-racing-orange/50 transition-all duration-300 rounded-sm overflow-hidden flex flex-col cursor-pointer"
     >
-      {/* Image Container */}
       <div className="relative aspect-square overflow-hidden bg-white">
         {!isDefaultImage && (
            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10" />
@@ -57,7 +55,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
           )}
         </div>
         
-        {/* Discount Badge */}
         {hasDiscount && (
           <span className="absolute top-2 right-2 z-20 bg-racing-red text-white text-[10px] md:text-xs font-bold px-1.5 py-0.5 uppercase rounded-sm shadow-lg">
             Oferta
@@ -65,12 +62,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
         )}
       </div>
 
-      {/* Content */}
       <div className="p-3 md:p-4 flex flex-col flex-grow">
         <span className="text-zinc-500 text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1 truncate">
           {product.category}
         </span>
-        {/* Responsive Title: text-sm on mobile, text-lg on desktop */}
         <h3 className="text-white font-bold text-sm md:text-lg leading-tight mb-2 group-hover:text-racing-orange transition-colors line-clamp-2">
           {product.title}
         </h3>

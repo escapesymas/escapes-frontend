@@ -14,10 +14,8 @@ import { fetchProducts, isConfigValid } from './services/woocommerce';
 import { saveSession, getSession, logoutSession } from './services/auth';
 import { pageview } from './services/analytics';
 import { Product, BikeSelection, CartItem, User } from './types';
-// Import optimizeImage utility
 import { optimizeImage } from './utils/imageOptimizer';
 
-// Add lazy-loaded components to resolve "Cannot find name" errors
 const Checkout = React.lazy(() => import('./components/Checkout').then(m => ({ default: m.Checkout })));
 const Login = React.lazy(() => import('./components/Login').then(m => ({ default: m.Login })));
 const Register = React.lazy(() => import('./components/Register').then(m => ({ default: m.Register })));
@@ -41,12 +39,10 @@ function App() {
   const [user, setUser] = useState<User | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  // Paginación
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const catalogRef = useRef<HTMLDivElement>(null);
 
-  // Parámetros de búsqueda actuales para persistir en paginación
   const [searchParams, setSearchParams] = useState<{ query?: string, categoryId?: number, bike?: BikeSelection | null }>({
     query: undefined,
     categoryId: undefined,
@@ -67,10 +63,6 @@ function App() {
     pageview(path);
   }, [currentView, selectedProduct]);
 
-  /**
-   * DESTACADOS: Algoritmo de Curación Diversificada
-   * Solo 4 productos de 4 categorías diferentes (Filtros, Amortiguadores, Escapes Completos, Silenciosos)
-   */
   const loadFeaturedProducts = async () => {
     setLoading(true);
     setCurrentFilter(null);
@@ -79,13 +71,11 @@ function App() {
     setCurrentPage(1);
 
     try {
-      // Descargamos un lote grande (100) para tener variedad suficiente de donde elegir
       const { products: all } = await fetchProducts(undefined, undefined, 1, 100);
       
       const curated: Product[] = [];
       const usedCategories = new Set<string>();
 
-      // Definimos los términos de búsqueda para las 4 categorías clave
       const targets = [
         { key: 'Filtro', pattern: /filtro/i },
         { key: 'Amortiguador', pattern: /amortiguador|suspension|ohlins/i },
@@ -93,7 +83,6 @@ function App() {
         { key: 'Silencioso', pattern: /silencioso|slip-on/i }
       ];
 
-      // Buscamos 1 por cada target
       for (const target of targets) {
         const match = all.find(p => 
           target.pattern.test(p.title) && 
@@ -107,7 +96,6 @@ function App() {
         }
       }
 
-      // Fallback: Si no encontramos los 4 específicos, rellenamos con categorías únicas
       if (curated.length < 4) {
         for (const p of all) {
           if (curated.length >= 4) break;
@@ -196,7 +184,6 @@ function App() {
     setCurrentFilter(categoryName);
   };
 
-  // Reaccionar a cambios en searchParams para disparar fetch
   useEffect(() => {
     if (currentView === 'catalog') {
       handleProductFetch(1);
@@ -372,17 +359,15 @@ function App() {
           <>
             <section className="relative h-[400px] sm:h-[500px] md:h-[600px] flex items-center justify-center bg-zinc-900 overflow-hidden w-full">
               <div className="absolute inset-0 z-0">
-                {/* 
-                   Optimización LCP: 
-                   1. Usar optimizeImage con un ancho menor (800px) para móviles.
-                   2. fetchPriority="high" para que el navegador le de prioridad máxima.
-                */}
                 <img 
                    src={optimizeImage(STORE_CONFIG.heroImage, 800)} 
                    srcSet={`${optimizeImage(STORE_CONFIG.heroImage, 800)} 800w, ${optimizeImage(STORE_CONFIG.heroImage, 1920)} 1920w`}
                    sizes="(max-width: 768px) 800px, 1920px"
-                   alt="Hero" 
+                   alt="Hero Escapes y Mas" 
+                   // Fixed attribute: changed fetchpriority to fetchPriority as required by React
                    fetchPriority="high"
+                   width="800"
+                   height="600"
                    className="w-full h-full object-cover grayscale opacity-40" 
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/70 to-transparent"></div>
