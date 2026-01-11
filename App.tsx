@@ -372,8 +372,19 @@ function App() {
           <>
             <section className="relative h-[400px] sm:h-[500px] md:h-[600px] flex items-center justify-center bg-zinc-900 overflow-hidden w-full">
               <div className="absolute inset-0 z-0">
-                {/* Fixed use of optimizeImage */}
-                <img src={optimizeImage(STORE_CONFIG.heroImage, 1920)} alt="Hero" className="w-full h-full object-cover grayscale opacity-40" />
+                {/* 
+                   Optimización LCP: 
+                   1. Usar optimizeImage con un ancho menor (800px) para móviles.
+                   2. fetchPriority="high" para que el navegador le de prioridad máxima.
+                */}
+                <img 
+                   src={optimizeImage(STORE_CONFIG.heroImage, 800)} 
+                   srcSet={`${optimizeImage(STORE_CONFIG.heroImage, 800)} 800w, ${optimizeImage(STORE_CONFIG.heroImage, 1920)} 1920w`}
+                   sizes="(max-width: 768px) 800px, 1920px"
+                   alt="Hero" 
+                   fetchPriority="high"
+                   className="w-full h-full object-cover grayscale opacity-40" 
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/70 to-transparent"></div>
               </div>
               <div className="relative z-10 text-center px-4 mt-[-40px] w-full max-w-[100vw]">

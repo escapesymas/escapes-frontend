@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Instagram } from 'lucide-react';
 import { STORE_CONFIG, NAV_LINKS } from '../storeData';
@@ -21,6 +22,8 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick }) => {
               <img 
                 src={STORE_CONFIG.logoUrl} 
                 alt={STORE_CONFIG.name} 
+                width="180"
+                height="60"
                 className="h-12 w-auto object-contain" 
               />
             </div>

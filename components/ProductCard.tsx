@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ShoppingCart, CheckCircle } from 'lucide-react';
 import { Product } from '../types';
@@ -20,7 +21,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
 
   const hasDiscount = product.regularPrice > product.price;
   const isDefaultImage = product.image === STORE_CONFIG.defaultProductImage;
-  const displayImage = isDefaultImage ? product.image : optimizeImage(product.image, 400);
+  
+  // Siempre optimizamos para asegurar formato WebP y tamaño ajustado al contenedor
+  const displayImage = optimizeImage(product.image, 400, 400);
 
   return (
     <div 
@@ -99,6 +102,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
             }}
             className="bg-zinc-800 hover:bg-racing-orange text-white p-2 md:p-3 rounded-sm transition-colors duration-200 shadow-lg"
             title="Añadir al carrito"
+            aria-label="Añadir al carrito"
           >
             <ShoppingCart className="w-4 h-4 md:w-5 md:h-5" />
           </button>
