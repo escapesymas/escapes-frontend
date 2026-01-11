@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ArrowLeft, Send, Mail, Phone, MapPin, Loader2, CheckCircle, MessageSquare, Instagram, Facebook } from 'lucide-react';
+import { ArrowLeft, Send, Mail, MapPin, Loader2, CheckCircle, Instagram } from 'lucide-react';
 import { STORE_CONFIG } from '../storeData';
 
 interface ContactProps {
@@ -86,16 +86,6 @@ export const Contact: React.FC<ContactProps> = ({ onBack }) => {
 
               <div className="flex items-start gap-4">
                 <div className="p-3 bg-zinc-900 border border-zinc-800 rounded-sm text-racing-orange">
-                  <MessageSquare className="w-6 h-6" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-zinc-500 uppercase">WhatsApp Técnico</p>
-                  <p className="text-white font-bold">+34 600 000 000</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-zinc-900 border border-zinc-800 rounded-sm text-racing-orange">
                   <MapPin className="w-6 h-6" />
                 </div>
                 <div>
@@ -108,11 +98,8 @@ export const Contact: React.FC<ContactProps> = ({ onBack }) => {
             <div className="mt-12 pt-8 border-t border-zinc-900">
                <p className="text-xs font-bold text-zinc-600 uppercase mb-4">Síguenos en Pista</p>
                <div className="flex gap-4">
-                  <a href="#" className="w-10 h-10 bg-zinc-900 rounded-sm flex items-center justify-center text-zinc-400 hover:bg-racing-orange hover:text-white transition-colors">
+                  <a href="https://www.instagram.com/escapesymas" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-zinc-900 rounded-sm flex items-center justify-center text-zinc-400 hover:bg-racing-orange hover:text-white transition-colors">
                     <Instagram className="w-5 h-5" />
-                  </a>
-                  <a href="#" className="w-10 h-10 bg-zinc-900 rounded-sm flex items-center justify-center text-zinc-400 hover:bg-racing-orange hover:text-white transition-colors">
-                    <Facebook className="w-5 h-5" />
                   </a>
                </div>
             </div>
