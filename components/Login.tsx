@@ -11,8 +11,8 @@ interface LoginProps {
 
 export const Login: React.FC<LoginProps> = ({ onLoginSuccess, onBack, onRegisterClick }) => {
   // Credenciales reales pre-cargadas para facilitar pruebas
-  const [username, setUsername] = useState('adsave');
-  const [password, setPassword] = useState('Pedrito2011P!');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
