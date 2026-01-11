@@ -10,7 +10,7 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ onLoginSuccess, onBack, onRegisterClick }) => {
-  // Credenciales reales pre-cargadas para facilitar pruebas
+  // CORRECCIÓN: Se eliminaron las credenciales por defecto para evitar exposición.
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);

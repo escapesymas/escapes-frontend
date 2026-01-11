@@ -29,6 +29,9 @@ export const Header: React.FC<HeaderProps> = ({
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Filtramos los enlaces para quitar "Garantías" de la cabecera
+  const filteredNavLinks = NAV_LINKS.filter(link => link.view !== 'warranty');
+
   const handleMobileNavClick = (view: any, category?: string) => {
     setIsMobileMenuOpen(false);
     onNavClick(view, category);
@@ -49,7 +52,6 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             <div onClick={onLogoClick} className="cursor-pointer group flex items-center">
-              {/* Responsive Logo Height */}
               <img 
                 src={STORE_CONFIG.logoUrl} 
                 alt={STORE_CONFIG.name} 
@@ -60,7 +62,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* DESKTOP NAVIGATION */}
           <nav className="hidden md:flex items-center gap-6">
-            {NAV_LINKS.map((link, idx) => (
+            {filteredNavLinks.map((link, idx) => (
               <button 
                 key={idx}
                 onClick={() => onNavClick(link.view || 'catalog', link.category)}
@@ -135,7 +137,7 @@ export const Header: React.FC<HeaderProps> = ({
 
               <div className="space-y-1">
                 <p className="text-zinc-600 text-[10px] font-bold uppercase tracking-widest mb-2 px-2">Navegación</p>
-                {NAV_LINKS.map((link, idx) => (
+                {filteredNavLinks.map((link, idx) => (
                   <button 
                     key={idx}
                     onClick={() => handleMobileNavClick(link.view || 'catalog', link.category)}

@@ -4,32 +4,29 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   
-  const proxyConfig = {
-    target: 'https://backendescapes.com',
-    changeOrigin: true,
-    secure: false,
-    configure: (proxy, _options) => {
-      proxy.on('proxyReq', (proxyReq, req, _res) => {
-        proxyReq.removeHeader('Origin');
-        proxyReq.removeHeader('Referer');
-        proxyReq.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-      });
-    }
-  };
+  // Todas las peticiones al backend durante el desarrollo se canalizarán a través
+  // de nuestro servidor Node.js local (server.js) que actúa como un proxy seguro.
+  const localBackendTarget = 'http://localhost:8080';
 
   return {
     plugins: [react()],
     server: {
       proxy: {
-        // Proxy Estándar
-        '/wp-json': proxyConfig,
-        // Proxy Fallback (Redirige /wp-fallback a la raíz del dominio)
-        '/wp-fallback': {
-          ...proxyConfig,
-          rewrite: (path) => path.replace(/^\/wp-fallback/, '')
+        // Proxy para la API de WooCommerce
+        '/wp-json': {
+          target: localBackendTarget,
+          changeOrigin: true,
+          secure: false,
         },
+        // Proxy para la ruta de fallback de WooCommerce
+        '/wp-fallback': {
+          target: localBackendTarget,
+          changeOrigin: true,
+          secure: false,
+        },
+        // Proxy para nuestra API interna (ej. pagos con SumUp)
         '/api': {
-          target: 'http://localhost:8080',
+          target: localBackendTarget,
           changeOrigin: true,
           secure: false,
         }
