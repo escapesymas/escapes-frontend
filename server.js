@@ -17,8 +17,9 @@ const WOO_CONSUMER_SECRET = process.env.WOO_CONSUMER_SECRET || 'cs_42b5d60e45d4f
 const SUMUP_API_KEY = process.env.SUMUP_SECRET_KEY || 'sup_sk_s1ekP4mYZVZvgbU52Df6AdjxEwbC98wmT';
 const PROXY_TARGET_URL = 'https://backendescapes.com';
 
-// Middleware para parsear JSON
-app.use(express.json({ limit: '50mb' }));
+// Middleware para parsear JSON - IMPORTANTE: Límite alto para Base64
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
 // Servir archivos estáticos del build de React
 app.use(express.static(join(__dirname, 'dist')));

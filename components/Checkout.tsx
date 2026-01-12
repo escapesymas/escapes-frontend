@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { ShieldCheck, ArrowLeft, Lock, CheckCircle, Loader2, AlertCircle, XCircle, User, ArrowRight, Mail } from 'lucide-react';
 import { CartItem, User as UserType } from '../types';
@@ -529,6 +530,14 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
               <div className="flex justify-between items-end pt-4 border-t border-zinc-800 mt-4">
                 <span className="text-white font-bold text-lg">Total</span>
                 <span className="text-2xl font-bold text-white">{formatPrice(total)}</span>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-end mb-6">
+              <span className="text-white font-bold uppercase">Total</span>
+              <div className="text-right">
+                <span className="text-3xl font-bold text-white block leading-none">{formatPrice(total)}</span>
+                <span className="text-zinc-500 text-xs">Impuestos incluidos</span>
               </div>
             </div>
 
