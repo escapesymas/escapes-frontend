@@ -161,7 +161,7 @@ export const Cart: React.FC<CartProps> = ({
               <span className="text-white font-bold uppercase">Total</span>
               <div className="text-right">
                 <span className="text-3xl font-bold text-white block leading-none">{formatPrice(total)}</span>
-                <span className="text-zinc-500 text-xs">IVA incluido</span>
+                <span className="text-zinc-500 text-xs">Impuestos incluidos</span>
               </div>
             </div>
 

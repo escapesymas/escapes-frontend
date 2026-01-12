@@ -13,7 +13,6 @@ interface WarrantyProduct {
   issue: string;
 }
 
-// Sub-componente para el buscador predictivo
 const ProductSearchInput = ({ 
   value, 
   onChange, 
@@ -43,7 +42,6 @@ const ProductSearchInput = ({
       if (value.length > 2 && showDropdown) {
         setLoading(true);
         try {
-          // Destructure products from fetchProducts result
           const results = await fetchProducts(value);
           setSuggestions(results.products);
         } catch (e) {
@@ -95,7 +93,7 @@ const ProductSearchInput = ({
               </button>
             ))
           ) : (
-            !loading && <div className="p-3 text-zinc-500 text-xs italic">No se encontraron productos. Puedes seguir escribiendo manualmente.</div>
+            !loading && <div className="p-3 text-zinc-500 text-xs italic">No se encontraron productos.</div>
           )}
         </div>
       )}
@@ -169,14 +167,14 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
     setLoading(true);
     setError(null);
 
-    if (products.some(p => !p.name || !p.issue)) {
-      setError("Por favor, selecciona el producto y describe la incidencia.");
+    // Validación mínima
+    if (products.some(p => !p.name.trim() || !p.issue.trim())) {
+      setError("Por favor, completa la información de los productos y sus incidencias.");
       setLoading(false);
       return;
     }
 
     try {
-      // Ahora enviamos directamente a WordPress a través del proxy /wp-json
       const response = await fetch('/wp-json/escapes/v1/warranty', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -187,25 +185,17 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
         })
       });
 
-      const contentType = response.headers.get("content-type");
-      let data;
-      
-      if (contentType && contentType.indexOf("application/json") !== -1) {
-        data = await response.json();
-      } else {
-        throw new Error("El servidor no devolvió una respuesta válida (JSON).");
-      }
+      const data = await response.json();
 
       if (response.ok && data.success) {
         setSuccess(true);
-        window.scrollTo(0,0);
+        window.scrollTo(0, 0);
       } else {
-        throw new Error(data.message || "Error al enviar la solicitud.");
+        throw new Error(data.message || "Error al enviar la solicitud al servidor.");
       }
-
     } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Error de conexión. Inténtalo de nuevo.");
+      console.error("Submit error:", err);
+      setError(err.message || "No se pudo conectar con el servidor de garantías. Asegúrate de que el endpoint esté activo en WordPress.");
     } finally {
       setLoading(false);
     }
@@ -218,11 +208,11 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
           <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/50">
             <CheckCircle className="w-10 h-10 text-green-500" />
           </div>
-          <h2 className="text-3xl font-bold text-white uppercase italic mb-2">Solicitud Recibida</h2>
-          <p className="text-zinc-400 mb-8">
-            Tu caso ha sido registrado en nuestro sistema de <strong>Garantías</strong>.
+          <h2 className="text-3xl font-bold text-white uppercase italic mb-2">Solicitud Enviada</h2>
+          <p className="text-zinc-400 mb-8 leading-relaxed">
+            Tu solicitud de garantía ha sido recibida con éxito. 
             <br/><br/>
-            Te hemos enviado un correo de confirmación y nuestro equipo técnico revisará las pruebas adjuntas.
+            Nuestro equipo técnico la revisará y te contactaremos en el email <strong>{formData.email}</strong> en un plazo de 24-48 horas laborables.
           </p>
           <button 
             onClick={onBack}
@@ -249,10 +239,10 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
           </div>
           <div>
             <h1 className="text-2xl md:text-4xl font-extrabold text-white uppercase italic leading-none">
-              Garantías y Devoluciones
+              Portal de Garantías
             </h1>
             <p className="text-zinc-500 text-sm mt-1">
-              Resolución de incidencias técnicas y devoluciones
+              Servicio posventa oficial Escapes y Más
             </p>
           </div>
         </div>
@@ -261,7 +251,7 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
           <div className="mb-6 bg-red-900/20 border border-red-800 p-4 rounded-sm flex items-start gap-3">
              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
              <div className="text-sm">
-                <p className="text-red-200 font-bold mb-1">Hubo un problema:</p>
+                <p className="text-red-200 font-bold mb-1">Error en el proceso:</p>
                 <p className="text-red-300">{error}</p>
              </div>
           </div>
@@ -269,17 +259,16 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
 
         <form onSubmit={handleSubmit} className="space-y-8">
           
-          {/* 1. Datos del Pedido y Cliente */}
           <section className="bg-racing-carbon border border-zinc-800 p-6 rounded-sm">
             <h3 className="text-white font-bold uppercase mb-6 text-sm tracking-wider flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-xs">1</span>
-              Datos de Compra
+              Información del Pedido
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Nº Factura / Pedido</label>
-                <input required name="invoiceNumber" value={formData.invoiceNumber} onChange={handleInputChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" placeholder="Ej: PED-12345" />
+                <input required name="invoiceNumber" value={formData.invoiceNumber} onChange={handleInputChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" placeholder="Ej: PED-2024-XXXX" />
               </div>
               <div>
                 <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Fecha de Compra</label>
@@ -287,30 +276,29 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
               </div>
               
               <div className="md:col-span-2">
-                <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Nombre del Comprador</label>
+                <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Nombre Titular</label>
                 <input required name="buyerName" value={formData.buyerName} onChange={handleInputChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Email</label>
+                <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Email de Contacto</label>
                 <input required type="email" name="email" value={formData.email} onChange={handleInputChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" placeholder="cliente@email.com" />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Teléfono</label>
-                <input required type="tel" name="phone" value={formData.phone} onChange={handleInputChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" placeholder="+34 600..." />
+                <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Teléfono Móvil</label>
+                <input required type="tel" name="phone" value={formData.phone} onChange={handleInputChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" placeholder="+34..." />
               </div>
             </div>
           </section>
 
-          {/* 2. Productos Afectados */}
           <section className="bg-racing-carbon border border-zinc-800 p-6 rounded-sm">
             <div className="flex justify-between items-center mb-6">
                <h3 className="text-white font-bold uppercase text-sm tracking-wider flex items-center gap-2">
                  <span className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-xs">2</span>
-                 Productos a Devolver / Garantía
+                 Detalles del Problema
                </h3>
                <button type="button" onClick={addProductRow} className="text-racing-orange text-xs font-bold uppercase flex items-center gap-1 hover:text-white transition-colors">
-                 <Plus className="w-4 h-4" /> Añadir otro producto
+                 <Plus className="w-4 h-4" /> Añadir otro artículo
                </button>
             </div>
 
@@ -322,7 +310,6 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
                       type="button" 
                       onClick={() => removeProductRow(index)}
                       className="absolute top-2 right-2 p-2 text-zinc-600 hover:text-red-500 transition-colors"
-                      title="Eliminar línea"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -330,21 +317,23 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
                   
                   <div className="grid grid-cols-1 gap-4">
                     <div>
-                       <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Producto del Catálogo</label>
+                       <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Producto</label>
                        <ProductSearchInput 
                          value={prod.name}
                          onChange={(val) => handleProductChange(index, 'name', val)}
-                         placeholder="Escribe para buscar (Ej: Escape Akrapovic...)"
+                         placeholder="Busca el producto..."
                        />
                     </div>
                     
                     <div>
-                       <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Motivo de Devolución / Incidencia</label>
-                       <input 
+                       <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Descripción de la falla</label>
+                       <textarea 
+                         required
+                         rows={2}
                          value={prod.issue}
                          onChange={(e) => handleProductChange(index, 'issue', e.target.value)}
-                         className="w-full bg-black border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none"
-                         placeholder="Ej: Defecto de fábrica, talla incorrecta, no compatible..."
+                         className="w-full bg-black border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none resize-none"
+                         placeholder="Ej: El escape presenta una grieta en la soldadura tras 2 meses..."
                        />
                     </div>
                   </div>
@@ -353,11 +342,10 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
             </div>
           </section>
 
-          {/* 3. Fotos y Evidencias */}
           <section className="bg-racing-carbon border border-zinc-800 p-6 rounded-sm">
             <h3 className="text-white font-bold uppercase mb-6 text-sm tracking-wider flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-xs">3</span>
-              Fotos de la Incidencia (Opcional)
+              Evidencia Fotográfica
             </h3>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -380,7 +368,7 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
                 className="aspect-square bg-zinc-900 border-2 border-dashed border-zinc-700 rounded-sm flex flex-col items-center justify-center gap-2 text-zinc-500 hover:text-white hover:border-racing-orange transition-colors"
               >
                 <Camera className="w-6 h-6" />
-                <span className="text-xs uppercase font-bold">Añadir Foto</span>
+                <span className="text-xs uppercase font-bold">Subir Foto</span>
               </button>
               <input 
                 type="file" 
@@ -391,20 +379,19 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
                 onChange={handleFileChange}
               />
             </div>
-            <p className="text-zinc-500 text-xs mt-4">
-              * Formatos: JPG, PNG. Máx 5MB por foto. <br/>
-              * Recomendamos no adjuntar más de 3-4 fotos para asegurar el envío rápido.
+            <p className="text-zinc-500 text-[10px] mt-4 uppercase font-bold tracking-widest">
+              Límite 5MB por archivo. Formatos permitidos: JPG, PNG.
             </p>
           </section>
 
-          <div className="flex justify-end pt-6 border-t border-zinc-800">
+          <div className="flex justify-end pt-6">
              <button 
                type="submit" 
                disabled={loading}
-               className="bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase py-4 px-12 rounded-sm transition-all shadow-lg shadow-orange-900/20 flex items-center gap-2 disabled:opacity-50"
+               className="w-full md:w-auto bg-racing-orange hover:bg-orange-600 text-white font-black uppercase py-4 px-16 rounded-sm transition-all shadow-lg shadow-orange-900/40 flex items-center justify-center gap-2 disabled:opacity-50"
              >
                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
-               Enviar Solicitud
+               Enviar Informe Técnico
              </button>
           </div>
         </form>

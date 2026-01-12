@@ -82,7 +82,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
                   <span className="text-5xl font-black text-white">
                     {formatPrice(product.price)}
                   </span>
-                  <span className="text-zinc-500 text-sm font-bold pb-2 uppercase tracking-tighter">IVA INC.</span>
+                  <span className="text-zinc-500 text-sm font-bold pb-2 uppercase tracking-tighter">Impuestos incluidos</span>
                 </div>
               </div>
 

@@ -56,6 +56,7 @@ function App() {
     const idParam = params.get('id');
     const catParam = params.get('cat');
     const queryParam = params.get('q');
+    const pageParam = params.get('p');
 
     const initialize = async () => {
       if (viewParam === 'product' && idParam) {
@@ -69,6 +70,7 @@ function App() {
         } catch (e) {}
       } else if (viewParam === 'catalog') {
         setCurrentView('catalog');
+        if (pageParam) setCurrentPage(parseInt(pageParam));
         if (catParam) {
           setSearchParams({ categoryId: parseInt(catParam), bike: null });
         } else if (queryParam) {
@@ -101,24 +103,25 @@ function App() {
     } else if (currentView === 'catalog') {
       if (searchParams.categoryId) params.set('cat', searchParams.categoryId.toString());
       if (searchParams.query) params.set('q', searchParams.query);
+      if (currentPage > 1) params.set('p', currentPage.toString());
     }
 
     const newUrl = `${window.location.pathname}?${params.toString()}`;
     try {
       window.history.pushState({}, '', newUrl);
     } catch (e) {
-      console.warn("History API restricted in this environment.");
+      console.warn("History API restricted");
     }
     
     pageview(newUrl);
-  }, [currentView, selectedProduct, searchParams]);
+  }, [currentView, selectedProduct, searchParams, currentPage]);
 
   const loadFeaturedProducts = async () => {
     setLoading(true);
     setCurrentFilter(null);
     setError(null);
     try {
-      const { products: all } = await fetchProducts(undefined, undefined, 1, 100);
+      const { products: all } = await fetchProducts(undefined, undefined, 1, 10);
       const curated = all.filter(p => p.image !== STORE_CONFIG.defaultProductImage).slice(0, 4);
       setProducts(curated);
     } catch (e: any) {
@@ -142,6 +145,11 @@ function App() {
       setProducts(matches);
       setTotalPages(pages);
       setCurrentPage(page);
+      
+      // Scroll al inicio del catálogo si estamos navegando páginas
+      if (page > 1 || (currentView === 'catalog' && catalogRef.current)) {
+        catalogRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
     } catch (e: any) {
       setError("Error cargando productos");
       setErrorDetail(e.message);
@@ -211,15 +219,83 @@ function App() {
     });
   };
 
-  const renderProductGrid = () => {
-    if (loading) return <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 text-racing-orange animate-spin" /></div>;
-    if (error) return <div className="text-center py-20 text-red-500 font-bold">{error}</div>;
+  const renderPagination = () => {
+    if (totalPages <= 1 || loading) return null;
+
+    const pages = [];
+    for (let i = 1; i <= totalPages; i++) {
+      pages.push(i);
+    }
+
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {products.map(product => (
-          <ProductCard key={product.id} product={product} onClick={(p) => { setSelectedProduct(p); setCurrentView('product'); }} onAddToCart={() => addToCart(product, 1)} />
+      <div className="flex flex-wrap justify-center items-center gap-2 mt-12 py-8 border-t border-zinc-900">
+        <button 
+          disabled={currentPage === 1}
+          onClick={() => handleProductFetch(currentPage - 1)}
+          className="p-3 bg-zinc-900 border border-zinc-800 rounded-sm text-zinc-400 hover:text-white hover:border-racing-orange disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        
+        {pages.map(p => (
+          <button 
+            key={p}
+            onClick={() => handleProductFetch(p)}
+            className={`w-12 h-12 rounded-sm font-bold text-sm border transition-all ${currentPage === p ? 'bg-racing-orange border-racing-orange text-white' : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-600'}`}
+          >
+            {p}
+          </button>
         ))}
+
+        <button 
+          disabled={currentPage === totalPages}
+          onClick={() => handleProductFetch(currentPage + 1)}
+          className="p-3 bg-zinc-900 border border-zinc-800 rounded-sm text-zinc-400 hover:text-white hover:border-racing-orange disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+        >
+          <ArrowRight className="w-5 h-5" />
+        </button>
       </div>
+    );
+  };
+
+  const renderProductGrid = () => {
+    if (loading) return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <Loader2 className="w-10 h-10 text-racing-orange animate-spin mb-4" />
+        <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Sincronizando garaje...</p>
+      </div>
+    );
+    
+    if (error) return (
+      <div className="text-center py-20 bg-zinc-900/30 rounded-sm border border-zinc-800 p-8">
+        <WifiOff className="w-12 h-12 text-red-500 mx-auto mb-4" />
+        <h3 className="text-white font-bold mb-2">{error}</h3>
+        <p className="text-zinc-500 text-sm mb-6 max-w-xs mx-auto">{errorDetail}</p>
+        <button onClick={handleClearFilters} className="bg-racing-orange text-white px-6 py-2 rounded-sm font-bold uppercase text-xs">Reintentar</button>
+      </div>
+    );
+
+    if (products.length === 0) return (
+      <div className="text-center py-20 bg-zinc-900/30 rounded-sm border border-zinc-800 p-8">
+        <p className="text-zinc-400 mb-4 font-bold">No se encontraron piezas compatibles.</p>
+        <button onClick={handleClearFilters} className="text-racing-orange hover:text-white font-bold uppercase text-xs">Limpiar filtros</button>
+      </div>
+    );
+
+    return (
+      <>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+          {products.map(product => (
+            <ProductCard 
+              key={product.id} 
+              product={product} 
+              onClick={(p) => { setSelectedProduct(p); setCurrentView('product'); }} 
+              onAddToCart={() => addToCart(product, 1)} 
+            />
+          ))}
+        </div>
+        {currentView === 'catalog' && renderPagination()}
+      </>
     );
   };
 
