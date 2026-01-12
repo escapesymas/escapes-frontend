@@ -11,7 +11,6 @@ export const WOO_CONFIG = {
 // CONFIGURACIÓN DE PAGOS (SUMUP)
 export const PAYMENT_CONFIG = {
   provider: 'sumup',
-  // NOTA: La secretKey debe estar en variables de entorno (SUMUP_SECRET_KEY) en el servidor.
   merchantEmail: 'info@escapesymas.com' 
 };
 
@@ -48,55 +47,62 @@ export const NAV_LINKS: { label: string; view: string; category?: string; highli
 ];
 
 /**
- * CATEGORÍAS DEL CATÁLOGO
+ * CATEGORÍAS DEL CATÁLOGO REORGANIZADAS
  */
 export const CATEGORIES = [
   {
     id: "escapes",
     name: "Sistemas de Escape",
     image: "https://images.unsplash.com/photo-1532588237936-a14a3818bc79?auto=format&fit=crop&q=80&w=800",
-    description: "Silenciosos, colectores y líneas completas.",
-    subcategories: ["Racing Line", "Slip-On", "Colectores", "Db Killers"]
+    description: "Silenciosos, colectores y líneas completas de alto rendimiento.",
+    subcategories: ["Línea Completa (Racing)", "Slip-On (Silenciosos)", "Colectores", "Accesorios Escape"]
   },
   {
     id: "frenos",
-    name: "Frenos & Hidráulica",
+    name: "Frenos de Competición",
     image: "https://images.unsplash.com/photo-1563618147570-36034c4f0282?auto=format&fit=crop&q=80&w=800",
-    description: "Pastillas sinterizadas, discos wave y latiguillos.",
-    subcategories: ["Pastillas", "Discos", "Bombas Radiales", "Líquidos"]
+    description: "Máxima potencia y control: bombas radiales, discos y pastillas.",
+    subcategories: ["Pastillas Sinterizadas", "Discos de Freno", "Bombas Radiales", "Latiguillos Metálicos"]
   },
   {
-    id: "transmision",
-    name: "Kits de Transmisión",
-    image: "https://images.unsplash.com/photo-1592657434559-99469f3752e2?auto=format&fit=crop&q=80&w=800",
-    description: "Cadenas reforzadas, piñones y coronas aligeradas.",
-    subcategories: ["Kits Completos", "Cadenas X-Ring", "Piñones", "Coronas"]
-  },
-  {
-    id: "admision",
-    name: "Admisión & Filtros",
-    image: "https://images.unsplash.com/photo-1502444390311-53697eb4b62d?auto=format&fit=crop&q=80&w=800",
-    description: "Filtros de alto flujo y kits de admisión directa.",
-    subcategories: ["Filtros Aire", "Filtros Aceite", "Kits Admisión"]
-  },
-  {
-    id: "neumaticos",
-    name: "Neumáticos & Llantas",
-    image: "https://images.unsplash.com/photo-1578844251758-2f71da645217?auto=format&fit=crop&q=80&w=800",
-    description: "Gomas slick, sport-touring y calentadores.",
-    subcategories: ["Slicks", "Carretera", "Off-Road", "Válvulas"]
+    id: "suspensiones",
+    name: "Ciclista & Chasis",
+    image: "https://images.unsplash.com/photo-1444491741275-3747c53c99b4?auto=format&fit=crop&q=80&w=800",
+    description: "Estabilidad extrema con suspensiones Pro y componentes de chasis.",
+    subcategories: ["Amortiguadores traseros", "Cartuchos Horquilla", "Amortiguadores Dirección", "Estriberas"]
   },
   {
     id: "electronica",
-    name: "Electrónica Racing",
+    name: "Electrónica & ECU",
     image: "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&q=80&w=800",
-    description: "Centralitas, quickshifters y control de tracción.",
-    subcategories: ["Quickshifters", "Centralitas", "Baterías Litio"]
+    description: "Gestión de motor, Quickshifters y telemetría de competición.",
+    subcategories: ["Centralitas (ECU)", "Quickshifters", "Módulos ABS/TC", "Baterías Litio"]
+  },
+  {
+    id: "transmision",
+    name: "Transmisión & Desarrollo",
+    image: "https://images.unsplash.com/photo-1592657434559-99469f3752e2?auto=format&fit=crop&q=80&w=800",
+    description: "Kits de arrastre reforzados, piñones y coronas aligeradas.",
+    subcategories: ["Kits Cadena Completos", "Cadenas X-Ring/Z-Ring", "Piñones", "Coronas Ergal"]
+  },
+  {
+    id: "mantenimiento",
+    name: "Mantenimiento & Fluidos",
+    image: "https://images.unsplash.com/photo-1502444390311-53697eb4b62d?auto=format&fit=crop&q=80&w=800",
+    description: "Filtros de alto flujo y lubricantes de máxima protección.",
+    subcategories: ["Filtros Aire Racing", "Filtros Aceite", "Aceites Motor Pro", "Líquidos Hidráulicos"]
+  },
+  {
+    id: "neumaticos",
+    name: "Neumáticos & Paddock",
+    image: "https://images.unsplash.com/photo-1578844251758-2f71da645217?auto=format&fit=crop&q=80&w=800",
+    description: "Gomas de alto agarre, calentadores y equipamiento de garaje.",
+    subcategories: ["Neumáticos Slick/Sport", "Calentadores", "Caballetes", "Manómetros & Accesorios"]
   }
 ];
 
 /**
- * MAPA DE AÑOS POR MODELO (Para filtrado preciso)
+ * MAPA DE AÑOS POR MODELO
  */
 export const MODEL_YEARS: Record<string, string[]> = {
   "RS 660": ["2024", "2023", "2022", "2021", "2020"],
