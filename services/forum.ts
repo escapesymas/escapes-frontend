@@ -1,3 +1,4 @@
+
 import { WOO_CONFIG } from '../storeData';
 import { ForumCategory, ForumTopic, ForumReply } from '../types';
 import { MessageSquare, Wrench, Bike, Shield, Compass, LifeBuoy, Flag } from 'lucide-react';
@@ -12,7 +13,7 @@ const WP_API_BASE = WOO_CONFIG.baseUrl.replace(/\/$/, "") + '/wp-json/wp/v2';
 const FORUM_SCHEMA: ForumCategory[] = [
   {
     id: 'start_zone',
-    title: 'La Zona de Salida',
+    title: 'Línea de Salida',
     description: 'Bienvenidas, presentaciones, normas y charla general off-topic.',
     icon: Flag,
     topicCount: 12
@@ -258,7 +259,7 @@ const getMockTopics = (catId: string): ForumTopic[] => {
   const common = { author: 'Marc M.', date: 'Hoy', views: 120, replies: 5, authorAvatar: '', isPinned: false };
   
   if (catId === 'start_zone') return [
-    { ...common, id: 501, categoryId: catId, title: 'Bienvenidos a Escapes y Más', content: 'Normas de la comunidad y presentaciones.', isPinned: true },
+    { ...common, id: 501, categoryId: catId, title: 'Bienvenidos a la Línea de Salida', content: 'Normas de la comunidad y presentaciones.', isPinned: true },
     { ...common, id: 502, categoryId: catId, title: 'Me presento desde Madrid', content: 'Hola a todos, acabo de adquirir una Z900...' }
   ];
 

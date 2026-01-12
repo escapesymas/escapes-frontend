@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Search, ChevronDown, ChevronUp, Bike, SlidersHorizontal } from 'lucide-react';
 import { BikeSelection, BikeDataStructure } from '../types';
@@ -53,7 +54,7 @@ export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTextSear
     : [];
 
   return (
-    <div className="w-full max-w-4xl mx-auto -mt-16 relative z-20 px-4">
+    <div className="w-full max-w-4xl mx-auto relative z-20 px-4">
       <div className="bg-racing-carbon border border-zinc-700 p-4 md:p-6 rounded-md shadow-2xl shadow-black/50">
         
         {/* BUSCADOR DE TEXTO (PRINCIPAL) */}
