@@ -6,9 +6,11 @@ export interface Session {
 
 const KEY = "escapesymas_session";
 
-// --- Auth API ---
+// =====================
+// API
+// =====================
 
-export async function register(data: {
+export async function registerUser(data: {
   username: string;
   email: string;
   password: string;
@@ -20,15 +22,14 @@ export async function register(data: {
   });
 
   const text = await res.text();
-
   try {
     return JSON.parse(text);
   } catch {
-    throw new Error("Invalid server response");
+    throw new Error("Invalid register response");
   }
 }
 
-export async function login(username: string, password: string) {
+export async function loginUser(username: string, password: string) {
   const res = await fetch("/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -36,7 +37,6 @@ export async function login(username: string, password: string) {
   });
 
   const text = await res.text();
-
   try {
     return JSON.parse(text);
   } catch {
@@ -44,22 +44,9 @@ export async function login(username: string, password: string) {
   }
 }
 
-// --- Session Storage ---
+// =====================
+// Session
+// =====================
 
 export function saveSession(session: Session) {
-  localStorage.setItem(KEY, JSON.stringify(session));
-}
-
-export function getSession(): Session | null {
-  const raw = localStorage.getItem(KEY);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
-
-export function logoutSession() {
-  localStorage.removeItem(KEY);
-}
+  localStorage.setItem
