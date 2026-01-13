@@ -49,4 +49,19 @@ export async function loginUser(username: string, password: string) {
 // =====================
 
 export function saveSession(session: Session) {
-  localStorage.setItem
+  localStorage.setItem(KEY, JSON.stringify(session));
+}
+
+export function getSession(): Session | null {
+  const raw = localStorage.getItem(KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+export function logoutSession() {
+  localStorage.removeItem(KEY);
+}
