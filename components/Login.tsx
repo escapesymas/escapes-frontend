@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User, Lock, AlertCircle, ArrowRight, ArrowLeft } from 'lucide-react';
-import { loginUser } from '../services/auth';
+import { loginUser } from "../services/auth";
 import { User as UserType } from '../types';
 
 interface LoginProps {
