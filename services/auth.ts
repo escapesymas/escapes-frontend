@@ -5,10 +5,49 @@ export interface Session {
 }
 
 const KEY = "escapesymas_session";
-const API = "https://backendescapes.com/wp-json";
+const WP = "https://backendescapes.com";
 
 // =====================
-// AUTH API
+// LOGIN (JWT)
+// =====================
+
+export async function loginUser(username: string, password: string) {
+  const res = await fetch(`${WP}/wp-json/jwt-auth/v1/token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ username, password })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    return {
+      success: false,
+      error: data.message || "Credenciales incorrectas"
+    };
+  }
+
+  const session: Session = {
+    token: data.token,
+    user_email: data.user_email,
+    user_display_name: data.user_display_name
+  };
+
+  saveSession(session);
+
+  return {
+    success: true,
+    user: {
+      email: data.user_email,
+      name: data.user_display_name
+    }
+  };
+}
+
+// =====================
+// REGISTER (via Vercel API)
 // =====================
 
 export async function registerUser(data: {
@@ -16,55 +55,19 @@ export async function registerUser(data: {
   email: string;
   password: string;
 }) {
-  const res = await fetch(`${API}/escapes/v1/register`, {
+  const res = await fetch("/api/auth/register", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify(data),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
   });
 
-  const text = await res.text();
+  const json = await res.json();
 
-  try {
-    const json = JSON.parse(text);
-
-    if (!res.ok) {
-      throw new Error(json.message || "Error al registrarse");
-    }
-
-    return json;
-  } catch (e) {
-    console.error("REGISTER RAW RESPONSE:", text);
-    throw new Error("Respuesta inválida del servidor");
+  if (!res.ok) {
+    throw new Error(json.message || "Error al registrarse");
   }
-}
 
-export async function loginUser(username: string, password: string) {
-  const res = await fetch(`${API}/jwt-auth/v1/token`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({ username, password }),
-  });
-
-  const text = await res.text();
-
-  try {
-    const json = JSON.parse(text);
-
-    if (!res.ok) {
-      throw new Error(json.message || "Error al iniciar sesión");
-    }
-
-    return json;
-  } catch {
-    console.error("LOGIN RAW RESPONSE:", text);
-    throw new Error("Respuesta inválida del servidor");
-  }
+  return json;
 }
 
 // =====================
@@ -78,7 +81,6 @@ export function saveSession(session: Session) {
 export function getSession(): Session | null {
   const raw = localStorage.getItem(KEY);
   if (!raw) return null;
-
   try {
     return JSON.parse(raw);
   } catch {
