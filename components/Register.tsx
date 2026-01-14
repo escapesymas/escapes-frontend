@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { registerUser, saveSession } from "../lib/auth";
+import { registerUser, saveSession } from "../services/auth";
 
 export default function Register() {
   const [firstName, setFirstName] = useState("");
