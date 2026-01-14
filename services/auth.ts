@@ -5,49 +5,26 @@ export interface Session {
 }
 
 const KEY = "escapesymas_session";
-const WP = "https://backendescapes.com";
 
-// =====================
-// LOGIN (JWT)
-// =====================
+async function safeFetch(url: string, options: RequestInit) {
+  const res = await fetch(url, options);
+  const text = await res.text();
 
-export async function loginUser(username: string, password: string) {
-  const res = await fetch(`${WP}/wp-json/jwt-auth/v1/token`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ username, password })
-  });
-
-  const data = await res.json();
-
-  if (!res.ok) {
+  try {
+    const json = JSON.parse(text);
+    return { ok: res.ok, status: res.status, json };
+  } catch {
+    console.error("Invalid JSON from API:", text);
     return {
-      success: false,
-      error: data.message || "Credenciales incorrectas"
+      ok: false,
+      status: res.status,
+      json: { error: "Respuesta inválida del servidor" }
     };
   }
-
-  const session: Session = {
-    token: data.token,
-    user_email: data.user_email,
-    user_display_name: data.user_display_name
-  };
-
-  saveSession(session);
-
-  return {
-    success: true,
-    user: {
-      email: data.user_email,
-      name: data.user_display_name
-    }
-  };
 }
 
 // =====================
-// REGISTER (via Vercel API)
+// API
 // =====================
 
 export async function registerUser(data: {
@@ -55,39 +32,25 @@ export async function registerUser(data: {
   email: string;
   password: string;
 }) {
-  const res = await fetch("/api/auth/register", {
+  const { ok, json } = await safeFetch("/api/auth/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   });
 
-  const json = await res.json();
-
-  if (!res.ok) {
-    throw new Error(json.message || "Error al registrarse");
+  if (!ok) {
+    throw new Error(json.error || "Registro fallido");
   }
 
   return json;
 }
 
-// =====================
-// SESSION
-// =====================
+export async function loginUser(username: string, password: string) {
+  const { ok, json } = await safeFetch("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
 
-export function saveSession(session: Session) {
-  localStorage.setItem(KEY, JSON.stringify(session));
-}
-
-export function getSession(): Session | null {
-  const raw = localStorage.getItem(KEY);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
-
-export function logoutSession() {
-  localStorage.removeItem(KEY);
-}
+  if (!ok) {
+    throw new Error(json.error || "Lo
