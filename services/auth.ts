@@ -6,19 +6,31 @@ export interface Session {
 
 const KEY = "escapesymas_session";
 
-async function safeFetch(url: string, options: RequestInit) {
+type ApiResult<T> = {
+  ok: boolean;
+  status: number;
+  data: T | null;
+  error?: string;
+};
+
+async function safeFetch<T>(url: string, options: RequestInit): Promise<ApiResult<T>> {
   const res = await fetch(url, options);
   const text = await res.text();
 
   try {
     const json = JSON.parse(text);
-    return { ok: res.ok, status: res.status, json };
+    return {
+      ok: res.ok,
+      status: res.status,
+      data: json as T,
+    };
   } catch {
     console.error("Invalid JSON from API:", text);
     return {
       ok: false,
       status: res.status,
-      json: { error: "Respuesta inválida del servidor" }
+      data: null,
+      error: "Respuesta inválida del servidor",
     };
   }
 }
@@ -31,26 +43,52 @@ export async function registerUser(data: {
   username: string;
   email: string;
   password: string;
-}) {
-  const { ok, json } = await safeFetch("/api/auth/register", {
+}): Promise<Session> {
+  const res = await safeFetch<Session>("/api/auth/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
 
-  if (!ok) {
-    throw new Error(json.error || "Registro fallido");
+  if (!res.ok || !res.data) {
+    throw new Error(res.error || "Registro fallido");
   }
 
-  return json;
+  return res.data;
 }
 
-export async function loginUser(username: string, password: string) {
-  const { ok, json } = await safeFetch("/api/auth/login", {
+export async function loginUser(username: string, password: string): Promise<Session> {
+  const res = await safeFetch<Session>("/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
   });
 
-  if (!ok) {
-    throw new Error(json.error || "Lo
+  if (!res.ok || !res.data) {
+    throw new Error(res.error || "Login fallido");
+  }
+
+  return res.data;
+}
+
+// =====================
+// Session
+// =====================
+
+export function saveSession(session: Session) {
+  localStorage.setItem(KEY, JSON.stringify(session));
+}
+
+export function getSession(): Session | null {
+  const raw = localStorage.getItem(KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as Session;
+  } catch {
+    return null;
+  }
+}
+
+export function logoutSession() {
+  localStorage.removeItem(KEY);
+}
