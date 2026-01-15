@@ -20,6 +20,18 @@ async function safeFetch<T>(url: string, options: RequestInit): Promise<ApiResul
 
   try {
     const json = JSON.parse(text);
+
+    // Si la respuesta no es ok, extraer el mensaje de error del JSON
+    if (!res.ok) {
+      const errorMessage = json.error || json.message || "Error del servidor";
+      return {
+        ok: false,
+        status: res.status,
+        data: json as T,
+        error: errorMessage,
+      };
+    }
+
     return {
       ok: res.ok,
       status: res.status,
