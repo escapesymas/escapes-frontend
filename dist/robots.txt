@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /wp-json/
+Disallow: /account
+Disallow: /cart
+Disallow: /checkout
+
+Sitemap: https://escapesymas.com/sitemap.xml
