@@ -58,14 +58,14 @@ const handleProxyResponse = async (targetUrl, req, res) => {
       headers: headers,
       body: ['GET', 'HEAD'].includes(req.method) ? undefined : JSON.stringify(req.body)
     });
-    
+
     response.headers.forEach((value, key) => {
       const lowerKey = key.toLowerCase();
       if (!['content-encoding', 'transfer-encoding', 'connection'].includes(lowerKey)) {
         res.setHeader(key, value);
       }
     });
-    
+
     res.status(response.status);
     const buffer = await response.arrayBuffer();
     res.send(Buffer.from(buffer));
@@ -84,6 +84,103 @@ app.use('/wp-fallback', async (req, res) => {
   await handleProxyResponse(`${PROXY_TARGET_URL}${req.url}`, req, res);
 });
 
+// --- ENDPOINTS DE AUTENTICACIÓN ---
+app.post('/api/auth/register', async (req, res) => {
+  const { username, email, password } = req.body;
+
+  if (!username || !email || !password) {
+    return res.status(400).json({ error: "Faltan campos requeridos: username, email, password" });
+  }
+
+  try {
+    const auth = Buffer.from(`${WOO_CONSUMER_KEY}:${WOO_CONSUMER_SECRET}`).toString('base64');
+
+    // Usar la API de WooCommerce para crear clientes (no la API de WordPress)
+    // Las credenciales de WooCommerce tienen permiso para crear clientes, no usuarios WP
+    const wcRes = await fetch(`${PROXY_TARGET_URL}/wp-json/wc/v3/customers`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Basic ${auth}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email,
+        username,
+        password,
+        first_name: username,
+        billing: {
+          email: email
+        }
+      }),
+    });
+
+    const wcData = await wcRes.json();
+    console.log("[AUTH REGISTER] WooCommerce response:", wcRes.status, wcData);
+
+    if (!wcRes.ok) {
+      // WooCommerce devolvió un error
+      const errorMessage = wcData.message || wcData.error || "Error al crear cliente";
+      console.error("[AUTH REGISTER ERROR] WooCommerce:", errorMessage);
+      return res.status(wcRes.status).json({ error: errorMessage });
+    }
+
+    // Cliente creado exitosamente, ahora hacer login para obtener token JWT
+    const loginRes = await fetch(`${PROXY_TARGET_URL}/wp-json/jwt-auth/v1/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+
+    const loginData = await loginRes.json();
+    console.log("[AUTH REGISTER] JWT response:", loginRes.status);
+
+    if (!loginRes.ok) {
+      // Cliente creado pero login falló - devolver datos parciales con la info del cliente
+      console.warn("[AUTH REGISTER] Cliente creado pero JWT falló");
+      return res.status(200).json({
+        token: "",
+        user_email: email,
+        user_display_name: wcData.first_name || username,
+        user_id: wcData.id,
+        warning: "Cliente creado pero no se pudo obtener token automáticamente. Por favor, inicia sesión."
+      });
+    }
+
+    res.status(200).json(loginData);
+  } catch (err) {
+    console.error("[AUTH REGISTER ERROR]:", err.message);
+    res.status(500).json({ error: "Error interno al registrar usuario" });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ error: "Faltan campos requeridos: username, password" });
+  }
+
+  try {
+    const wp = await fetch(`${PROXY_TARGET_URL}/wp-json/jwt-auth/v1/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+
+    const data = await wp.json();
+
+    if (!wp.ok) {
+      const errorMessage = data.message || data.error || "Login fallido";
+      return res.status(wp.status).json({ error: errorMessage });
+    }
+
+    res.status(200).json(data);
+  } catch (err) {
+    console.error("[AUTH LOGIN ERROR]:", err.message);
+    res.status(500).json({ error: "Error interno al iniciar sesión" });
+  }
+});
+
 // --- ENDPOINTS DE API INTERNA ---
 app.post('/api/checkout', async (req, res) => {
   const { amount, orderRef, currency, merchantEmail } = req.body;
@@ -92,9 +189,9 @@ app.post('/api/checkout', async (req, res) => {
   try {
     const response = await fetch('https://api.sumup.com/v0.1/checkouts', {
       method: 'POST',
-      headers: { 
-        'Authorization': `Bearer ${SUMUP_API_KEY}`, 
-        'Content-Type': 'application/json' 
+      headers: {
+        'Authorization': `Bearer ${SUMUP_API_KEY}`,
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         checkout_reference: orderRef,
