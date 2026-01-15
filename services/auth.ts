@@ -2,6 +2,7 @@ export interface Session {
   token: string;
   user_email: string;
   user_display_name: string;
+  warning?: string;
 }
 
 const KEY = "escapesymas_session";
@@ -39,19 +40,25 @@ async function safeFetch<T>(url: string, options: RequestInit): Promise<ApiResul
 // API
 // =====================
 
+interface RegisterResult extends Session {
+  user_id?: number;
+}
+
 export async function registerUser(data: {
   username: string;
   email: string;
   password: string;
-}): Promise<Session> {
-  const res = await safeFetch<Session>("/api/auth/register", {
+}): Promise<RegisterResult> {
+  const res = await safeFetch<RegisterResult>("/api/auth/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
 
   if (!res.ok || !res.data) {
-    throw new Error(res.error || "Registro fallido");
+    // Extraer mensaje de error del servidor
+    const errorData = res.data as any;
+    throw new Error(errorData?.error || res.error || "Registro fallido");
   }
 
   return res.data;
