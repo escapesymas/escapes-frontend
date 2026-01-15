@@ -46,6 +46,13 @@ export function Register({ onRegisterSuccess, onBack, onGoToLogin }: RegisterPro
         password,
       });
 
+      // Si hay warning (cliente creado pero JWT falló), ir al login
+      if (res.warning || !res.token) {
+        alert("¡Cuenta creada correctamente! Por favor, inicia sesión.");
+        onGoToLogin();
+        return;
+      }
+
       saveSession(res);
       onRegisterSuccess();
     } catch (err: any) {
