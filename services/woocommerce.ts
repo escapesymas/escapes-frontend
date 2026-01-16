@@ -403,21 +403,27 @@ export const fetchAvatars = async (): Promise<AvatarOption[]> => {
 
 /**
  * Actualiza el avatar del cliente en WooCommerce (guarda en metadata)
+ * Guarda tanto _custom_avatar (URL) como wp_user_avatar (ID) para persistencia.
  */
-export const updateCustomerAvatar = async (userId: number, avatarUrl: string): Promise<boolean> => {
+export const updateCustomerAvatar = async (userId: number, avatarData: string | number): Promise<boolean> => {
   if (!userId || userId === 0) return false;
+
+  const meta_data = [];
+
+  if (typeof avatarData === 'number') {
+    // Es un ID (Media Library)
+    meta_data.push({ key: 'wp_user_avatar', value: avatarData });
+  } else {
+    // Es una URL (Legacy o Fallback)
+    meta_data.push({ key: '_custom_avatar', value: avatarData });
+    // Intenta guardar también en wp_user_avatar si parece un ID, o déjalo.
+    // Si solo tenemos URL, no podemos deducir el ID fácilmente sin buscar.
+  }
 
   try {
     await makeRequest(`/wc/v3/customers/${userId}`, {
       method: 'PUT',
-      body: JSON.stringify({
-        meta_data: [
-          {
-            key: '_custom_avatar',
-            value: avatarUrl
-          }
-        ]
-      })
+      body: JSON.stringify({ meta_data })
     });
     console.log('[AVATAR] Avatar updated for user:', userId);
     return true;
@@ -430,7 +436,7 @@ export const updateCustomerAvatar = async (userId: number, avatarUrl: string): P
 /**
  * Sube una foto personalizada para el cliente
  */
-export const uploadFile = async (file: File): Promise<string> => {
+export const uploadFile = async (file: File): Promise<{ id: number; url: string }> => {
   let baseUrl = WOO_CONFIG.baseUrl.replace(/\/$/, "");
   // Use WP API Media endpoint
   const url = `${baseUrl}/wp-json/wp/v2/media`;
@@ -455,8 +461,8 @@ export const uploadFile = async (file: File): Promise<string> => {
     }
 
     const data = await response.json();
-    console.log('[UPLOAD] Success:', data.source_url);
-    return data.source_url; // Return the full public URL
+    console.log('[UPLOAD] Success:', data.id, data.source_url);
+    return { id: data.id, url: data.source_url };
   } catch (error) {
     console.error('[UPLOAD] Error:', error);
     throw error;
@@ -484,13 +490,26 @@ export const uploadCustomerPhoto = async (userId: number, file: File, email?: st
 
   try {
     // 1. Upload file to WP Media
-    const publicUrl = await uploadFile(file);
+    const { id, url } = await uploadFile(file);
 
-    // 2. Update Customer Metadata with new URL
-    const updateSuccess = await updateCustomerAvatar(targetId, publicUrl);
+    // 2. Update Customer Metadata with new ID (for persistence) AND URL
+    // 2. Update Customer Metadata with new ID (for persistence) AND URL
+    // We update 'wp_user_avatar' with ID for backend/theme compatibility
+    // And '_custom_avatar' with URL for frontend easy access
+    await makeRequest(`/wc/v3/customers/${targetId}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        meta_data: [
+          { key: 'wp_user_avatar', value: id },
+          { key: '_custom_avatar', value: url }
+        ]
+      })
+    });
+
+    const updateSuccess = true;
 
     if (updateSuccess) {
-      return { success: true, url: publicUrl };
+      return { success: true, url: url };
     } else {
       return { success: false, error: 'Error al actualizar perfil con la nueva foto' };
     }
