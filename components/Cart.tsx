@@ -1,24 +1,33 @@
 
-import React from 'react';
-import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Truck, ArrowLeft, AlertCircle } from 'lucide-react';
-import { CartItem } from '../types';
+import React, { useState } from 'react';
+import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Truck, ArrowLeft, AlertCircle, RotateCcw, Loader2, Package } from 'lucide-react';
+import { CartItem, User, Order } from '../types';
 import { optimizeImage } from '../utils/imageOptimizer';
+import { fetchPendingOrders, fetchProducts } from '../services/woocommerce';
 
 interface CartProps {
   items: CartItem[];
+  user?: User | null;
   onUpdateQuantity: (id: number, delta: number) => void;
   onRemove: (id: number) => void;
   onCheckout: () => void;
   onContinueShopping: () => void;
+  onRestoreCart?: (items: CartItem[]) => void;
 }
 
-export const Cart: React.FC<CartProps> = ({ 
-  items, 
-  onUpdateQuantity, 
-  onRemove, 
+export const Cart: React.FC<CartProps> = ({
+  items,
+  user,
+  onUpdateQuantity,
+  onRemove,
   onCheckout,
-  onContinueShopping 
+  onContinueShopping,
+  onRestoreCart
 }) => {
+  const [isRecovering, setIsRecovering] = useState(false);
+  const [pendingOrders, setPendingOrders] = useState<Order[] | null>(null);
+  const [recoveryError, setRecoveryError] = useState<string | null>(null);
+
   const formatPrice = (amount: number) => {
     return new Intl.NumberFormat('es-ES', {
       style: 'currency',
@@ -26,11 +35,63 @@ export const Cart: React.FC<CartProps> = ({
     }).format(amount);
   };
 
+  const handleFetchPendingOrders = async () => {
+    if (!user || !user.id) {
+      setRecoveryError("Debes iniciar sesión para recuperar tu carrito");
+      return;
+    }
+
+    setIsRecovering(true);
+    setRecoveryError(null);
+
+    try {
+      const orders = await fetchPendingOrders(user.id);
+      if (orders.length > 0) {
+        setPendingOrders(orders);
+      } else {
+        setRecoveryError("No tienes pedidos pendientes que recuperar");
+      }
+    } catch (error) {
+      setRecoveryError("Error al buscar pedidos pendientes");
+    } finally {
+      setIsRecovering(false);
+    }
+  };
+
+  const handleRestoreOrder = async (order: Order) => {
+    if (!onRestoreCart) return;
+
+    setIsRecovering(true);
+    try {
+      // Obtener los productos completos desde WooCommerce
+      const { products: allProducts } = await fetchProducts(undefined, undefined, 1, 100);
+
+      const restoredItems: CartItem[] = order.line_items.map(lineItem => {
+        const product = allProducts.find(p => p.id === lineItem.id);
+        if (product) {
+          return { ...product, quantity: lineItem.quantity };
+        }
+        return null;
+      }).filter(Boolean) as CartItem[];
+
+      if (restoredItems.length > 0) {
+        onRestoreCart(restoredItems);
+        setPendingOrders(null);
+      } else {
+        setRecoveryError("No se pudieron recuperar los productos del pedido");
+      }
+    } catch (error) {
+      setRecoveryError("Error al recuperar el carrito");
+    } finally {
+      setIsRecovering(false);
+    }
+  };
+
   const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  
+
   // Shipping logic updated: always charges shipping (calculated per shipment, using fixed base for now)
-  const shippingCost = 9.95; 
-  
+  const shippingCost = 9.95;
+
   const total = subtotal + shippingCost;
   const itemsCount = items.reduce((acc, item) => acc + item.quantity, 0);
 
@@ -44,12 +105,72 @@ export const Cart: React.FC<CartProps> = ({
         <p className="text-zinc-500 mb-8 max-w-md">
           Parece que aún no has añadido ninguna pieza para tu moto. Revisa nuestro catálogo para encontrar lo que necesitas.
         </p>
-        <button 
-          onClick={onContinueShopping}
-          className="bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase tracking-wide py-3 px-8 rounded-sm transition-colors flex items-center gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" /> Volver a la tienda
-        </button>
+
+        <div className="flex flex-col sm:flex-row gap-4">
+          <button
+            onClick={onContinueShopping}
+            className="bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase tracking-wide py-3 px-8 rounded-sm transition-colors flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" /> Volver a la tienda
+          </button>
+
+          {user && onRestoreCart && (
+            <button
+              onClick={handleFetchPendingOrders}
+              disabled={isRecovering}
+              className="bg-zinc-800 hover:bg-zinc-700 text-white font-bold uppercase tracking-wide py-3 px-8 rounded-sm transition-colors flex items-center gap-2 border border-zinc-700"
+            >
+              {isRecovering ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RotateCcw className="w-4 h-4" />
+              )}
+              Recuperar carrito anterior
+            </button>
+          )}
+        </div>
+
+        {/* Error Message */}
+        {recoveryError && (
+          <div className="mt-6 bg-red-900/20 border border-red-800 text-red-200 px-4 py-2 rounded-sm text-sm">
+            {recoveryError}
+          </div>
+        )}
+
+        {/* Pending Orders List */}
+        {pendingOrders && pendingOrders.length > 0 && (
+          <div className="mt-8 w-full max-w-lg">
+            <h3 className="text-white font-bold uppercase text-sm mb-4">Pedidos pendientes encontrados:</h3>
+            <div className="space-y-3">
+              {pendingOrders.map(order => (
+                <div
+                  key={order.id}
+                  className="bg-zinc-900 border border-zinc-800 p-4 rounded-sm flex justify-between items-center hover:border-zinc-700 transition-colors"
+                >
+                  <div className="text-left">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Package className="w-4 h-4 text-racing-orange" />
+                      <span className="text-white font-bold">Pedido #{order.id}</span>
+                    </div>
+                    <p className="text-zinc-500 text-xs">
+                      {order.line_items.length} productos • {formatPrice(parseFloat(order.total))}
+                    </p>
+                    <p className="text-zinc-600 text-xs">
+                      {new Date(order.date_created).toLocaleDateString('es-ES')}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleRestoreOrder(order)}
+                    disabled={isRecovering}
+                    className="bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase text-xs py-2 px-4 rounded-sm transition-colors"
+                  >
+                    Recuperar
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -61,39 +182,39 @@ export const Cart: React.FC<CartProps> = ({
       </h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+
         {/* Cart Items List */}
         <div className="lg:col-span-2 space-y-4">
           {items.map((item) => (
             <div key={item.id} className="bg-racing-carbon border border-zinc-800 p-4 rounded-sm flex flex-col sm:flex-row gap-4 items-center sm:items-stretch group hover:border-zinc-700 transition-colors">
               {/* Image */}
               <div className="w-24 h-24 bg-white rounded-sm overflow-hidden flex-shrink-0 p-2">
-                <img 
-                  src={optimizeImage(item.image, 100)} 
-                  alt={item.title} 
-                  className="w-full h-full object-contain" 
-                  width="100" 
-                  height="100" 
+                <img
+                  src={optimizeImage(item.image, 100)}
+                  alt={item.title}
+                  className="w-full h-full object-contain"
+                  width="100"
+                  height="100"
                 />
               </div>
 
               {/* Details */}
               <div className="flex-grow text-center sm:text-left">
                 <div className="flex justify-between items-start mb-1">
-                   <h3 className="text-white font-bold uppercase text-sm md:text-base leading-tight">
-                     {item.title}
-                   </h3>
+                  <h3 className="text-white font-bold uppercase text-sm md:text-base leading-tight">
+                    {item.title}
+                  </h3>
                 </div>
                 <p className="text-zinc-500 text-xs mb-4">{item.category}</p>
-                
+
                 <div className="flex items-center justify-between sm:justify-start gap-6">
                   <div className="font-bold text-white">
                     {formatPrice(item.price)}
                   </div>
-                  
+
                   {/* Quantity Controls */}
                   <div className="flex items-center bg-zinc-900 border border-zinc-700 rounded-sm">
-                    <button 
+                    <button
                       onClick={() => onUpdateQuantity(item.id, -1)}
                       className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
                       disabled={item.quantity <= 1}
@@ -101,7 +222,7 @@ export const Cart: React.FC<CartProps> = ({
                       <Minus className="w-3 h-3" />
                     </button>
                     <span className="w-8 text-center text-white text-sm font-bold">{item.quantity}</span>
-                    <button 
+                    <button
                       onClick={() => onUpdateQuantity(item.id, 1)}
                       className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
                     >
@@ -116,7 +237,7 @@ export const Cart: React.FC<CartProps> = ({
                 <div className="text-lg font-bold text-racing-orange">
                   {formatPrice(item.price * item.quantity)}
                 </div>
-                <button 
+                <button
                   onClick={() => onRemove(item.id)}
                   className="text-zinc-600 hover:text-red-500 transition-colors p-2"
                   title="Eliminar producto"
@@ -127,7 +248,7 @@ export const Cart: React.FC<CartProps> = ({
             </div>
           ))}
 
-          <button 
+          <button
             onClick={onContinueShopping}
             className="text-zinc-400 hover:text-white text-sm font-bold uppercase flex items-center gap-2 mt-6 transition-colors"
           >
@@ -139,7 +260,7 @@ export const Cart: React.FC<CartProps> = ({
         <div className="lg:col-span-1">
           <div className="bg-racing-carbon border border-zinc-800 p-6 rounded-sm sticky top-24">
             <h3 className="text-white font-bold uppercase mb-6 tracking-wide text-lg">Resumen del Pedido</h3>
-            
+
             <div className="space-y-3 mb-6 border-b border-zinc-800 pb-6">
               <div className="flex justify-between text-zinc-400 text-sm">
                 <span>Subtotal</span>
@@ -165,18 +286,18 @@ export const Cart: React.FC<CartProps> = ({
               </div>
             </div>
 
-            <button 
+            <button
               onClick={onCheckout}
               className="w-full bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase tracking-wide py-4 px-6 rounded-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-orange-900/20 group"
             >
               Tramitar Pedido <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
-            
+
             <div className="mt-4 flex justify-center gap-2">
-               {/* Mock Payment Icons */}
-               <div className="w-8 h-5 bg-zinc-700 rounded-sm opacity-50"></div>
-               <div className="w-8 h-5 bg-zinc-700 rounded-sm opacity-50"></div>
-               <div className="w-8 h-5 bg-zinc-700 rounded-sm opacity-50"></div>
+              {/* Mock Payment Icons */}
+              <div className="w-8 h-5 bg-zinc-700 rounded-sm opacity-50"></div>
+              <div className="w-8 h-5 bg-zinc-700 rounded-sm opacity-50"></div>
+              <div className="w-8 h-5 bg-zinc-700 rounded-sm opacity-50"></div>
             </div>
           </div>
         </div>

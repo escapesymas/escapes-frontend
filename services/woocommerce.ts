@@ -139,6 +139,21 @@ export const fetchCustomerOrders = async (customerId: number): Promise<Order[]> 
   return data as Order[];
 };
 
+/**
+ * Obtiene los pedidos pendientes de un cliente para recuperar carritos abandonados
+ */
+export const fetchPendingOrders = async (customerId: number): Promise<Order[]> => {
+  if (!customerId || customerId === 0) return [];
+
+  try {
+    const { data } = await makeRequest(`/wc/v3/orders?customer=${customerId}&status=pending&per_page=5`);
+    return data as Order[];
+  } catch (error) {
+    console.error('[ORDERS] Failed to fetch pending orders:', error);
+    return [];
+  }
+};
+
 export const updateCustomer = async (userId: number, data: Partial<User>): Promise<boolean> => {
   try {
     const payload = {
