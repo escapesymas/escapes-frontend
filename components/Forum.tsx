@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, Clock, Hash, ChevronRight, ArrowLeft, Send, User, Loader2, PlusCircle, Quote, AlertCircle } from 'lucide-react';
+import { MessageSquare, Clock, Hash, ChevronRight, ArrowLeft, Send, User, Loader2, PlusCircle, Quote, AlertCircle, CheckCircle } from 'lucide-react';
 import { ForumTopic, ForumCategory, ForumReply, User as UserType } from '../types';
 import { fetchForumCategories, fetchTopics, fetchReplies, createTopic, createReply } from '../services/forum';
 import { RichTextEditor } from './RichTextEditor';
@@ -19,7 +19,8 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
   const [selectedTopic, setSelectedTopic] = useState<ForumTopic | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
   // Topic Creation
   const [newTopicTitle, setNewTopicTitle] = useState('');
   const [newTopicBody, setNewTopicBody] = useState('');
@@ -32,6 +33,27 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
   useEffect(() => {
     loadCategories();
   }, []);
+
+  // Real-time polling (Chat mode)
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+
+    if (currentView === 'category_topics' && selectedCategory) {
+      interval = setInterval(async () => {
+        const data = await fetchTopics(selectedCategory.id);
+        setTopics(data);
+      }, 1000);
+    } else if (currentView === 'topic' && selectedTopic) {
+      interval = setInterval(async () => {
+        const data = await fetchReplies(selectedTopic.id);
+        setReplies(data);
+      }, 1000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [currentView, selectedCategory, selectedTopic]);
 
   const loadCategories = async () => {
     setLoading(true);
@@ -67,12 +89,14 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
       setErrorMsg("Debes completar el título y el contenido.");
       return;
     }
-    
+
+    setIsSubmitting(true);
     setIsSubmitting(true);
     setErrorMsg(null);
-    
+    setSuccessMsg(null);
+
     const result = await createTopic(user.token, selectedCategory!.id, newTopicTitle, newTopicBody);
-    
+
     if (result.success) {
       setNewTopicTitle('');
       setNewTopicBody('');
@@ -80,6 +104,8 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
       const updatedTopics = await fetchTopics(selectedCategory!.id);
       setTopics(updatedTopics);
       setCurrentView('category_topics');
+      setSuccessMsg("¡Tema publicado correctamente!");
+      setTimeout(() => setSuccessMsg(null), 3000);
     } else {
       setErrorMsg(result.error || "Error al crear el tema.");
     }
@@ -95,12 +121,16 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
 
     setIsSubmittingReply(true);
     const result = await createReply(user.token, selectedTopic!.id, replyBody);
-    
+
     if (result.success) {
+      setReplyBody('');
+      // Refresh replies
       setReplyBody('');
       // Refresh replies
       const updatedReplies = await fetchReplies(selectedTopic!.id);
       setReplies(updatedReplies);
+      setSuccessMsg("¡Respuesta publicada!");
+      setTimeout(() => setSuccessMsg(null), 3000);
     } else {
       setErrorMsg(result.error || "Error al responder.");
     }
@@ -120,36 +150,42 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
   const renderCreateTopic = () => (
     <div className="max-w-4xl mx-auto animate-fade-in">
       <h2 className="text-2xl font-bold text-white uppercase italic mb-6">Nuevo Tema en <span className="text-racing-orange">{selectedCategory?.title}</span></h2>
-      
+
       {errorMsg && (
         <div className="bg-red-900/20 border border-red-800 p-3 rounded-sm mb-4 text-red-200 flex items-center gap-2">
           <AlertCircle className="w-5 h-5" /> {errorMsg}
         </div>
       )}
 
+      {successMsg && (
+        <div className="bg-green-900/20 border border-green-800 p-3 rounded-sm mb-4 text-green-200 flex items-center gap-2 animate-pulse">
+          <CheckCircle className="w-5 h-5" /> {successMsg}
+        </div>
+      )}
+
       <div className="space-y-4">
         <div>
           <label className="block text-zinc-400 text-xs font-bold uppercase mb-2">Título del Tema</label>
-          <input 
+          <input
             value={newTopicTitle}
             onChange={e => setNewTopicTitle(e.target.value)}
             className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none font-bold"
             placeholder="Ej: Problema con escape Akrapovic..."
           />
         </div>
-        
+
         <div>
           <label className="block text-zinc-400 text-xs font-bold uppercase mb-2">Contenido</label>
-          <RichTextEditor 
-            value={newTopicBody} 
-            onChange={setNewTopicBody} 
+          <RichTextEditor
+            value={newTopicBody}
+            onChange={setNewTopicBody}
             placeholder="Describe tu consulta o aporte con detalle..."
             className="min-h-[300px]"
           />
         </div>
 
         <div className="flex gap-4 pt-4">
-          <button 
+          <button
             onClick={handleCreateTopic}
             disabled={isSubmitting}
             className="bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase py-3 px-8 rounded-sm transition-colors flex items-center gap-2 disabled:opacity-50"
@@ -157,7 +193,7 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
             {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
             Publicar Tema
           </button>
-          <button 
+          <button
             onClick={() => setCurrentView('category_topics')}
             disabled={isSubmitting}
             className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold uppercase py-3 px-6 rounded-sm transition-colors"
@@ -176,21 +212,21 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
         <div className="flex items-center gap-2 mb-8 text-sm text-zinc-500">
           <button onClick={() => setCurrentView('categories')} className="hover:text-white flex items-center gap-1">Paddock</button>
           {currentView !== 'categories' && (
-             <>
-               <ChevronRight className="w-4 h-4" />
-               <button onClick={() => setCurrentView('category_topics')} className="hover:text-white font-bold">
-                 {selectedCategory?.title || 'Foro'}
-               </button>
-             </>
+            <>
+              <ChevronRight className="w-4 h-4" />
+              <button onClick={() => setCurrentView('category_topics')} className="hover:text-white font-bold">
+                {selectedCategory?.title || 'Foro'}
+              </button>
+            </>
           )}
           {currentView === 'topic' && (
-             <>
-               <ChevronRight className="w-4 h-4" />
-               <span className="text-racing-orange truncate max-w-[200px]">{selectedTopic?.title}</span>
-             </>
+            <>
+              <ChevronRight className="w-4 h-4" />
+              <span className="text-racing-orange truncate max-w-[200px]">{selectedTopic?.title}</span>
+            </>
           )}
         </div>
-        
+
         {currentView !== 'categories' && (
           <button onClick={goBack} className="mb-6 flex items-center gap-2 text-zinc-400 hover:text-white text-xs uppercase font-bold">
             <ArrowLeft className="w-4 h-4" /> Volver
@@ -218,13 +254,13 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
                 {categories.map((cat) => {
                   const IconComponent = cat.icon;
                   return (
-                    <div 
-                      key={cat.id} 
+                    <div
+                      key={cat.id}
                       onClick={() => handleCategoryClick(cat)}
                       className="group bg-zinc-900 border border-zinc-800 hover:border-racing-orange p-6 rounded-sm cursor-pointer transition-all duration-300 flex items-start gap-4 relative overflow-hidden"
                     >
                       <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                         <IconComponent className="w-24 h-24 text-racing-orange transform rotate-12" />
+                        <IconComponent className="w-24 h-24 text-racing-orange transform rotate-12" />
                       </div>
 
                       <div className="p-4 bg-zinc-950 rounded-full group-hover:bg-racing-orange transition-colors z-10">
@@ -248,53 +284,58 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
         {/* 2. TOPIC LIST */}
         {currentView === 'category_topics' && (
           <div className="max-w-5xl mx-auto space-y-4">
-             <div className="flex justify-between items-center mb-6">
-                <div>
-                   <h2 className="text-2xl font-bold text-white uppercase italic">{selectedCategory?.title}</h2>
-                   <p className="text-zinc-500 text-sm">{selectedCategory?.description}</p>
-                </div>
-                <button 
-                  onClick={() => user ? setCurrentView('create_topic') : onLoginRequest()} 
-                  className="bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase text-xs py-2 px-4 rounded-sm flex items-center gap-2"
-                >
-                  <PlusCircle className="w-4 h-4" /> Nuevo Tema
-                </button>
-             </div>
+            {successMsg && (
+              <div className="fixed top-24 right-4 z-50 bg-green-900 border border-green-700 text-white px-6 py-3 rounded-sm shadow-2xl flex items-center gap-2 animate-fade-in-right">
+                <CheckCircle className="w-5 h-5 text-green-400" /> {successMsg}
+              </div>
+            )}
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-white uppercase italic">{selectedCategory?.title}</h2>
+                <p className="text-zinc-500 text-sm">{selectedCategory?.description}</p>
+              </div>
+              <button
+                onClick={() => user ? setCurrentView('create_topic') : onLoginRequest()}
+                className="bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase text-xs py-2 px-4 rounded-sm flex items-center gap-2"
+              >
+                <PlusCircle className="w-4 h-4" /> Nuevo Tema
+              </button>
+            </div>
 
-             {loading ? (
-                <div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-racing-orange"/></div>
-             ) : topics.length === 0 ? (
-                <div className="text-center py-12 bg-zinc-900 border border-zinc-800 rounded-sm">
-                   <MessageSquare className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
-                   <p className="text-zinc-400 font-bold mb-2">Esta pista está vacía</p>
-                   <p className="text-zinc-600 text-sm mb-6">Sé el primero en arrancar la conversación.</p>
-                   <button 
-                     onClick={() => user ? setCurrentView('create_topic') : onLoginRequest()}
-                     className="text-racing-orange hover:text-white text-sm font-bold uppercase"
-                   >
-                     Crear primer tema
-                   </button>
-                </div>
-             ) : (
-               topics.map(topic => (
+            {loading ? (
+              <div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-racing-orange" /></div>
+            ) : topics.length === 0 ? (
+              <div className="text-center py-12 bg-zinc-900 border border-zinc-800 rounded-sm">
+                <MessageSquare className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
+                <p className="text-zinc-400 font-bold mb-2">Esta pista está vacía</p>
+                <p className="text-zinc-600 text-sm mb-6">Sé el primero en arrancar la conversación.</p>
+                <button
+                  onClick={() => user ? setCurrentView('create_topic') : onLoginRequest()}
+                  className="text-racing-orange hover:text-white text-sm font-bold uppercase"
+                >
+                  Crear primer tema
+                </button>
+              </div>
+            ) : (
+              topics.map(topic => (
                 <div key={topic.id} onClick={() => handleTopicClick(topic)} className="bg-zinc-900 border border-zinc-800 p-4 rounded-sm cursor-pointer hover:border-racing-orange transition-colors flex justify-between items-center group">
                   <div className="flex items-center gap-4">
-                     <div className="w-10 h-10 bg-zinc-950 rounded-full flex items-center justify-center border border-zinc-800 group-hover:border-racing-orange/50 flex-shrink-0">
-                        <MessageSquare className="w-5 h-5 text-zinc-600 group-hover:text-racing-orange transition-colors" />
-                     </div>
-                     <div>
-                       <h3 className="text-white font-bold group-hover:text-racing-orange transition-colors text-sm md:text-base line-clamp-1" dangerouslySetInnerHTML={{__html: topic.title}}></h3>
-                       <div className="flex items-center gap-2 text-zinc-500 text-xs mt-1">
-                          <span className="flex items-center gap-1 font-bold text-zinc-400"><User className="w-3 h-3" /> {topic.author}</span>
-                          <span>•</span>
-                          <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {topic.date}</span>
-                       </div>
-                     </div>
+                    <div className="w-10 h-10 bg-zinc-950 rounded-full flex items-center justify-center border border-zinc-800 group-hover:border-racing-orange/50 flex-shrink-0">
+                      <MessageSquare className="w-5 h-5 text-zinc-600 group-hover:text-racing-orange transition-colors" />
+                    </div>
+                    <div>
+                      <h3 className="text-white font-bold group-hover:text-racing-orange transition-colors text-sm md:text-base line-clamp-1" dangerouslySetInnerHTML={{ __html: topic.title }}></h3>
+                      <div className="flex items-center gap-2 text-zinc-500 text-xs mt-1">
+                        <span className="flex items-center gap-1 font-bold text-zinc-400"><User className="w-3 h-3" /> {topic.author}</span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {topic.date}</span>
+                      </div>
+                    </div>
                   </div>
                   <ChevronRight className="w-5 h-5 text-zinc-700" />
                 </div>
-               ))
-             )}
+              ))
+            )}
           </div>
         )}
 
@@ -304,83 +345,89 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
         {/* 4. TOPIC DETAIL (READ & REPLY) */}
         {currentView === 'topic' && selectedTopic && (
           <div className="max-w-4xl mx-auto">
-             {/* Original Post */}
-             <div className="bg-zinc-900 border border-zinc-800 rounded-sm mb-6 overflow-hidden">
-                <div className="p-6 border-b border-zinc-800 bg-zinc-950/50">
-                   <div className="flex items-center gap-2 text-racing-orange text-xs font-bold uppercase mb-2">
-                      <Hash className="w-3 h-3" /> {selectedCategory?.title}
-                   </div>
-                   <h1 className="text-2xl md:text-3xl font-extrabold text-white uppercase italic leading-tight" dangerouslySetInnerHTML={{__html: selectedTopic.title}}></h1>
+            {/* Original Post */}
+            <div className="bg-zinc-900 border border-zinc-800 rounded-sm mb-6 overflow-hidden">
+              <div className="p-6 border-b border-zinc-800 bg-zinc-950/50">
+                <div className="flex items-center gap-2 text-racing-orange text-xs font-bold uppercase mb-2">
+                  <Hash className="w-3 h-3" /> {selectedCategory?.title}
                 </div>
-                
-                {/* Replies List (First one is the OP content usually) */}
-                <div className="divide-y divide-zinc-800">
-                   {loading ? (
-                      <div className="p-10 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-racing-orange"/></div>
-                   ) : replies.map((reply, idx) => (
-                      <div key={reply.id} className={`p-6 ${idx === 0 ? 'bg-zinc-900' : 'bg-zinc-950'}`}>
-                         <div className="flex items-start gap-4">
-                            <div className="flex-shrink-0 text-center">
-                               <div className="w-12 h-12 rounded-full bg-zinc-800 border-2 border-zinc-700 overflow-hidden mb-2 mx-auto">
-                                  {reply.authorAvatar ? (
-                                    <img src={reply.authorAvatar} className="w-full h-full object-cover" />
-                                  ) : (
-                                    <User className="w-full h-full p-2 text-zinc-500" />
-                                  )}
-                               </div>
-                               <span className="text-zinc-400 text-xs font-bold block truncate max-w-[80px]">{reply.author}</span>
-                               <span className={`text-[10px] px-1 rounded-sm uppercase ${idx === 0 ? 'text-racing-orange bg-racing-orange/10' : 'text-zinc-500 bg-zinc-800'}`}>
-                                  {idx === 0 ? 'OP' : (reply.authorRole || 'Racer')}
-                               </span>
-                            </div>
-                            
-                            <div className="flex-1 min-w-0">
-                               <div className="flex justify-between items-start mb-4">
-                                  <span className="text-zinc-600 text-xs flex items-center gap-1"><Clock className="w-3 h-3" /> {reply.date}</span>
-                                  <button className="text-zinc-600 hover:text-white"><Quote className="w-4 h-4" /></button>
-                               </div>
-                               <div className="prose prose-invert prose-sm max-w-none text-zinc-300 break-words" dangerouslySetInnerHTML={{__html: reply.content}}></div>
-                            </div>
-                         </div>
-                      </div>
-                   ))}
-                </div>
-             </div>
+                <h1 className="text-2xl md:text-3xl font-extrabold text-white uppercase italic leading-tight" dangerouslySetInnerHTML={{ __html: selectedTopic.title }}></h1>
+              </div>
 
-             {/* Reply Box */}
-             <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-sm">
-                <h3 className="text-white font-bold uppercase italic mb-4 flex items-center gap-2">
-                   <MessageSquare className="w-5 h-5 text-racing-orange" /> Responder al tema
-                </h3>
-                
-                {user ? (
-                   <div className="space-y-4">
-                      <RichTextEditor 
-                         value={replyBody} 
-                         onChange={setReplyBody}
-                         placeholder="Escribe tu respuesta aquí..."
-                         className="bg-zinc-950"
-                      />
-                      <div className="flex justify-end">
-                         <button 
-                            onClick={handleReplySubmit}
-                            disabled={isSubmittingReply || !replyBody.trim()}
-                            className="bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase py-3 px-8 rounded-sm transition-colors flex items-center gap-2 disabled:opacity-50"
-                         >
-                            {isSubmittingReply ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                            Publicar Respuesta
-                         </button>
+              {/* Replies List (First one is the OP content usually) */}
+              <div className="divide-y divide-zinc-800">
+                {loading ? (
+                  <div className="p-10 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-racing-orange" /></div>
+                ) : replies.map((reply, idx) => (
+                  <div key={reply.id} className={`p-6 ${idx === 0 ? 'bg-zinc-900' : 'bg-zinc-950'}`}>
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0 text-center">
+                        <div className="w-12 h-12 rounded-full bg-zinc-800 border-2 border-zinc-700 overflow-hidden mb-2 mx-auto">
+                          {reply.authorAvatar ? (
+                            <img src={reply.authorAvatar} className="w-full h-full object-cover" />
+                          ) : (
+                            <User className="w-full h-full p-2 text-zinc-500" />
+                          )}
+                        </div>
+                        <span className="text-zinc-400 text-xs font-bold block truncate max-w-[80px]">{reply.author}</span>
+                        <span className={`text-[10px] px-1 rounded-sm uppercase ${idx === 0 ? 'text-racing-orange bg-racing-orange/10' : 'text-zinc-500 bg-zinc-800'}`}>
+                          {idx === 0 ? 'OP' : (reply.authorRole || 'Racer')}
+                        </span>
                       </div>
-                   </div>
-                ) : (
-                   <div className="bg-zinc-950 border border-zinc-800 p-8 text-center rounded-sm">
-                      <p className="text-zinc-400 mb-4">Debes estar identificado para participar en la conversación.</p>
-                      <button onClick={onLoginRequest} className="bg-zinc-800 hover:bg-white hover:text-black text-white font-bold uppercase py-2 px-6 rounded-sm transition-colors">
-                         Iniciar Sesión
-                      </button>
-                   </div>
-                )}
-             </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start mb-4">
+                          <span className="text-zinc-600 text-xs flex items-center gap-1"><Clock className="w-3 h-3" /> {reply.date}</span>
+                          <button className="text-zinc-600 hover:text-white"><Quote className="w-4 h-4" /></button>
+                        </div>
+                        <div className="prose prose-invert prose-sm max-w-none text-zinc-300 break-words" dangerouslySetInnerHTML={{ __html: reply.content }}></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Reply Box */}
+            <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-sm">
+              <h3 className="text-white font-bold uppercase italic mb-4 flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-racing-orange" /> Responder al tema
+              </h3>
+
+              {successMsg && (
+                <div className="bg-green-900/20 border border-green-800 p-3 rounded-sm mb-4 text-green-200 flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5" /> {successMsg}
+                </div>
+              )}
+
+              {user ? (
+                <div className="space-y-4">
+                  <RichTextEditor
+                    value={replyBody}
+                    onChange={setReplyBody}
+                    placeholder="Escribe tu respuesta aquí..."
+                    className="bg-zinc-950"
+                  />
+                  <div className="flex justify-end">
+                    <button
+                      onClick={handleReplySubmit}
+                      disabled={isSubmittingReply || !replyBody.trim()}
+                      className="bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase py-3 px-8 rounded-sm transition-colors flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {isSubmittingReply ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      Publicar Respuesta
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-zinc-950 border border-zinc-800 p-8 text-center rounded-sm">
+                  <p className="text-zinc-400 mb-4">Debes estar identificado para participar en la conversación.</p>
+                  <button onClick={onLoginRequest} className="bg-zinc-800 hover:bg-white hover:text-black text-white font-bold uppercase py-2 px-6 rounded-sm transition-colors">
+                    Iniciar Sesión
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
