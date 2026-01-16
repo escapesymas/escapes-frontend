@@ -73,6 +73,36 @@ export const fetchCategories = async (): Promise<Category[]> => {
   }
 };
 
+/**
+ * Obtiene productos específicos por sus IDs
+ */
+export const fetchProductsByIds = async (ids: number[]): Promise<Product[]> => {
+  if (!isConfigValid() || ids.length === 0) return [];
+
+  try {
+    const { data } = await makeRequest(`/wc/v3/products?include=${ids.join(',')}&per_page=${ids.length}`);
+    return (data as any[]).map(p => ({
+      id: p.id,
+      title: p.name,
+      slug: p.slug,
+      price: parseFloat(p.price) || 0,
+      regularPrice: parseFloat(p.regular_price) || parseFloat(p.price) || 0,
+      image: p.images?.[0]?.src || '',
+      category: p.categories?.[0]?.name || '',
+      categoryId: p.categories?.[0]?.id || 0,
+      description: p.short_description || p.description || '',
+      stock: p.stock_quantity ?? (p.stock_status === 'instock' ? 99 : 0),
+      inStock: p.stock_status === 'instock',
+      sku: p.sku || '',
+      attributes: p.attributes || [],
+      images: p.images || [],
+    }));
+  } catch (error) {
+    console.error('[WC] Failed to fetch products by IDs:', error);
+    return [];
+  }
+};
+
 export const fetchProducts = async (
   searchQuery?: string,
   categoryId?: number,

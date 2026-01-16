@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Truck, ArrowLeft, AlertCircle, RotateCcw, Loader2, Package } from 'lucide-react';
 import { CartItem, User, Order } from '../types';
 import { optimizeImage } from '../utils/imageOptimizer';
-import { fetchPendingOrders, fetchProducts } from '../services/woocommerce';
+import { fetchPendingOrders, fetchProductsByIds } from '../services/woocommerce';
 
 interface CartProps {
   items: CartItem[];
@@ -66,26 +66,40 @@ export const Cart: React.FC<CartProps> = ({
     setIsRecovering(true);
     setRecoveryError(null);
     try {
-      // Obtener los productos completos desde WooCommerce
-      const { products: allProducts } = await fetchProducts(undefined, undefined, 1, 100);
+      // Obtener los IDs de productos del pedido
+      const productIds = order.line_items.map(item => (item as any).product_id || item.id).filter(Boolean);
 
-      const restoredItems: CartItem[] = order.line_items.map(lineItem => {
-        // El ID del producto está en product_id, no en id
+      if (productIds.length === 0) {
+        setRecoveryError("El pedido no tiene productos válidos");
+        return;
+      }
+
+      // Buscar productos por sus IDs específicos
+      const products = await fetchProductsByIds(productIds);
+
+      // Intentar encontrar cada producto
+      const restoredItems: CartItem[] = [];
+      for (const lineItem of order.line_items) {
         const productId = (lineItem as any).product_id || lineItem.id;
-        const product = allProducts.find(p => p.id === productId);
+        const product = products.find(p => p.id === productId);
+
         if (product) {
-          return { ...product, quantity: lineItem.quantity };
+          restoredItems.push({ ...product, quantity: lineItem.quantity });
         }
-        return null;
-      }).filter(Boolean) as CartItem[];
+      }
 
       if (restoredItems.length > 0) {
         onRestoreCart(restoredItems);
         setPendingOrders(null);
+        if (restoredItems.length < order.line_items.length) {
+          // Algunos productos no se encontraron
+          console.warn(`[CART] Recovered ${restoredItems.length} of ${order.line_items.length} products`);
+        }
       } else {
-        setRecoveryError("No se pudieron recuperar los productos del pedido");
+        setRecoveryError("Los productos de este pedido ya no están disponibles en el catálogo");
       }
     } catch (error) {
+      console.error('[CART] Error restoring order:', error);
       setRecoveryError("Error al recuperar el carrito");
     } finally {
       setIsRecovering(false);
