@@ -174,6 +174,22 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
     setTimeout(() => setSuccessMsg(null), 3000);
   };
 
+  const handleDeleteTopicButton = async (e: React.MouseEvent, topic: ForumTopic) => {
+    e.stopPropagation();
+    if (!user || !user.token) return;
+    if (!window.confirm("¿Seguro que quieres borrar este tema y todas sus respuestas?")) return;
+
+    const success = await deleteTopic(user.token, topic.id);
+    if (success) {
+      setSuccessMsg("Tema eliminado.");
+      const updated = await fetchTopics(selectedCategory!.id);
+      setTopics(updated);
+    } else {
+      alert("Error al eliminar el tema.");
+    }
+    setTimeout(() => setSuccessMsg(null), 3000);
+  };
+
   const startEdit = (item: ForumReply) => {
     setEditingId(item.id);
     setEditContent(item.content);
@@ -406,7 +422,19 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
                       </div>
                     </div>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-zinc-700" />
+                  <div className="flex items-center gap-4">
+                    {/* ...existing content... */}
+                    {user && user.id === topic.authorId && (
+                      <button
+                        onClick={(e) => handleDeleteTopicButton(e, topic)}
+                        className="text-zinc-600 hover:text-red-500 p-2 z-10"
+                        title="Borrar Tema"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                    <ChevronRight className="w-5 h-5 text-zinc-700" />
+                  </div>
                 </div>
               ))
             )}
