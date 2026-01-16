@@ -1,81 +1,41 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Tienda online especializada en repuestos de alto rendimiento para motocicletas. Escapes, frenos, transmisión y electrónica para Aprilia, BMW, Ducati, Honda, Kawasaki, KTM, Suzuki, Triumph y Yamaha." />
-    <title>Escapes y Más | Performance Parts</title>
-    
-    <!-- Favicon robusto para máxima compatibilidad -->
-    <link rel="icon" type="image/png" href="https://backendescapes.com/wp-content/uploads/2026/01/icow4.png">
-    <link rel="shortcut icon" type="image/png" href="https://backendescapes.com/wp-content/uploads/2026/01/icow4.png">
-    <link rel="apple-touch-icon" href="https://backendescapes.com/wp-content/uploads/2026/01/icow4.png">
 
-    <!-- Pre-conexión a orígenes críticos -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://wsrv.nl">
-    <link rel="preconnect" href="https://backendescapes.com">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="Tienda online especializada en repuestos de alto rendimiento para motocicletas. Escapes, frenos, transmisión y electrónica para Aprilia, BMW, Ducati, Honda, Kawasaki, KTM, Suzuki, Triumph y Yamaha." />
+  <title>Escapes y Más | Performance Parts</title>
 
-    <!-- Pre-carga de la imagen LCP con la URL exacta que usará el componente -->
-    <link rel="preload" as="image" href="https://wsrv.nl/?url=https%3A%2F%2Fimages.unsplash.com%2Fphoto-1591637333184-19aa84b3e01f&w=800&output=webp&q=80&l=5" fetchpriority="high">
+  <!-- Favicon robusto para máxima compatibilidad -->
+  <link rel="icon" type="image/png" href="https://backendescapes.com/wp-content/uploads/2026/01/icow4.png">
+  <link rel="shortcut icon" type="image/png" href="https://backendescapes.com/wp-content/uploads/2026/01/icow4.png">
+  <link rel="apple-touch-icon" href="https://backendescapes.com/wp-content/uploads/2026/01/icow4.png">
 
-    <!-- Carga de fuentes optimizada (no bloqueante) -->
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" media="print" onload="this.media='all'">
+  <!-- Pre-conexión a orígenes críticos -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://wsrv.nl">
+  <link rel="preconnect" href="https://backendescapes.com">
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              racing: {
-                red: '#DC2626',
-                orange: '#EA580C',
-                black: '#09090b',
-                carbon: '#18181b',
-                asphalt: '#27272a',
-                metal: '#a1a1aa',
-              }
-            },
-            fontFamily: { sans: ['Inter', 'sans-serif'] }
-          }
-        }
-      }
-    </script>
+  <!-- Pre-carga de la imagen LCP con la URL exacta que usará el componente -->
+  <link rel="preload" as="image"
+    href="https://wsrv.nl/?url=https%3A%2F%2Fimages.unsplash.com%2Fphoto-1591637333184-19aa84b3e01f&w=800&output=webp&q=80&l=5"
+    fetchpriority="high">
 
-    <style>
-      body { background-color: #09090b; color: #f4f4f5; font-family: 'Inter', sans-serif; overflow-x: hidden; }
-      .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
-      .animate-fade-in-right { animation: fadeInRight 0.3s ease-out forwards; }
-      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-      @keyframes fadeInRight { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
-      ::-webkit-scrollbar { width: 8px; }
-      ::-webkit-scrollbar-track { background: #09090b; }
-      ::-webkit-scrollbar-thumb { background: #1f1f23; border-radius: 4px; }
-      ::-webkit-scrollbar-thumb:hover { background: #EA580C; }
-    </style>
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "vite": "https://esm.sh/vite@^7.3.1",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "express": "https://esm.sh/express@^5.2.1",
-    "url": "https://esm.sh/url@^0.11.4",
-    "path": "https://esm.sh/path@^0.12.7",
-    "nodemailer": "https://esm.sh/nodemailer@^7.0.12",
-    "buffer": "https://esm.sh/buffer@^6.0.3"
-  }
-}
-</script>
+  <!-- Carga de fuentes optimizada (no bloqueante) -->
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap"
+    media="print" onload="this.media='all'">
+
+  <!-- Estilos locales compilados por Vite -->
+  <!-- Vite inyectará los estilos automáticamente desde index.tsx -->
 </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+
 </html>
