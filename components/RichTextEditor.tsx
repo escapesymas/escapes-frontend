@@ -253,7 +253,10 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
             <div
               key={user.id}
               className={`p-2 flex items-center gap-2 cursor-pointer ${idx === mentionIndex ? 'bg-racing-orange text-white' : 'hover:bg-zinc-800 text-zinc-300'}`}
-              onClick={() => insertMention(user)}
+              onMouseDown={(e) => {
+                e.preventDefault(); // Prevent blur
+                insertMention(user);
+              }}
             >
               {user.avatar ? (
                 <img src={user.avatar} alt={user.name} className="w-6 h-6 rounded-full" />
