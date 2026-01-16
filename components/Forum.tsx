@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, Clock, Hash, ChevronRight, ArrowLeft, Send, User, Loader2, PlusCircle, Quote, AlertCircle, CheckCircle } from 'lucide-react';
+import { MessageSquare, Clock, Hash, ChevronRight, ArrowLeft, Send, User, Loader2, PlusCircle, Quote, AlertCircle, CheckCircle, Pencil, Trash2, XCircle, Save } from 'lucide-react';
 import { ForumTopic, ForumCategory, ForumReply, User as UserType } from '../types';
-import { fetchForumCategories, fetchTopics, fetchReplies, createTopic, createReply } from '../services/forum';
+import { fetchForumCategories, fetchTopics, fetchReplies, createTopic, createReply, updateTopic, deleteTopic, updateReply, deleteReply } from '../services/forum';
 import { RichTextEditor } from './RichTextEditor';
 
 interface ForumProps {
@@ -28,7 +28,13 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
 
   // Reply Creation
   const [replyBody, setReplyBody] = useState('');
+
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+
+  // Editing State
+  const [editingId, setEditingId] = useState<number | null>(null); // ID of reply/topic being edited
+  const [editContent, setEditContent] = useState('');
+  const [editTitle, setEditTitle] = useState(''); // Only for Topic OP
 
   useEffect(() => {
     loadCategories();
@@ -117,14 +123,14 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
       onLoginRequest();
       return;
     }
-    if (!replyBody.trim()) return;
+    if (!selectedTopic || !replyBody.trim()) return;
 
     setIsSubmittingReply(true);
-    const result = await createReply(user.token, selectedTopic!.id, replyBody);
+    const result = await createReply(user!.token, selectedTopic.id, replyBody);
+
+    setIsSubmittingReply(false);
 
     if (result.success) {
-      setReplyBody('');
-      // Refresh replies
       setReplyBody('');
       // Refresh replies
       const updatedReplies = await fetchReplies(selectedTopic!.id);
@@ -134,7 +140,75 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
     } else {
       setErrorMsg(result.error || "Error al responder.");
     }
-    setIsSubmittingReply(false);
+  };
+
+  const handleDelete = async (item: ForumReply) => {
+    if (!user || !user.token) {
+      onLoginRequest();
+      return;
+    }
+    if (!window.confirm("¿Seguro que quieres borrar este mensaje? Esta acción no se puede deshacer.")) return;
+
+    let success = false;
+    const isTopic = item.id === selectedTopic?.id;
+
+    if (isTopic) {
+      success = await deleteTopic(user!.token, item.id);
+      if (success) {
+        setSuccessMsg("Tema eliminado.");
+        // Go back to list
+        setCurrentView('category_topics');
+        const updated = await fetchTopics(selectedCategory!.id);
+        setTopics(updated);
+      }
+    } else {
+      success = await deleteReply(user!.token, item.id);
+      if (success) {
+        setSuccessMsg("Respuesta eliminada.");
+        const updated = await fetchReplies(selectedTopic!.id);
+        setReplies(updated);
+      }
+    }
+
+    if (!success && !successMsg) alert("Error al eliminar.");
+    setTimeout(() => setSuccessMsg(null), 3000);
+  };
+
+  const startEdit = (item: ForumReply) => {
+    setEditingId(item.id);
+    setEditContent(item.content);
+    // If it's the topic OP, we might want to edit title too, but simpler to just edit content for now or add title field if isTopic
+    if (item.id === selectedTopic?.id) {
+      setEditTitle(selectedTopic.title);
+    }
+  };
+
+  const handleUpdate = async (item: ForumReply) => {
+    if (!user || !user.token) {
+      onLoginRequest();
+      return;
+    }
+    let success = false;
+    const isTopic = item.id === selectedTopic?.id;
+
+    if (isTopic) {
+      success = await updateTopic(user!.token, item.id, editTitle || selectedTopic!.title, editContent);
+      if (success && selectedTopic) {
+        setSelectedTopic({ ...selectedTopic, title: editTitle || selectedTopic.title }); // Optimistic update of title
+      }
+    } else {
+      success = await updateReply(user!.token, item.id, editContent);
+    }
+
+    if (success) {
+      setEditingId(null);
+      setSuccessMsg("Actualizado correctamente.");
+      const updated = await fetchReplies(selectedTopic!.id);
+      setReplies(updated);
+    } else {
+      alert("Error al actualizar.");
+    }
+    setTimeout(() => setSuccessMsg(null), 3000);
   };
 
   const goBack = () => {
@@ -358,29 +432,68 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
               <div className="divide-y divide-zinc-800">
                 {loading ? (
                   <div className="p-10 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-racing-orange" /></div>
-                ) : replies.map((reply, idx) => (
-                  <div key={reply.id} className={`p-6 ${idx === 0 ? 'bg-zinc-900' : 'bg-zinc-950'}`}>
+                ) : replies.map((reply, index) => (
+                  <div key={reply.id} className={`p-6 rounded-sm border ${index === 0 ? 'bg-zinc-900 border-zinc-700' : 'bg-zinc-900/50 border-zinc-800'}`}>
                     <div className="flex items-start gap-4">
                       <div className="flex-shrink-0 text-center">
-                        <div className="w-12 h-12 rounded-full bg-zinc-800 border-2 border-zinc-700 overflow-hidden mb-2 mx-auto">
-                          {reply.authorAvatar ? (
-                            <img src={reply.authorAvatar} className="w-full h-full object-cover" />
-                          ) : (
-                            <User className="w-full h-full p-2 text-zinc-500" />
-                          )}
-                        </div>
-                        <span className="text-zinc-400 text-xs font-bold block truncate max-w-[80px]">{reply.author}</span>
-                        <span className={`text-[10px] px-1 rounded-sm uppercase ${idx === 0 ? 'text-racing-orange bg-racing-orange/10' : 'text-zinc-500 bg-zinc-800'}`}>
-                          {idx === 0 ? 'OP' : (reply.authorRole || 'Racer')}
-                        </span>
+                        {reply.authorAvatar ? (
+                          <img src={reply.authorAvatar} alt={reply.author} className="w-10 h-10 rounded-full object-cover mx-auto mb-2" />
+                        ) : (
+                          <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <User className="w-6 h-6 text-zinc-500" />
+                          </div>
+                        )}
+                        <span className="text-xs font-bold text-zinc-400 block">{reply.authorRole || 'Racer'}</span>
                       </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start mb-4">
-                          <span className="text-zinc-600 text-xs flex items-center gap-1"><Clock className="w-3 h-3" /> {reply.date}</span>
-                          <button className="text-zinc-600 hover:text-white"><Quote className="w-4 h-4" /></button>
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <span className="font-bold text-zinc-200 block">{reply.author}</span>
+                            <span className="text-xs text-zinc-500 flex items-center gap-1">
+                              <Clock className="w-3 h-3" /> {reply.date}
+                              {index === 0 && <span className="ml-2 bg-racing-orange/20 text-racing-orange px-1.5 rounded text-[10px]">OP</span>}
+                            </span>
+                          </div>
+                          {/* Edit/Delete Actions */}
+                          {user && user.id === reply.authorId && (
+                            <div className="flex gap-2">
+                              <button onClick={() => startEdit(reply)} className="text-zinc-500 hover:text-white" title="Editar">
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => handleDelete(reply)} className="text-zinc-500 hover:text-red-500" title="Borrar">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
                         </div>
-                        <div className="prose prose-invert prose-sm max-w-none text-zinc-300 break-words" dangerouslySetInnerHTML={{ __html: reply.content }}></div>
+
+                        {/* Content or Editor */}
+                        {editingId === reply.id ? (
+                          <div className="space-y-3">
+                            {/* Title Editor for OP */}
+                            {index === 0 && (
+                              <input
+                                type="text"
+                                value={editTitle}
+                                onChange={(e) => setEditTitle(e.target.value)}
+                                className="w-full bg-zinc-800 border border-zinc-700 p-2 text-white font-bold mb-2"
+                                placeholder="Título del tema"
+                              />
+                            )}
+                            <RichTextEditor value={editContent} onChange={setEditContent} className="min-h-[150px]" />
+                            <div className="flex gap-2 justify-end">
+                              <button onClick={() => setEditingId(null)} className="px-3 py-1 text-zinc-400 hover:text-white flex items-center gap-1">
+                                <XCircle className="w-4 h-4" /> Cancelar
+                              </button>
+                              <button onClick={() => handleUpdate(reply)} className="px-3 py-1 bg-green-700 text-white hover:bg-green-600 flex items-center gap-1 rounded-sm">
+                                <Save className="w-4 h-4" /> Guardar
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-zinc-300 prose prose-invert prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: reply.content }} />
+                        )}
                       </div>
                     </div>
                   </div>

@@ -139,6 +139,7 @@ export interface ForumTopic {
   categoryId: string;
   title: string;
   author: string;
+  authorId: number; // For permissions
   authorAvatar: string;
   date: string;
   views: number;
@@ -152,6 +153,7 @@ export interface ForumReply {
   id: number;
   topicId: number;
   author: string;
+  authorId: number; // For permissions
   authorAvatar: string;
   authorRole?: string; // e.g., 'Admin', 'Moderator', 'Pro Racer'
   content: string;
