@@ -11,12 +11,12 @@ export const WOO_CONFIG = {
 // CONFIGURACIÓN DE PAGOS (SUMUP)
 export const PAYMENT_CONFIG = {
   provider: 'sumup',
-  merchantEmail: 'info@escapesymas.com' 
+  merchantEmail: 'info@escapesymas.com'
 };
 
 // CONFIGURACIÓN GENERAL DE LA TIENDA
 export const STORE_CONFIG = {
-  name: "Escapes y Más", 
+  name: "Escapes y Más",
   logoUrl: "https://backendescapes.com/wp-content/uploads/2026/01/logo1-cab.png",
   defaultProductImage: "https://backendescapes.com/wp-content/uploads/2026/01/ico-1.png",
   currency: "EUR",
@@ -39,7 +39,7 @@ export const FEATURES = [
  */
 export const NAV_LINKS: { label: string; view: string; category?: string; highlight?: boolean }[] = [
   { label: 'Inicio', view: 'home' },
-  { label: 'Catálogo', view: 'catalog' },
+  { label: 'Para tu moto', view: 'catalog' },
   { label: 'Categorías', view: 'categories' },
   { label: 'Paddock', view: 'forum', highlight: true },
   { label: 'Garantías', view: 'warranty' },
