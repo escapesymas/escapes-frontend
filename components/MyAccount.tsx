@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { User as UserIcon, MapPin, Save, ArrowLeft, Mail, Phone, Loader2, CheckCircle, Camera, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { User as UserIcon, MapPin, Save, ArrowLeft, Mail, Phone, Loader2, CheckCircle, Camera, X, Lock, Upload } from 'lucide-react';
 import { User } from '../types';
 import { updateCustomer, fetchAvatars, updateCustomerAvatar, AvatarOption } from '../services/woocommerce';
 
@@ -18,6 +18,18 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
   const [avatarOptions, setAvatarOptions] = useState<AvatarOption[]>([]);
   const [selectedAvatar, setSelectedAvatar] = useState(user.avatarUrl || '');
   const [avatarLoading, setAvatarLoading] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Password change state
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
   const [formData, setFormData] = useState({
     firstName: user.firstName,
@@ -59,8 +71,83 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
     setAvatarLoading(false);
   };
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor selecciona una imagen válida');
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('La imagen no debe superar 2MB');
+      return;
+    }
+
+    setUploadingPhoto(true);
+
+    // Convert to base64 and upload as avatar
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64 = event.target?.result as string;
+      if (base64) {
+        // Use the base64 as a data URL for now (or implement proper upload)
+        const success = await updateCustomerAvatar(user.id, base64);
+        if (success) {
+          setSelectedAvatar(base64);
+          onUpdateUser({ ...user, avatarUrl: base64 });
+          setShowAvatarPicker(false);
+          setSuccessMsg('Foto actualizada');
+          setTimeout(() => setSuccessMsg(''), 3000);
+        } else {
+          alert('Error al subir la foto. Intenta con un avatar predefinido.');
+        }
+      }
+      setUploadingPhoto(false);
+    };
+    reader.onerror = () => {
+      alert('Error al leer la imagen');
+      setUploadingPhoto(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError('Las contraseñas no coinciden');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      setPasswordError('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    setPasswordLoading(true);
+
+    // Note: WooCommerce REST API doesn't support password changes directly
+    // This would need custom endpoint or WordPress user API
+    // For now, we'll show a message to contact support
+    setTimeout(() => {
+      setPasswordLoading(false);
+      setShowPasswordModal(false);
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      alert('Para cambiar tu contraseña, utiliza la opción "¿Olvidaste tu contraseña?" en la pantalla de login.');
+    }, 500);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -68,16 +155,22 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
     setLoading(true);
     setSuccessMsg('');
 
+    // Build billing object only with non-empty values
+    const billing: any = {};
+    if (formData.address) billing.address_1 = formData.address;
+    if (formData.city) billing.city = formData.city;
+    if (formData.zip) billing.postcode = formData.zip;
+    if (formData.phone) billing.phone = formData.phone;
+    // WooCommerce requires first_name and email in billing too
+    billing.first_name = formData.firstName;
+    if (formData.lastName) billing.last_name = formData.lastName;
+    billing.email = formData.email;
+
     const updatedData: Partial<User> = {
       firstName: formData.firstName,
-      lastName: formData.lastName,
+      lastName: formData.lastName || '',
       email: formData.email,
-      billing: {
-        address_1: formData.address,
-        city: formData.city,
-        postcode: formData.zip,
-        phone: formData.phone
-      }
+      billing
     };
 
     const success = await updateCustomer(user.id, updatedData);
@@ -110,7 +203,7 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
       {/* Avatar Picker Modal */}
       {showAvatarPicker && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-zinc-900 border border-zinc-700 rounded-sm p-6 max-w-lg w-full animate-fade-in">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-sm p-6 max-w-lg w-full animate-fade-in max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-white font-bold uppercase">Elige tu Avatar</h3>
               <button onClick={() => setShowAvatarPicker(false)} className="text-zinc-500 hover:text-white">
@@ -137,6 +230,94 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
                 ))}
               </div>
             )}
+
+            {/* Option to upload custom photo */}
+            <div className="mt-6 pt-4 border-t border-zinc-700">
+              <p className="text-zinc-400 text-sm mb-3">¿Prefieres subir tu propia foto?</p>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-2 px-4 rounded-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+              >
+                {uploadingPhoto ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4" />
+                )}
+                Subir mi foto
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
+              <p className="text-zinc-600 text-xs mt-2">Máximo 2MB. Formatos: JPG, PNG, GIF</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Password Change Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-sm p-6 max-w-md w-full animate-fade-in">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-white font-bold uppercase">Cambiar Contraseña</h3>
+              <button onClick={() => setShowPasswordModal(false)} className="text-zinc-500 hover:text-white">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Contraseña Actual</label>
+                <input
+                  type="password"
+                  name="currentPassword"
+                  value={passwordData.currentPassword}
+                  onChange={handlePasswordChange}
+                  required
+                  className="w-full bg-zinc-800 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Nueva Contraseña</label>
+                <input
+                  type="password"
+                  name="newPassword"
+                  value={passwordData.newPassword}
+                  onChange={handlePasswordChange}
+                  required
+                  className="w-full bg-zinc-800 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Confirmar Contraseña</label>
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  value={passwordData.confirmPassword}
+                  onChange={handlePasswordChange}
+                  required
+                  className="w-full bg-zinc-800 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none"
+                />
+              </div>
+
+              {passwordError && (
+                <p className="text-red-500 text-sm">{passwordError}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={passwordLoading}
+                className="w-full bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase py-3 rounded-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+              >
+                {passwordLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Lock className="w-5 h-5" />}
+                Cambiar Contraseña
+              </button>
+            </form>
           </div>
         </div>
       )}
@@ -147,12 +328,18 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
           <div className="bg-racing-carbon border border-zinc-800 p-6 rounded-sm text-center">
             <div className="relative inline-block">
               <div className="w-24 h-24 bg-zinc-800 rounded-full mx-auto mb-4 overflow-hidden border-2 border-racing-orange">
-                <img src={selectedAvatar || user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                {(selectedAvatar || user.avatarUrl) ? (
+                  <img src={selectedAvatar || user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <UserIcon className="w-12 h-12 text-zinc-600" />
+                  </div>
+                )}
               </div>
               <button
                 onClick={() => setShowAvatarPicker(true)}
                 className="absolute bottom-3 right-0 bg-racing-orange hover:bg-orange-600 text-white p-2 rounded-full shadow-lg transition-colors"
-                title="Cambiar avatar"
+                title="Cambiar avatar o subir foto"
               >
                 <Camera className="w-4 h-4" />
               </button>
@@ -176,24 +363,24 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Nombre</label>
+                  <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Nombre *</label>
                   <input required name="firstName" value={formData.firstName} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
                 </div>
                 <div>
-                  <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Apellidos</label>
-                  <input required name="lastName" value={formData.lastName} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                  <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Apellidos <span className="text-zinc-600 font-normal">(opcional)</span></label>
+                  <input name="lastName" value={formData.lastName} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Email</label>
+                  <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Email *</label>
                   <div className="relative">
                     <input required name="email" type="email" value={formData.email} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 pl-10 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
                     <Mail className="w-4 h-4 text-zinc-500 absolute left-3 top-3.5" />
                   </div>
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Teléfono</label>
+                  <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Teléfono <span className="text-zinc-600 font-normal">(opcional)</span></label>
                   <div className="relative">
-                    <input required name="phone" value={formData.phone} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 pl-10 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                    <input name="phone" value={formData.phone} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 pl-10 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
                     <Phone className="w-4 h-4 text-zinc-500 absolute left-3 top-3.5" />
                   </div>
                 </div>
@@ -203,22 +390,37 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
             {/* Address */}
             <div>
               <h3 className="text-white font-bold uppercase mb-4 tracking-wide border-b border-zinc-800 pb-2 flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-racing-orange" /> Dirección de Envío
+                <MapPin className="w-4 h-4 text-racing-orange" /> Dirección de Envío <span className="text-zinc-600 text-xs font-normal">(opcional)</span>
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
                   <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Dirección</label>
-                  <input required name="address" value={formData.address} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                  <input name="address" value={formData.address} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
                 </div>
                 <div>
                   <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Ciudad</label>
-                  <input required name="city" value={formData.city} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                  <input name="city" value={formData.city} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
                 </div>
                 <div>
                   <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Código Postal</label>
-                  <input required name="zip" value={formData.zip} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                  <input name="zip" value={formData.zip} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
                 </div>
               </div>
+            </div>
+
+            {/* Security */}
+            <div>
+              <h3 className="text-white font-bold uppercase mb-4 tracking-wide border-b border-zinc-800 pb-2 flex items-center gap-2">
+                <Lock className="w-4 h-4 text-racing-orange" /> Seguridad
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowPasswordModal(true)}
+                className="bg-zinc-800 hover:bg-zinc-700 text-white font-bold px-4 py-3 rounded-sm flex items-center gap-2 transition-colors"
+              >
+                <Lock className="w-4 h-4" />
+                Cambiar Contraseña
+              </button>
             </div>
 
             {/* Action */}
