@@ -1,10 +1,10 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
   Bold, Italic, Underline, List, ListOrdered,
   AlignLeft, AlignCenter, AlignRight, Link as LinkIcon,
-  Quote, Code, Image as ImageIcon, Smile, Paperclip, Palette, Loader2
+  Quote, Code, Image as ImageIcon, Smile, Paperclip, Palette, Loader2, AtSign
 } from 'lucide-react';
-import { uploadFile } from '../services/woocommerce';
+import { uploadFile, searchUsers } from '../services/woocommerce';
 
 interface RichTextEditorProps {
   value: string;
@@ -16,12 +16,18 @@ interface RichTextEditorProps {
 export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeholder, className = '' }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const colorInputRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = React.useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  // Mentions State
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionResults, setMentionResults] = useState<{ id: number; name: string; avatar: string }[]>([]);
+  const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
+  const [mentionIndex, setMentionIndex] = useState(0);
 
   // Sync external value changes to editor (only if different to avoid cursor jumps)
   useEffect(() => {
     if (editorRef.current && editorRef.current.innerHTML !== value) {
-      // If value is empty, clear it specifically
       if (value === '') {
         editorRef.current.innerHTML = '';
       } else {
@@ -32,7 +38,6 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
 
   const execCommand = (command: string, value: string | undefined = undefined) => {
     document.execCommand(command, false, value);
-    // Force focus back to editor
     editorRef.current?.focus();
     updateParent();
   };
@@ -40,6 +45,113 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
   const updateParent = () => {
     if (editorRef.current) {
       onChange(editorRef.current.innerHTML);
+    }
+    checkMentionTrigger();
+  };
+
+  const checkMentionTrigger = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+    const textNode = range.startContainer;
+    const text = textNode.textContent || '';
+    const cursor = range.startOffset;
+
+    // Look for @ before cursor
+    const lastAt = text.lastIndexOf('@', cursor);
+
+    if (lastAt !== -1 && lastAt < cursor) {
+      const query = text.substring(lastAt + 1, cursor);
+      // Limit query length for sanity
+      if (query.length <= 20) {
+        setMentionQuery(query);
+        setShowMentions(true);
+
+        // Get coordinates for dropdown
+        const rect = range.getBoundingClientRect();
+        if (editorRef.current) {
+          const editorRect = editorRef.current.getBoundingClientRect();
+          setMentionPosition({
+            top: rect.bottom - editorRect.top + 10,
+            left: rect.left - editorRect.left
+          });
+        }
+        return;
+      }
+    }
+    setShowMentions(false);
+  };
+
+  useEffect(() => {
+    if (showMentions && mentionQuery.length >= 1) {
+      const timer = setTimeout(async () => {
+        const users = await searchUsers(mentionQuery);
+        setMentionResults(users);
+        setMentionIndex(0);
+      }, 300);
+      return () => clearTimeout(timer);
+    } else {
+      setMentionResults([]);
+    }
+  }, [showMentions, mentionQuery]);
+
+  const insertMention = (user: { id: number; name: string }) => {
+    const selection = window.getSelection();
+    if (!selection) return;
+
+    const range = selection.getRangeAt(0);
+    const textNode = range.startContainer;
+    const text = textNode.textContent || '';
+    const cursor = range.startOffset;
+    const lastAt = text.lastIndexOf('@', cursor);
+
+    if (lastAt !== -1) {
+      // Restore range to safe state
+      range.setStart(textNode, lastAt);
+      range.setEnd(textNode, cursor); // Delete specifically from @ to cursor
+      range.deleteContents();
+
+      // Create mention link
+      const link = document.createElement('a');
+      link.href = `/profile/${user.id}`;
+      link.className = 'text-racing-orange font-bold hover:underline';
+      link.contentEditable = 'false';
+      link.innerText = `@${user.name}`;
+
+      range.insertNode(link);
+
+      // Add space after
+      const space = document.createTextNode('\u00A0');
+      range.setStartAfter(link);
+      range.setEndAfter(link);
+      range.insertNode(space);
+
+      // Move cursor after space
+      range.setStartAfter(space);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      setShowMentions(false);
+      updateParent();
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (showMentions && mentionResults.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setMentionIndex(prev => (prev + 1) % mentionResults.length);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setMentionIndex(prev => (prev - 1 + mentionResults.length) % mentionResults.length);
+      } else if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        insertMention(mentionResults[mentionIndex]);
+      } else if (e.key === 'Escape') {
+        setShowMentions(false);
+      }
     }
   };
 
@@ -53,12 +165,10 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
     if (url) execCommand('insertImage', url);
   };
 
-  // Trigger the hidden color input
   const handleColorClick = () => {
     colorInputRef.current?.click();
   };
 
-  // Apply color when input changes
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     execCommand('foreColor', e.target.value);
   };
@@ -67,7 +177,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
     <button
       type="button"
       onMouseDown={(e) => {
-        e.preventDefault(); // Prevent losing focus from editor
+        e.preventDefault();
         if (typeof cmd === 'function') cmd();
         else execCommand(cmd, arg);
       }}
@@ -87,7 +197,6 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
           <ToolbarButton icon={Italic} cmd="italic" title="Cursiva" />
           <ToolbarButton icon={Underline} cmd="underline" title="Subrayado" />
 
-          {/* Color Picker */}
           <div className="relative flex items-center">
             <ToolbarButton icon={Palette} cmd={handleColorClick} title="Color de texto" />
             <input
@@ -116,6 +225,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
           <ToolbarButton icon={Code} cmd="formatBlock" arg="pre" title="Código" />
           <ToolbarButton icon={ImageIcon} cmd={handleImage} title="Insertar Imagen" />
           <ToolbarButton icon={Smile} cmd={() => execCommand('insertText', '😊')} title="Emoji" />
+          <ToolbarButton icon={AtSign} cmd={() => execCommand('insertText', '@')} title="Mencionar" />
         </div>
       </div>
 
@@ -124,10 +234,34 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
         ref={editorRef}
         contentEditable
         onInput={updateParent}
-        className="min-h-[200px] p-4 text-zinc-200 focus:outline-none prose prose-invert prose-sm max-w-none bg-zinc-950"
+        onKeyDown={handleKeyDown}
+        className="min-h-[200px] p-4 text-zinc-200 focus:outline-none prose prose-invert prose-sm max-w-none bg-zinc-950 relative"
         data-placeholder={placeholder}
         style={{ whiteSpace: 'pre-wrap' }}
       />
+
+      {/* MENTION LIST */}
+      {showMentions && mentionResults.length > 0 && (
+        <div
+          className="absolute z-50 bg-zinc-900 border border-zinc-700 rounded-sm shadow-xl w-64 overflow-hidden animate-fade-in"
+          style={{ top: mentionPosition.top, left: mentionPosition.left }}
+        >
+          {mentionResults.map((user, idx) => (
+            <div
+              key={user.id}
+              className={`p-2 flex items-center gap-2 cursor-pointer ${idx === mentionIndex ? 'bg-racing-orange text-white' : 'hover:bg-zinc-800 text-zinc-300'}`}
+              onClick={() => insertMention(user)}
+            >
+              {user.avatar ? (
+                <img src={user.avatar} alt={user.name} className="w-6 h-6 rounded-full" />
+              ) : (
+                <div className="w-6 h-6 bg-zinc-700 rounded-full" />
+              )}
+              <span className="text-sm font-bold truncate">{user.name}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* FOOTER / ATTACHMENTS */}
       <div className="p-3 bg-zinc-900 border-t border-zinc-800 flex items-center gap-4">
@@ -144,18 +278,17 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
 
               setUploading(true);
               try {
-                const url = await uploadFile(file);
+                const { url } = await uploadFile(file);
                 execCommand('insertImage', url);
               } catch (err: any) {
                 alert("Error al subir imagen: " + err.message);
               }
               setUploading(false);
-              // Clear input
               e.target.value = '';
             }
           }} />
         </label>
-        <span className="text-zinc-600 text-[10px] uppercase">Formatos: JPG, PNG, PDF (Max 5MB)</span>
+        <span className="text-zinc-600 text-[10px] uppercase">Formatos: JPG, PNG, PDF (Max 10MB)</span>
       </div>
     </div>
   );
