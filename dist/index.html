@@ -19,10 +19,16 @@
   <link rel="preconnect" href="https://wsrv.nl">
   <link rel="preconnect" href="https://backendescapes.com">
 
-  <!-- Pre-carga de la imagen LCP con la URL exacta que usará el componente -->
+  <!-- Pre-carga de la imagen LCP RESPONSIVE (coincide con App.tsx) -->
   <link rel="preload" as="image"
-    href="https://wsrv.nl/?url=https%3A%2F%2Fimages.unsplash.com%2Fphoto-1591637333184-19aa84b3e01f&w=800&output=webp&q=80&l=5"
-    fetchpriority="high">
+    href="https://wsrv.nl/?url=https%3A%2F%2Fimages.unsplash.com%2Fphoto-1591637333184-19aa84b3e01f%3Fq%3D80%26w%3D1920%26auto%3Dformat%26fit%3Dcrop&w=600&h=800&fit=cover&output=webp&q=75"
+    media="(max-width: 640px)" fetchpriority="high">
+  <link rel="preload" as="image"
+    href="https://wsrv.nl/?url=https%3A%2F%2Fimages.unsplash.com%2Fphoto-1591637333184-19aa84b3e01f%3Fq%3D80%26w%3D1920%26auto%3Dformat%26fit%3Dcrop&w=1200&output=webp&q=80"
+    media="(max-width: 1024px) and (min-width: 641px)" fetchpriority="high">
+  <link rel="preload" as="image"
+    href="https://wsrv.nl/?url=https%3A%2F%2Fimages.unsplash.com%2Fphoto-1591637333184-19aa84b3e01f%3Fq%3D80%26w%3D1920%26auto%3Dformat%26fit%3Dcrop&w=1920&output=webp&q=80"
+    media="(min-width: 1025px)" fetchpriority="high">
 
   <!-- Carga de fuentes optimizada (no bloqueante) -->
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap">
@@ -31,7 +37,7 @@
 
   <!-- Estilos locales compilados por Vite -->
   <!-- Vite inyectará los estilos automáticamente desde index.tsx -->
-  <script type="module" crossorigin src="/assets/index-BI_T9_58.js"></script>
+  <script type="module" crossorigin src="/assets/index-CB81oSKC.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/vendor-react-CRB3T2We.js">
   <link rel="modulepreload" crossorigin href="/assets/vendor-icons-CGUfLjwZ.js">
   <link rel="stylesheet" crossorigin href="/assets/index-B0kHi5SP.css">
