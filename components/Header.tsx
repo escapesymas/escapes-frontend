@@ -145,7 +145,17 @@ export const Header: React.FC<HeaderProps> = ({
               {user && (
                 <div className="mb-6 p-4 bg-zinc-900 rounded-sm border border-zinc-800 flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden">
-                    {user.avatarUrl ? <img src={user.avatarUrl} className="w-full h-full object-cover" width="40" height="40" alt="Avatar" /> : <User className="w-full h-full p-2 text-zinc-500" />}
+                    {user.avatarUrl ? (
+                      <img
+                        src={user.avatarUrl.startsWith('data:') ? user.avatarUrl : `https://wsrv.nl/?url=${encodeURIComponent(user.avatarUrl)}&w=150&h=150&fit=cover&output=webp`}
+                        className="w-full h-full object-cover"
+                        width="40"
+                        height="40"
+                        alt="Avatar"
+                      />
+                    ) : (
+                      <User className="w-full h-full p-2 text-zinc-500" />
+                    )}
                   </div>
                   <div>
                     <p className="text-white font-bold text-sm">{user.firstName}</p>
