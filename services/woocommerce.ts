@@ -45,7 +45,7 @@ const makeRequest = async (path: string, options: RequestInit = {}) => {
     if (!response.ok) {
       throw new Error(data.message || `API Error: ${response.status}`);
     }
-    
+
     return { data, totalPages };
 
   } catch (error: any) {
@@ -56,7 +56,7 @@ const makeRequest = async (path: string, options: RequestInit = {}) => {
 
 export const fetchCategories = async (): Promise<Category[]> => {
   if (!isConfigValid()) throw new Error("Configuración incompleta");
-  
+
   try {
     const { data } = await makeRequest('/wc/v3/products/categories?per_page=100&hide_empty=true');
     const wooCats = data as WooCategory[];
@@ -74,15 +74,17 @@ export const fetchCategories = async (): Promise<Category[]> => {
 };
 
 export const fetchProducts = async (
-  searchQuery?: string, 
-  categoryId?: number, 
-  page: number = 1, 
-  perPage: number = 20
+  searchQuery?: string,
+  categoryId?: number,
+  page: number = 1,
+  perPage: number = 20,
+  orderBy: string = 'date',
+  order: string = 'desc'
 ): Promise<{ products: Product[], totalPages: number }> => {
   if (!isConfigValid()) throw new Error("Configuración inválida");
-  
-  let path = `/wc/v3/products?per_page=${perPage}&page=${page}&status=publish`;
-  
+
+  let path = `/wc/v3/products?per_page=${perPage}&page=${page}&status=publish&orderby=${orderBy}&order=${order}`;
+
   if (searchQuery) path += `&search=${encodeURIComponent(searchQuery)}`;
   if (categoryId) path += `&category=${categoryId}`;
 
