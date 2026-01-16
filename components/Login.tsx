@@ -25,14 +25,41 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess, onBack, onRegister
       const session = await loginUser(username, password);
       // loginUser devuelve Session directamente o lanza error
       if (session && session.token) {
-        onLoginSuccess({
-          id: 0,
+
+        // Fetch full customer details to get the correct ID
+        // The auth session doesn't provide the WC Customer ID, only the WP User ID (maybe) or just email/display name
+        let userProfile: UserType = {
+          id: 0, // Temporary
           username: username,
           email: session.user_email,
           firstName: session.user_display_name,
           lastName: '',
           token: session.token,
-        });
+        };
+
+        try {
+          // Import dynamically to avoid circular dependencies if any, or just use the imported function
+          const { fetchCustomerByEmail } = await import('../services/woocommerce');
+          const customer = await fetchCustomerByEmail(session.user_email);
+
+          if (customer) {
+            userProfile = {
+              ...userProfile,
+              id: customer.id,
+              firstName: customer.firstName || userProfile.firstName,
+              lastName: customer.lastName,
+              avatarUrl: customer.avatarUrl,
+              billing: customer.billing
+            };
+            console.log("Logged in with Customer ID:", customer.id);
+          } else {
+            console.warn("Could not find WooCommerce customer for email:", session.user_email);
+          }
+        } catch (err) {
+          console.error("Error fetching customer details:", err);
+        }
+
+        onLoginSuccess(userProfile);
       } else if (session.warning) {
         // Usuario creado pero sin token - pedir login manual
         setError(session.warning);
