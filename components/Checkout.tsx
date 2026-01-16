@@ -24,7 +24,7 @@ declare global {
 export const Checkout: React.FC<CheckoutProps> = (props) => {
   const [step, setStep] = useState<'form' | 'success'>('form');
   const [orderId, setOrderId] = useState<number | null>(null);
-  
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -32,14 +32,14 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
-  
+
   // Login Inputs
   const [loginUserVal, setLoginUserVal] = useState('');
   const [loginPass, setLoginPass] = useState('');
 
   // Register Inputs
   const [regData, setRegData] = useState({
-     firstName: '', lastName: '', email: '', username: '', password: ''
+    firstName: '', lastName: '', email: '', username: '', password: ''
   });
 
   // SumUp State
@@ -119,40 +119,40 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
 
     setIsSumupLoading(true);
     setErrorMessage(null);
-    
+
     // Create a temporary reference ID
     const tempRef = `ORD-${Date.now()}`;
-    
+
     // Call our service to create checkout
     const checkoutData = await createSumUpCheckout(total, tempRef);
-    
+
     if (checkoutData && checkoutData.id) {
       setSumupCheckoutId(checkoutData.id);
-      
+
       // Mount Widget with a robust retry mechanism for mobile
       const mountWidget = (attemptsLeft = 5) => {
         if (window.SumUpCard && document.getElementById('sumup-card')) {
-           try {
+          try {
             window.SumUpCard.mount({
               id: 'sumup-card',
               checkoutId: checkoutData.id,
               onResponse: function (type: string, body: any) {
                 console.log('SumUp Response:', type, body);
-                
+
                 if (type === 'success') {
                   if (body.status === 'FAILED') {
-                     setErrorMessage("El pago ha sido denegado por el banco.");
-                     return;
+                    setErrorMessage("El pago ha sido denegado por el banco.");
+                    return;
                   }
                   setTimeout(() => {
                     finalizeOrder('sumup', body.transaction_code || body.id || 'SUMUP_TX');
                   }, 100);
 
                 } else if (type === 'error') {
-                   setErrorMessage("Error en el pago: " + (body.message || "Inténtalo de nuevo"));
+                  setErrorMessage("Error en el pago: " + (body.message || "Inténtalo de nuevo"));
                 }
               },
-              showFooter: false, 
+              showFooter: false,
               locale: 'es-ES'
             });
             setIsSumupLoading(false);
@@ -196,16 +196,26 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
     e.preventDefault();
     setAuthLoading(true);
     setAuthError(null);
-    
+
     try {
-      const result = await loginUser(loginUserVal, loginPass);
-      if (result.success && result.user) {
-        props.onLoginSuccess(result.user);
+      const session = await loginUser(loginUserVal, loginPass);
+      // loginUser devuelve Session directamente o lanza error
+      if (session && session.token) {
+        props.onLoginSuccess({
+          id: 0,
+          username: loginUserVal,
+          email: session.user_email,
+          firstName: session.user_display_name,
+          lastName: '',
+          token: session.token,
+        });
+      } else if (session.warning) {
+        setAuthError(session.warning);
       } else {
-        setAuthError(result.error || "Credenciales incorrectas");
+        setAuthError("Credenciales incorrectas");
       }
-    } catch (err) {
-      setAuthError("Error de conexión");
+    } catch (err: any) {
+      setAuthError(err.message || "Error de conexión");
     } finally {
       setAuthLoading(false);
     }
@@ -215,23 +225,28 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
     e.preventDefault();
     setAuthLoading(true);
     setAuthError(null);
-    
+
     try {
       const result = await registerUser(regData);
-      if (result.success) {
-        // Auto login after register attempt
-        const loginRes = await loginUser(regData.username || regData.email, regData.password);
-        if (loginRes.success && loginRes.user) {
-           props.onLoginSuccess(loginRes.user);
-        } else {
-           setAuthMode('login');
-           setAuthError("Cuenta creada. Por favor inicia sesión.");
-        }
+      // registerUser devuelve Session directamente o lanza error
+      if (result && result.token) {
+        props.onLoginSuccess({
+          id: result.user_id || 0,
+          username: regData.username,
+          email: result.user_email,
+          firstName: result.user_display_name || regData.firstName,
+          lastName: regData.lastName,
+          token: result.token,
+        });
+      } else if (result.warning) {
+        // Usuario creado pero sin token - pedir login manual
+        setAuthMode('login');
+        setAuthError(result.warning);
       } else {
-        setAuthError(result.error || "Error al registrarse");
+        setAuthError("Error al registrarse");
       }
-    } catch (err) {
-      setAuthError("Error de conexión");
+    } catch (err: any) {
+      setAuthError(err.message || "Error de conexión");
     } finally {
       setAuthLoading(false);
     }
@@ -240,14 +255,14 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
   // Finalize order in WooCommerce after successful payment
   const finalizeOrder = async (method: string, transactionId: string) => {
     setIsProcessing(true);
-    
+
     const currentData = formDataRef.current;
-    
+
     // Fallback email logic
     let safeEmail = currentData.email;
     if (!safeEmail || !safeEmail.includes('@')) {
-        console.warn("Email inválido detectado tras pago. Usando fallback.");
-        safeEmail = `cliente-sin-email-${Date.now()}@escapesymas.com`;
+      console.warn("Email inválido detectado tras pago. Usando fallback.");
+      safeEmail = `cliente-sin-email-${Date.now()}@escapesymas.com`;
     }
 
     const orderPayload = {
@@ -281,7 +296,7 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
     };
 
     const result = await createOrder(orderPayload);
-      
+
     if (result.success) {
       setOrderId(result.id || 0);
       setStep('success');
@@ -308,7 +323,7 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
             <p className="text-zinc-500 text-xs uppercase font-bold mb-1">Referencia Pedido</p>
             <p className="text-white font-mono tracking-widest">#{orderId}</p>
           </div>
-          <button 
+          <button
             onClick={props.onOrderComplete}
             className="w-full bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase py-3 rounded-sm transition-colors"
           >
@@ -335,80 +350,80 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-5xl mx-auto">
           {/* AUTH FORMS */}
           <div className="bg-racing-carbon border border-zinc-800 p-8 rounded-sm shadow-xl">
-             <div className="flex gap-4 mb-8 border-b border-zinc-700">
-               <button 
+            <div className="flex gap-4 mb-8 border-b border-zinc-700">
+              <button
                 onClick={() => setAuthMode('login')}
                 className={`pb-2 text-sm font-bold uppercase tracking-wider transition-colors border-b-2 ${authMode === 'login' ? 'text-racing-orange border-racing-orange' : 'text-zinc-500 border-transparent hover:text-white'}`}
-               >
-                 Ya soy cliente
-               </button>
-               <button 
+              >
+                Ya soy cliente
+              </button>
+              <button
                 onClick={() => setAuthMode('register')}
                 className={`pb-2 text-sm font-bold uppercase tracking-wider transition-colors border-b-2 ${authMode === 'register' ? 'text-racing-orange border-racing-orange' : 'text-zinc-500 border-transparent hover:text-white'}`}
-               >
-                 Nuevo Cliente
-               </button>
-             </div>
+              >
+                Nuevo Cliente
+              </button>
+            </div>
 
-             {authError && (
-               <div className="bg-red-900/20 border border-red-800 text-red-200 p-3 rounded-sm mb-6 flex items-start gap-2 text-sm">
-                 <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                 {authError}
-               </div>
-             )}
+            {authError && (
+              <div className="bg-red-900/20 border border-red-800 text-red-200 p-3 rounded-sm mb-6 flex items-start gap-2 text-sm">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                {authError}
+              </div>
+            )}
 
-             {authMode === 'login' ? (
-               <form onSubmit={handleInlineLogin} className="space-y-4">
-                 <div>
-                   <label className="text-xs font-bold text-zinc-500 uppercase mb-1 block">Usuario / Email</label>
-                   <input required type="text" value={loginUserVal} onChange={e => setLoginUserVal(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
-                 </div>
-                 <div>
-                   <label className="text-xs font-bold text-zinc-500 uppercase mb-1 block">Contraseña</label>
-                   <input required type="password" value={loginPass} onChange={e => setLoginPass(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
-                 </div>
-                 <button disabled={authLoading} type="submit" className="w-full bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase py-3 rounded-sm transition-colors flex items-center justify-center gap-2">
-                   {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Entrar y Continuar'}
-                 </button>
-               </form>
-             ) : (
-               <form onSubmit={handleInlineRegister} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <input required placeholder="Nombre" value={regData.firstName} onChange={e => setRegData({...regData, firstName: e.target.value})} className="bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
-                    <input required placeholder="Apellidos" value={regData.lastName} onChange={e => setRegData({...regData, lastName: e.target.value})} className="bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
-                  </div>
-                  <input required placeholder="Email" type="email" value={regData.email} onChange={e => setRegData({...regData, email: e.target.value})} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
-                  <input required placeholder="Usuario (Nick)" value={regData.username} onChange={e => setRegData({...regData, username: e.target.value})} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
-                  <input required placeholder="Contraseña (mín 6 carac.)" type="password" value={regData.password} onChange={e => setRegData({...regData, password: e.target.value})} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
-                  
-                  <button disabled={authLoading} type="submit" className="w-full bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase py-3 rounded-sm transition-colors flex items-center justify-center gap-2">
-                   {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Crear Cuenta y Continuar'}
-                 </button>
-               </form>
-             )}
+            {authMode === 'login' ? (
+              <form onSubmit={handleInlineLogin} className="space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-zinc-500 uppercase mb-1 block">Usuario / Email</label>
+                  <input required type="text" value={loginUserVal} onChange={e => setLoginUserVal(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-zinc-500 uppercase mb-1 block">Contraseña</label>
+                  <input required type="password" value={loginPass} onChange={e => setLoginPass(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                </div>
+                <button disabled={authLoading} type="submit" className="w-full bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase py-3 rounded-sm transition-colors flex items-center justify-center gap-2">
+                  {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Entrar y Continuar'}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleInlineRegister} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <input required placeholder="Nombre" value={regData.firstName} onChange={e => setRegData({ ...regData, firstName: e.target.value })} className="bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                  <input required placeholder="Apellidos" value={regData.lastName} onChange={e => setRegData({ ...regData, lastName: e.target.value })} className="bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                </div>
+                <input required placeholder="Email" type="email" value={regData.email} onChange={e => setRegData({ ...regData, email: e.target.value })} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                <input required placeholder="Usuario (Nick)" value={regData.username} onChange={e => setRegData({ ...regData, username: e.target.value })} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                <input required placeholder="Contraseña (mín 6 carac.)" type="password" value={regData.password} onChange={e => setRegData({ ...regData, password: e.target.value })} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+
+                <button disabled={authLoading} type="submit" className="w-full bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase py-3 rounded-sm transition-colors flex items-center justify-center gap-2">
+                  {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Crear Cuenta y Continuar'}
+                </button>
+              </form>
+            )}
           </div>
 
           {/* ORDER PREVIEW */}
           <div>
             <h3 className="text-white font-bold uppercase mb-4">Resumen de tu pedido</h3>
             <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-sm">
-               <div className="space-y-4 mb-6">
-                 {props.cart.map(item => (
-                   <div key={item.id} className="flex gap-3">
-                     <div className="w-12 h-12 bg-white rounded-sm overflow-hidden flex-shrink-0">
-                       <img src={item.image} className="w-full h-full object-contain" />
-                     </div>
-                     <div>
-                       <p className="text-white text-sm font-bold line-clamp-1">{item.title}</p>
-                       <p className="text-zinc-500 text-xs">{item.quantity} x {formatPrice(item.price)}</p>
-                     </div>
-                   </div>
-                 ))}
-               </div>
-               <div className="flex justify-between items-center pt-4 border-t border-zinc-800">
-                 <span className="text-zinc-400">Total a pagar</span>
-                 <span className="text-xl font-bold text-white">{formatPrice(total)}</span>
-               </div>
+              <div className="space-y-4 mb-6">
+                {props.cart.map(item => (
+                  <div key={item.id} className="flex gap-3">
+                    <div className="w-12 h-12 bg-white rounded-sm overflow-hidden flex-shrink-0">
+                      <img src={item.image} className="w-full h-full object-contain" />
+                    </div>
+                    <div>
+                      <p className="text-white text-sm font-bold line-clamp-1">{item.title}</p>
+                      <p className="text-zinc-500 text-xs">{item.quantity} x {formatPrice(item.price)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between items-center pt-4 border-t border-zinc-800">
+                <span className="text-zinc-400">Total a pagar</span>
+                <span className="text-xl font-bold text-white">{formatPrice(total)}</span>
+              </div>
             </div>
             <div className="mt-6 flex gap-4 text-zinc-500 text-xs">
               <div className="flex items-center gap-1"><ShieldCheck className="w-4 h-4" /> Pago Seguro</div>
@@ -433,17 +448,17 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+
         {/* LEFT COLUMN: FORMS & PAYMENT */}
         <div className="lg:col-span-2 space-y-8">
-          
+
           {/* 1. Shipping Info */}
           <section className="bg-racing-carbon border border-zinc-800 p-6 rounded-sm">
             <h3 className="text-white font-bold uppercase mb-6 tracking-wide border-b border-zinc-800 pb-2 flex items-center gap-2">
               <span className="bg-racing-orange text-white w-6 h-6 flex items-center justify-center rounded-full text-xs">1</span>
               Datos de Envío
             </h3>
-            
+
             {props.user && (
               <div className="mb-4 bg-blue-900/20 border border-blue-800 p-3 rounded-sm text-blue-200 text-sm flex items-center gap-2">
                 <CheckCircle className="w-4 h-4" />
@@ -457,8 +472,8 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
               <input required name="email" type="email" placeholder="Email (Obligatorio)" value={formData.email} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500 md:col-span-2" />
               <input required name="address" placeholder="Dirección completa" value={formData.address} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500 md:col-span-2" />
               <div className="grid grid-cols-2 gap-4">
-                 <input required name="city" placeholder="Ciudad" value={formData.city} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500" />
-                 <input required name="zip" placeholder="Código Postal" value={formData.zip} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500" />
+                <input required name="city" placeholder="Ciudad" value={formData.city} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500" />
+                <input required name="zip" placeholder="Código Postal" value={formData.zip} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500" />
               </div>
               <input required name="phone" placeholder="Teléfono" value={formData.phone} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500 md:col-span-2" />
             </form>
@@ -470,34 +485,34 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
               <span className="bg-racing-orange text-white w-6 h-6 flex items-center justify-center rounded-full text-xs">2</span>
               Pago con Tarjeta
             </h3>
-            
+
             {/* PAYMENT CONTENT */}
             <div className="bg-zinc-900 p-6 rounded-sm border border-zinc-800 min-h-[200px] flex flex-col justify-center relative">
-              
-                <div className="animate-fade-in w-full max-w-sm mx-auto">
-                   {isSumupLoading && (
-                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 z-10">
-                        <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
-                        <span className="text-xs text-zinc-400">Cargando pasarela segura...</span>
-                     </div>
-                   )}
-                   
-                   {/* This div is where SumUp mounts. Important: width full for mobile */}
-                   <div id="sumup-card" className="bg-white rounded-md p-1 min-h-[150px] w-full"></div>
-                   
-                   {!formData.email && !isSumupLoading && (
-                      <div className="text-center mt-4 p-2 bg-yellow-900/20 border border-yellow-800 rounded-sm">
-                        <p className="text-xs text-yellow-500">
-                          ⚠️ Rellena los <strong>Datos de Envío</strong> para recibir el recibo.
-                        </p>
-                      </div>
-                   )}
-                </div>
 
-               <div className="flex items-center gap-2 text-[10px] text-zinc-500 justify-center pt-4">
-                  <Lock className="w-3 h-3" />
-                  Transacción protegida por <span className="text-zinc-300 font-bold">SumUp</span>
-                </div>
+              <div className="animate-fade-in w-full max-w-sm mx-auto">
+                {isSumupLoading && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 z-10">
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
+                    <span className="text-xs text-zinc-400">Cargando pasarela segura...</span>
+                  </div>
+                )}
+
+                {/* This div is where SumUp mounts. Important: width full for mobile */}
+                <div id="sumup-card" className="bg-white rounded-md p-1 min-h-[150px] w-full"></div>
+
+                {!formData.email && !isSumupLoading && (
+                  <div className="text-center mt-4 p-2 bg-yellow-900/20 border border-yellow-800 rounded-sm">
+                    <p className="text-xs text-yellow-500">
+                      ⚠️ Rellena los <strong>Datos de Envío</strong> para recibir el recibo.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 text-[10px] text-zinc-500 justify-center pt-4">
+                <Lock className="w-3 h-3" />
+                Transacción protegida por <span className="text-zinc-300 font-bold">SumUp</span>
+              </div>
             </div>
           </section>
         </div>
@@ -506,7 +521,7 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
         <div className="lg:col-span-1">
           <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-sm sticky top-24">
             <h3 className="text-white font-bold uppercase mb-4 tracking-wide text-sm">Resumen del Pedido</h3>
-            
+
             <div className="space-y-3 mb-6 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
               {props.cart.map(item => (
                 <div key={item.id} className="flex justify-between gap-2 text-sm">
@@ -547,15 +562,15 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
                 {errorMessage}
               </div>
             )}
-            
+
             {/* Trust Badges */}
             <div className="mt-6 pt-6 border-t border-zinc-800 grid grid-cols-2 gap-4">
-               <div className="flex items-center gap-2 text-zinc-500 text-[10px] uppercase font-bold">
-                 <ShieldCheck className="w-3 h-3" /> SSL Seguro
-               </div>
-               <div className="flex items-center gap-2 text-zinc-500 text-[10px] uppercase font-bold">
-                 <CheckCircle className="w-3 h-3" /> Garantía Oficial
-               </div>
+              <div className="flex items-center gap-2 text-zinc-500 text-[10px] uppercase font-bold">
+                <ShieldCheck className="w-3 h-3" /> SSL Seguro
+              </div>
+              <div className="flex items-center gap-2 text-zinc-500 text-[10px] uppercase font-bold">
+                <CheckCircle className="w-3 h-3" /> Garantía Oficial
+              </div>
             </div>
           </div>
         </div>
