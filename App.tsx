@@ -448,7 +448,11 @@ function App() {
         {currentView === 'home' && (
           <>
             <section className="relative h-[500px] flex items-center justify-center bg-zinc-900 overflow-hidden">
-              <img src={optimizeImage(STORE_CONFIG.heroImage, 1920)} className="absolute inset-0 w-full h-full object-cover opacity-40 grayscale" alt="" />
+              <picture className="absolute inset-0 w-full h-full">
+                <source media="(max-width: 640px)" srcSet={`https://wsrv.nl/?url=${encodeURIComponent(STORE_CONFIG.heroImage)}&w=600&h=800&fit=cover&output=webp&q=75`} />
+                <source media="(max-width: 1024px)" srcSet={`https://wsrv.nl/?url=${encodeURIComponent(STORE_CONFIG.heroImage)}&w=1200&output=webp&q=80`} />
+                <img src={`https://wsrv.nl/?url=${encodeURIComponent(STORE_CONFIG.heroImage)}&w=1920&output=webp&q=80`} className="w-full h-full object-cover opacity-40 grayscale" alt="Taller Moto" />
+              </picture>
               <div className="relative z-10 text-center px-4">
                 <h1 className="text-5xl md:text-7xl font-extrabold text-white uppercase italic mb-4">
                   {STORE_CONFIG.heroTitle}
