@@ -430,13 +430,58 @@ export const updateCustomerAvatar = async (userId: number, avatarUrl: string): P
 /**
  * Sube una foto personalizada para el cliente
  */
-export const uploadCustomerPhoto = async (userId: number, file: File, username: string): Promise<{ success: boolean; url?: string; error?: string }> => {
-  // Nota: Subir archivos directamente a WordPress REST API requiere autenticación de admin/editor
-  // O un endpoint personalizado. Para esta implementación, asumiremos que no podemos subir directamente
-  // sin un endpoint específico o plugin.
-  // 
-  // Esta función es un placeholder que requeriría backend adicional.
-  // Como fallback, retornamos error para que el UI maneje la subida de otra forma (o base64 en metadata si es pequeña)
+export const uploadFile = async (file: File): Promise<string> => {
+  let baseUrl = WOO_CONFIG.baseUrl.replace(/\/$/, "");
+  // Use WP API Media endpoint
+  const url = `${baseUrl}/wp-json/wp/v2/media`;
 
-  return { success: false, error: 'La subida de archivos requiere configuración adicional del servidor.' };
+  const credentials = btoa(`${WOO_CONFIG.consumerKey}:${WOO_CONFIG.consumerSecret}`);
+  const headers = {
+    'Authorization': `Basic ${credentials}`,
+    'Content-Disposition': `attachment; filename="${file.name}"`,
+    'Cache-Control': 'no-cache'
+  };
+
+  try {
+    const response = await fetch(url + `?_t=${new Date().getTime()}`, {
+      method: 'POST',
+      headers: headers,
+      body: file
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.message || 'Error al subir archivo');
+    }
+
+    const data = await response.json();
+    console.log('[UPLOAD] Success:', data.source_url);
+    return data.source_url; // Return the full public URL
+  } catch (error) {
+    console.error('[UPLOAD] Error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Sube una foto personalizada para el cliente y actualiza su metadata
+ */
+export const uploadCustomerPhoto = async (userId: number, file: File, username?: string): Promise<{ success: boolean; url?: string; error?: string }> => {
+  if (!userId || userId === 0) return { success: false, error: 'Usuario inválido' };
+
+  try {
+    // 1. Upload file to WP Media
+    const publicUrl = await uploadFile(file);
+
+    // 2. Update Customer Metadata with new URL
+    const updateSuccess = await updateCustomerAvatar(userId, publicUrl);
+
+    if (updateSuccess) {
+      return { success: true, url: publicUrl };
+    } else {
+      return { success: false, error: 'Error al actualizar perfil con la nueva foto' };
+    }
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
 };
