@@ -230,10 +230,46 @@ function App() {
   const renderPagination = () => {
     if (totalPages <= 1 || loading) return null;
 
-    const pages = [];
-    for (let i = 1; i <= totalPages; i++) {
-      pages.push(i);
-    }
+    // Genera un rango inteligente de páginas a mostrar
+    const getPageRange = () => {
+      const delta = 2; // Páginas a mostrar a cada lado de la actual
+      const range: (number | string)[] = [];
+
+      // Siempre mostrar primera página
+      range.push(1);
+
+      // Calcular inicio y fin del rango central
+      const start = Math.max(2, currentPage - delta);
+      const end = Math.min(totalPages - 1, currentPage + delta);
+
+      // Agregar elipsis si hay hueco después de la primera página
+      if (start > 2) range.push('...');
+
+      // Agregar páginas del rango central
+      for (let i = start; i <= end; i++) {
+        range.push(i);
+      }
+
+      // Agregar elipsis si hay hueco antes de la última página
+      if (end < totalPages - 1) range.push('...');
+
+      // Siempre mostrar última página (si hay más de 1)
+      if (totalPages > 1) range.push(totalPages);
+
+      return range;
+    };
+
+    const pages = getPageRange();
+
+    const handleGoToPage = (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      const input = e.currentTarget.elements.namedItem('pageInput') as HTMLInputElement;
+      const page = parseInt(input.value);
+      if (page >= 1 && page <= totalPages) {
+        handleProductFetch(page);
+        input.value = '';
+      }
+    };
 
     return (
       <div className="flex flex-wrap justify-center items-center gap-2 mt-12 py-8 border-t border-zinc-900">
@@ -245,14 +281,18 @@ function App() {
           <ChevronLeft className="w-5 h-5" />
         </button>
 
-        {pages.map(p => (
-          <button
-            key={p}
-            onClick={() => handleProductFetch(p)}
-            className={`w-12 h-12 rounded-sm font-bold text-sm border transition-all ${currentPage === p ? 'bg-racing-orange border-racing-orange text-white' : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-600'}`}
-          >
-            {p}
-          </button>
+        {pages.map((p, idx) => (
+          p === '...' ? (
+            <span key={`ellipsis-${idx}`} className="text-zinc-600 px-2">...</span>
+          ) : (
+            <button
+              key={p}
+              onClick={() => handleProductFetch(p as number)}
+              className={`w-10 h-10 rounded-sm font-bold text-sm border transition-all ${currentPage === p ? 'bg-racing-orange border-racing-orange text-white' : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-600'}`}
+            >
+              {p}
+            </button>
+          )
         ))}
 
         <button
@@ -262,6 +302,20 @@ function App() {
         >
           <ArrowRight className="w-5 h-5" />
         </button>
+
+        {/* Input para ir a página específica */}
+        <form onSubmit={handleGoToPage} className="flex items-center gap-2 ml-4">
+          <span className="text-zinc-500 text-xs">Ir a:</span>
+          <input
+            type="number"
+            name="pageInput"
+            min={1}
+            max={totalPages}
+            placeholder={currentPage.toString()}
+            className="w-16 bg-zinc-900 border border-zinc-800 text-white text-sm px-2 py-2 rounded-sm focus:border-racing-orange focus:outline-none text-center"
+          />
+          <span className="text-zinc-600 text-xs">/ {totalPages}</span>
+        </form>
       </div>
     );
   };
