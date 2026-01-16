@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User as UserIcon, MapPin, Save, ArrowLeft, Mail, Phone, Loader2, CheckCircle, Camera, X, Lock, Upload } from 'lucide-react';
 import { User } from '../types';
-import { updateCustomer, fetchAvatars, updateCustomerAvatar, AvatarOption } from '../services/woocommerce';
+import { updateCustomer, fetchAvatars, updateCustomerAvatar, uploadCustomerPhoto, AvatarOption } from '../services/woocommerce';
 
 interface MyAccountProps {
   user: User;
@@ -89,30 +89,21 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
 
     setUploadingPhoto(true);
 
-    // Convert to base64 and upload as avatar
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const base64 = event.target?.result as string;
-      if (base64) {
-        // Use the base64 as a data URL for now (or implement proper upload)
-        const success = await updateCustomerAvatar(user.id, base64);
-        if (success) {
-          setSelectedAvatar(base64);
-          onUpdateUser({ ...user, avatarUrl: base64 });
-          setShowAvatarPicker(false);
-          setSuccessMsg('Foto actualizada');
-          setTimeout(() => setSuccessMsg(''), 3000);
-        } else {
-          alert('Error al subir la foto. Intenta con un avatar predefinido.');
-        }
-      }
-      setUploadingPhoto(false);
-    };
-    reader.onerror = () => {
-      alert('Error al leer la imagen');
-      setUploadingPhoto(false);
-    };
-    reader.readAsDataURL(file);
+    setUploadingPhoto(true);
+
+    // Subir a WP Media Library real
+    const result = await uploadCustomerPhoto(user.id, file, user.username);
+
+    if (result.success && result.url) {
+      setSelectedAvatar(result.url);
+      onUpdateUser({ ...user, avatarUrl: result.url });
+      setShowAvatarPicker(false);
+      setSuccessMsg('Foto actualizada');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } else {
+      alert(result.error || 'Error al subir la foto. Intenta con un avatar predefinido.');
+    }
+    setUploadingPhoto(false);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
