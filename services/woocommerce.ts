@@ -518,3 +518,25 @@ export const uploadCustomerPhoto = async (userId: number, file: File, email?: st
     return { success: false, error: error.message || 'Error de subida (Posible fallo de permisos)' };
   }
 };
+
+/**
+ * Busca usuarios para menciones (Autocomplete)
+ */
+export const searchUsers = async (query: string): Promise<{ id: number; name: string; avatar: string }[]> => {
+  if (!query || query.length < 2) return [];
+
+  try {
+    // Usamos endpoints de WP o WC. WC Customers es más seguro si tenemos keys de tienda.
+    const { data } = await makeRequest(`/wc/v3/customers?search=${encodeURIComponent(query)}&per_page=5`);
+    const customers = data as any[];
+
+    return customers.map(c => ({
+      id: c.id,
+      name: c.username || c.first_name + ' ' + c.last_name,
+      avatar: c.avatar_url || ''
+    }));
+  } catch (error) {
+    console.error('[SEARCH USERS] Error:', error);
+    return [];
+  }
+};
