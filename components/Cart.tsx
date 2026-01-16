@@ -64,12 +64,15 @@ export const Cart: React.FC<CartProps> = ({
     if (!onRestoreCart) return;
 
     setIsRecovering(true);
+    setRecoveryError(null);
     try {
       // Obtener los productos completos desde WooCommerce
       const { products: allProducts } = await fetchProducts(undefined, undefined, 1, 100);
 
       const restoredItems: CartItem[] = order.line_items.map(lineItem => {
-        const product = allProducts.find(p => p.id === lineItem.id);
+        // El ID del producto está en product_id, no en id
+        const productId = (lineItem as any).product_id || lineItem.id;
+        const product = allProducts.find(p => p.id === productId);
         if (product) {
           return { ...product, quantity: lineItem.quantity };
         }
