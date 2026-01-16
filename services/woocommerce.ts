@@ -465,16 +465,29 @@ export const uploadFile = async (file: File): Promise<string> => {
 
 /**
  * Sube una foto personalizada para el cliente y actualiza su metadata
+ * Si userId es 0, intenta resolverlo por email.
  */
-export const uploadCustomerPhoto = async (userId: number, file: File, username?: string): Promise<{ success: boolean; url?: string; error?: string }> => {
-  if (!userId || userId === 0) return { success: false, error: 'Usuario inválido' };
+export const uploadCustomerPhoto = async (userId: number, file: File, email?: string): Promise<{ success: boolean; url?: string; error?: string }> => {
+  let targetId = userId;
+
+  // Auto-resolve ID if missing
+  if ((!targetId || targetId === 0) && email) {
+    console.log('[AVATAR] User ID is 0, attempting to resolve by email:', email);
+    const user = await fetchCustomerByEmail(email);
+    if (user && user.id > 0) {
+      targetId = user.id;
+      console.log('[AVATAR] Resolved User ID:', targetId);
+    }
+  }
+
+  if (!targetId || targetId === 0) return { success: false, error: 'Usuario inválido (ID 0). No se encontró cuenta de cliente asociada.' };
 
   try {
     // 1. Upload file to WP Media
     const publicUrl = await uploadFile(file);
 
     // 2. Update Customer Metadata with new URL
-    const updateSuccess = await updateCustomerAvatar(userId, publicUrl);
+    const updateSuccess = await updateCustomerAvatar(targetId, publicUrl);
 
     if (updateSuccess) {
       return { success: true, url: publicUrl };
@@ -482,6 +495,7 @@ export const uploadCustomerPhoto = async (userId: number, file: File, username?:
       return { success: false, error: 'Error al actualizar perfil con la nueva foto' };
     }
   } catch (error: any) {
-    return { success: false, error: error.message };
+    console.error('[AVATAR] Upload failed:', error);
+    return { success: false, error: error.message || 'Error de subida (Posible fallo de permisos)' };
   }
 };
