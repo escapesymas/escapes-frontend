@@ -189,9 +189,9 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
   );
 
   return (
-    <div className={`flex flex-col border border-zinc-700 rounded-sm overflow-hidden bg-zinc-900 ${className}`}>
+    <div className={`flex flex-col border border-zinc-700 rounded-sm bg-zinc-900 relative ${className}`}>
       {/* TOOLBAR */}
-      <div className="flex flex-wrap items-center gap-1 p-2 bg-zinc-800 border-b border-zinc-700">
+      <div className="flex flex-wrap items-center gap-1 p-2 bg-zinc-800 border-b border-zinc-700 rounded-t-sm">
         <div className="flex items-center gap-0.5 border-r border-zinc-700 pr-2 mr-1">
           <ToolbarButton icon={Bold} cmd="bold" title="Negrita" />
           <ToolbarButton icon={Italic} cmd="italic" title="Cursiva" />
@@ -244,7 +244,10 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
       {showMentions && mentionResults.length > 0 && (
         <div
           className="absolute z-50 bg-zinc-900 border border-zinc-700 rounded-sm shadow-xl w-64 overflow-hidden animate-fade-in"
-          style={{ top: mentionPosition.top, left: mentionPosition.left }}
+          style={{
+            top: mentionPosition.top,
+            left: Math.min(mentionPosition.left, (editorRef.current?.offsetWidth || 300) - 260) // Clamp left to avoid overflow
+          }}
         >
           {mentionResults.map((user, idx) => (
             <div
@@ -264,7 +267,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
       )}
 
       {/* FOOTER / ATTACHMENTS */}
-      <div className="p-3 bg-zinc-900 border-t border-zinc-800 flex items-center gap-4">
+      <div className="p-3 bg-zinc-900 border-t border-zinc-800 flex items-center gap-4 rounded-b-sm">
         <label className={`cursor-pointer flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 px-3 py-1.5 rounded-sm text-xs font-bold text-zinc-300 transition-colors ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
           {uploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Paperclip className="w-3 h-3" />}
           {uploading ? 'Subiendo...' : 'Seleccionar archivo'}
