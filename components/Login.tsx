@@ -22,14 +22,25 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess, onBack, onRegister
     setError(null);
 
     try {
-      const result = await loginUser(username, password);
-      if (result.success && result.user) {
-        onLoginSuccess(result.user);
+      const session = await loginUser(username, password);
+      // loginUser devuelve Session directamente o lanza error
+      if (session && session.token) {
+        onLoginSuccess({
+          id: 0,
+          username: username,
+          email: session.user_email,
+          firstName: session.user_display_name,
+          lastName: '',
+          token: session.token,
+        });
+      } else if (session.warning) {
+        // Usuario creado pero sin token - pedir login manual
+        setError(session.warning);
       } else {
-        setError(result.error || 'Error al iniciar sesión');
+        setError('Error al iniciar sesión');
       }
-    } catch (e) {
-      setError('Error de conexión');
+    } catch (e: any) {
+      setError(e.message || 'Error de conexión');
     } finally {
       setIsLoading(false);
     }
@@ -38,9 +49,9 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess, onBack, onRegister
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 animate-fade-in bg-[url('https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center relative">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
-      
+
       <div className="relative z-10 w-full max-w-md bg-zinc-950 border border-zinc-800 p-8 rounded-sm shadow-2xl">
-        <button 
+        <button
           onClick={onBack}
           className="absolute top-4 left-4 text-zinc-500 hover:text-white transition-colors"
         >
@@ -66,8 +77,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess, onBack, onRegister
           <div>
             <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Usuario / Email</label>
             <div className="relative">
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full bg-zinc-900 border border-zinc-700 text-white p-3 pl-10 rounded-sm focus:border-racing-orange focus:outline-none transition-colors"
@@ -81,8 +92,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess, onBack, onRegister
           <div>
             <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Contraseña</label>
             <div className="relative">
-              <input 
-                type="password" 
+              <input
+                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-zinc-900 border border-zinc-700 text-white p-3 pl-10 rounded-sm focus:border-racing-orange focus:outline-none transition-colors"
@@ -101,7 +112,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess, onBack, onRegister
             <a href="#" className="text-racing-orange hover:text-orange-400 font-bold">¿Olvidaste la clave?</a>
           </div>
 
-          <button 
+          <button
             type="submit"
             disabled={isLoading}
             className="w-full bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase py-3 rounded-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group"
@@ -113,8 +124,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess, onBack, onRegister
 
         <div className="mt-8 text-center border-t border-zinc-800 pt-6">
           <p className="text-zinc-500 text-sm">
-            ¿No tienes cuenta? 
-            <button 
+            ¿No tienes cuenta?
+            <button
               onClick={onRegisterClick}
               className="ml-2 text-white font-bold hover:text-racing-orange transition-colors uppercase text-xs"
             >
