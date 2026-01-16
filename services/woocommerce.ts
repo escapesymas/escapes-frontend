@@ -156,3 +156,91 @@ export const updateCustomer = async (userId: number, data: Partial<User>): Promi
     return false;
   }
 };
+
+// =====================
+// CART PERSISTENCE
+// =====================
+
+interface CartItemData {
+  product_id: number;
+  quantity: number;
+}
+
+/**
+ * Guarda el carrito del usuario en los metadatos del cliente de WooCommerce
+ */
+export const saveUserCart = async (userId: number, cartItems: CartItemData[]): Promise<boolean> => {
+  if (!userId || userId === 0) return false;
+
+  try {
+    await makeRequest(`/wc/v3/customers/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        meta_data: [
+          {
+            key: '_saved_cart',
+            value: JSON.stringify(cartItems)
+          },
+          {
+            key: '_saved_cart_date',
+            value: new Date().toISOString()
+          }
+        ]
+      })
+    });
+    console.log('[CART SYNC] Cart saved for user:', userId);
+    return true;
+  } catch (error) {
+    console.error('[CART SYNC] Failed to save cart:', error);
+    return false;
+  }
+};
+
+/**
+ * Recupera el carrito guardado del usuario
+ */
+export const getUserCart = async (userId: number): Promise<CartItemData[]> => {
+  if (!userId || userId === 0) return [];
+
+  try {
+    const { data } = await makeRequest(`/wc/v3/customers/${userId}`);
+    const customer = data as any;
+
+    if (customer.meta_data) {
+      const savedCart = customer.meta_data.find((m: any) => m.key === '_saved_cart');
+      if (savedCart && savedCart.value) {
+        const parsed = JSON.parse(savedCart.value);
+        console.log('[CART SYNC] Cart recovered for user:', userId, parsed);
+        return parsed;
+      }
+    }
+    return [];
+  } catch (error) {
+    console.error('[CART SYNC] Failed to get cart:', error);
+    return [];
+  }
+};
+
+// =====================
+// ORDER STATUS UPDATE
+// =====================
+
+/**
+ * Actualiza el estado de un pedido existente
+ */
+export const updateOrderStatus = async (
+  orderId: number,
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled'
+): Promise<boolean> => {
+  try {
+    await makeRequest(`/wc/v3/orders/${orderId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status })
+    });
+    console.log(`[ORDER] Updated order ${orderId} to status: ${status}`);
+    return true;
+  } catch (error) {
+    console.error('[ORDER] Failed to update status:', error);
+    return false;
+  }
+};
