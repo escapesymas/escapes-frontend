@@ -81,9 +81,9 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
       return;
     }
 
-    // Validate file size (max 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      alert('La imagen no debe superar 2MB');
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('La imagen no debe superar 10MB');
       return;
     }
 
@@ -257,7 +257,7 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
                 onChange={handlePhotoUpload}
                 className="hidden"
               />
-              <p className="text-zinc-600 text-xs mt-2">Máximo 2MB. Formatos: JPG, PNG, GIF</p>
+              <p className="text-zinc-600 text-xs mt-2">Máximo 10MB. Formatos: JPG, PNG, GIF</p>
             </div>
           </div>
         </div>
