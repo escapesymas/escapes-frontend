@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
-  
+
   // Todas las peticiones al backend durante el desarrollo se canalizarán a través
   // de nuestro servidor Node.js local (server.js) que actúa como un proxy seguro.
   const localBackendTarget = 'http://localhost:8080';
@@ -17,6 +17,13 @@ export default defineConfig(({ mode }) => {
           target: localBackendTarget,
           changeOrigin: true,
           secure: false,
+        },
+        // Proxy para evitar CORS en producción y desarrollo (Unified Proxy)
+        '/proxy-wc': {
+          target: localBackendTarget,
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path) => path.replace(/^\/proxy-wc/, ''),
         },
         // Proxy para la ruta de fallback de WooCommerce
         '/wp-fallback': {
@@ -35,7 +42,7 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       emptyOutDir: true,
-      sourcemap: false, 
+      sourcemap: false,
       rollupOptions: {
         output: {
           manualChunks: {
