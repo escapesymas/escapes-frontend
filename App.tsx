@@ -31,16 +31,18 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
-  
+
   const [currentFilter, setCurrentFilter] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<ViewState>('home');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [lastView, setLastView] = useState<ViewState>('home'); 
+  const [lastView, setLastView] = useState<ViewState>('home');
   const [user, setUser] = useState<User | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [perPage, setPerPage] = useState(20);
+  const [sortBy, setSortBy] = useState<'date' | 'price' | 'price-asc'>('date');
   const catalogRef = useRef<HTMLDivElement>(null);
 
   const [searchParams, setSearchParams] = useState<{ query?: string, categoryId?: number, bike?: BikeSelection | null }>({
@@ -67,7 +69,7 @@ function App() {
             setSelectedProduct(found);
             setCurrentView('product');
           }
-        } catch (e) {}
+        } catch (e) { }
       } else if (viewParam === 'catalog') {
         setCurrentView('catalog');
         if (pageParam) setCurrentPage(parseInt(pageParam));
@@ -79,7 +81,7 @@ function App() {
       } else if (viewParam && ['home', 'cart', 'forum', 'contact', 'warranty', 'categories'].includes(viewParam)) {
         setCurrentView(viewParam);
       }
-      
+
       loadFeaturedProducts();
       const savedUser = getSession();
       if (savedUser) setUser(savedUser);
@@ -88,7 +90,7 @@ function App() {
     initialize();
 
     const handlePopState = () => {
-      try { window.location.reload(); } catch (e) {}
+      try { window.location.reload(); } catch (e) { }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -97,7 +99,7 @@ function App() {
   useEffect(() => {
     const params = new URLSearchParams();
     params.set('view', currentView);
-    
+
     if (currentView === 'product' && selectedProduct) {
       params.set('id', selectedProduct.id.toString());
     } else if (currentView === 'catalog') {
@@ -112,7 +114,7 @@ function App() {
     } catch (e) {
       console.warn("History API restricted");
     }
-    
+
     pageview(newUrl);
   }, [currentView, selectedProduct, searchParams, currentPage]);
 
@@ -136,16 +138,22 @@ function App() {
     setLoading(true);
     setError(null);
     try {
+      // Mapear sortBy a orderby/order de WooCommerce
+      const orderBy = sortBy === 'date' ? 'date' : 'price';
+      const order = sortBy === 'price-asc' ? 'asc' : 'desc';
+
       const { products: matches, totalPages: pages } = await fetchProducts(
-        searchParams.query, 
-        searchParams.categoryId, 
-        page, 
-        20
+        searchParams.query,
+        searchParams.categoryId,
+        page,
+        perPage,
+        orderBy,
+        order
       );
       setProducts(matches);
       setTotalPages(pages);
       setCurrentPage(page);
-      
+
       // Scroll al inicio del catálogo si estamos navegando páginas
       if (page > 1 || (currentView === 'catalog' && catalogRef.current)) {
         catalogRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -183,7 +191,7 @@ function App() {
     if (currentView === 'catalog') {
       handleProductFetch(1);
     }
-  }, [searchParams]);
+  }, [searchParams, perPage, sortBy]);
 
   const handleClearFilters = () => {
     if (currentView === 'home') {
@@ -198,7 +206,7 @@ function App() {
   const handleNavClick = (view: ViewState, category?: string) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (view === 'catalog' && category) {
-      handleCategorySelect(0, category); 
+      handleCategorySelect(0, category);
     } else {
       setCurrentView(view);
       setSelectedProduct(null);
@@ -211,7 +219,7 @@ function App() {
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
-        return prev.map(item => 
+        return prev.map(item =>
           item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
         );
       }
@@ -229,16 +237,16 @@ function App() {
 
     return (
       <div className="flex flex-wrap justify-center items-center gap-2 mt-12 py-8 border-t border-zinc-900">
-        <button 
+        <button
           disabled={currentPage === 1}
           onClick={() => handleProductFetch(currentPage - 1)}
           className="p-3 bg-zinc-900 border border-zinc-800 rounded-sm text-zinc-400 hover:text-white hover:border-racing-orange disabled:opacity-30 disabled:cursor-not-allowed transition-all"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
-        
+
         {pages.map(p => (
-          <button 
+          <button
             key={p}
             onClick={() => handleProductFetch(p)}
             className={`w-12 h-12 rounded-sm font-bold text-sm border transition-all ${currentPage === p ? 'bg-racing-orange border-racing-orange text-white' : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-600'}`}
@@ -247,7 +255,7 @@ function App() {
           </button>
         ))}
 
-        <button 
+        <button
           disabled={currentPage === totalPages}
           onClick={() => handleProductFetch(currentPage + 1)}
           className="p-3 bg-zinc-900 border border-zinc-800 rounded-sm text-zinc-400 hover:text-white hover:border-racing-orange disabled:opacity-30 disabled:cursor-not-allowed transition-all"
@@ -265,7 +273,7 @@ function App() {
         <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Sincronizando garaje...</p>
       </div>
     );
-    
+
     if (error) return (
       <div className="text-center py-20 bg-zinc-900/30 rounded-sm border border-zinc-800 p-8">
         <WifiOff className="w-12 h-12 text-red-500 mx-auto mb-4" />
@@ -286,11 +294,11 @@ function App() {
       <>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
           {products.map(product => (
-            <ProductCard 
-              key={product.id} 
-              product={product} 
-              onClick={(p) => { setSelectedProduct(p); setCurrentView('product'); }} 
-              onAddToCart={() => addToCart(product, 1)} 
+            <ProductCard
+              key={product.id}
+              product={product}
+              onClick={(p) => { setSelectedProduct(p); setCurrentView('product'); }}
+              onAddToCart={() => addToCart(product, 1)}
             />
           ))}
         </div>
@@ -301,8 +309,8 @@ function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-black w-full overflow-x-hidden">
-      <Header 
-        cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)} 
+      <Header
+        cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)}
         user={user}
         onCartClick={() => setCurrentView('cart')}
         onLogoClick={() => { setCurrentView('home'); setSelectedProduct(null); loadFeaturedProducts(); }}
@@ -310,9 +318,9 @@ function App() {
         onLogoutClick={() => { setUser(null); logoutSession(); setCurrentView('home'); }}
         onOrdersClick={() => setCurrentView('orders')}
         onAccountClick={() => setCurrentView('account')}
-        onNavClick={handleNavClick} 
+        onNavClick={handleNavClick}
       />
-      
+
       <main className="flex-grow w-full">
         <Suspense fallback={<div className="h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 text-racing-orange animate-spin" /></div>}>
           {currentView === 'login' && <Login onLoginSuccess={(u) => { setUser(u); saveSession(u); setCurrentView(lastView); }} onBack={() => setCurrentView(lastView)} onRegisterClick={() => setCurrentView('register')} />}
@@ -327,20 +335,20 @@ function App() {
         </Suspense>
 
         {currentView === 'cart' && (
-          <Cart 
-            items={cart} 
-            onUpdateQuantity={(id, delta) => setCart(p => p.map(i => i.id === id ? {...i, quantity: Math.max(1, i.quantity + delta)} : i))} 
-            onRemove={(id) => setCart(p => p.filter(i => i.id !== id))} 
-            onCheckout={() => setCurrentView('checkout')} 
+          <Cart
+            items={cart}
+            onUpdateQuantity={(id, delta) => setCart(p => p.map(i => i.id === id ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i))}
+            onRemove={(id) => setCart(p => p.filter(i => i.id !== id))}
+            onCheckout={() => setCurrentView('checkout')}
             onContinueShopping={() => setCurrentView('catalog')}
           />
         )}
 
         {currentView === 'product' && selectedProduct && (
-          <ProductDetail 
-            product={selectedProduct} 
-            onBack={() => setCurrentView('catalog')} 
-            onAddToCart={(qty) => { addToCart(selectedProduct, qty); setCurrentView('cart'); }} 
+          <ProductDetail
+            product={selectedProduct}
+            onBack={() => setCurrentView('catalog')}
+            onAddToCart={(qty) => { addToCart(selectedProduct, qty); setCurrentView('cart'); }}
           />
         )}
 
@@ -367,14 +375,42 @@ function App() {
         {currentView === 'catalog' && (
           <div ref={catalogRef}>
             <section className="pt-32 pb-12 bg-zinc-950">
-               <BikeSelector onSearch={handleBikeSearch} onTextSearch={handleTextSearch} isLoading={loading} bikeData={BIKE_DATA} />
+              <BikeSelector onSearch={handleBikeSearch} onTextSearch={handleTextSearch} isLoading={loading} bikeData={BIKE_DATA} />
             </section>
             <section className="py-12 bg-zinc-950 min-h-screen container mx-auto px-4 border-t border-zinc-900">
-                <div className="flex justify-between items-center mb-10">
-                   <h2 className="text-2xl font-bold text-white uppercase italic">{currentFilter || "Catálogo"}</h2>
-                   {currentFilter && <button onClick={handleClearFilters} className="text-zinc-500 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2"><Trash2 className="w-4 h-4" /> Limpiar</button>}
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
+                <div className="flex items-center gap-4">
+                  <h2 className="text-2xl font-bold text-white uppercase italic">{currentFilter || "Catálogo"}</h2>
+                  {currentFilter && <button onClick={handleClearFilters} className="text-zinc-500 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2"><Trash2 className="w-4 h-4" /> Limpiar</button>}
                 </div>
-                {renderProductGrid()}
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-zinc-500 text-xs uppercase">Mostrar:</span>
+                    <select
+                      value={perPage}
+                      onChange={(e) => { setPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                      className="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer"
+                    >
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-zinc-500 text-xs uppercase">Ordenar:</span>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => { setSortBy(e.target.value as 'date' | 'price' | 'price-asc'); setCurrentPage(1); }}
+                      className="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer"
+                    >
+                      <option value="date">Relevancia</option>
+                      <option value="price">Precio: Mayor a menor</option>
+                      <option value="price-asc">Precio: Menor a mayor</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              {renderProductGrid()}
             </section>
           </div>
         )}
