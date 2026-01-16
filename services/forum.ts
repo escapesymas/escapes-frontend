@@ -124,6 +124,7 @@ export const fetchTopics = async (categoryId: string): Promise<ForumTopic[]> => 
       categoryId: categoryId,
       title: item.title.rendered,
       author: item._embedded?.author?.[0]?.name || 'Piloto Anónimo',
+      authorId: item.author, // WP exposes author ID here
       authorAvatar: item._embedded?.author?.[0]?.avatar_urls?.['96'] || '',
       date: new Date(item.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
       views: 0,
@@ -159,6 +160,7 @@ export const fetchReplies = async (topicId: number): Promise<ForumReply[]> => {
         id: postData.id,
         topicId: postData.id,
         author: postData._embedded?.author?.[0]?.name || 'Autor Original',
+        authorId: postData.author,
         authorAvatar: postData._embedded?.author?.[0]?.avatar_urls?.['96'] || '',
         authorRole: 'OP',
         content: postData.content.rendered,
@@ -171,6 +173,7 @@ export const fetchReplies = async (topicId: number): Promise<ForumReply[]> => {
       id: comment.id,
       topicId: topicId,
       author: comment.author_name,
+      authorId: comment.author || 0, // Comments might have 0 if anonymous, but here logged in
       authorAvatar: comment.author_avatar_urls?.['96'] || '',
       authorRole: 'Racer',
       content: comment.content.rendered,
@@ -260,9 +263,81 @@ export const createReply = async (
   }
 };
 
+/**
+ * 6. EDITAR TEMA
+ */
+export const updateTopic = async (token: string, topicId: number, title: string, content: string): Promise<boolean> => {
+  try {
+    const response = await fetch(`${WP_API_BASE}/posts/${topicId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ title, content })
+    });
+    return response.ok;
+  } catch (e) {
+    console.error(e);
+    return false;
+  }
+};
+
+/**
+ * 7. BORRAR TEMA
+ */
+export const deleteTopic = async (token: string, topicId: number): Promise<boolean> => {
+  try {
+    const response = await fetch(`${WP_API_BASE}/posts/${topicId}?force=true`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return response.ok;
+  } catch (e) {
+    console.error(e);
+    return false;
+  }
+};
+
+/**
+ * 8. EDITAR RESPUESTA
+ */
+export const updateReply = async (token: string, replyId: number, content: string): Promise<boolean> => {
+  try {
+    const response = await fetch(`${WP_API_BASE}/comments/${replyId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ content })
+    });
+    return response.ok;
+  } catch (e) {
+    console.error(e);
+    return false;
+  }
+};
+
+/**
+ * 9. BORRAR RESPUESTA
+ */
+export const deleteReply = async (token: string, replyId: number): Promise<boolean> => {
+  try {
+    const response = await fetch(`${WP_API_BASE}/comments/${replyId}?force=true`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return response.ok;
+  } catch (e) {
+    console.error(e);
+    return false;
+  }
+};
+
 // --- MOCK DATA GENERATOR FOR DEMO ---
 const getMockTopics = (catId: string): ForumTopic[] => {
-  const common = { author: 'Marc M.', date: 'Hoy', views: 120, replies: 5, authorAvatar: '', isPinned: false };
+  const common = { author: 'Marc M.', authorId: 9999, date: 'Hoy', views: 120, replies: 5, authorAvatar: '', isPinned: false };
 
   if (catId === 'start_zone') return [
     { ...common, id: 501, categoryId: catId, title: 'Bienvenidos a la Línea de Salida', content: 'Normas de la comunidad y presentaciones.', isPinned: true },
