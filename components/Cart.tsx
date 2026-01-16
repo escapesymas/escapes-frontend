@@ -36,7 +36,7 @@ export const Cart: React.FC<CartProps> = ({
   };
 
   const handleFetchPendingOrders = async () => {
-    if (!user || !user.id) {
+    if (!user) {
       setRecoveryError("Debes iniciar sesión para recuperar tu carrito");
       return;
     }
@@ -45,7 +45,9 @@ export const Cart: React.FC<CartProps> = ({
     setRecoveryError(null);
 
     try {
-      const orders = await fetchPendingOrders(user.id);
+      // Usar user.id si existe, sino buscar por email
+      const customerId = user.id && user.id > 0 ? user.id : 0;
+      const orders = await fetchPendingOrders(customerId, user.email);
       if (orders.length > 0) {
         setPendingOrders(orders);
       } else {

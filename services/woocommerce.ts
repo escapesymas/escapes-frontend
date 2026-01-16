@@ -141,12 +141,22 @@ export const fetchCustomerOrders = async (customerId: number): Promise<Order[]> 
 
 /**
  * Obtiene los pedidos pendientes de un cliente para recuperar carritos abandonados
+ * Puede buscar por customerId o por email
  */
-export const fetchPendingOrders = async (customerId: number): Promise<Order[]> => {
-  if (!customerId || customerId === 0) return [];
-
+export const fetchPendingOrders = async (customerId: number, email?: string): Promise<Order[]> => {
   try {
-    const { data } = await makeRequest(`/wc/v3/orders?customer=${customerId}&status=pending&per_page=5`);
+    let query = '/wc/v3/orders?status=pending&per_page=5';
+
+    if (customerId && customerId > 0) {
+      query += `&customer=${customerId}`;
+    } else if (email) {
+      // Buscar por email en billing
+      query += `&search=${encodeURIComponent(email)}`;
+    } else {
+      return [];
+    }
+
+    const { data } = await makeRequest(query);
     return data as Order[];
   } catch (error) {
     console.error('[ORDERS] Failed to fetch pending orders:', error);
