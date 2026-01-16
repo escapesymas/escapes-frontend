@@ -75,18 +75,18 @@ const getIconForForum = (slug: string = '', id: string | number) => {
 export const fetchForumCategories = async (): Promise<ForumCategory[]> => {
   try {
     const response = await fetch(`${WP_API_BASE}/categories?hide_empty=false&per_page=20`);
-    
+
     if (!response.ok) {
-       console.warn("Forum API unavailable, loading Schema.");
-       return FORUM_SCHEMA;
+      console.warn("Forum API unavailable, loading Schema.");
+      return FORUM_SCHEMA;
     }
-    
+
     const data = await response.json();
-    
+
     if (data.length === 0) {
-       return FORUM_SCHEMA;
+      return FORUM_SCHEMA;
     }
-    
+
     return data.map((item: any) => ({
       id: String(item.id),
       title: item.name,
@@ -109,12 +109,14 @@ export const fetchTopics = async (categoryId: string): Promise<ForumTopic[]> => 
     // Si la categoría es del esquema estático (string) y no numérico, devolvemos mock data para demo
     // ya que WP necesita IDs numéricos.
     if (isNaN(Number(categoryId))) {
-       return getMockTopics(categoryId);
+      return getMockTopics(categoryId);
     }
 
-    const response = await fetch(`${WP_API_BASE}/posts?categories=${categoryId}&_embed&per_page=20`);
+    const response = await fetch(`${WP_API_BASE}/posts?categories=${categoryId}&_embed&per_page=20&_t=${new Date().getTime()}`, {
+      headers: { 'Cache-Control': 'no-cache' }
+    });
     if (!response.ok) throw new Error('Failed to fetch topics');
-    
+
     const data = await response.json();
 
     return data.map((item: any) => ({
@@ -124,10 +126,10 @@ export const fetchTopics = async (categoryId: string): Promise<ForumTopic[]> => 
       author: item._embedded?.author?.[0]?.name || 'Piloto Anónimo',
       authorAvatar: item._embedded?.author?.[0]?.avatar_urls?.['96'] || '',
       date: new Date(item.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
-      views: 0, 
+      views: 0,
       replies: 0,
       isPinned: item.sticky || false,
-      content: item.content.rendered 
+      content: item.content.rendered
     }));
   } catch (error) {
     console.warn("Native Forum API Error (Topics), returning mocks for demo.");
@@ -140,10 +142,14 @@ export const fetchTopics = async (categoryId: string): Promise<ForumTopic[]> => 
  */
 export const fetchReplies = async (topicId: number): Promise<ForumReply[]> => {
   try {
-    const postResponse = await fetch(`${WP_API_BASE}/posts/${topicId}?_embed`);
+    const postResponse = await fetch(`${WP_API_BASE}/posts/${topicId}?_embed&_t=${new Date().getTime()}`, {
+      headers: { 'Cache-Control': 'no-cache' }
+    });
     const postData = postResponse.ok ? await postResponse.json() : null;
 
-    const commentsResponse = await fetch(`${WP_API_BASE}/comments?post=${topicId}&order=asc&per_page=100`);
+    const commentsResponse = await fetch(`${WP_API_BASE}/comments?post=${topicId}&order=asc&per_page=100&_t=${new Date().getTime()}`, {
+      headers: { 'Cache-Control': 'no-cache' }
+    });
     const commentsData = commentsResponse.ok ? await commentsResponse.json() : [];
 
     const result: ForumReply[] = [];
@@ -156,7 +162,7 @@ export const fetchReplies = async (topicId: number): Promise<ForumReply[]> => {
         authorAvatar: postData._embedded?.author?.[0]?.avatar_urls?.['96'] || '',
         authorRole: 'OP',
         content: postData.content.rendered,
-        date: new Date(postData.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit' }),
+        date: new Date(postData.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
         likes: 0
       });
     }
@@ -168,7 +174,7 @@ export const fetchReplies = async (topicId: number): Promise<ForumReply[]> => {
       authorAvatar: comment.author_avatar_urls?.['96'] || '',
       authorRole: 'Racer',
       content: comment.content.rendered,
-      date: new Date(comment.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit' }),
+      date: new Date(comment.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
       likes: 0
     }));
 
@@ -183,12 +189,12 @@ export const fetchReplies = async (topicId: number): Promise<ForumReply[]> => {
  * 4. CREAR TEMA
  */
 export const createTopic = async (
-  token: string, 
-  categoryId: string, 
-  title: string, 
+  token: string,
+  categoryId: string,
+  title: string,
   body: string
 ): Promise<{ success: boolean; id?: number; error?: string }> => {
-  
+
   // Simulación si estamos en modo Demo (ID categoría no numérica)
   if (isNaN(Number(categoryId))) {
     return new Promise(resolve => {
@@ -203,7 +209,7 @@ export const createTopic = async (
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         title: title,
         content: body,
         categories: [parseInt(categoryId)],
@@ -257,7 +263,7 @@ export const createReply = async (
 // --- MOCK DATA GENERATOR FOR DEMO ---
 const getMockTopics = (catId: string): ForumTopic[] => {
   const common = { author: 'Marc M.', date: 'Hoy', views: 120, replies: 5, authorAvatar: '', isPinned: false };
-  
+
   if (catId === 'start_zone') return [
     { ...common, id: 501, categoryId: catId, title: 'Bienvenidos a la Línea de Salida', content: 'Normas de la comunidad y presentaciones.', isPinned: true },
     { ...common, id: 502, categoryId: catId, title: 'Me presento desde Madrid', content: 'Hola a todos, acabo de adquirir una Z900...' }
