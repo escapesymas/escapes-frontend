@@ -85,10 +85,31 @@ function App() {
       loadFeaturedProducts();
       const savedUser = getSession();
       if (savedUser) {
-        setUser(savedUser);
+        let currentUser = savedUser as unknown as User;
+
+        // AUTO-REPAIR: Si el usuario tiene ID 0, intentamos recuperarlo por email
+        // Esto corrige el problema donde las actualizaciones de perfil fallan en sesiones persistentes
+        if ((!currentUser.id || currentUser.id === 0) && (currentUser.email || (savedUser as any).user_email)) {
+          try {
+            const email = currentUser.email || (savedUser as any).user_email;
+            const { fetchCustomerByEmail } = await import('./services/woocommerce');
+            const freshData = await fetchCustomerByEmail(email);
+
+            if (freshData && freshData.id > 0) {
+              currentUser = { ...currentUser, ...freshData, token: (savedUser as any).token };
+              saveSession(currentUser);
+              console.log('[AUTH] User ID repaired from session:', currentUser.id);
+            }
+          } catch (e) {
+            console.error('[AUTH] Failed to repair user ID:', e);
+          }
+        }
+
+        setUser(currentUser);
+
         // Recuperar carrito guardado del servidor
-        if (savedUser.id && savedUser.id > 0) {
-          const savedCart = await getUserCart(savedUser.id);
+        if (currentUser.id && currentUser.id > 0) {
+          const savedCart = await getUserCart(currentUser.id);
           if (savedCart.length > 0) {
             // Cargar productos completos del carrito guardado
             try {

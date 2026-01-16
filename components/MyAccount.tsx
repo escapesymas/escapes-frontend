@@ -225,7 +225,11 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
                     onClick={() => handleSelectAvatar(avatar.url)}
                     className={`aspect-square rounded-sm overflow-hidden border-2 transition-all hover:scale-105 ${selectedAvatar === avatar.url ? 'border-racing-orange' : 'border-zinc-700 hover:border-zinc-500'}`}
                   >
-                    <img src={avatar.url} alt={avatar.title} className="w-full h-full object-cover" />
+                    <img
+                      src={avatar.url.startsWith('data:') ? avatar.url : `https://wsrv.nl/?url=${encodeURIComponent(avatar.url)}&w=150&h=150&fit=cover&output=webp`}
+                      alt={avatar.title}
+                      className="w-full h-full object-cover"
+                    />
                   </button>
                 ))}
               </div>
@@ -257,70 +261,73 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
             </div>
           </div>
         </div>
-      )}
+      )
+      }
 
       {/* Password Change Modal */}
-      {showPasswordModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-zinc-900 border border-zinc-700 rounded-sm p-6 max-w-md w-full animate-fade-in">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-white font-bold uppercase">Cambiar Contraseña</h3>
-              <button onClick={() => setShowPasswordModal(false)} className="text-zinc-500 hover:text-white">
-                <X className="w-6 h-6" />
-              </button>
+      {
+        showPasswordModal && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-zinc-900 border border-zinc-700 rounded-sm p-6 max-w-md w-full animate-fade-in">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-white font-bold uppercase">Cambiar Contraseña</h3>
+                <button onClick={() => setShowPasswordModal(false)} className="text-zinc-500 hover:text-white">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Contraseña Actual</label>
+                  <input
+                    type="password"
+                    name="currentPassword"
+                    value={passwordData.currentPassword}
+                    onChange={handlePasswordChange}
+                    required
+                    className="w-full bg-zinc-800 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Nueva Contraseña</label>
+                  <input
+                    type="password"
+                    name="newPassword"
+                    value={passwordData.newPassword}
+                    onChange={handlePasswordChange}
+                    required
+                    className="w-full bg-zinc-800 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Confirmar Contraseña</label>
+                  <input
+                    type="password"
+                    name="confirmPassword"
+                    value={passwordData.confirmPassword}
+                    onChange={handlePasswordChange}
+                    required
+                    className="w-full bg-zinc-800 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none"
+                  />
+                </div>
+
+                {passwordError && (
+                  <p className="text-red-500 text-sm">{passwordError}</p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={passwordLoading}
+                  className="w-full bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase py-3 rounded-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                >
+                  {passwordLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Lock className="w-5 h-5" />}
+                  Cambiar Contraseña
+                </button>
+              </form>
             </div>
-
-            <form onSubmit={handlePasswordSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Contraseña Actual</label>
-                <input
-                  type="password"
-                  name="currentPassword"
-                  value={passwordData.currentPassword}
-                  onChange={handlePasswordChange}
-                  required
-                  className="w-full bg-zinc-800 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Nueva Contraseña</label>
-                <input
-                  type="password"
-                  name="newPassword"
-                  value={passwordData.newPassword}
-                  onChange={handlePasswordChange}
-                  required
-                  className="w-full bg-zinc-800 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Confirmar Contraseña</label>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  value={passwordData.confirmPassword}
-                  onChange={handlePasswordChange}
-                  required
-                  className="w-full bg-zinc-800 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none"
-                />
-              </div>
-
-              {passwordError && (
-                <p className="text-red-500 text-sm">{passwordError}</p>
-              )}
-
-              <button
-                type="submit"
-                disabled={passwordLoading}
-                className="w-full bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase py-3 rounded-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-              >
-                {passwordLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Lock className="w-5 h-5" />}
-                Cambiar Contraseña
-              </button>
-            </form>
           </div>
-        </div>
-      )}
+        )
+      }
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Sidebar Info */}
@@ -329,7 +336,11 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
             <div className="relative inline-block">
               <div className="w-24 h-24 bg-zinc-800 rounded-full mx-auto mb-4 overflow-hidden border-2 border-racing-orange">
                 {(selectedAvatar || user.avatarUrl) ? (
-                  <img src={selectedAvatar || user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  <img
+                    src={(selectedAvatar || user.avatarUrl).startsWith('data:') ? (selectedAvatar || user.avatarUrl) : `https://wsrv.nl/?url=${encodeURIComponent(selectedAvatar || user.avatarUrl)}&w=200&h=200&fit=cover&output=webp`}
+                    alt="Avatar"
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <UserIcon className="w-12 h-12 text-zinc-600" />
@@ -443,6 +454,6 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
           </form>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
