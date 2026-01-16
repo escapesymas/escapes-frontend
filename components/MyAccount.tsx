@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { User as UserIcon, MapPin, Save, ArrowLeft, Mail, Phone, Loader2, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User as UserIcon, MapPin, Save, ArrowLeft, Mail, Phone, Loader2, CheckCircle, Camera, X } from 'lucide-react';
 import { User } from '../types';
-import { updateCustomer } from '../services/woocommerce';
+import { updateCustomer, fetchAvatars, updateCustomerAvatar, AvatarOption } from '../services/woocommerce';
 
 interface MyAccountProps {
   user: User;
@@ -12,7 +12,13 @@ interface MyAccountProps {
 export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser }) => {
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
-  
+
+  // Avatar state
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [avatarOptions, setAvatarOptions] = useState<AvatarOption[]>([]);
+  const [selectedAvatar, setSelectedAvatar] = useState(user.avatarUrl || '');
+  const [avatarLoading, setAvatarLoading] = useState(false);
+
   const [formData, setFormData] = useState({
     firstName: user.firstName,
     lastName: user.lastName,
@@ -22,6 +28,36 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
     zip: user.billing?.postcode || '',
     phone: user.billing?.phone || ''
   });
+
+  // Cargar avatares disponibles al abrir el picker
+  useEffect(() => {
+    if (showAvatarPicker && avatarOptions.length === 0) {
+      loadAvatars();
+    }
+  }, [showAvatarPicker]);
+
+  const loadAvatars = async () => {
+    setAvatarLoading(true);
+    const avatars = await fetchAvatars();
+    setAvatarOptions(avatars);
+    setAvatarLoading(false);
+  };
+
+  const handleSelectAvatar = async (avatarUrl: string) => {
+    setSelectedAvatar(avatarUrl);
+    setAvatarLoading(true);
+
+    // Guardar el avatar en WooCommerce
+    const success = await updateCustomerAvatar(user.id, avatarUrl);
+
+    if (success) {
+      onUpdateUser({ ...user, avatarUrl });
+      setShowAvatarPicker(false);
+      setSuccessMsg('Avatar actualizado');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    }
+    setAvatarLoading(false);
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -71,12 +107,55 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
         </h1>
       </div>
 
+      {/* Avatar Picker Modal */}
+      {showAvatarPicker && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-sm p-6 max-w-lg w-full animate-fade-in">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-white font-bold uppercase">Elige tu Avatar</h3>
+              <button onClick={() => setShowAvatarPicker(false)} className="text-zinc-500 hover:text-white">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {avatarLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 text-racing-orange animate-spin" />
+              </div>
+            ) : avatarOptions.length === 0 ? (
+              <p className="text-zinc-500 text-center py-8">No hay avatares disponibles. Sube imágenes con "AVATAR" en el título a WordPress.</p>
+            ) : (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
+                {avatarOptions.map(avatar => (
+                  <button
+                    key={avatar.id}
+                    onClick={() => handleSelectAvatar(avatar.url)}
+                    className={`aspect-square rounded-sm overflow-hidden border-2 transition-all hover:scale-105 ${selectedAvatar === avatar.url ? 'border-racing-orange' : 'border-zinc-700 hover:border-zinc-500'}`}
+                  >
+                    <img src={avatar.url} alt={avatar.title} className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Sidebar Info */}
         <div className="lg:col-span-1">
           <div className="bg-racing-carbon border border-zinc-800 p-6 rounded-sm text-center">
-            <div className="w-24 h-24 bg-zinc-800 rounded-full mx-auto mb-4 overflow-hidden border-2 border-racing-orange">
-              <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+            <div className="relative inline-block">
+              <div className="w-24 h-24 bg-zinc-800 rounded-full mx-auto mb-4 overflow-hidden border-2 border-racing-orange">
+                <img src={selectedAvatar || user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              </div>
+              <button
+                onClick={() => setShowAvatarPicker(true)}
+                className="absolute bottom-3 right-0 bg-racing-orange hover:bg-orange-600 text-white p-2 rounded-full shadow-lg transition-colors"
+                title="Cambiar avatar"
+              >
+                <Camera className="w-4 h-4" />
+              </button>
             </div>
             <h2 className="text-xl font-bold text-white mb-1">{user.username}</h2>
             <p className="text-zinc-500 text-sm mb-4">Piloto Oficial</p>
@@ -89,7 +168,7 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
         {/* Form */}
         <div className="lg:col-span-2">
           <form onSubmit={handleSubmit} className="bg-racing-carbon border border-zinc-800 p-6 rounded-sm space-y-8">
-            
+
             {/* Personal Info */}
             <div>
               <h3 className="text-white font-bold uppercase mb-4 tracking-wide border-b border-zinc-800 pb-2 flex items-center gap-2">
@@ -97,26 +176,26 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                   <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Nombre</label>
-                   <input required name="firstName" value={formData.firstName} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                  <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Nombre</label>
+                  <input required name="firstName" value={formData.firstName} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
                 </div>
                 <div>
-                   <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Apellidos</label>
-                   <input required name="lastName" value={formData.lastName} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                  <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Apellidos</label>
+                  <input required name="lastName" value={formData.lastName} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
                 </div>
                 <div className="md:col-span-2">
-                   <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Email</label>
-                   <div className="relative">
-                     <input required name="email" type="email" value={formData.email} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 pl-10 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
-                     <Mail className="w-4 h-4 text-zinc-500 absolute left-3 top-3.5" />
-                   </div>
+                  <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Email</label>
+                  <div className="relative">
+                    <input required name="email" type="email" value={formData.email} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 pl-10 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                    <Mail className="w-4 h-4 text-zinc-500 absolute left-3 top-3.5" />
+                  </div>
                 </div>
                 <div className="md:col-span-2">
-                   <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Teléfono</label>
-                   <div className="relative">
-                     <input required name="phone" value={formData.phone} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 pl-10 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
-                     <Phone className="w-4 h-4 text-zinc-500 absolute left-3 top-3.5" />
-                   </div>
+                  <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Teléfono</label>
+                  <div className="relative">
+                    <input required name="phone" value={formData.phone} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 pl-10 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                    <Phone className="w-4 h-4 text-zinc-500 absolute left-3 top-3.5" />
+                  </div>
                 </div>
               </div>
             </div>
@@ -128,36 +207,36 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                   <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Dirección</label>
-                   <input required name="address" value={formData.address} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                  <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Dirección</label>
+                  <input required name="address" value={formData.address} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
                 </div>
                 <div>
-                   <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Ciudad</label>
-                   <input required name="city" value={formData.city} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                  <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Ciudad</label>
+                  <input required name="city" value={formData.city} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
                 </div>
                 <div>
-                   <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Código Postal</label>
-                   <input required name="zip" value={formData.zip} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                  <label className="block text-xs text-zinc-500 mb-1 uppercase font-bold">Código Postal</label>
+                  <input required name="zip" value={formData.zip} onChange={handleChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
                 </div>
               </div>
             </div>
 
             {/* Action */}
             <div className="flex items-center justify-between pt-4 border-t border-zinc-800">
-               {successMsg ? (
-                 <div className="text-green-500 flex items-center gap-2 text-sm font-bold animate-pulse">
-                   <CheckCircle className="w-5 h-5" /> {successMsg}
-                 </div>
-               ) : <span></span>}
-               
-               <button 
-                type="submit" 
+              {successMsg ? (
+                <div className="text-green-500 flex items-center gap-2 text-sm font-bold animate-pulse">
+                  <CheckCircle className="w-5 h-5" /> {successMsg}
+                </div>
+              ) : <span></span>}
+
+              <button
+                type="submit"
                 disabled={loading}
                 className="bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase px-6 py-3 rounded-sm flex items-center gap-2 transition-colors disabled:opacity-50"
-               >
-                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                 Guardar Cambios
-               </button>
+              >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                Guardar Cambios
+              </button>
             </div>
           </form>
         </div>

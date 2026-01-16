@@ -299,3 +299,58 @@ export const updateOrderStatus = async (
     return false;
   }
 };
+
+// =====================
+// AVATAR MANAGEMENT
+// =====================
+
+export interface AvatarOption {
+  id: number;
+  url: string;
+  title: string;
+}
+
+/**
+ * Busca imágenes en la media library de WordPress que contengan "AVATAR" en el título
+ */
+export const fetchAvatars = async (): Promise<AvatarOption[]> => {
+  try {
+    // Usar la API de WordPress Media para buscar por título
+    const { data } = await makeRequest('/wp/v2/media?search=AVATAR&per_page=20&media_type=image');
+
+    return (data as any[]).map(media => ({
+      id: media.id,
+      url: media.source_url || media.guid?.rendered || '',
+      title: media.title?.rendered || `Avatar ${media.id}`
+    })).filter(a => a.url); // Solo devolver los que tienen URL
+  } catch (error) {
+    console.error('[AVATAR] Failed to fetch avatars from media library:', error);
+    return [];
+  }
+};
+
+/**
+ * Actualiza el avatar del cliente en WooCommerce (guarda en metadata)
+ */
+export const updateCustomerAvatar = async (userId: number, avatarUrl: string): Promise<boolean> => {
+  if (!userId || userId === 0) return false;
+
+  try {
+    await makeRequest(`/wc/v3/customers/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        meta_data: [
+          {
+            key: '_custom_avatar',
+            value: avatarUrl
+          }
+        ]
+      })
+    });
+    console.log('[AVATAR] Avatar updated for user:', userId);
+    return true;
+  } catch (error) {
+    console.error('[AVATAR] Failed to update avatar:', error);
+    return false;
+  }
+};
