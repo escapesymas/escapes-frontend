@@ -194,6 +194,54 @@ export const fetchPendingOrders = async (customerId: number, email?: string): Pr
   }
 };
 
+// Helper to format WC customer to our User type
+const formatUserResponse = (customer: any): User => {
+  return {
+    id: customer.id,
+    username: customer.username,
+    email: customer.email,
+    firstName: customer.first_name,
+    lastName: customer.last_name,
+    avatarUrl: customer.avatar_url,
+    billing: {
+      address_1: customer.billing?.address_1 || '',
+      city: customer.billing?.city || '',
+      postcode: customer.billing?.postcode || '',
+      phone: customer.billing?.phone || ''
+    }
+  };
+};
+
+/**
+ * Obtiene un cliente por su email
+ */
+export const fetchCustomerByEmail = async (email: string): Promise<User | null> => {
+  try {
+    const { data } = await makeRequest(`/wc/v3/customers?email=${encodeURIComponent(email)}`);
+    const customers = data as any[];
+
+    if (customers && customers.length > 0) {
+      const customer = customers[0];
+      // Check for saved avatar in metadata
+      let avatarUrl = customer.avatar_url;
+      if (customer.meta_data) {
+        const customAvatar = customer.meta_data.find((m: any) => m.key === '_custom_avatar');
+        if (customAvatar) {
+          avatarUrl = customAvatar.value;
+        }
+      }
+
+      const user = formatUserResponse(customer);
+      user.avatarUrl = avatarUrl;
+      return user;
+    }
+    return null;
+  } catch (error) {
+    console.error('[WC] Error fetching customer by email:', error);
+    return null;
+  }
+};
+
 export const updateCustomer = async (userId: number, data: Partial<User>): Promise<boolean> => {
   try {
     const payload: any = {};
@@ -228,7 +276,6 @@ export const updateCustomer = async (userId: number, data: Partial<User>): Promi
     return false;
   }
 };
-
 
 // =====================
 // CART PERSISTENCE
@@ -371,4 +418,18 @@ export const updateCustomerAvatar = async (userId: number, avatarUrl: string): P
     console.error('[AVATAR] Failed to update avatar:', error);
     return false;
   }
+};
+
+/**
+ * Sube una foto personalizada para el cliente
+ */
+export const uploadCustomerPhoto = async (userId: number, file: File, username: string): Promise<{ success: boolean; url?: string; error?: string }> => {
+  // Nota: Subir archivos directamente a WordPress REST API requiere autenticación de admin/editor
+  // O un endpoint personalizado. Para esta implementación, asumiremos que no podemos subir directamente
+  // sin un endpoint específico o plugin.
+  // 
+  // Esta función es un placeholder que requeriría backend adicional.
+  // Como fallback, retornamos error para que el UI maneje la subida de otra forma (o base64 en metadata si es pequeña)
+
+  return { success: false, error: 'La subida de archivos requiere configuración adicional del servidor.' };
 };
