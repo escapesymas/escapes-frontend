@@ -10,7 +10,7 @@ import { Cart } from './components/Cart';
 import { CategoryBrowser } from './components/CategoryBrowser';
 import { Contact } from './components/Contact';
 import { STORE_CONFIG, FEATURES, BIKE_DATA } from './storeData';
-import { fetchProducts } from './services/woocommerce';
+import { fetchProducts, saveUserCart, getUserCart } from './services/woocommerce';
 import { saveSession, getSession, logoutSession } from './services/auth';
 import { pageview } from './services/analytics';
 import { Product, BikeSelection, CartItem, User } from './types';
@@ -84,7 +84,33 @@ function App() {
 
       loadFeaturedProducts();
       const savedUser = getSession();
-      if (savedUser) setUser(savedUser);
+      if (savedUser) {
+        setUser(savedUser);
+        // Recuperar carrito guardado del servidor
+        if (savedUser.id && savedUser.id > 0) {
+          const savedCart = await getUserCart(savedUser.id);
+          if (savedCart.length > 0) {
+            // Cargar productos completos del carrito guardado
+            try {
+              const { products: allProducts } = await fetchProducts(undefined, undefined, 1, 100);
+              const restoredCart = savedCart.map(item => {
+                const product = allProducts.find(p => p.id === item.product_id);
+                if (product) {
+                  return { ...product, quantity: item.quantity };
+                }
+                return null;
+              }).filter(Boolean) as CartItem[];
+
+              if (restoredCart.length > 0) {
+                setCart(restoredCart);
+                console.log('[CART] Restored cart from server:', restoredCart.length, 'items');
+              }
+            } catch (e) {
+              console.error('[CART] Failed to restore cart:', e);
+            }
+          }
+        }
+      }
     };
 
     initialize();
@@ -226,6 +252,17 @@ function App() {
       return [...prev, { ...product, quantity }];
     });
   };
+
+  // Sincronizar carrito con el servidor cuando cambia (para usuarios logueados)
+  useEffect(() => {
+    if (user && user.id && user.id > 0 && cart.length > 0) {
+      const cartData = cart.map(item => ({
+        product_id: item.id,
+        quantity: item.quantity
+      }));
+      saveUserCart(user.id, cartData);
+    }
+  }, [cart, user]);
 
   const renderPagination = () => {
     if (totalPages <= 1 || loading) return null;

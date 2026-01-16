@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ShieldCheck, ArrowLeft, Lock, CheckCircle, Loader2, AlertCircle, XCircle, User, ArrowRight, Mail } from 'lucide-react';
 import { CartItem, User as UserType } from '../types';
-import { createOrder } from '../services/woocommerce';
+import { createOrder, updateOrderStatus } from '../services/woocommerce';
 import { createSumUpCheckout } from '../services/sumup';
 import { loginUser, registerUser } from '../services/auth';
 
@@ -46,6 +46,9 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
   const [sumupCheckoutId, setSumupCheckoutId] = useState<string | null>(null);
   const [isSumupLoading, setIsSumupLoading] = useState(false);
 
+  // Pending Order State (para tracking de carritos abandonados)
+  const [pendingOrderId, setPendingOrderId] = useState<number | null>(null);
+
   // Form States
   const [formData, setFormData] = useState({
     firstName: '',
@@ -88,12 +91,64 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
   const shippingCost = subtotal > shippingThreshold ? 0 : 9.95;
   const total = subtotal + shippingCost;
 
-  // Initialize SumUp ONLY when user is logged in
+  // Initialize SumUp and create pending order when user is logged in
   useEffect(() => {
     if (props.user && !sumupCheckoutId) {
       loadSumUpScriptAndInit();
+      // Crear pedido pendiente para tracking de abandonos
+      createPendingOrder();
     }
   }, [props.user]);
+
+  // Crear pedido pendiente en WooCommerce
+  const createPendingOrder = async () => {
+    if (!props.user || pendingOrderId) return;
+
+    const currentData = formDataRef.current;
+    const orderPayload = {
+      status: 'pending',
+      payment_method: 'sumup_gateway',
+      payment_method_title: 'Tarjeta (SumUp) - Pendiente',
+      set_paid: false,
+      customer_id: props.user.id || 0,
+      billing: {
+        first_name: currentData.firstName || props.user.firstName || 'Cliente',
+        last_name: currentData.lastName || props.user.lastName || '',
+        address_1: currentData.address || '',
+        city: currentData.city || '',
+        postcode: currentData.zip || '',
+        country: 'ES',
+        email: currentData.email || props.user.email || '',
+        phone: currentData.phone || ''
+      },
+      shipping: {
+        first_name: currentData.firstName || props.user.firstName || '',
+        last_name: currentData.lastName || props.user.lastName || '',
+        address_1: currentData.address || '',
+        city: currentData.city || '',
+        postcode: currentData.zip || '',
+        country: 'ES'
+      },
+      line_items: props.cart.map(item => ({
+        product_id: item.id,
+        quantity: item.quantity
+      })),
+      meta_data: [
+        { key: '_checkout_source', value: 'react_app' },
+        { key: '_checkout_started', value: new Date().toISOString() }
+      ]
+    };
+
+    try {
+      const result = await createOrder(orderPayload);
+      if (result.success && result.id) {
+        setPendingOrderId(result.id);
+        console.log('[CHECKOUT] Pending order created:', result.id);
+      }
+    } catch (error) {
+      console.error('[CHECKOUT] Failed to create pending order:', error);
+    }
+  };
 
   // DYNAMIC SCRIPT LOADING
   const loadSumUpScriptAndInit = () => {
@@ -142,6 +197,10 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
                 if (type === 'success') {
                   if (body.status === 'FAILED') {
                     setErrorMessage("El pago ha sido denegado por el banco.");
+                    // Marcar pedido como fallido
+                    if (pendingOrderId) {
+                      updateOrderStatus(pendingOrderId, 'failed');
+                    }
                     return;
                   }
                   setTimeout(() => {
@@ -150,6 +209,10 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
 
                 } else if (type === 'error') {
                   setErrorMessage("Error en el pago: " + (body.message || "Inténtalo de nuevo"));
+                  // Marcar pedido como fallido
+                  if (pendingOrderId) {
+                    updateOrderStatus(pendingOrderId, 'failed');
+                  }
                 }
               },
               showFooter: false,
@@ -265,10 +328,28 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
       safeEmail = `cliente-sin-email-${Date.now()}@escapesymas.com`;
     }
 
+    // Si ya existe un pedido pendiente, actualizarlo en lugar de crear uno nuevo
+    if (pendingOrderId) {
+      try {
+        // Actualizar el pedido pendiente a processing (pagado)
+        await updateOrderStatus(pendingOrderId, 'processing');
+        console.log('[CHECKOUT] Pending order updated to processing:', pendingOrderId);
+        setOrderId(pendingOrderId);
+        setStep('success');
+      } catch (error) {
+        console.error('[CHECKOUT] Failed to update pending order:', error);
+        setErrorMessage("Error actualizando el pedido. Referencia: " + transactionId);
+      }
+      setIsProcessing(false);
+      return;
+    }
+
+    // Fallback: crear nuevo pedido si no hay pendiente
     const orderPayload = {
       payment_method: 'sumup_gateway',
       payment_method_title: 'Tarjeta (SumUp)',
       set_paid: true,
+      status: 'processing',
       transaction_id: transactionId,
       customer_id: props.user?.id || 0,
       billing: {
