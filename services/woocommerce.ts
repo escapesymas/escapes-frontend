@@ -196,21 +196,39 @@ export const fetchPendingOrders = async (customerId: number, email?: string): Pr
 
 export const updateCustomer = async (userId: number, data: Partial<User>): Promise<boolean> => {
   try {
-    const payload = {
-      first_name: data.firstName,
-      last_name: data.lastName,
-      email: data.email,
-      billing: data.billing
-    };
+    const payload: any = {};
+
+    // Only include fields that have values
+    if (data.firstName) payload.first_name = data.firstName;
+    if (data.lastName !== undefined) payload.last_name = data.lastName || '';
+    if (data.email) payload.email = data.email;
+
+    // Handle billing data - only include if there's actual data
+    if (data.billing) {
+      payload.billing = {
+        first_name: data.firstName || '',
+        last_name: data.lastName || '',
+        email: data.email || ''
+      };
+
+      // Add optional fields only if they have values
+      if (data.billing.address_1) payload.billing.address_1 = data.billing.address_1;
+      if (data.billing.city) payload.billing.city = data.billing.city;
+      if (data.billing.postcode) payload.billing.postcode = data.billing.postcode;
+      if (data.billing.phone) payload.billing.phone = data.billing.phone;
+    }
+
     await makeRequest(`/wc/v3/customers/${userId}`, {
       method: 'PUT',
       body: JSON.stringify(payload)
     });
     return true;
   } catch (error) {
+    console.error('[WC] Error updating customer:', error);
     return false;
   }
 };
+
 
 // =====================
 // CART PERSISTENCE
