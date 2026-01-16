@@ -17,10 +17,17 @@ const getAuthHeaders = () => {
 
 const makeRequest = async (path: string, options: RequestInit = {}) => {
   let baseUrl = WOO_CONFIG.baseUrl.replace(/\/$/, "");
-  let url = `${baseUrl}/wp-json${path}`;
+
+  // Cache busting: Add timestamp to avoid caching issues with W3 Total Cache / WP REST Cache
+  const cacheBuster = `_t=${new Date().getTime()}`;
+  const separator = path.includes('?') ? '&' : '?';
+  let url = `${baseUrl}/wp-json${path}${separator}${cacheBuster}`;
 
   const headers = {
     ...getAuthHeaders(),
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
     ...options.headers
   };
 
