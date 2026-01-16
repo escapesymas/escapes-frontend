@@ -29,14 +29,14 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
-  
+
   const [currentFilter, setCurrentFilter] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<ViewState>('home');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [lastView, setLastView] = useState<ViewState>('home'); 
+  const [lastView, setLastView] = useState<ViewState>('home');
   const [user, setUser] = useState<User | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
-  
+
   useEffect(() => {
     // Carga inicial de productos y sesión de usuario
     loadFeaturedProducts();
@@ -130,10 +130,10 @@ function App() {
     if (view === 'catalog' && category) {
       handleCategorySelect(0, category);
     } else if (view === 'contact') {
-       if (currentView !== 'home') setCurrentView('home');
-       setTimeout(() => {
-          document.getElementById('contact-section')?.scrollIntoView({ behavior: 'smooth' });
-       }, 100);
+      if (currentView !== 'home') setCurrentView('home');
+      setTimeout(() => {
+        document.getElementById('contact-section')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
     } else {
       setCurrentView(view);
       setSelectedProduct(null);
@@ -152,7 +152,7 @@ function App() {
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
-        return prev.map(item => 
+        return prev.map(item =>
           item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
         );
       }
@@ -161,6 +161,7 @@ function App() {
   };
 
   const heroMobile = `https://wsrv.nl/?url=${encodeURIComponent(STORE_CONFIG.heroImage)}&w=600&h=800&fit=cover&output=webp&q=75`;
+  const heroTablet = `https://wsrv.nl/?url=${encodeURIComponent(STORE_CONFIG.heroImage)}&w=1200&output=webp&q=80`;
   const heroDesktop = `https://wsrv.nl/?url=${encodeURIComponent(STORE_CONFIG.heroImage)}&w=1920&output=webp&q=80`;
 
   const renderProductGrid = () => {
@@ -168,32 +169,32 @@ function App() {
       return <div className="flex justify-center h-64"><Loader2 className="w-12 h-12 text-racing-orange animate-spin" /></div>;
     }
     if (error) {
-       return (
-          <div className="flex flex-col items-center justify-center py-20 bg-red-900/10 border border-red-900/50 rounded-sm p-8 text-center">
-            <WifiOff className="w-16 h-16 text-red-500 mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">{error}</h3>
-            <p className="text-zinc-400 mb-6">Parece que no podemos conectar con el servidor. Inténtalo de nuevo.</p>
-            <button onClick={handleClearFilters} className="bg-red-600 hover:bg-red-700 text-white font-bold uppercase py-3 px-8 rounded-sm flex items-center gap-2">
-              <RefreshCw className="w-4 h-4" /> Reintentar
-            </button>
-            <div className="bg-black/30 p-4 rounded text-left text-xs font-mono text-red-300 mt-6 max-w-lg overflow-auto">
-              <p className="font-bold border-b border-red-800/50 pb-2 mb-2">Detalle Técnico:</p>
-              {errorDetail || "No se pudo obtener un mensaje de error detallado."}
-            </div>
+      return (
+        <div className="flex flex-col items-center justify-center py-20 bg-red-900/10 border border-red-900/50 rounded-sm p-8 text-center">
+          <WifiOff className="w-16 h-16 text-red-500 mb-4" />
+          <h3 className="text-xl font-bold text-white mb-2">{error}</h3>
+          <p className="text-zinc-400 mb-6">Parece que no podemos conectar con el servidor. Inténtalo de nuevo.</p>
+          <button onClick={handleClearFilters} className="bg-red-600 hover:bg-red-700 text-white font-bold uppercase py-3 px-8 rounded-sm flex items-center gap-2">
+            <RefreshCw className="w-4 h-4" /> Reintentar
+          </button>
+          <div className="bg-black/30 p-4 rounded text-left text-xs font-mono text-red-300 mt-6 max-w-lg overflow-auto">
+            <p className="font-bold border-b border-red-800/50 pb-2 mb-2">Detalle Técnico:</p>
+            {errorDetail || "No se pudo obtener un mensaje de error detallado."}
           </div>
-       );
+        </div>
+      );
     }
     if (products.length === 0) {
-       return (
-          <div className="col-span-full py-20 text-center">
-              <div className="bg-zinc-900 inline-block p-8 rounded-sm border border-zinc-800">
-                <p className="text-zinc-400 text-lg mb-4">No se encontraron productos compatibles.</p>
-                <button onClick={handleClearFilters} className="text-racing-orange font-bold uppercase text-sm hover:text-white">
-                  Ver todo el catálogo
-                </button>
-              </div>
+      return (
+        <div className="col-span-full py-20 text-center">
+          <div className="bg-zinc-900 inline-block p-8 rounded-sm border border-zinc-800">
+            <p className="text-zinc-400 text-lg mb-4">No se encontraron productos compatibles.</p>
+            <button onClick={handleClearFilters} className="text-racing-orange font-bold uppercase text-sm hover:text-white">
+              Ver todo el catálogo
+            </button>
           </div>
-       );
+        </div>
+      );
     }
     return (
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
@@ -206,8 +207,8 @@ function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-black w-full overflow-x-hidden">
-      <Header 
-        cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)} 
+      <Header
+        cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)}
         user={user}
         onCartClick={() => setCurrentView('cart')}
         onLogoClick={() => { setCurrentView('home'); setSelectedProduct(null); loadFeaturedProducts(); }}
@@ -215,9 +216,9 @@ function App() {
         onLogoutClick={() => { setUser(null); logoutSession(); setCurrentView('home'); }}
         onOrdersClick={() => setCurrentView('orders')}
         onAccountClick={() => setCurrentView('account')}
-        onNavClick={handleNavClick} 
+        onNavClick={handleNavClick}
       />
-      
+
       <main className="flex-grow w-full">
         <Suspense fallback={<div className="h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 text-racing-orange animate-spin" /></div>}>
           {currentView === 'login' && <Login onLoginSuccess={(u) => { setUser(u); saveSession(u); setCurrentView(lastView); }} onBack={() => setCurrentView(lastView)} onRegisterClick={() => setCurrentView('register')} />}
@@ -231,20 +232,20 @@ function App() {
         </Suspense>
 
         {currentView === 'cart' && (
-          <Cart 
-            items={cart} 
-            onUpdateQuantity={(id, delta) => setCart(p => p.map(i => i.id === id ? {...i, quantity: Math.max(1, i.quantity + delta)} : i))} 
-            onRemove={(id) => setCart(p => p.filter(i => i.id !== id))} 
-            onCheckout={() => setCurrentView('checkout')} 
+          <Cart
+            items={cart}
+            onUpdateQuantity={(id, delta) => setCart(p => p.map(i => i.id === id ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i))}
+            onRemove={(id) => setCart(p => p.filter(i => i.id !== id))}
+            onCheckout={() => setCurrentView('checkout')}
             onContinueShopping={() => setCurrentView('catalog')}
           />
         )}
 
         {currentView === 'product' && selectedProduct && (
-          <ProductDetail 
-            product={selectedProduct} 
-            onBack={() => setCurrentView('catalog')} 
-            onAddToCart={(qty) => { addToCart(selectedProduct, qty); setCurrentView('cart'); }} 
+          <ProductDetail
+            product={selectedProduct}
+            onBack={() => setCurrentView('catalog')}
+            onAddToCart={(qty) => { addToCart(selectedProduct, qty); setCurrentView('cart'); }}
           />
         )}
 
@@ -254,7 +255,8 @@ function App() {
             <section className="relative h-[400px] sm:h-[500px] md:h-[600px] flex items-center justify-center bg-zinc-900 overflow-hidden w-full">
               <div className="absolute inset-0 z-0">
                 <picture>
-                  <source media="(max-width: 768px)" srcSet={heroMobile} />
+                  <source media="(max-width: 640px)" srcSet={heroMobile} />
+                  <source media="(max-width: 1024px)" srcSet={heroTablet} />
                   <img src={heroDesktop} alt="Taller Moto" className="w-full h-full object-cover grayscale opacity-40" />
                 </picture>
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/70 to-transparent"></div>
@@ -264,7 +266,7 @@ function App() {
                   {STORE_CONFIG.name}
                 </span>
                 <h1 className="text-3xl sm:text-5xl md:text-7xl font-extrabold text-white mb-4 uppercase italic leading-tight">
-                  <span className="inline-block py-1 pr-1 md:pr-3">{STORE_CONFIG.heroTitle}</span> <br/>
+                  <span className="inline-block py-1 pr-1 md:pr-3">{STORE_CONFIG.heroTitle}</span> <br />
                   <span className="inline-block text-transparent bg-clip-text bg-gradient-to-r from-racing-orange to-red-600 py-2 pr-2 md:pr-6 pb-2">
                     {STORE_CONFIG.heroSubtitle}
                   </span>
@@ -274,74 +276,74 @@ function App() {
 
             {/* FEATURES BANNER */}
             <section className="bg-zinc-900 w-full border-y border-zinc-800 shadow-xl relative z-10">
-               <div className="container mx-auto px-4 py-6">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                     {FEATURES.map((feat, idx) => (
-                        <div key={idx} className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-3">
-                           <div className="text-racing-orange p-2 bg-zinc-950 rounded-full border border-zinc-800">
-                             <feat.icon className="w-6 h-6" />
-                           </div>
-                           <div>
-                              <p className="font-bold text-white uppercase italic text-sm leading-tight mb-1">{feat.title}</p>
-                              <p className="text-zinc-500 text-xs font-medium leading-tight">{feat.desc}</p>
-                           </div>
-                        </div>
-                     ))}
-                  </div>
-               </div>
+              <div className="container mx-auto px-4 py-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  {FEATURES.map((feat, idx) => (
+                    <div key={idx} className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-3">
+                      <div className="text-racing-orange p-2 bg-zinc-950 rounded-full border border-zinc-800">
+                        <feat.icon className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-white uppercase italic text-sm leading-tight mb-1">{feat.title}</p>
+                        <p className="text-zinc-500 text-xs font-medium leading-tight">{feat.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </section>
 
-             {/* COMMUNITY SECTION (HOME ONLY) */}
-             <section className="py-16 bg-gradient-to-r from-zinc-900 to-black border-b border-zinc-800">
-                <div className="container mx-auto px-4">
-                  <div className="bg-zinc-900/50 border border-zinc-800 rounded-sm p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden group">
-                     {/* Decorative background element */}
-                     <div className="absolute top-0 right-0 w-64 h-64 bg-racing-orange/5 rounded-full blur-3xl group-hover:bg-racing-orange/10 transition-colors"></div>
-                     
-                     <div className="flex items-start gap-6 relative z-10 max-w-2xl">
-                        <div className="hidden md:block p-4 bg-black border border-zinc-800 rounded-full">
-                           <Users className="w-10 h-10 text-racing-orange" />
-                        </div>
-                        <div>
-                           <div className="flex items-center gap-2 mb-2">
-                             <MessageSquare className="w-5 h-5 text-racing-orange md:hidden" />
-                             <span className="text-racing-orange font-bold uppercase tracking-widest text-xs">Comunidad Paddock</span>
-                           </div>
-                           <h2 className="text-3xl md:text-4xl font-extrabold text-white uppercase italic mb-4">
-                              ¿Dudas sobre tu setup?
-                           </h2>
-                           <p className="text-zinc-400 text-sm md:text-base leading-relaxed">
-                              Únete a nuestra comunidad de pilotos y mecánicos. Comparte tus experiencias, resuelve dudas sobre compatibilidad y encuentra el mejor material para tu moto.
-                           </p>
-                        </div>
-                     </div>
-                     
-                     <div className="relative z-10">
-                        <button 
-                          onClick={() => setCurrentView('forum')}
-                          className="bg-white hover:bg-zinc-200 text-black font-black uppercase py-4 px-8 rounded-sm transition-transform hover:scale-105 flex items-center gap-2 shadow-xl"
-                        >
-                           Entrar al Foro <ArrowRight className="w-5 h-5" />
-                        </button>
-                     </div>
+            {/* COMMUNITY SECTION (HOME ONLY) */}
+            <section className="py-16 bg-gradient-to-r from-zinc-900 to-black border-b border-zinc-800">
+              <div className="container mx-auto px-4">
+                <div className="bg-zinc-900/50 border border-zinc-800 rounded-sm p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden group">
+                  {/* Decorative background element */}
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-racing-orange/5 rounded-full blur-3xl group-hover:bg-racing-orange/10 transition-colors"></div>
+
+                  <div className="flex items-start gap-6 relative z-10 max-w-2xl">
+                    <div className="hidden md:block p-4 bg-black border border-zinc-800 rounded-full">
+                      <Users className="w-10 h-10 text-racing-orange" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <MessageSquare className="w-5 h-5 text-racing-orange md:hidden" />
+                        <span className="text-racing-orange font-bold uppercase tracking-widest text-xs">Comunidad Paddock</span>
+                      </div>
+                      <h2 className="text-3xl md:text-4xl font-extrabold text-white uppercase italic mb-4">
+                        ¿Dudas sobre tu setup?
+                      </h2>
+                      <p className="text-zinc-400 text-sm md:text-base leading-relaxed">
+                        Únete a nuestra comunidad de pilotos y mecánicos. Comparte tus experiencias, resuelve dudas sobre compatibilidad y encuentra el mejor material para tu moto.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="relative z-10">
+                    <button
+                      onClick={() => setCurrentView('forum')}
+                      className="bg-white hover:bg-zinc-200 text-black font-black uppercase py-4 px-8 rounded-sm transition-transform hover:scale-105 flex items-center gap-2 shadow-xl"
+                    >
+                      Entrar al Foro <ArrowRight className="w-5 h-5" />
+                    </button>
                   </div>
                 </div>
-             </section>
+              </div>
+            </section>
 
             {/* FEATURED PRODUCTS */}
             <section className="py-20 bg-zinc-950 w-full">
               <div className="container mx-auto px-4">
                 <div className="flex flex-wrap justify-between items-end mb-8 md:mb-12 gap-4">
                   <div className="flex items-center gap-4">
-                     <h2 className="text-2xl md:text-3xl font-extrabold text-white uppercase italic pr-2">
-                       Destacados
-                     </h2>
+                    <h2 className="text-2xl md:text-3xl font-extrabold text-white uppercase italic pr-2">
+                      Destacados
+                    </h2>
                   </div>
                   <button onClick={() => setCurrentView('catalog')} className="text-racing-orange font-bold uppercase text-xs flex items-center gap-1 hover:text-white transition-colors">
-                     Ver todo el catálogo <ArrowRight className="w-4 h-4" />
+                    Ver todo el catálogo <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
-                
+
                 {renderProductGrid()}
               </div>
             </section>
@@ -352,35 +354,35 @@ function App() {
         {currentView === 'catalog' && (
           <>
             <section className="pt-24 pb-8 bg-zinc-950">
-               <div className="container mx-auto px-4 mb-8 text-center">
-                  <h1 className="text-2xl md:text-4xl font-extrabold text-white uppercase italic">
-                     Buscador de Piezas
-                  </h1>
-                  <p className="text-zinc-500 text-sm mt-2">Encuentra exactamente lo que necesitas para tu máquina.</p>
-               </div>
+              <div className="container mx-auto px-4 mb-8 text-center">
+                <h1 className="text-2xl md:text-4xl font-extrabold text-white uppercase italic">
+                  Buscador de Piezas
+                </h1>
+                <p className="text-zinc-500 text-sm mt-2">Encuentra exactamente lo que necesitas para tu máquina.</p>
+              </div>
 
-               <BikeSelector 
-                  onSearch={handleBikeSearch} 
-                  onTextSearch={handleTextSearch}
-                  isLoading={loading && !!currentFilter} 
-                  bikeData={BIKE_DATA} 
-               />
+              <BikeSelector
+                onSearch={handleBikeSearch}
+                onTextSearch={handleTextSearch}
+                isLoading={loading && !!currentFilter}
+                bikeData={BIKE_DATA}
+              />
             </section>
 
             <section className="py-12 bg-zinc-950 min-h-screen w-full border-t border-zinc-900">
               <div className="container mx-auto px-4">
                 <div className="flex flex-wrap justify-between items-end mb-8 gap-4">
-                   <h2 className="text-xl font-bold text-white uppercase italic">
-                     {currentFilter ? `Resultados: ${currentFilter}` : "Catálogo Completo"}
-                   </h2>
-                   {currentFilter && (
-                       <button 
-                        onClick={handleClearFilters}
-                        className="bg-zinc-800 hover:bg-red-900/50 text-zinc-400 hover:text-red-400 p-2 rounded-sm transition-colors flex items-center gap-2 text-xs font-bold uppercase px-4"
-                       >
-                         <Trash2 className="w-4 h-4" /> Limpiar Filtros
-                       </button>
-                   )}
+                  <h2 className="text-xl font-bold text-white uppercase italic">
+                    {currentFilter ? `Resultados: ${currentFilter}` : "Catálogo Completo"}
+                  </h2>
+                  {currentFilter && (
+                    <button
+                      onClick={handleClearFilters}
+                      className="bg-zinc-800 hover:bg-red-900/50 text-zinc-400 hover:text-red-400 p-2 rounded-sm transition-colors flex items-center gap-2 text-xs font-bold uppercase px-4"
+                    >
+                      <Trash2 className="w-4 h-4" /> Limpiar Filtros
+                    </button>
+                  )}
                 </div>
 
                 {renderProductGrid()}
