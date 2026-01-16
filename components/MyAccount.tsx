@@ -92,7 +92,7 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
     setUploadingPhoto(true);
 
     // Subir a WP Media Library real
-    const result = await uploadCustomerPhoto(user.id, file, user.username);
+    const result = await uploadCustomerPhoto(user.id, file, user.email);
 
     if (result.success && result.url) {
       setSelectedAvatar(result.url);
