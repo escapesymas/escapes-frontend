@@ -428,10 +428,12 @@ function App() {
         {currentView === 'cart' && (
           <Cart
             items={cart}
+            user={user}
             onUpdateQuantity={(id, delta) => setCart(p => p.map(i => i.id === id ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i))}
             onRemove={(id) => setCart(p => p.filter(i => i.id !== id))}
             onCheckout={() => setCurrentView('checkout')}
             onContinueShopping={() => setCurrentView('catalog')}
+            onRestoreCart={(items) => setCart(items)}
           />
         )}
 
