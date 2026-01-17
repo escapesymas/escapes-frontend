@@ -11,13 +11,22 @@ interface MyOrdersProps {
 export const MyOrders: React.FC<MyOrdersProps> = ({ user, onBack }) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadOrders = async () => {
       setLoading(true);
-      const data = await fetchCustomerOrders(user.id);
-      setOrders(data);
-      setLoading(false);
+      setError(null);
+      try {
+        console.log('[MyOrders] User ID:', user.id);
+        const data = await fetchCustomerOrders(user.id);
+        setOrders(data);
+      } catch (err: any) {
+        console.error('[MyOrders] Error:', err);
+        setError(err.message || 'Error al cargar tus pedidos');
+      } finally {
+        setLoading(false);
+      }
     };
     loadOrders();
   }, [user.id]);
@@ -46,7 +55,7 @@ export const MyOrders: React.FC<MyOrdersProps> = ({ user, onBack }) => {
 
   return (
     <div className="container mx-auto px-4 py-8 animate-fade-in min-h-screen">
-       <div className="mb-8 flex items-center gap-4">
+      <div className="mb-8 flex items-center gap-4">
         <button onClick={onBack} className="text-zinc-500 hover:text-white transition-colors">
           <ArrowLeft className="w-6 h-6" />
         </button>
@@ -58,6 +67,16 @@ export const MyOrders: React.FC<MyOrdersProps> = ({ user, onBack }) => {
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <Loader2 className="w-12 h-12 text-racing-orange animate-spin" />
+        </div>
+      ) : error ? (
+        <div className="text-center py-20 border border-red-800 rounded-sm bg-red-900/10">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-white mb-2">Error al cargar pedidos</h3>
+          <p className="text-zinc-400 mb-4">{error}</p>
+          <p className="text-zinc-500 text-sm mb-6">Por favor, verifica la consola del navegador (F12) para más detalles.</p>
+          <button onClick={() => window.location.reload()} className="text-racing-orange hover:text-white font-bold uppercase text-sm">
+            Reintentar
+          </button>
         </div>
       ) : orders.length === 0 ? (
         <div className="text-center py-20 border border-zinc-800 border-dashed rounded-sm bg-zinc-900/50">
@@ -75,16 +94,16 @@ export const MyOrders: React.FC<MyOrdersProps> = ({ user, onBack }) => {
               {/* Order Header */}
               <div className="p-4 md:p-6 border-b border-zinc-800 flex flex-col md:flex-row justify-between md:items-center gap-4">
                 <div>
-                   <div className="flex items-center gap-3 mb-1">
-                     <span className="text-white font-bold text-lg">#{order.id}</span>
-                     <span className={`px-2 py-0.5 text-xs font-bold uppercase rounded-sm border ${getStatusColor(order.status)}`}>
-                       {translateStatus(order.status)}
-                     </span>
-                   </div>
-                   <div className="flex items-center gap-2 text-zinc-500 text-sm">
-                     <Calendar className="w-4 h-4" />
-                     {new Date(order.date_created).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}
-                   </div>
+                  <div className="flex items-center gap-3 mb-1">
+                    <span className="text-white font-bold text-lg">#{order.id}</span>
+                    <span className={`px-2 py-0.5 text-xs font-bold uppercase rounded-sm border ${getStatusColor(order.status)}`}>
+                      {translateStatus(order.status)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-zinc-500 text-sm">
+                    <Calendar className="w-4 h-4" />
+                    {new Date(order.date_created).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-zinc-400 text-sm">Total:</span>

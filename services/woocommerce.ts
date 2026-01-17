@@ -373,17 +373,35 @@ export const updateOrderStatus = async (
  * Obtiene los pedidos de un cliente
  */
 export const fetchCustomerOrders = async (customerId: number, status: string = 'any'): Promise<Order[]> => {
-  if (!customerId) return [];
+  console.log('[ORDERS] 🔍 Fetching orders for customer ID:', customerId, '| Status filter:', status);
+
+  // Validate customer ID
+  if (!customerId || customerId === 0) {
+    console.error('[ORDERS] ❌ Invalid customer ID:', customerId);
+    throw new Error('ID de cliente inválido. Por favor, cierra sesión y vuelve a iniciar sesión.');
+  }
+
+  // Build endpoint
+  let endpoint = `/wc/v3/orders?customer=${customerId}&per_page=50`;
+  if (status !== 'any') {
+    endpoint += `&status=${status}`;
+  }
+
+  console.log('[ORDERS] 📡 API endpoint:', endpoint);
+
   try {
-    let endpoint = `/wc/v3/orders?customer=${customerId}&per_page=50`;
-    if (status !== 'any') {
-      endpoint += `&status=${status}`;
-    }
     const { data } = await makeRequest(endpoint);
+    console.log('[ORDERS] ✅ Received', Array.isArray(data) ? data.length : 0, 'orders');
+
+    if (!Array.isArray(data)) {
+      console.error('[ORDERS] ❌ API returned non-array:', data);
+      throw new Error('Respuesta inesperada del servidor');
+    }
+
     return data as Order[];
-  } catch (error) {
-    console.error('[ORDERS] Error fetching customer orders:', error);
-    return [];
+  } catch (error: any) {
+    console.error('[ORDERS] ❌ Error fetching orders:', error);
+    throw new Error(error.message || 'Error al cargar pedidos del servidor');
   }
 };
 
