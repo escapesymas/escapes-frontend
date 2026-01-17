@@ -380,19 +380,7 @@ export const fetchCustomerOrders = async (customerId: number, status: string = '
       endpoint += `&status=${status}`;
     }
     const { data } = await makeRequest(endpoint);
-    return (data as any[]).map((o: any) => ({
-      id: o.id,
-      number: o.number,
-      status: o.status,
-      total: o.total,
-      date_created: o.date_created,
-      line_items: o.line_items.map((i: any) => ({ // Fixed property name
-        id: i.product_id,
-        name: i.name,
-        quantity: i.quantity,
-        total: i.total
-      }))
-    }));
+    return data as Order[];
   } catch (error) {
     console.error('[ORDERS] Error fetching customer orders:', error);
     return [];
