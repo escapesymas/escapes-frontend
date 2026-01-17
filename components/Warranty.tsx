@@ -115,6 +115,7 @@ export const Warranty: React.FC<WarrantyProps> = ({ user, onBack, onLoginRequest
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
 
   // Auto-fill user data and fetch orders
   useEffect(() => {
@@ -128,9 +129,17 @@ export const Warranty: React.FC<WarrantyProps> = ({ user, onBack, onLoginRequest
 
       // Fetch completed orders
       setLoadingOrders(true);
+      setOrdersError(null);
+      console.log('[Warranty] Fetching orders for user:', user.id);
       fetchCustomerOrders(user.id, 'completed')
-        .then(data => setOrders(data))
-        .catch(err => console.error("Error loading orders", err))
+        .then(data => {
+          console.log('[Warranty] Orders loaded:', data.length);
+          setOrders(data);
+        })
+        .catch(err => {
+          console.error('[Warranty] Error loading orders:', err);
+          setOrdersError(err.message || 'Error al cargar pedidos');
+        })
         .finally(() => setLoadingOrders(false));
     }
   }, [user]);
@@ -324,6 +333,11 @@ export const Warranty: React.FC<WarrantyProps> = ({ user, onBack, onLoginRequest
                   {loadingOrders ? (
                     <div className="text-zinc-500 text-sm flex items-center gap-2 bg-zinc-900 p-3 rounded-sm border border-zinc-800">
                       <Loader2 className="w-4 h-4 animate-spin" /> Cargando historial...
+                    </div>
+                  ) : ordersError ? (
+                    <div className="text-red-400 text-sm font-bold flex items-center gap-2 bg-red-900/10 p-3 rounded-sm border border-red-900/30">
+                      <AlertCircle className="w-4 h-4" /> {ordersError}
+                      <span className="text-xs text-zinc-500 ml-2">(Revisa la consola F12)</span>
                     </div>
                   ) : orders.length > 0 ? (
                     <select
