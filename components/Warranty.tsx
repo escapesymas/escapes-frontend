@@ -150,11 +150,23 @@ export const Warranty: React.FC<WarrantyProps> = ({ user, onBack, onLoginRequest
     if (selected) {
       // Format date YYYY-MM-DD
       const date = selected.date_created ? new Date(selected.date_created).toISOString().split('T')[0] : '';
+
+      // Auto-fill form data
       setFormData(prev => ({
         ...prev,
         invoiceNumber: String(selected.id),
         purchaseDate: date
       }));
+
+      // Auto-fill products from order line items
+      if (selected.line_items && selected.line_items.length > 0) {
+        const orderProducts = selected.line_items.map(item => ({
+          name: item.name,
+          issue: '' // User needs to fill this
+        }));
+        setProducts(orderProducts);
+        console.log('[Warranty] Auto-filled', orderProducts.length, 'products from order');
+      }
     }
   };
 
