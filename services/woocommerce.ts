@@ -372,6 +372,36 @@ export const updateOrderStatus = async (
   }
 };
 
+/**
+ * Obtiene los pedidos de un cliente
+ */
+export const fetchCustomerOrders = async (customerId: number, status: string = 'any'): Promise<Order[]> => {
+  if (!customerId) return [];
+  try {
+    let endpoint = `/wc/v3/orders?customer=${customerId}&per_page=50`;
+    if (status !== 'any') {
+      endpoint += `&status=${status}`;
+    }
+    const { data } = await makeRequest(endpoint);
+    return (data as any[]).map((o: any) => ({
+      id: o.id,
+      number: o.number,
+      status: o.status,
+      total: o.total,
+      date_created: o.date_created,
+      line_items: o.line_items.map((i: any) => ({ // Fixed property name
+        id: i.product_id,
+        name: i.name,
+        quantity: i.quantity,
+        total: i.total
+      }))
+    }));
+  } catch (error) {
+    console.error('[ORDERS] Error fetching customer orders:', error);
+    return [];
+  }
+};
+
 // =====================
 // AVATAR MANAGEMENT
 // =====================

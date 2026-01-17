@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { invoiceNumber, purchaseDate, buyerName, email, phone, products, images } = req.body;
+  const { invoiceNumber, purchaseDate, installationDate, buyerName, email, phone, products, images } = req.body;
 
   if (!invoiceNumber || !email || !buyerName) {
     return res.status(400).json({ message: 'Faltan datos obligatorios' });
@@ -35,6 +35,7 @@ export default async function handler(req, res) {
     <h2>Nueva Solicitud de Garantía</h2>
     <p><strong>Factura:</strong> ${invoiceNumber}</p>
     <p><strong>Fecha Compra:</strong> ${purchaseDate}</p>
+    <p><strong>Fecha Instalación:</strong> ${installationDate || 'No indicada'}</p>
     <p><strong>Titular:</strong> ${buyerName}</p>
     <p><strong>Email:</strong> ${email}</p>
     <p><strong>Teléfono:</strong> ${phone}</p>
