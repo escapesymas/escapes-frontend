@@ -389,10 +389,13 @@ export const toggleLike = async (
   token: string
 ): Promise<{ success: boolean; liked: boolean; likeCount: number }> => {
   try {
+    // Ensure token has Bearer prefix
+    const authToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+
     const response = await fetch('/api/forum/toggle-like', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, id, userId, token })
+      body: JSON.stringify({ type, id, userId, token: authToken })
     });
 
     const data = await response.json();
@@ -421,10 +424,13 @@ export const awardXP = async (
   token: string
 ): Promise<void> => {
   try {
+    // Ensure token has Bearer prefix
+    const authToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+
     await fetch('/api/forum/award-xp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, actionType, token })
+      body: JSON.stringify({ userId, actionType, token: authToken })
     });
   } catch (error) {
     console.error('[XP] Error awarding XP:', error);
