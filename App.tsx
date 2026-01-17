@@ -442,7 +442,7 @@ function App() {
           {currentView === 'checkout' && <Checkout cart={cart} user={user} onBack={() => setCurrentView('cart')} onOrderComplete={() => { setCart([]); setCurrentView('home'); }} onLoginSuccess={(u) => { setUser(u); saveSession(u); }} />}
           {currentView === 'orders' && user && <MyOrders user={user} onBack={() => setCurrentView('home')} />}
           {currentView === 'account' && user && <MyAccount user={user} onBack={() => setCurrentView('home')} onUpdateUser={setUser} />}
-          {currentView === 'warranty' && <Warranty onBack={() => setCurrentView('home')} />}
+          {currentView === 'warranty' && <Warranty user={user} onBack={() => setCurrentView('home')} onLoginRequest={() => { setLastView('warranty'); setCurrentView('login'); }} />}
           {currentView === 'contact' && <Contact onBack={() => setCurrentView('home')} />}
         </Suspense>
 

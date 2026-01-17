@@ -1,11 +1,13 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, ShieldCheck, Plus, Trash2, Upload, Loader2, CheckCircle, AlertCircle, Camera, Search } from 'lucide-react';
-import { fetchProducts } from '../services/woocommerce';
-import { Product } from '../types';
+import { ArrowLeft, ShieldCheck, Plus, Trash2, Upload, Loader2, CheckCircle, AlertCircle, Camera, Search, FileText } from 'lucide-react';
+import { fetchProducts, fetchCustomerOrders } from '../services/woocommerce';
+import { Product, Order, User } from '../types';
 
 interface WarrantyProps {
+  user: User | null;
   onBack: () => void;
+  onLoginRequest: () => void;
 }
 
 interface WarrantyProduct {
@@ -101,14 +103,51 @@ const ProductSearchInput = ({
   );
 };
 
-export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
+export const Warranty: React.FC<WarrantyProps> = ({ user, onBack, onLoginRequest }) => {
   const [formData, setFormData] = useState({
     invoiceNumber: '',
     purchaseDate: '',
+    installationDate: '',
     buyerName: '',
     email: '',
     phone: '',
   });
+
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+
+  // Auto-fill user data and fetch orders
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        buyerName: `${user.firstName} ${user.lastName}`,
+        email: user.email,
+        phone: user.billing?.phone || ''
+      }));
+
+      // Fetch completed orders
+      setLoadingOrders(true);
+      fetchCustomerOrders(user.id, 'completed')
+        .then(data => setOrders(data))
+        .catch(err => console.error("Error loading orders", err))
+        .finally(() => setLoadingOrders(false));
+    }
+  }, [user]);
+
+  const handleOrderSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const orderId = Number(e.target.value);
+    const selected = orders.find(o => o.id === orderId);
+    if (selected) {
+      // Format date YYYY-MM-DD
+      const date = selected.date_created ? new Date(selected.date_created).toISOString().split('T')[0] : '';
+      setFormData(prev => ({
+        ...prev,
+        invoiceNumber: String(selected.id),
+        purchaseDate: date
+      }));
+    }
+  };
 
   const [products, setProducts] = useState<WarrantyProduct[]>([{ name: '', issue: '' }]);
   const [images, setImages] = useState<string[]>([]);
@@ -195,7 +234,7 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
       }
     } catch (err: any) {
       console.error("Submit error:", err);
-      setError(err.message || "No se pudo conectar con el servidor de garantías. Asegúrate de que el endpoint esté activo en WordPress.");
+      setError(err.message || "No se pudo conectar con el servidor de garantías. Asegúrate de que el endpoint esté activo y configurado.");
     } finally {
       setLoading(false);
     }
@@ -257,144 +296,193 @@ export const Warranty: React.FC<WarrantyProps> = ({ onBack }) => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-
-          <section className="bg-racing-carbon border border-zinc-800 p-6 rounded-sm">
-            <h3 className="text-white font-bold uppercase mb-6 text-sm tracking-wider flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-xs">1</span>
-              Información del Pedido
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Nº Factura / Pedido</label>
-                <input required name="invoiceNumber" value={formData.invoiceNumber} onChange={handleInputChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" placeholder="Ej: PED-2024-XXXX" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Fecha de Compra</label>
-                <input required type="date" name="purchaseDate" value={formData.purchaseDate} onChange={handleInputChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Nombre Titular</label>
-                <input required name="buyerName" value={formData.buyerName} onChange={handleInputChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Email de Contacto</label>
-                <input required type="email" name="email" value={formData.email} onChange={handleInputChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" placeholder="cliente@email.com" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Teléfono Móvil</label>
-                <input required type="tel" name="phone" value={formData.phone} onChange={handleInputChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" placeholder="+34..." />
-              </div>
-            </div>
-          </section>
-
-          <section className="bg-racing-carbon border border-zinc-800 p-6 rounded-sm">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-white font-bold uppercase text-sm tracking-wider flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-xs">2</span>
-                Detalles del Problema
-              </h3>
-              <button type="button" onClick={addProductRow} className="text-racing-orange text-xs font-bold uppercase flex items-center gap-1 hover:text-white transition-colors">
-                <Plus className="w-4 h-4" /> Añadir otro artículo
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {products.map((prod, index) => (
-                <div key={index} className="bg-zinc-900 p-4 rounded-sm border border-zinc-800 relative group">
-                  {products.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeProductRow(index)}
-                      className="absolute top-2 right-2 p-2 text-zinc-600 hover:text-red-500 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-
-                  <div className="grid grid-cols-1 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Producto</label>
-                      <ProductSearchInput
-                        value={prod.name}
-                        onChange={(val) => handleProductChange(index, 'name', val)}
-                        placeholder="Busca el producto..."
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Descripción de la falla</label>
-                      <textarea
-                        required
-                        rows={2}
-                        value={prod.issue}
-                        onChange={(e) => handleProductChange(index, 'issue', e.target.value)}
-                        className="w-full bg-black border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none resize-none"
-                        placeholder="Ej: El escape presenta una grieta en la soldadura tras 2 meses..."
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="bg-racing-carbon border border-zinc-800 p-6 rounded-sm">
-            <h3 className="text-white font-bold uppercase mb-6 text-sm tracking-wider flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-xs">3</span>
-              Evidencia Fotográfica
-            </h3>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {images.map((img, idx) => (
-                <div key={idx} className="relative aspect-square bg-black rounded-sm overflow-hidden border border-zinc-700 group">
-                  <img src={img} className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => removeImage(idx)}
-                    className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white"
-                  >
-                    <Trash2 className="w-6 h-6" />
-                  </button>
-                </div>
-              ))}
-
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="aspect-square bg-zinc-900 border-2 border-dashed border-zinc-700 rounded-sm flex flex-col items-center justify-center gap-2 text-zinc-500 hover:text-white hover:border-racing-orange transition-colors"
-              >
-                <Camera className="w-6 h-6" />
-                <span className="text-xs uppercase font-bold">Subir Foto</span>
-              </button>
-              <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                accept="image/*"
-                multiple
-                onChange={handleFileChange}
-              />
-            </div>
-            <p className="text-zinc-500 text-[10px] mt-4 uppercase font-bold tracking-widest">
-              Límite 5MB por archivo. Formatos permitidos: JPG, PNG.
+        {!user ? (
+          <div className="bg-zinc-900 border border-zinc-800 p-8 text-center rounded-sm">
+            <ShieldCheck className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-white uppercase italic mb-2">Requiere Iniciar Sesión</h2>
+            <p className="text-zinc-400 mb-6 font-medium">
+              Para gestionar garantías, necesitamos identificar tus pedidos y asegurar el seguimiento.
             </p>
-          </section>
-
-          <div className="flex justify-end pt-6">
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full md:w-auto bg-racing-orange hover:bg-orange-600 text-white font-black uppercase py-4 px-16 rounded-sm transition-all shadow-lg shadow-orange-900/40 flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
-              Enviar Informe Técnico
+            <button onClick={onLoginRequest} className="bg-racing-orange text-white font-bold uppercase py-3 px-8 rounded-sm hover:bg-orange-600 transition-colors shadow-lg shadow-orange-900/20">
+              Iniciar Sesión
             </button>
           </div>
-        </form>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-8 animate-fade-in">
+
+            <section className="bg-racing-carbon border border-zinc-800 p-6 rounded-sm">
+              <h3 className="text-white font-bold uppercase mb-6 text-sm tracking-wider flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-xs">1</span>
+                Información del Pedido
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                {/* SELECTOR DE PEDIDOS */}
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Seleccionar Pedido Completado</label>
+                  {loadingOrders ? (
+                    <div className="text-zinc-500 text-sm flex items-center gap-2 bg-zinc-900 p-3 rounded-sm border border-zinc-800">
+                      <Loader2 className="w-4 h-4 animate-spin" /> Cargando historial...
+                    </div>
+                  ) : orders.length > 0 ? (
+                    <select
+                      onChange={handleOrderSelect}
+                      className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none appearance-none cursor-pointer hover:border-zinc-500 transition-colors"
+                      defaultValue=""
+                    >
+                      <option value="" disabled>-- Selecciona una factura --</option>
+                      {orders.map(order => (
+                        <option key={order.id} value={order.id}>
+                          #{order.id} - {new Date(order.date_created).toLocaleDateString()} - {order.total}€
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="text-racing-orange text-sm font-bold flex items-center gap-2 bg-orange-900/10 p-3 rounded-sm border border-orange-900/30">
+                      <AlertCircle className="w-4 h-4" /> No tienes pedidos completados disponibles para garantía.
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Nº Factura / Pedido</label>
+                  <div className="relative">
+                    <input required name="invoiceNumber" value={formData.invoiceNumber} onChange={handleInputChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 pl-10 text-white rounded-sm focus:border-racing-orange focus:outline-none" placeholder="Ej: 12345" />
+                    <FileText className="absolute left-3 top-3.5 w-4 h-4 text-zinc-500" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Fecha de Compra</label>
+                  <input required type="date" name="purchaseDate" value={formData.purchaseDate} onChange={handleInputChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Fecha de Instalación / Recepción</label>
+                  <input required type="date" name="installationDate" value={formData.installationDate} onChange={handleInputChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                </div>
+
+                <div className="md:col-span-1">
+                  <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Nombre Titular</label>
+                  <input required name="buyerName" value={formData.buyerName} onChange={handleInputChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none opacity-50 cursor-not-allowed" readOnly />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Email de Contacto</label>
+                  <input required type="email" name="email" value={formData.email} onChange={handleInputChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none opacity-50 cursor-not-allowed" readOnly />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Teléfono Móvil</label>
+                  <input required type="tel" name="phone" value={formData.phone} onChange={handleInputChange} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none opacity-50 cursor-not-allowed" readOnly />
+                </div>
+              </div>
+            </section>
+
+            <section className="bg-racing-carbon border border-zinc-800 p-6 rounded-sm">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-white font-bold uppercase text-sm tracking-wider flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-xs">2</span>
+                  Detalles del Problema
+                </h3>
+                <button type="button" onClick={addProductRow} className="text-racing-orange text-xs font-bold uppercase flex items-center gap-1 hover:text-white transition-colors">
+                  <Plus className="w-4 h-4" /> Añadir otro artículo
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {products.map((prod, index) => (
+                  <div key={index} className="bg-zinc-900 p-4 rounded-sm border border-zinc-800 relative group">
+                    {products.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeProductRow(index)}
+                        className="absolute top-2 right-2 p-2 text-zinc-600 hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+
+                    <div className="grid grid-cols-1 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Producto</label>
+                        <ProductSearchInput
+                          value={prod.name}
+                          onChange={(val) => handleProductChange(index, 'name', val)}
+                          placeholder="Busca el producto..."
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Descripción de la falla</label>
+                        <textarea
+                          required
+                          rows={2}
+                          value={prod.issue}
+                          onChange={(e) => handleProductChange(index, 'issue', e.target.value)}
+                          className="w-full bg-black border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none resize-none"
+                          placeholder="Ej: El escape presenta una grieta en la soldadura tras 2 meses..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="bg-racing-carbon border border-zinc-800 p-6 rounded-sm">
+              <h3 className="text-white font-bold uppercase mb-6 text-sm tracking-wider flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-xs">3</span>
+                Evidencia Fotográfica
+              </h3>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {images.map((img, idx) => (
+                  <div key={idx} className="relative aspect-square bg-black rounded-sm overflow-hidden border border-zinc-700 group">
+                    <img src={img} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(idx)}
+                      className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white"
+                    >
+                      <Trash2 className="w-6 h-6" />
+                    </button>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="aspect-square bg-zinc-900 border-2 border-dashed border-zinc-700 rounded-sm flex flex-col items-center justify-center gap-2 text-zinc-500 hover:text-white hover:border-racing-orange transition-colors"
+                >
+                  <Camera className="w-6 h-6" />
+                  <span className="text-xs uppercase font-bold">Subir Foto</span>
+                </button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFileChange}
+                />
+              </div>
+              <p className="text-zinc-500 text-[10px] mt-4 uppercase font-bold tracking-widest">
+                Límite 5MB por archivo. Formatos permitidos: JPG, PNG.
+              </p>
+            </section>
+
+            <div className="flex justify-end pt-6">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full md:w-auto bg-racing-orange hover:bg-orange-600 text-white font-black uppercase py-4 px-16 rounded-sm transition-all shadow-lg shadow-orange-900/40 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+                Enviar Informe Técnico
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );
