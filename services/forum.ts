@@ -156,6 +156,7 @@ export const fetchReplies = async (topicId: number): Promise<ForumReply[]> => {
     const result: ForumReply[] = [];
 
     if (postData) {
+      const opLikes = postData.meta?._likes ? JSON.parse(postData.meta._likes) : [];
       result.push({
         id: postData.id,
         topicId: postData.id,
@@ -165,21 +166,26 @@ export const fetchReplies = async (topicId: number): Promise<ForumReply[]> => {
         authorRole: 'OP',
         content: postData.content.rendered,
         date: new Date(postData.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
-        likes: 0
+        likes: opLikes.length,
+        likedBy: opLikes
       });
     }
 
-    const mappedComments = commentsData.map((comment: any) => ({
-      id: comment.id,
-      topicId: topicId,
-      author: comment.author_name,
-      authorId: comment.author || 0, // Comments might have 0 if anonymous, but here logged in
-      authorAvatar: comment.author_avatar_urls?.['96'] || '',
-      authorRole: 'Racer',
-      content: comment.content.rendered,
-      date: new Date(comment.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
-      likes: 0
-    }));
+    const mappedComments = commentsData.map((comment: any) => {
+      const commentLikes = comment.meta?._likes ? JSON.parse(comment.meta._likes) : [];
+      return {
+        id: comment.id,
+        topicId: topicId,
+        author: comment.author_name,
+        authorId: comment.author || 0,
+        authorAvatar: comment.author_avatar_urls?.['96'] || '',
+        authorRole: 'Racer',
+        content: comment.content.rendered,
+        date: new Date(comment.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+        likes: commentLikes.length,
+        likedBy: commentLikes
+      };
+    });
 
     return [...result, ...mappedComments];
 
@@ -337,7 +343,7 @@ export const deleteReply = async (token: string, replyId: number): Promise<boole
 
 // --- MOCK DATA GENERATOR FOR DEMO ---
 const getMockTopics = (catId: string): ForumTopic[] => {
-  const common = { author: 'Marc M.', authorId: 9999, date: 'Hoy', views: 120, replies: 5, authorAvatar: '', isPinned: false };
+  const common = { author: 'Marc M.', authorId: 9999, date: 'Hoy', views: 120, replies: 5, authorAvatar: '', isPinned: false, likes: 0, likedBy: [] };
 
   if (catId === 'start_zone') return [
     { ...common, id: 501, categoryId: catId, title: 'Bienvenidos a la Línea de Salida', content: 'Normas de la comunidad y presentaciones.', isPinned: true },
@@ -368,3 +374,60 @@ const getMockTopics = (catId: string): ForumTopic[] => {
     { ...common, id: 999, categoryId: catId, title: 'Bienvenido al foro', content: 'Participa con respeto.', isPinned: true }
   ];
 };
+
+// =====================
+// LIKE SYSTEM
+// =====================
+
+/**
+ * Toggle like on a topic or reply
+ */
+export const toggleLike = async (
+  type: 'topic' | 'reply',
+  id: number,
+  userId: number,
+  token: string
+): Promise<{ success: boolean; liked: boolean; likeCount: number }> => {
+  try {
+    const response = await fetch('/api/forum/toggle-like', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, id, userId, token })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Error toggling like');
+    }
+
+    return {
+      success: true,
+      liked: data.liked,
+      likeCount: data.likeCount
+    };
+  } catch (error) {
+    console.error('[LIKE] Error:', error);
+    return { success: false, liked: false, likeCount: 0 };
+  }
+};
+
+/**
+ * Award XP to a user
+ */
+export const awardXP = async (
+  userId: number,
+  actionType: 'CREATE_TOPIC' | 'CREATE_REPLY',
+  token: string
+): Promise<void> => {
+  try {
+    await fetch('/api/forum/award-xp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, actionType, token })
+    });
+  } catch (error) {
+    console.error('[XP] Error awarding XP:', error);
+  }
+};
+

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, Clock, Hash, ChevronRight, ArrowLeft, Send, User, Loader2, PlusCircle, Quote, AlertCircle, CheckCircle, Pencil, Trash2, XCircle, Save } from 'lucide-react';
+import { MessageSquare, Clock, Hash, ChevronRight, ArrowLeft, Send, User, Loader2, PlusCircle, Quote, AlertCircle, CheckCircle, Pencil, Trash2, XCircle, Save, Heart } from 'lucide-react';
 import { ForumTopic, ForumCategory, ForumReply, User as UserType } from '../types';
-import { fetchForumCategories, fetchTopics, fetchReplies, createTopic, createReply, updateTopic, deleteTopic, updateReply, deleteReply } from '../services/forum';
+import { fetchForumCategories, fetchTopics, fetchReplies, createTopic, createReply, updateTopic, deleteTopic, updateReply, deleteReply, toggleLike, awardXP } from '../services/forum';
 import { RichTextEditor } from './RichTextEditor';
+import { RankBadge } from './RankBadge';
 
 interface ForumProps {
   user: UserType | null;
@@ -86,6 +87,40 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
     setLoading(false);
   };
 
+  const handleLikeToggle = async (type: 'topic' | 'reply', id: number, currentLikes: number, currentLikedBy: number[]) => {
+    if (!user || !user.token) {
+      onLoginRequest();
+      return;
+    }
+
+    // Optimistic UI update
+    const isLiked = currentLikedBy.includes(user.id);
+    const newLikedBy = isLiked
+      ? currentLikedBy.filter(uid => uid !== user.id)
+      : [...currentLikedBy, user.id];
+    const newLikeCount = newLikedBy.length;
+
+    // Update local state immediately
+    if (type === 'reply') {
+      setReplies(prev => prev.map(r =>
+        r.id === id ? { ...r, likes: newLikeCount, likedBy: newLikedBy } : r
+      ));
+    }
+
+    // Call API
+    const result = await toggleLike(type, id, user.id, user.token);
+
+    if (!result.success) {
+      // Revert on failure
+      if (type === 'reply') {
+        setReplies(prev => prev.map(r =>
+          r.id === id ? { ...r, likes: currentLikes, likedBy: currentLikedBy } : r
+        ));
+      }
+      setErrorMsg('Error al procesar el like');
+    }
+  };
+
   const handleCreateTopic = async () => {
     if (!user || !user.token) {
       onLoginRequest();
@@ -106,11 +141,15 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
     if (result.success) {
       setNewTopicTitle('');
       setNewTopicBody('');
+      // Award XP for creating topic
+      if (user.id && user.token) {
+        awardXP(user.id, 'CREATE_TOPIC', user.token);
+      }
       // Reload topics
       const updatedTopics = await fetchTopics(selectedCategory!.id);
       setTopics(updatedTopics);
       setCurrentView('category_topics');
-      setSuccessMsg("¡Tema publicado correctamente!");
+      setSuccessMsg("¡Tema publicado correctamente! +10 XP");
       setTimeout(() => setSuccessMsg(null), 3000);
     } else {
       setErrorMsg(result.error || "Error al crear el tema.");
@@ -132,10 +171,14 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
 
     if (result.success) {
       setReplyBody('');
+      // Award XP for creating reply
+      if (user.id && user.token) {
+        awardXP(user.id, 'CREATE_REPLY', user.token);
+      }
       // Refresh replies
       const updatedReplies = await fetchReplies(selectedTopic!.id);
       setReplies(updatedReplies);
-      setSuccessMsg("¡Respuesta publicada!");
+      setSuccessMsg("¡Respuesta publicada! +5 XP");
       setTimeout(() => setSuccessMsg(null), 3000);
     } else {
       setErrorMsg(result.error || "Error al responder.");
@@ -520,7 +563,26 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
                             </div>
                           </div>
                         ) : (
-                          <div className="text-zinc-300 prose prose-invert prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: reply.content }} />
+                          <>
+                            <div className="text-zinc-300 prose prose-invert prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: reply.content }} />
+
+                            {/* Like Button */}
+                            <div className="mt-3 pt-3 border-t border-zinc-800 flex items-center gap-4">
+                              <button
+                                onClick={() => handleLikeToggle('reply', reply.id, reply.likes, reply.likedBy)}
+                                className={`flex items-center gap-1.5 text-sm transition-colors ${user && reply.likedBy.includes(user.id)
+                                  ? 'text-red-500 hover:text-red-400'
+                                  : 'text-zinc-500 hover:text-red-500'
+                                  }`}
+                              >
+                                <Heart
+                                  className="w-4 h-4"
+                                  fill={user && reply.likedBy.includes(user.id) ? 'currentColor' : 'none'}
+                                />
+                                <span className="font-bold">{reply.likes}</span>
+                              </button>
+                            </div>
+                          </>
                         )}
                       </div>
                     </div>
