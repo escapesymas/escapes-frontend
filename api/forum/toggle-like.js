@@ -45,7 +45,19 @@ export default async function handler(req, res) {
         }
 
         const content = await response.json();
-        const currentLikes = content.meta?._likes ? JSON.parse(content.meta._likes) : [];
+
+        // Parse existing likes (handle both string and already-parsed array)
+        let currentLikes = [];
+        if (content.meta && content.meta._likes) {
+            try {
+                currentLikes = typeof content.meta._likes === 'string'
+                    ? JSON.parse(content.meta._likes)
+                    : content.meta._likes;
+            } catch (e) {
+                currentLikes = [];
+            }
+        }
+
         const authorId = type === 'topic' ? content.author : content.author_id;
 
         // Toggle like
@@ -74,8 +86,10 @@ export default async function handler(req, res) {
 
         // Award XP only on new likes (not unlikes)
         if (!isLiked) {
+            const apiBase = req.headers.host ? `https://${req.headers.host}` : 'http://localhost:5173';
+
             // Award XP to liker (+1 for engagement)
-            await fetch(`${req.headers.origin || 'http://localhost:5173'}/api/forum/award-xp`, {
+            await fetch(`${apiBase}/api/forum/award-xp`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -87,7 +101,7 @@ export default async function handler(req, res) {
 
             // Award XP to author (+3 for topic, +2 for reply)
             if (authorId && authorId !== userId) {
-                await fetch(`${req.headers.origin || 'http://localhost:5173'}/api/forum/award-xp`, {
+                await fetch(`${apiBase}/api/forum/award-xp`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

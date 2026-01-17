@@ -1,5 +1,3 @@
-import nodemailer from 'nodemailer';
-
 // Rank configuration
 const RANKS = [
     { level: 1, title: 'Novato', xpRequired: 0, color: '#71717a', icon: '🏍️' },
@@ -21,7 +19,7 @@ const XP_REWARDS = {
 /**
  * Calculate user level based on XP
  */
-function calculateLevel(xp: number) {
+function calculateLevel(xp) {
     for (let i = RANKS.length - 1; i >= 0; i--) {
         if (xp >= RANKS[i].xpRequired) {
             const currentRank = RANKS[i];
@@ -60,7 +58,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ message: 'Missing required fields' });
     }
 
-    // Validate token (basic JWT check - in production, verify signature)
+    // Validate token
     if (!token.startsWith('Bearer ')) {
         return res.status(401).json({ message: 'Invalid token format' });
     }
