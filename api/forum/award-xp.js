@@ -48,36 +48,63 @@ function calculateLevel(xp) {
  * Award XP to a user and update their level
  */
 export default async function handler(req, res) {
+    // Enable CORS
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+
     if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Method Not Allowed' });
     }
 
-    const { userId, actionType, token } = req.body;
-
-    if (!userId || !actionType || !token) {
-        return res.status(400).json({ message: 'Missing required fields' });
-    }
-
-    // Validate token
-    if (!token.startsWith('Bearer ')) {
-        return res.status(401).json({ message: 'Invalid token format' });
-    }
-
-    // Determine XP to award
-    const xpAmount = XP_REWARDS[actionType] || 0;
-    if (xpAmount === 0) {
-        return res.status(400).json({ message: 'Invalid action type' });
-    }
-
     try {
-        // Fetch current user metadata from WooCommerce
+        const { userId, actionType, token } = req.body;
+
+        console.log('[XP] Request received:', { userId, actionType, hasToken: !!token });
+
+        if (!userId || !actionType || !token) {
+            console.error('[XP] Missing fields:', { userId: !!userId, actionType: !!actionType, token: !!token });
+            return res.status(400).json({ message: 'Missing required fields' });
+        }
+
+        // Validate token
+        if (!token.startsWith('Bearer ')) {
+            console.error('[XP] Invalid token format');
+            return res.status(401).json({ message: 'Invalid token format' });
+        }
+
+        // Determine XP to award
+        const xpAmount = XP_REWARDS[actionType] || 0;
+        if (xpAmount === 0) {
+            console.error('[XP] Invalid action type:', actionType);
+            return res.status(400).json({ message: 'Invalid action type' });
+        }
+
+        console.log('[XP] Awarding', xpAmount, 'XP for', actionType);
+
+        // Check if environment variables are set
         const WOO_URL = process.env.WOO_BASE_URL || 'https://backendescapes.com';
         const WOO_KEY = process.env.WOO_CONSUMER_KEY;
         const WOO_SECRET = process.env.WOO_CONSUMER_SECRET;
 
+        if (!WOO_KEY || !WOO_SECRET) {
+            console.error('[XP] Missing WooCommerce credentials');
+            return res.status(500).json({
+                success: false,
+                message: 'Server configuration error: Missing WooCommerce credentials'
+            });
+        }
+
+        console.log('[XP] Using WooCommerce URL:', WOO_URL);
+
         const credentials = Buffer.from(`${WOO_KEY}:${WOO_SECRET}`).toString('base64');
 
         // Get current user data
+        console.log('[XP] Fetching user data for ID:', userId);
         const userResponse = await fetch(`${WOO_URL}/wp-json/wc/v3/customers/${userId}`, {
             headers: {
                 'Authorization': `Basic ${credentials}`,
@@ -86,16 +113,22 @@ export default async function handler(req, res) {
         });
 
         if (!userResponse.ok) {
-            throw new Error('Failed to fetch user data');
+            const errorText = await userResponse.text();
+            console.error('[XP] Failed to fetch user:', userResponse.status, errorText);
+            throw new Error(`Failed to fetch user data: ${userResponse.status}`);
         }
 
         const userData = await userResponse.json();
+        console.log('[XP] User data fetched successfully');
+
         const currentXP = parseInt(userData.meta_data?.find(m => m.key === '_forum_xp')?.value || '0');
         const newXP = currentXP + xpAmount;
         const newRank = calculateLevel(newXP);
 
+        console.log('[XP] XP progression:', { currentXP, newXP, level: newRank.level });
+
         // Update user metadata
-        await fetch(`${WOO_URL}/wp-json/wc/v3/customers/${userId}`, {
+        const updateResponse = await fetch(`${WOO_URL}/wp-json/wc/v3/customers/${userId}`, {
             method: 'PUT',
             headers: {
                 'Authorization': `Basic ${credentials}`,
@@ -109,7 +142,13 @@ export default async function handler(req, res) {
             })
         });
 
-        console.log(`[XP] User ${userId} awarded ${xpAmount} XP for ${actionType}. Total: ${newXP} XP, Level: ${newRank.level}`);
+        if (!updateResponse.ok) {
+            const errorText = await updateResponse.text();
+            console.error('[XP] Failed to update user:', updateResponse.status, errorText);
+            throw new Error(`Failed to update user: ${updateResponse.status}`);
+        }
+
+        console.log('[XP] ✓ User updated successfully. Total XP:', newXP, 'Level:', newRank.level);
 
         return res.status(200).json({
             success: true,
@@ -119,7 +158,8 @@ export default async function handler(req, res) {
         });
 
     } catch (error) {
-        console.error('[XP] Error awarding XP:', error);
+        console.error('[XP] Error:', error.message);
+        console.error('[XP] Stack:', error.stack);
         return res.status(500).json({
             success: false,
             message: 'Error al otorgar XP: ' + error.message
