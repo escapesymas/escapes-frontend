@@ -171,10 +171,7 @@ export const createOrder = async (orderData: OrderPayload | any): Promise<{ succ
   }
 };
 
-export const fetchCustomerOrders = async (customerId: number): Promise<Order[]> => {
-  const { data } = await makeRequest(`/wc/v3/orders?customer=${customerId}`);
-  return data as Order[];
-};
+
 
 /**
  * Obtiene los pedidos pendientes de un cliente para recuperar carritos abandonados
