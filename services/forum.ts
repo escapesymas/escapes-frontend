@@ -1,10 +1,67 @@
-
 import { WOO_CONFIG } from '../storeData';
-import { ForumCategory, ForumTopic, ForumReply } from '../types';
+import { ForumCategory, ForumTopic, ForumReply, UserRank } from '../types';
 import { MessageSquare, Wrench, Bike, Shield, Compass, LifeBuoy, Flag } from 'lucide-react';
 
 // BASE URL NATIVA DE WORDPRESS
-const WP_API_BASE = WOO_CONFIG.baseUrl.replace(/\/$/, "") + '/wp-json/wp/v2';
+const WP_API_BASE = 'https://backendescapes.com/wp-json/wp/v2';
+
+// Rank configuration (matches backend)
+const RANKS = [
+  { level: 1, title: 'Novato', xpRequired: 0, color: '#71717a', icon: '🏍️' },
+  { level: 2, title: 'Aprendiz', xpRequired: 50, color: '#22c55e', icon: '⚡' },
+  { level: 3, title: 'Piloto', xpRequired: 150, color: '#3b82f6', icon: '🏁' },
+  { level: 4, title: 'Experto', xpRequired: 300, color: '#a855f7', icon: '🔥' },
+  { level: 5, title: 'Profesional', xpRequired: 500, color: '#f97316', icon: '💨' },
+  { level: 6, title: 'Leyenda', xpRequired: 1000, color: '#eab308', icon: '👑' }
+];
+
+/**
+ * Calculate user rank from XP
+ */
+function calculateRank(xp: number): UserRank {
+  for (let i = RANKS.length - 1; i >= 0; i--) {
+    if (xp >= RANKS[i].xpRequired) {
+      const currentRank = RANKS[i];
+      const nextRank = RANKS[i + 1];
+      return {
+        level: currentRank.level,
+        title: currentRank.title,
+        color: currentRank.color,
+        icon: currentRank.icon,
+        xp: xp,
+        xpToNext: nextRank ? nextRank.xpRequired - xp : 0
+      };
+    }
+  }
+  return {
+    level: 1,
+    title: RANKS[0].title,
+    color: RANKS[0].color,
+    icon: RANKS[0].icon,
+    xp: 0,
+    xpToNext: RANKS[1].xpRequired
+  };
+}
+
+/**
+ * Get user rank from WordPress via API
+ */
+export const getUserRank = async (userId: number): Promise<UserRank | null> => {
+  try {
+    const response = await fetch(`/api/forum/get-user-rank?userId=${userId}`);
+
+    if (!response.ok) {
+      console.warn('[RANK] Failed to fetch user rank');
+      return null;
+    }
+
+    const rank = await response.json();
+    return rank;
+  } catch (error) {
+    console.error('[RANK] Error fetching user rank:', error);
+    return null;
+  }
+};
 
 /**
  * ESQUEMA MAESTRO DEL FORO (Fallback & Structure)
