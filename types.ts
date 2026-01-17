@@ -134,6 +134,15 @@ export interface ForumCategory {
   topicCount: number;
 }
 
+export interface UserRank {
+  level: number;
+  title: string;
+  xp: number;
+  xpToNext: number;
+  color: string;
+  icon: string; // Emoji or icon name
+}
+
 export interface ForumTopic {
   id: number;
   categoryId: string;
@@ -141,9 +150,12 @@ export interface ForumTopic {
   author: string;
   authorId: number; // For permissions
   authorAvatar: string;
+  authorRank?: UserRank; // User's rank/level
   date: string;
   views: number;
   replies: number;
+  likes: number; // Total likes count
+  likedBy: number[]; // Array of user IDs who liked
   isPinned?: boolean;
   tags?: string[];
   content?: string;
@@ -156,9 +168,11 @@ export interface ForumReply {
   authorId: number; // For permissions
   authorAvatar: string;
   authorRole?: string; // e.g., 'Admin', 'Moderator', 'Pro Racer'
+  authorRank?: UserRank; // User's rank/level
   content: string;
   date: string;
-  likes: number;
+  likes: number; // Total likes count
+  likedBy: number[]; // Array of user IDs who liked
 }
 
 // --- GLOBAL DECLARATIONS ---
