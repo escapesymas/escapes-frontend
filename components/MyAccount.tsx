@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User as UserIcon, MapPin, Save, ArrowLeft, Mail, Phone, Loader2, CheckCircle, Camera, X, Lock, Upload } from 'lucide-react';
-import { User } from '../types';
+import { User, UserRank } from '../types';
 import { updateCustomer, fetchAvatars, updateCustomerAvatar, uploadCustomerPhoto, AvatarOption } from '../services/woocommerce';
+import { getUserRank } from '../services/forum';
+import { RankBadge } from './RankBadge';
 
 interface MyAccountProps {
   user: User;
@@ -40,6 +42,18 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
     zip: user.billing?.postcode || '',
     phone: user.billing?.phone || ''
   });
+
+  // Rank state
+  const [userRank, setUserRank] = useState<UserRank | null>(null);
+
+  // Load user rank
+  useEffect(() => {
+    if (user.id) {
+      getUserRank(user.id).then(rank => {
+        if (rank) setUserRank(rank);
+      });
+    }
+  }, [user.id]);
 
   // Cargar avatares disponibles al abrir el picker
   useEffect(() => {
@@ -353,6 +367,51 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
             </div>
           </div>
         </div>
+
+        {/* XP & Rank Section */}
+        {userRank && (
+          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-sm mb-6">
+            <h2 className="text-xl font-bold text-white uppercase italic mb-4 flex items-center gap-2">
+              <span className="text-racing-orange">🏆</span> Rango del Paddock
+            </h2>
+
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="text-4xl">{userRank.icon}</div>
+                <div>
+                  <p className="text-lg font-bold text-white">{userRank.title}</p>
+                  <p className="text-sm text-zinc-400">Nivel {userRank.level}</p>
+                </div>
+              </div>
+              <RankBadge rank={userRank} showProgress />
+            </div>
+
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-zinc-400">XP: {userRank.xp}</span>
+                {userRank.xpToNext > 0 && (
+                  <span className="text-zinc-500">{userRank.xpToNext} XP al siguiente nivel</span>
+                )}
+              </div>
+
+              {userRank.xpToNext > 0 && (
+                <div className="w-full bg-zinc-800 rounded-full h-2">
+                  <div
+                    className="h-2 rounded-full transition-all duration-500"
+                    style={{
+                      width: `${(userRank.xp / (userRank.xp + userRank.xpToNext)) * 100}%`,
+                      backgroundColor: userRank.color
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-zinc-800 text-xs text-zinc-500">
+              <p>💡 Gana XP publicando temas (+10), respondiendo (+5) y recibiendo likes (+2/+3)</p>
+            </div>
+          </div>
+        )}
 
         {/* Form */}
         <div className="lg:col-span-2">

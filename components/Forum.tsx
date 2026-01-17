@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MessageSquare, Clock, Hash, ChevronRight, ArrowLeft, Send, User, Loader2, PlusCircle, Quote, AlertCircle, CheckCircle, Pencil, Trash2, XCircle, Save, Heart } from 'lucide-react';
-import { ForumTopic, ForumCategory, ForumReply, User as UserType } from '../types';
-import { fetchForumCategories, fetchTopics, fetchReplies, createTopic, createReply, updateTopic, deleteTopic, updateReply, deleteReply, toggleLike, awardXP } from '../services/forum';
+import { ForumTopic, ForumCategory, ForumReply, User as UserType, UserRank } from '../types';
+import { fetchForumCategories, fetchTopics, fetchReplies, createTopic, createReply, updateTopic, deleteTopic, updateReply, deleteReply, toggleLike, awardXP, getUserRank } from '../services/forum';
 import { RichTextEditor } from './RichTextEditor';
 import { RankBadge } from './RankBadge';
 
@@ -36,6 +36,9 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
   const [editingId, setEditingId] = useState<number | null>(null); // ID of reply/topic being edited
   const [editContent, setEditContent] = useState('');
   const [editTitle, setEditTitle] = useState(''); // Only for Topic OP
+
+  // Ranks State
+  const [userRanks, setUserRanks] = useState<Record<number, UserRank>>({});
 
   useEffect(() => {
     loadCategories();
@@ -84,7 +87,25 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
     setCurrentView('topic');
     const data = await fetchReplies(topic.id);
     setReplies(data);
+
+    // Load ranks for all authors
+    loadUserRanks(data);
+
     setLoading(false);
+  };
+
+  // Load user ranks for all unique authors in replies
+  const loadUserRanks = async (replies: ForumReply[]) => {
+    const uniqueAuthorIds = [...new Set(replies.map(r => r.authorId))].filter(id => id > 0);
+
+    for (const authorId of uniqueAuthorIds) {
+      if (!userRanks[authorId]) {
+        const rank = await getUserRank(authorId);
+        if (rank) {
+          setUserRanks(prev => ({ ...prev, [authorId]: rank }));
+        }
+      }
+    }
   };
 
   const handleLikeToggle = async (type: 'topic' | 'reply', id: number, currentLikes: number, currentLikedBy: number[]) => {
@@ -520,7 +541,12 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
                       <div className="flex-1">
                         <div className="flex justify-between items-start mb-2">
                           <div>
-                            <span className="font-bold text-zinc-200 block">{reply.author}</span>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-bold text-zinc-200">{reply.author}</span>
+                              {userRanks[reply.authorId] && (
+                                <RankBadge rank={userRanks[reply.authorId]} size="sm" />
+                              )}
+                            </div>
                             <span className="text-xs text-zinc-500 flex items-center gap-1">
                               <Clock className="w-3 h-3" /> {reply.date}
                               {index === 0 && <span className="ml-2 bg-racing-orange/20 text-racing-orange px-1.5 rounded text-[10px]">OP</span>}
