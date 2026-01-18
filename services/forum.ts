@@ -2,8 +2,8 @@ import { WOO_CONFIG } from '../storeData';
 import { ForumCategory, ForumTopic, ForumReply, UserRank } from '../types';
 import { MessageSquare, Wrench, Bike, Shield, Compass, LifeBuoy, Flag } from 'lucide-react';
 
-// BASE URL NATIVA DE WORDPRESS
-const WP_API_BASE = 'https://backendescapes.com/wp-json/wp/v2';
+// Use proxy to avoid CORS issues
+const WP_API_BASE = '/proxy-wc/wp-json/wp/v2';
 
 // Rank configuration (matches backend)
 const RANKS = [
@@ -134,15 +134,11 @@ export const fetchForumCategories = async (): Promise<ForumCategory[]> => {
     const response = await fetch(`${WP_API_BASE}/categories?hide_empty=false&per_page=20`);
 
     if (!response.ok) {
-      console.warn("Forum API unavailable, loading Schema.");
-      return FORUM_SCHEMA;
+      console.error("Forum API unavailable", response.status);
+      return [];
     }
 
     const data = await response.json();
-
-    if (data.length === 0) {
-      return FORUM_SCHEMA;
-    }
 
     return data.map((item: any) => ({
       id: String(item.id),
@@ -152,8 +148,8 @@ export const fetchForumCategories = async (): Promise<ForumCategory[]> => {
       topicCount: item.count || 0
     }));
   } catch (error) {
-    console.error("Using Fallback Schema due to error:", error);
-    return FORUM_SCHEMA;
+    console.error("Error fetching forum categories:", error);
+    return [];
   }
 };
 
@@ -163,16 +159,12 @@ export const fetchForumCategories = async (): Promise<ForumCategory[]> => {
  */
 export const fetchTopics = async (categoryId: string): Promise<ForumTopic[]> => {
   try {
-    // Si la categoría es del esquema estático (string) y no numérico, devolvemos mock data para demo
-    // ya que WP necesita IDs numéricos.
-    if (isNaN(Number(categoryId))) {
-      return getMockTopics(categoryId);
-    }
+    const response = await fetch(`${WP_API_BASE}/posts?categories=${categoryId}&_embed&per_page=20&_t=${new Date().getTime()}`);
 
-    const response = await fetch(`${WP_API_BASE}/posts?categories=${categoryId}&_embed&per_page=20&_t=${new Date().getTime()}`, {
-      headers: { 'Cache-Control': 'no-cache' }
-    });
-    if (!response.ok) throw new Error('Failed to fetch topics');
+    if (!response.ok) {
+      console.error('Failed to fetch topics:', response.status);
+      return [];
+    }
 
     const data = await response.json();
 
@@ -181,7 +173,7 @@ export const fetchTopics = async (categoryId: string): Promise<ForumTopic[]> => 
       categoryId: categoryId,
       title: item.title.rendered,
       author: item._embedded?.author?.[0]?.name || 'Piloto Anónimo',
-      authorId: item.author, // WP exposes author ID here
+      authorId: item.author,
       authorAvatar: item._embedded?.author?.[0]?.avatar_urls?.['96'] || '',
       date: new Date(item.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
       views: 0,
@@ -190,8 +182,8 @@ export const fetchTopics = async (categoryId: string): Promise<ForumTopic[]> => 
       content: item.content.rendered
     }));
   } catch (error) {
-    console.warn("Native Forum API Error (Topics), returning mocks for demo.");
-    return getMockTopics(categoryId);
+    console.error("Error fetching topics:", error);
+    return [];
   }
 };
 
