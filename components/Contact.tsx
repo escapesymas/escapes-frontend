@@ -17,14 +17,28 @@ export const Contact: React.FC<ContactProps> = ({ onBack }) => {
     message: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Simulación de envío
-    setTimeout(() => {
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      if (response.ok) {
+        setSuccess(true);
+      } else {
+        alert("Hubo un error al enviar el mensaje. Inténtalo de nuevo.");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Error de conexión. Inténtalo de nuevo.");
+    } finally {
       setLoading(false);
-      setSuccess(true);
-    }, 1500);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -42,7 +56,7 @@ export const Contact: React.FC<ContactProps> = ({ onBack }) => {
           <p className="text-zinc-400 mb-8">
             Hemos recibido tu consulta correctamente. Un técnico de nuestro equipo se pondrá en contacto contigo en las próximas 24 horas laborables.
           </p>
-          <button 
+          <button
             onClick={onBack}
             className="w-full bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase py-3 rounded-sm transition-colors"
           >
@@ -66,7 +80,7 @@ export const Contact: React.FC<ContactProps> = ({ onBack }) => {
             <div className="mb-8">
               <span className="text-racing-orange font-bold uppercase tracking-[0.2em] text-xs">Punto de Servicio</span>
               <h1 className="text-4xl md:text-5xl font-extrabold text-white uppercase italic leading-none mt-2">
-                Contacta con <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-racing-orange to-red-600">Nosotros</span>
+                Contacta con <br /> <span className="text-transparent bg-clip-text bg-gradient-to-r from-racing-orange to-red-600">Nosotros</span>
               </h1>
               <p className="text-zinc-500 mt-6 leading-relaxed max-w-md">
                 ¿Tienes dudas técnicas sobre la compatibilidad de un escape o necesitas asesoramiento para tu setup? Estamos aquí para ayudarte.
@@ -96,19 +110,19 @@ export const Contact: React.FC<ContactProps> = ({ onBack }) => {
             </div>
 
             <div className="mt-12 pt-8 border-t border-zinc-900">
-               <p className="text-xs font-bold text-zinc-600 uppercase mb-4">Síguenos en Pista</p>
-               <div className="flex gap-4">
-                  <a href="https://www.instagram.com/escapesymas" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-zinc-900 rounded-sm flex items-center justify-center text-zinc-400 hover:bg-racing-orange hover:text-white transition-colors">
-                    <Instagram className="w-5 h-5" />
-                  </a>
-               </div>
+              <p className="text-xs font-bold text-zinc-600 uppercase mb-4">Síguenos en Pista</p>
+              <div className="flex gap-4">
+                <a href="https://www.instagram.com/escapesymas" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-zinc-900 rounded-sm flex items-center justify-center text-zinc-400 hover:bg-racing-orange hover:text-white transition-colors">
+                  <Instagram className="w-5 h-5" />
+                </a>
+              </div>
             </div>
           </div>
 
           {/* Formulario */}
           <div className="bg-racing-carbon border border-zinc-800 p-8 rounded-sm shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-racing-orange/5 rounded-full blur-3xl"></div>
-            
+
             <h3 className="text-white font-bold uppercase italic mb-8 border-b border-zinc-800 pb-4">
               Formulario de Consulta
             </h3>
@@ -117,10 +131,10 @@ export const Contact: React.FC<ContactProps> = ({ onBack }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Nombre Completo</label>
-                  <input 
-                    required 
-                    name="name" 
-                    value={formData.name} 
+                  <input
+                    required
+                    name="name"
+                    value={formData.name}
                     onChange={handleChange}
                     className="w-full bg-zinc-950 border border-zinc-800 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none transition-colors"
                     placeholder="Tu nombre..."
@@ -128,11 +142,11 @@ export const Contact: React.FC<ContactProps> = ({ onBack }) => {
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Email</label>
-                  <input 
-                    required 
-                    type="email" 
-                    name="email" 
-                    value={formData.email} 
+                  <input
+                    required
+                    type="email"
+                    name="email"
+                    value={formData.email}
                     onChange={handleChange}
                     className="w-full bg-zinc-950 border border-zinc-800 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none transition-colors"
                     placeholder="tu@email.com"
@@ -142,35 +156,38 @@ export const Contact: React.FC<ContactProps> = ({ onBack }) => {
 
               <div>
                 <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Asunto de la Consulta</label>
-                <select 
-                  name="subject" 
-                  value={formData.subject} 
+                <select
+                  name="subject"
+                  value={formData.subject}
                   onChange={handleChange}
                   className="w-full bg-zinc-950 border border-zinc-800 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none transition-colors"
                 >
                   <option value="">Selecciona una opción</option>
-                  <option value="tecnico">Asesoramiento Técnico</option>
-                  <option value="pedido">Estado de mi Pedido</option>
-                  <option value="devolucion">Garantías y Devoluciones</option>
-                  <option value="otros">Otros asuntos</option>
+                  <option value="Recambios">Recambios</option>
+                  <option value="Accesorios">Accesorios</option>
+                  <option value="Taller">Cita Taller</option>
+                  <option value="Tecnico">Asesoramiento Técnico</option>
+                  <option value="Pedido">Estado de mi Pedido</option>
+                  <option value="Devolucion">Garantías y Devoluciones</option>
+                  <option value="Otros">Otros asuntos</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-bold uppercase text-zinc-500 mb-2">Mensaje / Consulta</label>
-                <textarea 
-                  required 
-                  name="message" 
+                <textarea
+                  required
+                  name="message"
                   rows={5}
-                  value={formData.message} 
+                  value={formData.message}
                   onChange={handleChange}
                   className="w-full bg-zinc-950 border border-zinc-800 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none transition-colors resize-none"
                   placeholder="Explícanos brevemente qué necesitas..."
                 />
               </div>
 
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={loading}
                 className="w-full bg-racing-orange hover:bg-orange-600 text-white font-black uppercase py-4 rounded-sm transition-all shadow-lg shadow-orange-900/20 flex items-center justify-center gap-2 disabled:opacity-50"
               >
