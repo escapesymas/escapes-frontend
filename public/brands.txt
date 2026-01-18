@@ -1,6 +1,4 @@
-Brand A,brand_a.svg
-Brand B,brand_b.svg
-Brand C,brand_c.svg
-Brand A,brand_a.svg
-Brand B,brand_b.svg
-Brand C,brand_c.svg
+MIVV,mivv.png
+Öhlins,ohlins.png
+Sprint Filter,sprint_filter.png
+Termignoni,termignoni.png
