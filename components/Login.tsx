@@ -35,6 +35,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess, onBack, onRegister
           firstName: session.user_display_name,
           lastName: '',
           token: session.token,
+          avatarUrl: session.avatarUrl || undefined, // Use avatar from login response
         };
 
         try {
@@ -48,10 +49,10 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess, onBack, onRegister
               id: customer.id,
               firstName: customer.firstName || userProfile.firstName,
               lastName: customer.lastName,
-              avatarUrl: customer.avatarUrl,
+              avatarUrl: userProfile.avatarUrl || customer.avatarUrl, // Prefer login avatar, fallback to customer
               billing: customer.billing
             };
-            console.log("Logged in with Customer ID:", customer.id);
+            console.log("Logged in with Customer ID:", customer.id, "Avatar:", userProfile.avatarUrl);
           } else {
             console.warn("Could not find WooCommerce customer for email:", session.user_email);
           }
