@@ -184,11 +184,15 @@ app.post('/api/auth/login', async (req, res) => {
 app.post('/api/contact', async (req, res) => {
   const { name, email, subject, message } = req.body;
 
+  console.log("[CONTACT] Received request from:", name, email);
+
   if (!name || !email || !message) {
+    console.log("[CONTACT] Missing required fields");
     return res.status(400).json({ error: "Faltan campos requeridos" });
   }
 
   try {
+    console.log("[CONTACT] Creating transporter...");
     const transporter = nodemailer.createTransport({
       host: "smtp.buzondecorreo.com",
       port: 465,
@@ -196,8 +200,15 @@ app.post('/api/contact', async (req, res) => {
       auth: {
         user: "web@backendescapes.com",
         pass: "Pedrito2011P!"
+      },
+      tls: {
+        rejectUnauthorized: false
       }
     });
+
+    console.log("[CONTACT] Verifying transporter connection...");
+    await transporter.verify();
+    console.log("[CONTACT] Transporter verified successfully");
 
     const mailOptions = {
       from: '"Escapes y Más Web" <web@backendescapes.com>',
@@ -214,13 +225,15 @@ app.post('/api/contact', async (req, res) => {
       `
     };
 
+    console.log("[CONTACT] Sending email...");
     const info = await transporter.sendMail(mailOptions);
-    console.log("[EMAIL SENT]", info.messageId);
+    console.log("[CONTACT] ✅ Email sent successfully:", info.messageId);
     res.status(200).json({ success: true, messageId: info.messageId });
 
   } catch (error) {
-    console.error("[EMAIL ERROR]", error);
-    res.status(500).json({ error: "Error al enviar el correo" });
+    console.error("[CONTACT] ❌ Email error:", error.message);
+    console.error("[CONTACT] Full error:", error);
+    res.status(500).json({ error: "Error al enviar el correo: " + error.message });
   }
 });
 
@@ -256,30 +269,38 @@ app.post('/api/checkout', async (req, res) => {
 app.post('/api/warranty', async (req, res) => {
   const { invoiceNumber, purchaseDate, installationDate, buyerName, email, phone, products, images } = req.body;
 
+  console.log("[WARRANTY] Received request from:", buyerName, email);
+
   if (!invoiceNumber || !email || !buyerName) {
+    console.log("[WARRANTY] Missing required fields");
     return res.status(400).json({ message: 'Faltan datos obligatorios' });
   }
 
-  // Configuración SMTP
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.buzondecorreo.com',
-    port: 465,
-    secure: true,
-    auth: {
-      user: 'web@backendescapes.com',
-      pass: 'Pedrito2011P!'
-    }
-  });
+  try {
+    console.log("[WARRANTY] Creating transporter...");
+    // Configuración SMTP
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.buzondecorreo.com',
+      port: 465,
+      secure: true,
+      auth: {
+        user: 'web@backendescapes.com',
+        pass: 'Pedrito2011P!'
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
+    });
 
-  // Preparar contenido del email
-  const productRows = products.map(p => `
+    // Preparar contenido del email
+    const productRows = products.map(p => `
     <tr>
       <td style="padding: 8px; border: 1px solid #ddd;">${p.name}</td>
       <td style="padding: 8px; border: 1px solid #ddd;">${p.issue}</td>
     </tr>
   `).join('');
 
-  const htmlContent = `
+    const htmlContent = `
     <h2>Nueva Solicitud de Garantía</h2>
     <p><strong>Factura:</strong> ${invoiceNumber}</p>
     <p><strong>Fecha Compra:</strong> ${purchaseDate}</p>
@@ -302,54 +323,54 @@ app.post('/api/warranty', async (req, res) => {
     </table>
   `;
 
-  // Preparar adjuntos (Imágenes Base64)
-  const attachments = (images || []).map((img, index) => {
-    // img es "data:image/png;base64,....."
-    const split = img.split(',');
-    const typeMatch = split[0].match(/:(.*?);/);
-    const type = typeMatch ? typeMatch[1] : 'image/jpeg';
-    const itemContent = split[1];
-    const ext = type.split('/')[1] || 'jpg';
+    // Preparar adjuntos (Imágenes Base64)
+    const attachments = (images || []).map((img, index) => {
+      // img es "data:image/png;base64,....."
+      const split = img.split(',');
+      const typeMatch = split[0].match(/:(.*?);/);
+      const type = typeMatch ? typeMatch[1] : 'image/jpeg';
+      const itemContent = split[1];
+      const ext = type.split('/')[1] || 'jpg';
 
-    return {
-      filename: `evidencia_${index + 1}.${ext}`,
-      content: itemContent,
-      encoding: 'base64'
-    };
-  });
-
-  try {
-    // Enviar correo a la tienda
-    await transporter.sendMail({
-      from: '"Portal Garantías" <web@backendescapes.com>',
-      to: 'garantiasydevoluciones@escapesymas.com',
-      replyTo: email,
-      subject: `[GARANTÍA] ${invoiceNumber} - ${buyerName}`,
-      html: htmlContent,
-      attachments: attachments
+      return {
+        filename: `evidencia_${index + 1}.${ext}`,
+        content: itemContent,
+        encoding: 'base64'
+      };
     });
 
-    // Enviar confirmación al cliente
-    await transporter.sendMail({
-      from: '"Escapes y Más" <web@backendescapes.com>',
-      to: email,
-      replyTo: 'garantiasydevoluciones@escapesymas.com',
-      subject: 'Hemos recibido tu solicitud de garantía',
-      html: `
+    try {
+      // Enviar correo a la tienda
+      await transporter.sendMail({
+        from: '"Portal Garantías" <web@backendescapes.com>',
+        to: 'garantiasydevoluciones@escapesymas.com',
+        replyTo: email,
+        subject: `[GARANTÍA] ${invoiceNumber} - ${buyerName}`,
+        html: htmlContent,
+        attachments: attachments
+      });
+
+      // Enviar confirmación al cliente
+      await transporter.sendMail({
+        from: '"Escapes y Más" <web@backendescapes.com>',
+        to: email,
+        replyTo: 'garantiasydevoluciones@escapesymas.com',
+        subject: 'Hemos recibido tu solicitud de garantía',
+        html: `
         <h3>Hola ${buyerName},</h3>
         <p>Hemos recibido tu solicitud de garantía asociada a la factura <strong>${invoiceNumber}</strong>.</p>
         <p>Nuestro equipo revisará la información y te contactará en breve.</p>
         <p>Gracias por confiar en Escapes y Más.</p>
       `
-    });
+      });
 
-    return res.status(200).json({ success: true, message: 'Correo enviado correctamente' });
+      return res.status(200).json({ success: true, message: 'Correo enviado correctamente' });
 
-  } catch (error) {
-    console.error('Error enviando correo:', error);
-    return res.status(500).json({ success: false, message: 'Error al enviar el correo: ' + error.message });
-  }
-});
+    } catch (error) {
+      console.error('Error enviando correo:', error);
+      return res.status(500).json({ success: false, message: 'Error al enviar el correo: ' + error.message });
+    }
+  });
 
 // --- RUTA CATCH-ALL PARA SPA ---
 app.get('*', (req, res) => {
