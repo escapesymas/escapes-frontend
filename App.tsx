@@ -10,6 +10,7 @@ import { Cart } from './components/Cart';
 import { CategoryBrowser } from './components/CategoryBrowser';
 import { Contact } from './components/Contact';
 import { BrandSlider } from './components/BrandSlider';
+import { PromoBanner } from './components/PromoBanner';
 import { STORE_CONFIG, FEATURES, BIKE_DATA } from './storeData';
 import { fetchProducts, saveUserCart, getUserCart } from './services/woocommerce';
 import { saveSession, getSession, logoutSession } from './services/auth';
@@ -482,6 +483,7 @@ function App() {
                 <p className="text-racing-orange font-bold uppercase tracking-widest text-xl">{STORE_CONFIG.heroSubtitle}</p>
               </div>
             </section>
+            <PromoBanner onForumClick={() => handleNavClick('forum')} />
             <BrandSlider />
           </>
         )
