@@ -1,0 +1,6 @@
+Brand A,brand_a.svg
+Brand B,brand_b.svg
+Brand C,brand_c.svg
+Brand A,brand_a.svg
+Brand B,brand_b.svg
+Brand C,brand_c.svg

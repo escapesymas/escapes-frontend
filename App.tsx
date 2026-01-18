@@ -9,6 +9,7 @@ import { ProductDetail } from './components/ProductDetail';
 import { Cart } from './components/Cart';
 import { CategoryBrowser } from './components/CategoryBrowser';
 import { Contact } from './components/Contact';
+import { BrandSlider } from './components/BrandSlider';
 import { STORE_CONFIG, FEATURES, BIKE_DATA } from './storeData';
 import { fetchProducts, saveUserCart, getUserCart } from './services/woocommerce';
 import { saveSession, getSession, logoutSession } from './services/auth';
@@ -481,60 +482,58 @@ function App() {
                 <p className="text-racing-orange font-bold uppercase tracking-widest text-xl">{STORE_CONFIG.heroSubtitle}</p>
               </div>
             </section>
-            <section className="py-20 bg-zinc-950">
-              <div className="container mx-auto px-4">
-                <h2 className="text-3xl font-bold text-white uppercase italic mb-10 border-l-4 border-racing-orange pl-4">Destacados</h2>
-                {renderProductGrid()}
-              </div>
-            </section>
+            <BrandSlider />
           </>
-        )}
+        )
+        }
 
-        {currentView === 'catalog' && (
-          <div ref={catalogRef}>
-            <section className="pt-32 pb-12 bg-zinc-950">
-              <BikeSelector onSearch={handleBikeSearch} onTextSearch={handleTextSearch} isLoading={loading} bikeData={BIKE_DATA} />
-            </section>
-            <section className="py-12 bg-zinc-950 min-h-screen container mx-auto px-4 border-t border-zinc-900">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
-                <div className="flex items-center gap-4">
-                  <h2 className="text-2xl font-bold text-white uppercase italic">{currentFilter || "Catálogo"}</h2>
-                  {currentFilter && <button onClick={handleClearFilters} className="text-zinc-500 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2"><Trash2 className="w-4 h-4" /> Limpiar</button>}
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-zinc-500 text-xs uppercase">Mostrar:</span>
-                    <select
-                      value={perPage}
-                      onChange={(e) => { setPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                      className="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer"
-                    >
-                      <option value={10}>10</option>
-                      <option value={20}>20</option>
-                      <option value={50}>50</option>
-                    </select>
+        {
+          currentView === 'catalog' && (
+            <div ref={catalogRef}>
+              <section className="pt-32 pb-12 bg-zinc-950">
+                <BikeSelector onSearch={handleBikeSearch} onTextSearch={handleTextSearch} isLoading={loading} bikeData={BIKE_DATA} />
+              </section>
+              <section className="py-12 bg-zinc-950 min-h-screen container mx-auto px-4 border-t border-zinc-900">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
+                  <div className="flex items-center gap-4">
+                    <h2 className="text-2xl font-bold text-white uppercase italic">{currentFilter || "Catálogo"}</h2>
+                    {currentFilter && <button onClick={handleClearFilters} className="text-zinc-500 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2"><Trash2 className="w-4 h-4" /> Limpiar</button>}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-zinc-500 text-xs uppercase">Ordenar:</span>
-                    <select
-                      value={sortBy}
-                      onChange={(e) => { setSortBy(e.target.value as 'date' | 'price' | 'price-asc'); setCurrentPage(1); }}
-                      className="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer"
-                    >
-                      <option value="date">Relevancia</option>
-                      <option value="price">Precio: Mayor a menor</option>
-                      <option value="price-asc">Precio: Menor a mayor</option>
-                    </select>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-zinc-500 text-xs uppercase">Mostrar:</span>
+                      <select
+                        value={perPage}
+                        onChange={(e) => { setPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                        className="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer"
+                      >
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-zinc-500 text-xs uppercase">Ordenar:</span>
+                      <select
+                        value={sortBy}
+                        onChange={(e) => { setSortBy(e.target.value as 'date' | 'price' | 'price-asc'); setCurrentPage(1); }}
+                        className="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer"
+                      >
+                        <option value="date">Relevancia</option>
+                        <option value="price">Precio: Mayor a menor</option>
+                        <option value="price-asc">Precio: Menor a mayor</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
-              </div>
-              {renderProductGrid()}
-            </section>
-          </div>
-        )}
-      </main>
+                {renderProductGrid()}
+              </section>
+            </div>
+          )
+        }
+      </main >
       <Footer onNavClick={handleNavClick} />
-    </div>
+    </div >
   );
 }
 
