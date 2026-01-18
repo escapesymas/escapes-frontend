@@ -181,6 +181,49 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+app.post('/api/contact', async (req, res) => {
+  const { name, email, subject, message } = req.body;
+
+  if (!name || !email || !message) {
+    return res.status(400).json({ error: "Faltan campos requeridos" });
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host: "smtp.buzondecorreo.com",
+      port: 465,
+      secure: true,
+      auth: {
+        user: "web@backendescapes.com",
+        pass: "Pedrito2011P!"
+      }
+    });
+
+    const mailOptions = {
+      from: '"Escapes y Más Web" <web@backendescapes.com>',
+      to: "info@escapesymas.com",
+      replyTo: email,
+      subject: `Consulta de ${subject || 'General'}`,
+      html: `
+        <h3>Nueva Consulta desde la Web</h3>
+        <p><strong>De:</strong> ${name} (${email})</p>
+        <p><strong>Asunto:</strong> ${subject || 'General'}</p>
+        <div style="background-color: #f5f5f5; padding: 15px; border-left: 5px solid #ff4500;">
+          <p>${message.replace(/\n/g, '<br>')}</p>
+        </div>
+      `
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log("[EMAIL SENT]", info.messageId);
+    res.status(200).json({ success: true, messageId: info.messageId });
+
+  } catch (error) {
+    console.error("[EMAIL ERROR]", error);
+    res.status(500).json({ error: "Error al enviar el correo" });
+  }
+});
+
 // --- ENDPOINTS DE API INTERNA ---
 app.post('/api/checkout', async (req, res) => {
   const { amount, orderRef, currency, merchantEmail } = req.body;
