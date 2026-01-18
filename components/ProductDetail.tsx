@@ -14,7 +14,9 @@ interface ProductDetailProps {
 export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToCart }) => {
   const [quantity, setQuantity] = useState(1);
   const [copied, setCopied] = useState(false);
-  const mainImage = optimizeImage(product.image, 800);
+  const mainImage = optimizeImage(product.image, { width: 800 });
+  const avifImage = optimizeImage(product.image, { width: 800, format: 'avif' });
+  const webpImage = optimizeImage(product.image, { width: 800, format: 'webp' });
 
   const formatPrice = (amount: number) => {
     return new Intl.NumberFormat('es-ES', {
@@ -41,8 +43,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
           <button onClick={onBack} className="flex items-center gap-2 text-zinc-500 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors">
             <ArrowLeft className="w-4 h-4" /> Volver al catálogo
           </button>
-          
-          <button 
+
+          <button
             onClick={handleShare}
             className={`flex items-center gap-2 px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-widest transition-all ${copied ? 'bg-green-600 text-white' : 'bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800 border border-zinc-800'}`}
           >
@@ -53,7 +55,15 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           <div className="bg-white rounded-sm overflow-hidden border border-zinc-800 aspect-square group">
-            <img src={mainImage} alt={product.title} className="w-full h-full object-contain p-8 group-hover:scale-105 transition-transform duration-500" />
+            <picture>
+              <source srcSet={avifImage} type="image/avif" />
+              <source srcSet={webpImage} type="image/webp" />
+              <img
+                src={mainImage}
+                alt={product.title}
+                className="w-full h-full object-contain p-8 group-hover:scale-105 transition-transform duration-500"
+              />
+            </picture>
           </div>
 
           <div className="flex flex-col">
@@ -63,14 +73,14 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
                 <Hash className="w-2.5 h-2.5" /> REF: {product.sku}
               </span>
             </div>
-            
+
             <h1 className="text-4xl font-extrabold text-white uppercase italic leading-none mb-4 pr-2">{product.title}</h1>
-            
-            <div 
+
+            <div
               className="prose prose-invert prose-sm text-zinc-400 mb-6 leading-relaxed line-clamp-6"
               dangerouslySetInnerHTML={{ __html: displayDescription }}
             />
-            
+
             <div className="bg-racing-carbon p-8 rounded-sm border border-zinc-800 mb-8 shadow-xl">
               <div className="flex flex-col mb-8">
                 {hasDiscount && (
@@ -88,9 +98,9 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex items-center bg-zinc-950 border border-zinc-700 rounded-sm">
-                  <button onClick={() => setQuantity(q => Math.max(1, q-1))} className="p-3 text-zinc-500 hover:text-white transition-colors"><Minus className="w-4 h-4" /></button>
+                  <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="p-3 text-zinc-500 hover:text-white transition-colors"><Minus className="w-4 h-4" /></button>
                   <span className="w-10 text-center text-white font-bold">{quantity}</span>
-                  <button onClick={() => setQuantity(q => q+1)} className="p-3 text-zinc-500 hover:text-white transition-colors"><Plus className="w-4 h-4" /></button>
+                  <button onClick={() => setQuantity(q => q + 1)} className="p-3 text-zinc-500 hover:text-white transition-colors"><Plus className="w-4 h-4" /></button>
                 </div>
                 <button onClick={() => onAddToCart?.(quantity)} className="flex-1 bg-racing-orange hover:bg-orange-600 text-white font-black uppercase py-4 px-6 flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-orange-900/40">
                   <ShoppingCart className="w-5 h-5" /> Añadir al garaje
