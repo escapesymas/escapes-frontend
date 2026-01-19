@@ -1,4 +1,4 @@
-MIVV,mivv.png
-Öhlins,ohlins.png
-Sprint Filter,sprint_filter.png
-Termignoni,termignoni.png
+MIVV,mivv.svg
+Öhlins,ohlins.svg
+Sprint Filter,sprint_filter.svg
+Termignoni,termignoni.svg
