@@ -58,7 +58,7 @@ export function BrandSlider() {
                     {displayBrands.map((brand, index) => (
                         <div
                             key={`${brand.name}-${index}`}
-                            className="flex-shrink-0 flex items-center justify-center grayscale hover:grayscale-0 transition-all duration-300 opacity-60 hover:opacity-100 transform hover:scale-110 cursor-pointer"
+                            className="flex-shrink-0 flex items-center justify-center transition-all duration-300 transform hover:scale-110 cursor-pointer"
                         >
                             <img
                                 src={`/brands/${brand.logo}`}
