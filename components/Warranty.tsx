@@ -105,6 +105,7 @@ const ProductSearchInput = ({
 
 export const Warranty: React.FC<WarrantyProps> = ({ user, onBack, onLoginRequest }) => {
   const [formData, setFormData] = useState({
+    requestType: 'warranty', // 'warranty' or 'return'
     invoiceNumber: '',
     purchaseDate: '',
     installationDate: '',
