@@ -53,6 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             <div onClick={onLogoClick} className="cursor-pointer group flex items-center">
               <img
+                src={STORE_CONFIG.logoUrl}
                 alt={STORE_CONFIG.name}
                 width="150"
                 height="48"
