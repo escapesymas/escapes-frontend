@@ -53,7 +53,10 @@ export const Header: React.FC<HeaderProps> = ({
 
             <div onClick={onLogoClick} className="cursor-pointer group flex items-center">
               <img
-                src={`https://wsrv.nl/?url=${encodeURIComponent(STORE_CONFIG.logoUrl)}&w=300&output=webp&q=85`}
+                src={STORE_CONFIG.logoUrl.startsWith('/') || STORE_CONFIG.logoUrl.endsWith('.svg')
+                  ? STORE_CONFIG.logoUrl
+                  : `https://wsrv.nl/?url=${encodeURIComponent(STORE_CONFIG.logoUrl)}&w=300&output=webp&q=85`
+                }
                 alt={STORE_CONFIG.name}
                 width="150"
                 height="48"
