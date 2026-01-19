@@ -43,6 +43,19 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       emptyOutDir: true,
       sourcemap: false,
+      target: 'es2020', // Modern browsers for smaller output
+      minify: 'terser', // Use Terser for better minification
+      terserOptions: {
+        compress: {
+          drop_console: true, // Remove console.log in production
+          drop_debugger: true,
+          pure_funcs: ['console.log', 'console.info', 'console.debug']
+        },
+        mangle: true,
+        format: {
+          comments: false // Remove all comments
+        }
+      },
       rollupOptions: {
         output: {
           manualChunks: {
