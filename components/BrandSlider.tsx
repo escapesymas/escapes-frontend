@@ -66,7 +66,6 @@ export function BrandSlider() {
                                 width={150}
                                 height={64}
                                 className="h-16 w-auto max-w-[150px] object-contain"
-                                style={{ filter: 'brightness(0) invert(1)' }}
                                 title={brand.name}
                                 loading="lazy"
                             />
