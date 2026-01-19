@@ -5,14 +5,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Google Analytics -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-380Z8BCKGF"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag() { dataLayer.push(arguments); }
-    gtag('js', new Date());
-    gtag('config', 'G-380Z8BCKGF');
-  </script>
+  <!-- Google Analytics - Deferred for performance -->
+  <!-- GA is loaded at end of body to prevent blocking render -->
 
   <!-- SEO Meta Tags -->
   <meta name="description"
@@ -63,6 +57,45 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://wsrv.nl" crossorigin>
   <link rel="preconnect" href="https://backendescapes.com">
+  <link rel="dns-prefetch" href="https://www.googletagmanager.com">
+
+  <!-- Critical CSS inline to prevent render blocking -->
+  <style>
+    :root {
+      --racing-orange: #f97316
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #09090b;
+      color: #f4f4f5;
+      min-height: 100vh
+    }
+
+    #root {
+      min-height: 100vh
+    }
+
+    .animate-fade-in {
+      animation: fadeIn .3s ease-out
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0
+      }
+
+      to {
+        opacity: 1
+      }
+    }
+  </style>
 
   <!-- Pre-carga de la fuente crítica para romper la cadena de dependencia -->
   <link rel="preload" href="https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7W0Q5nw.woff2"
@@ -91,6 +124,22 @@
 <body>
   <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
+
+  <!-- Google Analytics - Loaded after DOM for better performance -->
+  <script>
+    window.addEventListener('load', function () {
+      var ga = document.createElement('script');
+      ga.src = 'https://www.googletagmanager.com/gtag/js?id=G-380Z8BCKGF';
+      ga.async = true;
+      document.head.appendChild(ga);
+      ga.onload = function () {
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-380Z8BCKGF');
+      };
+    });
+  </script>
 </body>
 
 </html>
