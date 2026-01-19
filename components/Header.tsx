@@ -147,7 +147,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden">
                     {user.avatarUrl ? (
                       <img
-                        src={user.avatarUrl.startsWith('data:') ? user.avatarUrl : `https://wsrv.nl/?url=${encodeURIComponent(user.avatarUrl)}&w=150&h=150&fit=cover&output=webp`}
+                        src={user.avatarUrl}
                         className="w-full h-full object-cover"
                         width="40"
                         height="40"

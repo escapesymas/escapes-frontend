@@ -30,50 +30,7 @@ export const optimizeImage = (
   options: OptimizeOptions = {}
 ): string => {
   if (!url) return '';
-
-  // Skip optimization for local assets or data URIs
-  if (url.startsWith('data:') || url.startsWith('/')) return url;
-
-  // Check if it's already optimized
-  if (url.includes('wsrv.nl')) return url;
-
-  const {
-    width = 800,
-    height,
-    quality = 80,
-    format = 'webp', // Default to WebP (mejor compatibilidad que AVIF)
-    fit = 'cover'
-  } = options;
-
-  try {
-    // Clean the URL parameters from the source
-    const baseUrl = url.split('?')[0];
-
-    // Construct the proxy URL
-    let params = new URLSearchParams({
-      url: baseUrl,
-      w: width.toString(),
-      q: quality.toString(),
-      l: '5', // Level 5 compression
-    });
-
-    // Add format (webp, avif, or auto)
-    if (format !== 'auto') {
-      params.set('output', format);
-    }
-
-    // Add height and fit if specified
-    if (height) {
-      params.set('h', height.toString());
-      params.set('fit', fit);
-    }
-
-    return `https://wsrv.nl/?${params.toString()}`;
-  } catch (e) {
-    // Fallback to original if something fails
-    console.warn('Image optimization failed:', e);
-    return url;
-  }
+  return url; // OPTIMIZATION DISABLED BY USER REQUEST
 };
 
 /**
