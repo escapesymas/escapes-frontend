@@ -55,47 +55,8 @@
   <!-- Pre-conexión a orígenes críticos -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://wsrv.nl" crossorigin>
-  <link rel="preconnect" href="https://backendescapes.com">
-  <link rel="dns-prefetch" href="https://www.googletagmanager.com">
-
-  <!-- Critical CSS inline to prevent render blocking -->
-  <style>
-    :root {
-      --racing-orange: #f97316
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box
-    }
-
-    body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background: #09090b;
-      color: #f4f4f5;
-      min-height: 100vh
-    }
-
-    #root {
-      min-height: 100vh
-    }
-
-    .animate-fade-in {
-      animation: fadeIn .3s ease-out
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0
-      }
-
-      to {
-        opacity: 1
-      }
-    }
-  </style>
+  <link rel="preconnect" href="https://images.unsplash.com">
+  <link rel="dns-prefetch" href="https://images.unsplash.com">
 
   <!-- Pre-carga de la fuente crítica para romper la cadena de dependencia -->
   <link rel="preload" href="https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7W0Q5nw.woff2"
@@ -103,14 +64,8 @@
 
   <!-- Pre-carga de la imagen LCP RESPONSIVE (coincide con App.tsx) -->
   <link rel="preload" as="image"
-    href="https://wsrv.nl/?url=https%3A%2F%2Fimages.unsplash.com%2Fphoto-1591637333184-19aa84b3e01f%3Fq%3D80%26w%3D1920%26auto%3Dformat%26fit%3Dcrop&w=600&h=800&fit=cover&output=webp&q=75"
-    media="(max-width: 640px)" fetchpriority="high">
-  <link rel="preload" as="image"
-    href="https://wsrv.nl/?url=https%3A%2F%2Fimages.unsplash.com%2Fphoto-1591637333184-19aa84b3e01f%3Fq%3D80%26w%3D1920%26auto%3Dformat%26fit%3Dcrop&w=1200&output=webp&q=80"
-    media="(max-width: 1024px) and (min-width: 641px)" fetchpriority="high">
-  <link rel="preload" as="image"
-    href="https://wsrv.nl/?url=https%3A%2F%2Fimages.unsplash.com%2Fphoto-1591637333184-19aa84b3e01f%3Fq%3D80%26w%3D1920%26auto%3Dformat%26fit%3Dcrop&w=1920&output=webp&q=80"
-    media="(min-width: 1025px)" fetchpriority="high">
+    href="https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?q=80&w=1920&auto=format&fit=crop"
+    fetchpriority="high">
 
   <!-- Carga de fuentes optimizada (no bloqueante) -->
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap">
