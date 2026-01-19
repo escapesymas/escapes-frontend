@@ -1,5 +1,5 @@
 // Reemplaza con tu ID de medición real
-export const GA_MEASUREMENT_ID = 'G-XXXXXXXXXX';
+export const GA_MEASUREMENT_ID = 'G-380Z8BCKGF';
 
 // Registra una vista de página "virtual"
 export const pageview = (url: string) => {
