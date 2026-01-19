@@ -63,6 +63,8 @@ export function BrandSlider() {
                             <img
                                 src={`/brands/${brand.logo}`}
                                 alt={brand.name}
+                                width={150}
+                                height={64}
                                 className="h-16 w-auto max-w-[150px] object-contain"
                                 title={brand.name}
                                 loading="lazy"
