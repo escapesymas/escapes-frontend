@@ -11,6 +11,7 @@ import { CategoryBrowser } from './components/CategoryBrowser';
 import { Contact } from './components/Contact';
 import { BrandSlider } from './components/BrandSlider';
 import { PromoBanner } from './components/PromoBanner';
+import { FeaturesBanner } from './components/FeaturesBanner';
 import { STORE_CONFIG, FEATURES, BIKE_DATA } from './storeData';
 import { fetchProducts, saveUserCart, getUserCart } from './services/woocommerce';
 import { saveSession, getSession, logoutSession } from './services/auth';
@@ -484,6 +485,7 @@ function App() {
               </div>
             </section>
             <PromoBanner onForumClick={() => handleNavClick('forum')} />
+            <FeaturesBanner />
             <BrandSlider />
           </>
         )
