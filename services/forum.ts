@@ -20,13 +20,14 @@ const FORUM_ICONS: Record<string, any> = {
  */
 export const fetchForumCategories = async (): Promise<ForumCategory[]> => {
   try {
-    const { data } = await makeRequest('/wp/v2/paddock_category?hide_empty=false&per_page=20');
+    // Native WP Categories
+    const { data } = await makeRequest('/wp/v2/categories?hide_empty=false&per_page=20');
 
     return (data as any[]).map(cat => ({
       id: String(cat.id),
       title: cat.name,
       description: cat.description || 'Espacio de discusión',
-      icon: FORUM_ICONS['brands'] || MessageSquare, // Fallback icon logic ideally based on slug
+      icon: FORUM_ICONS['brands'] || MessageSquare, // Logic to pick icon based on slug/id could be improved here
       topicCount: cat.count || 0
     }));
   } catch (error) {
@@ -42,12 +43,12 @@ export const fetchForumCategories = async (): Promise<ForumCategory[]> => {
  */
 export const fetchTopics = async (categoryId: string): Promise<ForumTopic[]> => {
   try {
-    let endpoint = `/wp/v2/paddock_topic?_embed&per_page=20&status=publish`;
+    // Native WP Posts
+    let endpoint = `/wp/v2/posts?_embed&per_page=20&status=publish`;
 
-    // If it's a specific category, filter by it.
-    // Note: 'paddock_category' is the taxonomy. In WP REST API, filtering by custom tax requires `paddock_category=<id>` 
+    // Filter by native category ID
     if (categoryId && !isNaN(Number(categoryId))) {
-      endpoint += `&paddock_category=${categoryId}`;
+      endpoint += `&categories=${categoryId}`;
     }
 
     const { data } = await makeRequest(endpoint);
@@ -61,7 +62,7 @@ export const fetchTopics = async (categoryId: string): Promise<ForumTopic[]> => 
       authorAvatar: item._embedded?.author?.[0]?.avatar_urls?.['96'] || '',
       date: new Date(item.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
       views: 0,
-      replies: 0, // Need to implement replies count if needed
+      replies: 0, // Native posts show comment count in 'replies' or we can fetch it
       isPinned: item.sticky || false,
       content: item.content?.rendered || '',
       likes: 0,
@@ -79,8 +80,8 @@ export const fetchTopics = async (categoryId: string): Promise<ForumTopic[]> => 
  */
 export const fetchReplies = async (topicId: number): Promise<ForumReply[]> => {
   try {
-    // Fetch Topic (OP) content first to display as first message
-    const topicReq = await makeRequest(`/wp/v2/paddock_topic/${topicId}?_embed`);
+    // Fetch Topic (Post) content first
+    const topicReq = await makeRequest(`/wp/v2/posts/${topicId}?_embed`);
     const topic = topicReq.data as any;
 
     if (!topic) return [];
@@ -88,7 +89,7 @@ export const fetchReplies = async (topicId: number): Promise<ForumReply[]> => {
     const result: ForumReply[] = [];
 
     // 1. Topic (OP)
-    // We treat the topic content as the first "reply" in the thread
+    // We treat the post content as the first "reply" in the thread
     result.push({
       id: topic.id,
       topicId: topic.id,
@@ -102,7 +103,7 @@ export const fetchReplies = async (topicId: number): Promise<ForumReply[]> => {
       likedBy: []
     });
 
-    // 2. Comments (Replies)
+    // 2. Comments (Replies) - Native WP Comments
     const commentsReq = await makeRequest(`/wp/v2/comments?post=${topicId}&order=asc&per_page=100`);
     const comments = commentsReq.data as any[];
 
@@ -137,18 +138,15 @@ export const createTopic = async (
   body: string
 ): Promise<{ success: boolean; id?: number; error?: string }> => {
   try {
-    // In WP REST API, to create a post with custom tax, use the tax slug as key and array of IDs as value
+    // Creating a native WP Post
     const payload = {
       title: title,
       content: body,
       status: 'publish',
-      paddock_category: [parseInt(categoryId)] // Must be array
+      categories: [parseInt(categoryId)] // Native tax uses 'categories'
     };
 
-    // Need to pass token in header. makeRequest handles auth if configured in WOO_CONFIG, 
-    // but here we might need the specific user token if we are using JWT?
-    // User passed token, so we override Auth header
-    const { data } = await makeRequest('/wp/v2/paddock_topic', {
+    const { data } = await makeRequest('/wp/v2/posts', {
       method: 'POST',
       body: JSON.stringify(payload),
       headers: {
@@ -193,7 +191,7 @@ export const createReply = async (
  */
 export const updateTopic = async (token: string, topicId: number, title: string, content: string): Promise<boolean> => {
   try {
-    await makeRequest(`/wp/v2/paddock_topic/${topicId}`, {
+    await makeRequest(`/wp/v2/posts/${topicId}`, {
       method: 'POST',
       body: JSON.stringify({ title, content }),
       headers: { 'Authorization': `Bearer ${token}` }
@@ -209,7 +207,7 @@ export const updateTopic = async (token: string, topicId: number, title: string,
  */
 export const deleteTopic = async (token: string, topicId: number): Promise<boolean> => {
   try { // Force delete to skip trash
-    await makeRequest(`/wp/v2/paddock_topic/${topicId}?force=true`, {
+    await makeRequest(`/wp/v2/posts/${topicId}?force=true`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     });
