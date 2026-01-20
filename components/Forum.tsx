@@ -163,8 +163,8 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
       setNewTopicTitle('');
       setNewTopicBody('');
       // Award XP for creating topic
-      if (user.id && user.token) {
-        awardXP(user.id, 'CREATE_TOPIC', user.token);
+      if (user.id && user.token && result.id) {
+        awardXP(user.id, 'CREATE_TOPIC', user.token, result.id);
       }
       // Reload topics
       const updatedTopics = await fetchTopics(selectedCategory!.id);
@@ -193,8 +193,8 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
     if (result.success) {
       setReplyBody('');
       // Award XP for creating reply
-      if (user.id && user.token) {
-        awardXP(user.id, 'CREATE_REPLY', user.token);
+      if (user.id && user.token && result.id) {
+        awardXP(user.id, 'CREATE_REPLY', user.token, result.id);
       }
       // Refresh replies
       const updatedReplies = await fetchReplies(selectedTopic!.id);
