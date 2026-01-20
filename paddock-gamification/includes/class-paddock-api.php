@@ -89,6 +89,47 @@ class Paddock_API
         return new WP_REST_Response(['success' => true, 'new_stats' => $new_rank], 200);
     }
 
+    public static function get_topics($request)
+    {
+        // Use native WP_Query to fetch posts
+        // The frontend will now filter by category ID (native 'category' taxonomy)
+        $category_id = $request->get_param('category_id');
+
+        $args = [
+            'post_type' => 'post',
+            'post_status' => 'publish',
+            'posts_per_page' => 20,
+            'orderby' => 'date',
+            'order' => 'DESC'
+        ];
+
+        if (!empty($category_id)) {
+            $args['cat'] = intval($category_id);
+        }
+
+        $query = new WP_Query($args);
+        $topics = [];
+
+        if ($query->have_posts()) {
+            while ($query->have_posts()) {
+                $query->the_post();
+                $topics[] = [
+                    'id' => get_the_ID(),
+                    'title' => get_the_title(),
+                    'content' => get_the_content(), // Frontend might need strip_tags or rendered
+                    'author' => get_the_author(),
+                    'author_id' => get_the_author_meta('ID'),
+                    'date' => get_the_date('c'),
+                    'comment_count' => get_comments_number(),
+                    'link' => get_permalink()
+                ];
+            }
+            wp_reset_postdata();
+        }
+
+        return new WP_REST_Response($topics, 200);
+    }
+
     public static function toggle_like($request)
     {
         global $wpdb;

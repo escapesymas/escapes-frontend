@@ -121,6 +121,32 @@ class Paddock_XP
         );
     }
 
+    /**
+     * Hook: When a post is published
+     */
+    public static function on_post_publish($new_status, $old_status, $post)
+    {
+        if ($new_status === 'publish' && $old_status !== 'publish' && $post->post_type === 'post') {
+            $user_id = $post->post_author;
+            self::award_xp($user_id, self::XP_CREATE_TOPIC, 'create_topic');
+            self::update_stat($user_id, 'total_posts', 1);
+        }
+    }
+
+    /**
+     * Hook: When a comment is posted
+     */
+    public static function on_comment_posted($comment_id, $comment_object)
+    {
+        if ($comment_object->comment_approved == 1) {
+            $user_id = $comment_object->user_id;
+            if ($user_id > 0) {
+                self::award_xp($user_id, self::XP_CREATE_REPLY, 'create_reply');
+                self::update_stat($user_id, 'total_replies', 1);
+            }
+        }
+    }
+
     public static function get_user_rank_data($user_id)
     {
         global $wpdb;
