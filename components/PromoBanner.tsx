@@ -55,7 +55,7 @@ export const PromoBanner: React.FC<PromoBannerProps> = ({ onForumClick }) => {
                 <div className="absolute top-0 -left-full h-full w-1/2 bg-gradient-to-r from-transparent via-white to-transparent animate-shine"></div>
             </div>
 
-            <style jsx>{`
+            <style>{`
         @keyframes gradient-x {
           0%, 100% { background-position: 0% 50%; }
           50% { background-position: 100% 50%; }

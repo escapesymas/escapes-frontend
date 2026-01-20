@@ -3,6 +3,7 @@ export interface Session {
   user_email: string;
   user_display_name: string;
   warning?: string;
+  avatarUrl?: string;
 }
 
 const KEY = "escapesymas_session";
@@ -94,7 +95,7 @@ export async function loginUser(username: string, password: string): Promise<Ses
 // Session
 // =====================
 
-export function saveSession(session: Session) {
+export function saveSession(session: object) {
   localStorage.setItem(KEY, JSON.stringify(session));
 }
 
