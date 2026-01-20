@@ -257,7 +257,7 @@ export const toggleLike = async (
   token: string
 ) => {
   try {
-    const result = await apiToggleLike(type, id);
+    const result = await apiToggleLike(type, id, token);
     // Return format matching what Forum.tsx expects
     return { success: true, liked: result.liked, likeCount: 0 };
   } catch (e) {
@@ -268,7 +268,7 @@ export const toggleLike = async (
 export const awardXP = async (userId: number, actionType: 'CREATE_TOPIC' | 'CREATE_REPLY', token: string, targetId: number = 0) => {
   // Map actionType to the values expected by registerActivity ('post' or 'reply')
   const type = actionType === 'CREATE_TOPIC' ? 'post' : 'reply';
-  await registerActivity(type, targetId);
+  await registerActivity(type, targetId, token);
 };
 
 export const getUserRank = async (userId: number): Promise<UserRank | null> => {
