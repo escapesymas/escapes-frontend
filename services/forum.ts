@@ -65,8 +65,8 @@ export const fetchTopics = async (categoryId: string): Promise<ForumTopic[]> => 
       replies: 0, // Native posts show comment count in 'replies' or we can fetch it
       isPinned: item.sticky || false,
       content: item.content?.rendered || '',
-      likes: 0,
-      likedBy: []
+      likes: item.likes || 0,
+      likedBy: item.is_liked ? [9999] : [] // Frontend uses likedBy array length to check status, slight hack but effective for boolean
     }));
   } catch (error) {
     console.error("Error fetching topics:", error);
@@ -258,9 +258,10 @@ export const toggleLike = async (
 ) => {
   try {
     const result = await apiToggleLike(type, id, token);
-    // Return format matching what Forum.tsx expects
-    return { success: true, liked: result.liked, likeCount: 0 };
-  } catch (e) {
+    return { success: true, liked: result.liked, likeCount: result.likeCount };
+  } catch (e: any) {
+    const msg = e.message || 'Error';
+    if (msg.includes('No puedes')) return { success: false, liked: false, likeCount: 0, error: msg };
     return { success: false, liked: false, likeCount: 0 };
   }
 };

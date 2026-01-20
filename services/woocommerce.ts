@@ -638,8 +638,12 @@ export const toggleLike = async (targetType: 'topic' | 'reply', targetId: number
       body: JSON.stringify({ target_type: targetType, target_id: targetId }),
       headers
     });
-    return data as { liked: boolean };
-  } catch (error) {
+    return data as { liked: boolean; likeCount: number; message?: string };
+  } catch (error: any) {
+    if (error.message?.includes('No puedes dar like')) {
+      // Return special object to handle in UI?? Or just throw
+      throw new Error('No puedes dar like a tu propio contenido');
+    }
     console.error('[PADDOCK] Error toggling like:', error);
     throw error;
   }
