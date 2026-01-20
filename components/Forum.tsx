@@ -126,6 +126,12 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
       setReplies(prev => prev.map(r =>
         r.id === id ? { ...r, likes: newLikeCount, likedBy: newLikedBy } : r
       ));
+    } else if (type === 'topic' && selectedTopic && selectedTopic.id === id) {
+      setSelectedTopic({ ...selectedTopic, likes: newLikeCount, likedBy: newLikedBy });
+      // Also update in topics list
+      setTopics(prev => prev.map(t =>
+        t.id === id ? { ...t, likes: newLikeCount, likedBy: newLikedBy } : t
+      ));
     }
 
     // Call API
@@ -136,6 +142,11 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
       if (type === 'reply') {
         setReplies(prev => prev.map(r =>
           r.id === id ? { ...r, likes: currentLikes, likedBy: currentLikedBy } : r
+        ));
+      } else if (type === 'topic' && selectedTopic && selectedTopic.id === id) {
+        setSelectedTopic({ ...selectedTopic, likes: currentLikes, likedBy: currentLikedBy });
+        setTopics(prev => prev.map(t =>
+          t.id === id ? { ...t, likes: currentLikes, likedBy: currentLikedBy } : t
         ));
       }
       setErrorMsg('Error al procesar el like');
@@ -254,12 +265,13 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
     setTimeout(() => setSuccessMsg(null), 3000);
   };
 
-  const startEdit = (item: ForumReply) => {
+  const startEdit = (item: ForumReply | ForumTopic) => {
     setEditingId(item.id);
-    setEditContent(item.content);
-    // If it's the topic OP, we might want to edit title too, but simpler to just edit content for now or add title field if isTopic
-    if (item.id === selectedTopic?.id) {
-      setEditTitle(selectedTopic.title);
+    if ('title' in item) { // Is Topic
+      setEditTitle(item.title);
+      setEditContent(item.content || ''); // Content might be missing from list view but present in detail
+    } else {
+      setEditContent(item.content);
     }
   };
 
@@ -518,6 +530,65 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
                   <Hash className="w-3 h-3" /> {selectedCategory?.title}
                 </div>
                 <h1 className="text-2xl md:text-3xl font-extrabold text-white uppercase italic leading-tight" dangerouslySetInnerHTML={{ __html: selectedTopic.title }}></h1>
+
+                <div className="mt-6 text-zinc-300 prose prose-invert prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: selectedTopic.content }} />
+
+                {/* Topic Like Button */}
+                <div className="mt-4 pt-4 border-t border-zinc-800 flex items-center gap-4">
+                  <button
+                    onClick={() => handleLikeToggle('topic', selectedTopic.id, selectedTopic.likes, selectedTopic.likedBy)}
+                    className={`flex items-center gap-1.5 text-sm transition-colors ${user && selectedTopic.likedBy.includes(user.id)
+                      ? 'text-red-500 hover:text-red-400'
+                      : 'text-zinc-500 hover:text-red-500'
+                      }`}
+                  >
+                    <Heart
+                      className="w-5 h-5"
+                      fill={user && selectedTopic.likedBy.includes(user.id) ? 'currentColor' : 'none'}
+                    />
+                    <span className="font-bold">{selectedTopic.likes}</span>
+                  </button>
+                  <span className="text-zinc-500 text-xs flex items-center gap-1">
+                    <User className="w-4 h-4" /> {selectedTopic.author}
+                  </span>
+                  <span className="text-zinc-500 text-xs flex items-center gap-1">
+                    <Clock className="w-4 h-4" /> {selectedTopic.date}
+                  </span>
+
+                  {/* Topic Actions */}
+                  {user && user.id === selectedTopic.authorId && (
+                    <div className="flex gap-2 ml-auto">
+                      <button onClick={() => startEdit(selectedTopic)} className="text-zinc-500 hover:text-white" title="Editar Tema">
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button onClick={(e) => handleDeleteTopicButton(e, selectedTopic)} className="text-zinc-500 hover:text-red-500" title="Borrar Tema">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Topic Editor */}
+                {editingId === selectedTopic.id && (
+                  <div className="mt-4 border-t border-zinc-800 pt-4 space-y-3">
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="w-full bg-zinc-800 border border-zinc-700 p-2 text-white font-bold mb-2"
+                      placeholder="Título del tema"
+                    />
+                    <RichTextEditor value={editContent} onChange={setEditContent} className="min-h-[150px]" />
+                    <div className="flex gap-2 justify-end">
+                      <button onClick={() => setEditingId(null)} className="px-3 py-1 text-zinc-400 hover:text-white flex items-center gap-1">
+                        <XCircle className="w-4 h-4" /> Cancelar
+                      </button>
+                      <button onClick={() => handleUpdate({ ...selectedTopic, content: editContent } as any)} className="px-3 py-1 bg-green-700 text-white hover:bg-green-600 flex items-center gap-1 rounded-sm">
+                        <Save className="w-4 h-4" /> Guardar
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Replies List (First one is the OP content usually) */}
@@ -525,7 +596,7 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
                 {loading ? (
                   <div className="p-10 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-racing-orange" /></div>
                 ) : replies.map((reply, index) => (
-                  <div key={reply.id} className={`p-6 rounded-sm border ${index === 0 ? 'bg-zinc-900 border-zinc-700' : 'bg-zinc-900/50 border-zinc-800'}`}>
+                  <div key={reply.id} className="p-6 rounded-sm border bg-zinc-900/50 border-zinc-800">
                     <div className="flex items-start gap-4">
                       <div className="flex-shrink-0 text-center">
                         {reply.authorAvatar ? (
@@ -549,7 +620,6 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
                             </div>
                             <span className="text-xs text-zinc-500 flex items-center gap-1">
                               <Clock className="w-3 h-3" /> {reply.date}
-                              {index === 0 && <span className="ml-2 bg-racing-orange/20 text-racing-orange px-1.5 rounded text-[10px]">OP</span>}
                             </span>
                           </div>
                           {/* Edit/Delete Actions */}
@@ -568,16 +638,6 @@ export const Forum: React.FC<ForumProps> = ({ user, onBack, onLoginRequest }) =>
                         {/* Content or Editor */}
                         {editingId === reply.id ? (
                           <div className="space-y-3">
-                            {/* Title Editor for OP */}
-                            {index === 0 && (
-                              <input
-                                type="text"
-                                value={editTitle}
-                                onChange={(e) => setEditTitle(e.target.value)}
-                                className="w-full bg-zinc-800 border border-zinc-700 p-2 text-white font-bold mb-2"
-                                placeholder="Título del tema"
-                              />
-                            )}
                             <RichTextEditor value={editContent} onChange={setEditContent} className="min-h-[150px]" />
                             <div className="flex gap-2 justify-end">
                               <button onClick={() => setEditingId(null)} className="px-3 py-1 text-zinc-400 hover:text-white flex items-center gap-1">

@@ -39,12 +39,79 @@ class Paddock_API
             'callback' => [__CLASS__, 'get_leaderboard'],
             'permission_callback' => '__return_true',
         ]);
+
+        register_rest_route('paddock/v1', '/replies', [
+            'methods' => 'GET',
+            'callback' => [__CLASS__, 'get_replies'],
+            'permission_callback' => '__return_true',
+        ]);
     }
 
     public static function check_auth($request)
     {
         // Check for logged in user via standard WP cookies or JWT
         return is_user_logged_in();
+    }
+
+    public static function get_replies($request)
+    {
+        global $wpdb;
+        $user_id = get_current_user_id();
+        $topic_id = $request->get_param('topic_id');
+        $table_likes = $wpdb->prefix . 'paddock_likes';
+
+        if (empty($topic_id)) {
+            return new WP_REST_Response([], 200);
+        }
+
+        $comments = get_comments([
+            'post_id' => intval($topic_id),
+            'status' => 'approve',
+            'order' => 'ASC'
+        ]);
+
+        $replies = [];
+
+        foreach ($comments as $comment) {
+            // Get like count
+            $likes_count = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $table_likes WHERE target_type = 'reply' AND target_id = %d",
+                $comment->comment_ID
+            ));
+
+            // Check if user liked
+            $liked_by_user = false;
+            // Build likedBy array (for frontend optimistic logic if needed, but bool is enough for now. 
+            // Actually frontend wants array to check .includes(id). 
+            // We'll return an array with just current user ID if liked, to save query perf.)
+            $liked_by = [];
+
+            if ($user_id) {
+                $check = $wpdb->get_var($wpdb->prepare(
+                    "SELECT id FROM $table_likes WHERE target_type = 'reply' AND target_id = %d AND user_id = %d",
+                    $comment->comment_ID,
+                    $user_id
+                ));
+                if ($check) {
+                    $liked_by[] = (int) $user_id;
+                }
+            }
+
+            $replies[] = [
+                'id' => (int) $comment->comment_ID,
+                'topicId' => (int) $topic_id,
+                'author' => $comment->comment_author,
+                'authorId' => (int) $comment->user_id,
+                'authorAvatar' => get_avatar_url($comment->user_id),
+                'authorRole' => 'Racer', // Can be fetched if needed
+                'content' => $comment->comment_content,
+                'date' => get_comment_date('d M, H:i', $comment->comment_ID),
+                'likes' => (int) $likes_count,
+                'likedBy' => $liked_by
+            ];
+        }
+
+        return new WP_REST_Response($replies, 200);
     }
 
     public static function get_user_stats($request)

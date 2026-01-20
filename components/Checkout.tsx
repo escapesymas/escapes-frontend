@@ -85,11 +85,28 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
     formDataRef.current = formData;
   }, [formData]);
 
+  // Rank Discount State
+  const [userRank, setUserRank] = useState<{ discount: number, title: string } | null>(null);
+
+  useEffect(() => {
+    if (props.user && props.user.id) {
+      import('../services/woocommerce').then(mod => {
+        mod.fetchUserRank(props.user!.id).then(rank => {
+          if (rank && rank.discount > 0) {
+            setUserRank({ discount: rank.discount, title: rank.title });
+          }
+        });
+      });
+    }
+  }, [props.user]);
+
   // Calculations
   const subtotal = props.cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  const discountAmount = userRank ? (subtotal * userRank.discount) / 100 : 0;
+
   const shippingThreshold = 150;
   const shippingCost = subtotal > shippingThreshold ? 0 : 9.95;
-  const total = subtotal + shippingCost;
+  const total = subtotal + shippingCost - discountAmount;
 
   // Initialize SumUp and create pending order when user is logged in
   useEffect(() => {
@@ -133,6 +150,12 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
         product_id: item.id,
         quantity: item.quantity
       })),
+      fee_lines: userRank && userRank.discount > 0 ? [
+        {
+          name: `Descuento Paddock (${userRank.title})`,
+          total: `-${discountAmount.toFixed(2)}`
+        }
+      ] : [],
       meta_data: [
         { key: '_checkout_source', value: 'react_app' },
         { key: '_checkout_started', value: new Date().toISOString() }
@@ -373,7 +396,13 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
       line_items: props.cart.map(item => ({
         product_id: item.id,
         quantity: item.quantity
-      }))
+      })),
+      fee_lines: userRank && userRank.discount > 0 ? [
+        {
+          name: `Descuento Paddock (${userRank.title})`,
+          total: `-${discountAmount.toFixed(2)}`
+        }
+      ] : []
     };
 
     const result = await createOrder(orderPayload);
@@ -617,6 +646,14 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
                 <span>Subtotal</span>
                 <span className="text-white font-medium">{formatPrice(subtotal)}</span>
               </div>
+
+              {userRank && (
+                <div className="flex justify-between text-racing-orange text-sm">
+                  <span>Descuento {userRank.title} (-{userRank.discount}%)</span>
+                  <span className="font-bold">-{formatPrice(discountAmount)}</span>
+                </div>
+              )}
+
               <div className="flex justify-between text-zinc-400 text-sm">
                 <span>Envío</span>
                 <span className={shippingCost === 0 ? "text-green-500 font-bold" : "text-white font-medium"}>

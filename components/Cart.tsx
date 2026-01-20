@@ -106,12 +106,30 @@ export const Cart: React.FC<CartProps> = ({
     }
   };
 
+  // Rank Discount State
+  const [userRank, setUserRank] = useState<{ discount: number, title: string } | null>(null);
+
+  React.useEffect(() => {
+    if (user && user.id) {
+      import('../services/woocommerce').then(mod => {
+        mod.fetchUserRank(user.id).then(rank => {
+          if (rank && rank.discount > 0) {
+            setUserRank({ discount: rank.discount, title: rank.title });
+          }
+        });
+      });
+    }
+  }, [user]);
+
   const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+
+  // Calculate Discount
+  const discountAmount = userRank ? (subtotal * userRank.discount) / 100 : 0;
 
   // Shipping logic updated: always charges shipping (calculated per shipment, using fixed base for now)
   const shippingCost = 9.95;
 
-  const total = subtotal + shippingCost;
+  const total = subtotal + shippingCost - discountAmount;
   const itemsCount = items.reduce((acc, item) => acc + item.quantity, 0);
 
   if (items.length === 0) {
@@ -285,6 +303,14 @@ export const Cart: React.FC<CartProps> = ({
                 <span>Subtotal</span>
                 <span className="text-white font-medium">{formatPrice(subtotal)}</span>
               </div>
+
+              {userRank && (
+                <div className="flex justify-between text-racing-orange text-sm">
+                  <span>Descuento {userRank.title} (-{userRank.discount}%)</span>
+                  <span className="font-bold">-{formatPrice(discountAmount)}</span>
+                </div>
+              )}
+
               <div className="flex justify-between text-zinc-400 text-sm">
                 <span>Envío (Despacho 24/48h)</span>
                 <span className="text-white font-medium">{formatPrice(shippingCost)}</span>

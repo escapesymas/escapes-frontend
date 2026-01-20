@@ -80,48 +80,8 @@ export const fetchTopics = async (categoryId: string): Promise<ForumTopic[]> => 
  */
 export const fetchReplies = async (topicId: number): Promise<ForumReply[]> => {
   try {
-    // Fetch Topic (Post) content first
-    const topicReq = await makeRequest(`/wp/v2/posts/${topicId}?_embed`);
-    const topic = topicReq.data as any;
-
-    if (!topic) return [];
-
-    const result: ForumReply[] = [];
-
-    // 1. Topic (OP)
-    // We treat the post content as the first "reply" in the thread
-    result.push({
-      id: topic.id,
-      topicId: topic.id,
-      author: topic._embedded?.author?.[0]?.name || 'Autor Original',
-      authorId: topic.author,
-      authorAvatar: topic._embedded?.author?.[0]?.avatar_urls?.['96'] || '',
-      authorRole: 'OP',
-      content: topic.content.rendered,
-      date: new Date(topic.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
-      likes: 0, // We need to fetch likes from Paddock API or stored meta
-      likedBy: []
-    });
-
-    // 2. Comments (Replies) - Native WP Comments
-    const commentsReq = await makeRequest(`/wp/v2/comments?post=${topicId}&order=asc&per_page=100`);
-    const comments = commentsReq.data as any[];
-
-    const mappedComments = comments.map(comment => ({
-      id: comment.id,
-      topicId: topicId,
-      author: comment.author_name,
-      authorId: comment.author || 0,
-      authorAvatar: comment.author_avatar_urls?.['96'] || '',
-      authorRole: 'Racer',
-      content: comment.content.rendered,
-      date: new Date(comment.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
-      likes: 0,
-      likedBy: []
-    }));
-
-    return [...result, ...mappedComments];
-
+    const { data } = await makeRequest(`/paddock/v1/replies?topic_id=${topicId}`);
+    return data as ForumReply[];
   } catch (error) {
     console.error("Error fetching replies:", error);
     return [];
