@@ -91,8 +91,11 @@ class Paddock_API
 
     public static function get_topics($request)
     {
+        global $wpdb;
+        $user_id = get_current_user_id();
+        $table_likes = $wpdb->prefix . 'paddock_likes';
+
         // Use native WP_Query to fetch posts
-        // The frontend will now filter by category ID (native 'category' taxonomy)
         $category_id = $request->get_param('category_id');
 
         $args = [
@@ -113,15 +116,35 @@ class Paddock_API
         if ($query->have_posts()) {
             while ($query->have_posts()) {
                 $query->the_post();
+                $post_id = get_the_ID();
+
+                // Get like count
+                $likes_count = $wpdb->get_var($wpdb->prepare(
+                    "SELECT COUNT(*) FROM $table_likes WHERE target_type = 'topic' AND target_id = %d",
+                    $post_id
+                ));
+
+                // Check if user liked
+                $liked_by_user = false;
+                if ($user_id) {
+                    $liked_by_user = $wpdb->get_var($wpdb->prepare(
+                        "SELECT id FROM $table_likes WHERE target_type = 'topic' AND target_id = %d AND user_id = %d",
+                        $post_id,
+                        $user_id
+                    ));
+                }
+
                 $topics[] = [
-                    'id' => get_the_ID(),
+                    'id' => $post_id,
                     'title' => get_the_title(),
-                    'content' => get_the_content(), // Frontend might need strip_tags or rendered
+                    'content' => get_the_content(),
                     'author' => get_the_author(),
                     'author_id' => get_the_author_meta('ID'),
                     'date' => get_the_date('c'),
                     'comment_count' => get_comments_number(),
-                    'link' => get_permalink()
+                    'link' => get_permalink(),
+                    'likes' => (int) $likes_count,
+                    'is_liked' => (bool) $liked_by_user
                 ];
             }
             wp_reset_postdata();
@@ -137,6 +160,27 @@ class Paddock_API
         $target_type = $request['target_type'];
         $target_id = $request['target_id'];
 
+        if (!$user_id) {
+            return new WP_REST_Response(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        // Get Author ID
+        $author_id = 0;
+        if ($target_type === 'topic') {
+            $post = get_post($target_id);
+            if ($post)
+                $author_id = $post->post_author;
+        } else {
+            $comment = get_comment($target_id);
+            if ($comment)
+                $author_id = $comment->user_id;
+        }
+
+        // PREVENT SELF LIKES
+        if ($author_id == $user_id) {
+            return new WP_REST_Response(['success' => false, 'message' => 'No puedes dar like a tu propio contenido', 'liked' => false], 400);
+        }
+
         $table_likes = $wpdb->prefix . 'paddock_likes';
 
         // Check if already liked
@@ -147,10 +191,14 @@ class Paddock_API
             $target_id
         ));
 
+        $is_liked = false;
+
         if ($existing) {
             // Unlike
             $wpdb->delete($table_likes, ['id' => $existing->id]);
-            return new WP_REST_Response(['liked' => false], 200);
+            $is_liked = false;
+            // NOTE: We do not remove XP from author to avoid negative feelings, or we could? 
+            // User request regarding undoing XP was not specified, but typically we don't revoke.
         } else {
             // Like
             $wpdb->insert($table_likes, [
@@ -158,30 +206,23 @@ class Paddock_API
                 'target_type' => $target_type,
                 'target_id' => $target_id
             ]);
+            $is_liked = true;
 
-            // Award XP to the Liker (small amount)
-            Paddock_XP::award_xp($user_id, Paddock_XP::XP_GIVE_LIKE, 'give_like');
-            Paddock_XP::update_stat($user_id, 'total_likes_given', 1);
-
-            // Award XP to the Author
-            $author_id = 0;
-            if ($target_type === 'topic') {
-                $post = get_post($target_id);
-                if ($post)
-                    $author_id = $post->post_author;
-            } else {
-                $comment = get_comment($target_id);
-                if ($comment)
-                    $author_id = $comment->user_id;
-            }
-
+            // Award XP ONLY to the Author (Receiver), NOT the Liker
             if ($author_id && $author_id != $user_id) {
                 Paddock_XP::award_xp($author_id, Paddock_XP::XP_RECEIVE_LIKE, 'receive_like');
                 Paddock_XP::update_stat($author_id, 'total_likes_received', 1);
             }
-
-            return new WP_REST_Response(['liked' => true], 200);
         }
+
+        // Get updated count
+        $likes_count = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM $table_likes WHERE target_type = %s AND target_id = %d",
+            $target_type,
+            $target_id
+        ));
+
+        return new WP_REST_Response(['liked' => $is_liked, 'likeCount' => (int) $likes_count], 200);
     }
 
     public static function get_leaderboard($request)
