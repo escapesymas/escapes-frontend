@@ -383,28 +383,30 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
                   <p className="text-sm text-zinc-400">Nivel {userRank.level}</p>
                 </div>
               </div>
-              <RankBadge rank={userRank} showProgress />
+              <RankBadge rank={userRank} />
             </div>
 
             <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-zinc-400">XP: {userRank.xp}</span>
-                {userRank.xpToNext > 0 && (
-                  <span className="text-zinc-500">{userRank.xpToNext} XP al siguiente nivel</span>
+              <div className="flex justify-between text-sm mb-1 font-bold">
+                <span className="text-zinc-400">Total: <span className="text-white">{userRank.xp} XP</span></span>
+                {userRank.xpToNext > userRank.xp ? (
+                  <span className="text-zinc-500">Siguiente Rango: {userRank.xpToNext} XP</span>
+                ) : (
+                  <span className="text-racing-orange">¡Nivel Máximo!</span>
                 )}
               </div>
 
-              {userRank.xpToNext > 0 && (
-                <div className="w-full bg-zinc-800 rounded-full h-2">
-                  <div
-                    className="h-2 rounded-full transition-all duration-500"
-                    style={{
-                      width: `${(userRank.xp / (userRank.xp + userRank.xpToNext)) * 100}%`,
-                      backgroundColor: userRank.color
-                    }}
-                  />
+              <div className="w-full bg-zinc-800 rounded-full h-2.5 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500 relative"
+                  style={{
+                    width: `${Math.min((userRank.xp / (userRank.xpToNext || 1)) * 100, 100)}%`,
+                    backgroundColor: userRank.color
+                  }}
+                >
+                  <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
                 </div>
-              )}
+              </div>
             </div>
 
             <div className="mt-4 pt-4 border-t border-zinc-800 text-xs text-zinc-500">

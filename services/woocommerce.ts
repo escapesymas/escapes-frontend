@@ -599,6 +599,7 @@ export const fetchUserRank = async (userId: number): Promise<UserRank> => {
         case 'Experto': return { color: '#FBBF24', icon: '⚡' };
         case 'Pro Racer': return { color: '#F97316', icon: '🏆' };
         case 'Leyenda': return { color: '#EF4444', icon: '👑' };
+        case 'Administrador': return { color: '#ef4444', icon: '🛡️' };
         default: return { color: '#9CA3AF', icon: '👤' };
       }
     };
@@ -625,11 +626,17 @@ export const fetchUserRank = async (userId: number): Promise<UserRank> => {
 /**
  * Alterna el Like en un post o respuesta
  */
-export const toggleLike = async (targetType: 'topic' | 'reply', targetId: number): Promise<{ liked: boolean }> => {
+export const toggleLike = async (targetType: 'topic' | 'reply', targetId: number, token?: string): Promise<{ liked: boolean }> => {
   try {
+    const headers: any = {};
+    if (token) {
+      headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+    }
+
     const { data } = await makeRequest('/paddock/v1/like', {
       method: 'POST',
-      body: JSON.stringify({ target_type: targetType, target_id: targetId })
+      body: JSON.stringify({ target_type: targetType, target_id: targetId }),
+      headers
     });
     return data as { liked: boolean };
   } catch (error) {
@@ -641,11 +648,17 @@ export const toggleLike = async (targetType: 'topic' | 'reply', targetId: number
 /**
  * Registra actividad (crear post/respuesta) para ganar XP
  */
-export const registerActivity = async (type: 'post' | 'reply', targetId: number): Promise<void> => {
+export const registerActivity = async (type: 'post' | 'reply', targetId: number, token?: string): Promise<void> => {
   try {
+    const headers: any = {};
+    if (token) {
+      headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+    }
+
     await makeRequest('/paddock/v1/activity', {
       method: 'POST',
-      body: JSON.stringify({ type, target_id: targetId })
+      body: JSON.stringify({ type, target_id: targetId }),
+      headers
     });
   } catch (error) {
     console.error('[PADDOCK] Error registering activity:', error);

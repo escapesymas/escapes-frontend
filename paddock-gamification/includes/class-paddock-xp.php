@@ -152,6 +152,19 @@ class Paddock_XP
         global $wpdb;
         $table = $wpdb->prefix . 'paddock_user_stats';
 
+        // Check for Administrator override
+        $user_info = get_userdata($user_id);
+        if ($user_info && (in_array('administrator', $user_info->roles) || $user_info->user_email === 'info@escapesymas.com')) {
+            return [
+                'level' => 99,
+                'title' => 'Administrador',
+                'xp' => 999999,
+                'next_xp' => 999999,
+                'discount' => 10, // Max discount
+                'icon' => '🛡️' // Special icon
+            ];
+        }
+
         $stats = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE user_id = %d", $user_id));
 
         if (!$stats) {
