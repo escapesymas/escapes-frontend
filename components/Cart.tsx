@@ -209,7 +209,7 @@ export const Cart: React.FC<CartProps> = ({
               {/* Image */}
               <div className="w-24 h-24 bg-white rounded-sm overflow-hidden flex-shrink-0 p-2">
                 <img
-                  src={optimizeImage(item.image, 100)}
+                  src={optimizeImage(item.image, { width: 100 })}
                   alt={item.title}
                   className="w-full h-full object-contain"
                   width="100"

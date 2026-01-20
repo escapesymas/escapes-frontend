@@ -370,7 +370,11 @@ app.post('/api/warranty', async (req, res) => {
       console.error('Error enviando correo:', error);
       return res.status(500).json({ success: false, message: 'Error al enviar el correo: ' + error.message });
     }
-  });
+  } catch (err) {
+    console.error('[WARRANTY] Outer error:', err);
+    return res.status(500).json({ success: false, message: 'Error interno del servidor' });
+  }
+});
 
 // --- RUTA CATCH-ALL PARA SPA ---
 app.get('*', (req, res) => {
