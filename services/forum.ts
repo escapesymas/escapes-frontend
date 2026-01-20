@@ -1,174 +1,58 @@
-import { WOO_CONFIG } from '../storeData';
 import { ForumCategory, ForumTopic, ForumReply, UserRank } from '../types';
 import { MessageSquare, Wrench, Bike, Shield, Compass, LifeBuoy, Flag } from 'lucide-react';
+import { makeRequest, toggleLike as apiToggleLike, registerActivity, fetchUserRank as apiFetchUserRank } from './woocommerce';
 
-// Use proxy to avoid CORS issues
-const WP_API_BASE = '/proxy-wc/wp-json/wp/v2';
+// --- CONFIGURATION ---
 
-// Rank configuration (matches backend)
-const RANKS = [
-  { level: 1, title: 'Novato', xpRequired: 0, color: '#71717a', icon: '🏍️' },
-  { level: 2, title: 'Aprendiz', xpRequired: 50, color: '#22c55e', icon: '⚡' },
-  { level: 3, title: 'Piloto', xpRequired: 150, color: '#3b82f6', icon: '🏁' },
-  { level: 4, title: 'Experto', xpRequired: 300, color: '#a855f7', icon: '🔥' },
-  { level: 5, title: 'Profesional', xpRequired: 500, color: '#f97316', icon: '💨' },
-  { level: 6, title: 'Leyenda', xpRequired: 1000, color: '#eab308', icon: '👑' }
-];
-
-/**
- * Calculate user rank from XP
- */
-function calculateRank(xp: number): UserRank {
-  for (let i = RANKS.length - 1; i >= 0; i--) {
-    if (xp >= RANKS[i].xpRequired) {
-      const currentRank = RANKS[i];
-      const nextRank = RANKS[i + 1];
-      return {
-        level: currentRank.level,
-        title: currentRank.title,
-        color: currentRank.color,
-        icon: currentRank.icon,
-        xp: xp,
-        xpToNext: nextRank ? nextRank.xpRequired - xp : 0
-      };
-    }
-  }
-  return {
-    level: 1,
-    title: RANKS[0].title,
-    color: RANKS[0].color,
-    icon: RANKS[0].icon,
-    xp: 0,
-    xpToNext: RANKS[1].xpRequired
-  };
-}
-
-/**
- * Get user rank from WordPress via API
- */
-export const getUserRank = async (userId: number): Promise<UserRank | null> => {
-  try {
-    const response = await fetch(`/api/forum/get-user-rank?userId=${userId}`);
-
-    if (!response.ok) {
-      console.warn('[RANK] Failed to fetch user rank');
-      return null;
-    }
-
-    const rank = await response.json();
-    return rank;
-  } catch (error) {
-    console.error('[RANK] Error fetching user rank:', error);
-    return null;
-  }
+// We map the mock IDs to these visual cues, but in real WP they are just categories
+const FORUM_ICONS: Record<string, any> = {
+  'start_zone': Flag,
+  'mechanic': Wrench,
+  'brands': Bike,
+  'gear': Shield,
+  'routes': Compass,
+  'support': LifeBuoy
 };
 
 /**
- * ESQUEMA MAESTRO DEL FORO (Fallback & Structure)
- * Estas son las categorías ideales para organizar la comunidad.
- */
-const FORUM_SCHEMA: ForumCategory[] = [
-  {
-    id: 'start_zone',
-    title: 'Línea de Salida',
-    description: 'Bienvenidas, presentaciones, normas y charla general off-topic.',
-    icon: Flag,
-    topicCount: 12
-  },
-  {
-    id: 'mechanic',
-    title: 'El Taller',
-    description: 'Mecánica, dudas técnicas, bricos, reparaciones y mantenimiento.',
-    icon: Wrench,
-    topicCount: 45
-  },
-  {
-    id: 'brands',
-    title: 'Por Marcas y Modelos',
-    description: 'Espacio dedicado por fabricante: Aprilia, BMW, Ducati, Yamaha, etc.',
-    icon: Bike,
-    topicCount: 89
-  },
-  {
-    id: 'gear',
-    title: 'Equipamiento y Accesorios',
-    description: 'Cascos, monos, guantes, chuches para la moto y reviews de material.',
-    icon: Shield,
-    topicCount: 23
-  },
-  {
-    id: 'routes',
-    title: 'Rutas y Encuentros',
-    description: 'Organización de quedadas, rutas, viajes, circuitos y crónicas.',
-    icon: Compass,
-    topicCount: 34
-  },
-  {
-    id: 'support',
-    title: 'Soporte y Sugerencias',
-    description: 'Ayuda con la web, atención al cliente y buzón de sugerencias.',
-    icon: LifeBuoy,
-    topicCount: 7
-  }
-];
-
-// Mapeo avanzado de iconos por si vienen de WP real
-const getIconForForum = (slug: string = '', id: string | number) => {
-  const s = slug.toLowerCase();
-  if (s.includes('bienvenid') || s.includes('general') || s.includes('salida')) return Flag;
-  if (s.includes('taller') || s.includes('mecanic') || s.includes('tecni')) return Wrench;
-  if (s.includes('marca') || s.includes('modelo') || s.includes('bike')) return Bike;
-  if (s.includes('equip') || s.includes('accesori') || s.includes('casco')) return Shield;
-  if (s.includes('ruta') || s.includes('quedada') || s.includes('viaje') || s.includes('circuit')) return Compass;
-  if (s.includes('soporte') || s.includes('ayuda') || s.includes('sugerencia')) return LifeBuoy;
-  return MessageSquare;
-};
-
-/**
- * 1. OBTENER FOROS (Categorías)
- * Intenta obtener categorías de WP. Si falla o están vacías,
- * devuelve el ESQUEMA MAESTRO para asegurar una buena UX.
+ * 1. OBTENER CATEGORÍAS
+ * Se mappea la taxonomía 'paddock_category' a nuestro tipo ForumCategory
  */
 export const fetchForumCategories = async (): Promise<ForumCategory[]> => {
   try {
-    const response = await fetch(`${WP_API_BASE}/categories?hide_empty=false&per_page=20`);
+    const { data } = await makeRequest('/wp/v2/paddock_category?hide_empty=false&per_page=20');
 
-    if (!response.ok) {
-      console.error("Forum API unavailable", response.status);
-      return [];
-    }
-
-    const data = await response.json();
-
-    return data.map((item: any) => ({
-      id: String(item.id),
-      title: item.name,
-      description: item.description || 'Espacio de discusión',
-      icon: getIconForForum(item.slug, item.id),
-      topicCount: item.count || 0
+    return (data as any[]).map(cat => ({
+      id: String(cat.id),
+      title: cat.name,
+      description: cat.description || 'Espacio de discusión',
+      icon: FORUM_ICONS['brands'] || MessageSquare, // Fallback icon logic ideally based on slug
+      topicCount: cat.count || 0
     }));
   } catch (error) {
     console.error("Error fetching forum categories:", error);
+    // Fallback if no categories exist yet
     return [];
   }
 };
 
 /**
- * 2. OBTENER TEMAS (Posts de WP)
- * Filtramos los posts por la categoría seleccionada.
+ * 2. OBTENER TEMAS
+ * Endpoint: /wp/v2/paddock_topic
  */
 export const fetchTopics = async (categoryId: string): Promise<ForumTopic[]> => {
   try {
-    const response = await fetch(`${WP_API_BASE}/posts?categories=${categoryId}&_embed&per_page=20&_t=${new Date().getTime()}`);
+    let endpoint = `/wp/v2/paddock_topic?_embed&per_page=20&status=publish`;
 
-    if (!response.ok) {
-      console.error('Failed to fetch topics:', response.status);
-      return [];
+    // If it's a specific category, filter by it.
+    // Note: 'paddock_category' is the taxonomy. In WP REST API, filtering by custom tax requires `paddock_category=<id>` 
+    if (categoryId && !isNaN(Number(categoryId))) {
+      endpoint += `&paddock_category=${categoryId}`;
     }
 
-    const data = await response.json();
+    const { data } = await makeRequest(endpoint);
 
-    return data.map((item: any) => ({
+    return (data as any[]).map(item => ({
       id: item.id,
       categoryId: categoryId,
       title: item.title.rendered,
@@ -177,9 +61,11 @@ export const fetchTopics = async (categoryId: string): Promise<ForumTopic[]> => 
       authorAvatar: item._embedded?.author?.[0]?.avatar_urls?.['96'] || '',
       date: new Date(item.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
       views: 0,
-      replies: 0,
+      replies: 0, // Need to implement replies count if needed
       isPinned: item.sticky || false,
-      content: item.content.rendered
+      content: item.content?.rendered || '',
+      likes: 0,
+      likedBy: []
     }));
   } catch (error) {
     console.error("Error fetching topics:", error);
@@ -189,56 +75,54 @@ export const fetchTopics = async (categoryId: string): Promise<ForumTopic[]> => 
 
 /**
  * 3. OBTENER RESPUESTAS
+ * Las respuestas son Comments del post type 'paddock_topic'
  */
 export const fetchReplies = async (topicId: number): Promise<ForumReply[]> => {
   try {
-    const postResponse = await fetch(`${WP_API_BASE}/posts/${topicId}?_embed&_t=${new Date().getTime()}`, {
-      headers: { 'Cache-Control': 'no-cache' }
-    });
-    const postData = postResponse.ok ? await postResponse.json() : null;
+    // Fetch Topic (OP) content first to display as first message
+    const topicReq = await makeRequest(`/wp/v2/paddock_topic/${topicId}?_embed`);
+    const topic = topicReq.data as any;
 
-    const commentsResponse = await fetch(`${WP_API_BASE}/comments?post=${topicId}&order=asc&per_page=100&_t=${new Date().getTime()}`, {
-      headers: { 'Cache-Control': 'no-cache' }
-    });
-    const commentsData = commentsResponse.ok ? await commentsResponse.json() : [];
+    if (!topic) return [];
 
     const result: ForumReply[] = [];
 
-    if (postData) {
-      const opLikes = postData.meta?._likes ? JSON.parse(postData.meta._likes) : [];
-      result.push({
-        id: postData.id,
-        topicId: postData.id,
-        author: postData._embedded?.author?.[0]?.name || 'Autor Original',
-        authorId: postData.author,
-        authorAvatar: postData._embedded?.author?.[0]?.avatar_urls?.['96'] || '',
-        authorRole: 'OP',
-        content: postData.content.rendered,
-        date: new Date(postData.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
-        likes: opLikes.length,
-        likedBy: opLikes
-      });
-    }
-
-    const mappedComments = commentsData.map((comment: any) => {
-      const commentLikes = comment.meta?._likes ? JSON.parse(comment.meta._likes) : [];
-      return {
-        id: comment.id,
-        topicId: topicId,
-        author: comment.author_name,
-        authorId: comment.author || 0,
-        authorAvatar: comment.author_avatar_urls?.['96'] || '',
-        authorRole: 'Racer',
-        content: comment.content.rendered,
-        date: new Date(comment.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
-        likes: commentLikes.length,
-        likedBy: commentLikes
-      };
+    // 1. Topic (OP)
+    // We treat the topic content as the first "reply" in the thread
+    result.push({
+      id: topic.id,
+      topicId: topic.id,
+      author: topic._embedded?.author?.[0]?.name || 'Autor Original',
+      authorId: topic.author,
+      authorAvatar: topic._embedded?.author?.[0]?.avatar_urls?.['96'] || '',
+      authorRole: 'OP',
+      content: topic.content.rendered,
+      date: new Date(topic.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+      likes: 0, // We need to fetch likes from Paddock API or stored meta
+      likedBy: []
     });
+
+    // 2. Comments (Replies)
+    const commentsReq = await makeRequest(`/wp/v2/comments?post=${topicId}&order=asc&per_page=100`);
+    const comments = commentsReq.data as any[];
+
+    const mappedComments = comments.map(comment => ({
+      id: comment.id,
+      topicId: topicId,
+      author: comment.author_name,
+      authorId: comment.author || 0,
+      authorAvatar: comment.author_avatar_urls?.['96'] || '',
+      authorRole: 'Racer',
+      content: comment.content.rendered,
+      date: new Date(comment.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+      likes: 0,
+      likedBy: []
+    }));
 
     return [...result, ...mappedComments];
 
   } catch (error) {
+    console.error("Error fetching replies:", error);
     return [];
   }
 };
@@ -252,43 +136,34 @@ export const createTopic = async (
   title: string,
   body: string
 ): Promise<{ success: boolean; id?: number; error?: string }> => {
-
-  // Simulación si estamos en modo Demo (ID categoría no numérica)
-  if (isNaN(Number(categoryId))) {
-    return new Promise(resolve => {
-      setTimeout(() => resolve({ success: true, id: Math.floor(Math.random() * 1000) }), 800);
-    });
-  }
-
   try {
-    const response = await fetch(`${WP_API_BASE}/posts`, {
+    // In WP REST API, to create a post with custom tax, use the tax slug as key and array of IDs as value
+    const payload = {
+      title: title,
+      content: body,
+      status: 'publish',
+      paddock_category: [parseInt(categoryId)] // Must be array
+    };
+
+    // Need to pass token in header. makeRequest handles auth if configured in WOO_CONFIG, 
+    // but here we might need the specific user token if we are using JWT?
+    // User passed token, so we override Auth header
+    const { data } = await makeRequest('/wp/v2/paddock_topic', {
       method: 'POST',
+      body: JSON.stringify(payload),
       headers: {
-        'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        title: title,
-        content: body,
-        categories: [parseInt(categoryId)],
-        status: 'publish'
-      })
+      }
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      if (data.code === 'rest_cannot_create') return { success: false, error: 'Sin permisos.' };
-      throw new Error(data.message);
-    }
     return { success: true, id: data.id };
   } catch (error: any) {
-    return { success: false, error: error.message };
+    return { success: false, error: error.message || 'Error al crear tema' };
   }
 };
 
 /**
- * 5. CREAR RESPUESTA
+ * 5. CREAR RESPUESTA (Comentario)
  */
 export const createReply = async (
   token: string,
@@ -296,44 +171,35 @@ export const createReply = async (
   body: string
 ): Promise<{ success: boolean; id?: number; error?: string }> => {
   try {
-    const response = await fetch(`${WP_API_BASE}/comments`, {
+    const { data } = await makeRequest('/wp/v2/comments', {
       method: 'POST',
+      body: JSON.stringify({
+        post: topicId,
+        content: body
+      }),
       headers: {
-        'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ post: topicId, content: body })
+      }
     });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      if (data.code === 'rest_comment_login_required') return { success: false, error: 'Login requerido.' };
-      throw new Error(data.message);
-    }
 
     return { success: true, id: data.id };
   } catch (error: any) {
-    return { success: false, error: error.message };
+    return { success: false, error: error.message || 'Error al responder' };
   }
 };
 
 /**
- * 6. EDITAR TEMA
+ * 6. ACTUALIZAR TEMA
  */
 export const updateTopic = async (token: string, topicId: number, title: string, content: string): Promise<boolean> => {
   try {
-    const response = await fetch(`${WP_API_BASE}/posts/${topicId}`, {
+    await makeRequest(`/wp/v2/paddock_topic/${topicId}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ title, content })
+      body: JSON.stringify({ title, content }),
+      headers: { 'Authorization': `Bearer ${token}` }
     });
-    return response.ok;
+    return true;
   } catch (e) {
-    console.error(e);
     return false;
   }
 };
@@ -342,34 +208,29 @@ export const updateTopic = async (token: string, topicId: number, title: string,
  * 7. BORRAR TEMA
  */
 export const deleteTopic = async (token: string, topicId: number): Promise<boolean> => {
-  try {
-    const response = await fetch(`${WP_API_BASE}/posts/${topicId}?force=true`, {
+  try { // Force delete to skip trash
+    await makeRequest(`/wp/v2/paddock_topic/${topicId}?force=true`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    return response.ok;
+    return true;
   } catch (e) {
-    console.error(e);
     return false;
   }
 };
 
 /**
- * 8. EDITAR RESPUESTA
+ * 8. ACTUALIZAR RESPUESTA
  */
 export const updateReply = async (token: string, replyId: number, content: string): Promise<boolean> => {
   try {
-    const response = await fetch(`${WP_API_BASE}/comments/${replyId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ content })
+    await makeRequest(`/wp/v2/comments/${replyId}`, {
+      method: 'POST', // Update
+      body: JSON.stringify({ content }),
+      headers: { 'Authorization': `Bearer ${token}` }
     });
-    return response.ok;
+    return true;
   } catch (e) {
-    console.error(e);
     return false;
   }
 };
@@ -379,110 +240,39 @@ export const updateReply = async (token: string, replyId: number, content: strin
  */
 export const deleteReply = async (token: string, replyId: number): Promise<boolean> => {
   try {
-    const response = await fetch(`${WP_API_BASE}/comments/${replyId}?force=true`, {
+    await makeRequest(`/wp/v2/comments/${replyId}?force=true`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    return response.ok;
+    return true;
   } catch (e) {
-    console.error(e);
     return false;
   }
 };
 
-// --- MOCK DATA GENERATOR FOR DEMO ---
-const getMockTopics = (catId: string): ForumTopic[] => {
-  const common = { author: 'Marc M.', authorId: 9999, date: 'Hoy', views: 120, replies: 5, authorAvatar: '', isPinned: false, likes: 0, likedBy: [] };
+// --- GAMIFICATION DELEGATES ---
 
-  if (catId === 'start_zone') return [
-    { ...common, id: 501, categoryId: catId, title: 'Bienvenidos a la Línea de Salida', content: 'Normas de la comunidad y presentaciones.', isPinned: true },
-    { ...common, id: 502, categoryId: catId, title: 'Me presento desde Madrid', content: 'Hola a todos, acabo de adquirir una Z900...' }
-  ];
-
-  if (catId === 'mechanic') return [
-    { ...common, id: 101, categoryId: catId, title: '¿Par de apriete colectores MT-09?', content: 'Hola, alguien tiene el manual de taller...', isPinned: true },
-    { ...common, id: 102, categoryId: catId, title: 'Ruido metálico al reducir en S1000RR', content: 'Suena como una lata...' }
-  ];
-
-  if (catId === 'brands') return [
-    { ...common, id: 601, categoryId: catId, title: '[Yamaha] Hilo Oficial MT-09 2024', content: 'Opiniones, configs y experiencias.', isPinned: true },
-    { ...common, id: 602, categoryId: catId, title: '[Ducati] Problema con el quickshifter', content: 'A veces no entra la tercera...' }
-  ];
-
-  if (catId === 'gear') return [
-    { ...common, id: 701, categoryId: catId, title: 'Review: Casco AGV Pista GP RR', content: 'Vale cada euro...', isPinned: true },
-    { ...common, id: 702, categoryId: catId, title: '¿Mejores guantes para invierno?', content: 'Busco tacto pero que no se congelen las manos.' }
-  ];
-
-  if (catId === 'routes') return [
-    { ...common, id: 801, categoryId: catId, title: 'Ruta Pirineos - Junio 2025', content: 'Estamos organizando grupo...', isPinned: true },
-    { ...common, id: 802, categoryId: catId, title: 'Tandas en Cheste', content: '¿Alguien va el próximo finde?' }
-  ];
-
-  return [
-    { ...common, id: 999, categoryId: catId, title: 'Bienvenido al foro', content: 'Participa con respeto.', isPinned: true }
-  ];
-};
-
-// =====================
-// LIKE SYSTEM
-// =====================
-
-/**
- * Toggle like on a topic or reply
- */
 export const toggleLike = async (
   type: 'topic' | 'reply',
   id: number,
   userId: number,
   token: string
-): Promise<{ success: boolean; liked: boolean; likeCount: number }> => {
+) => {
   try {
-    // Ensure token has Bearer prefix
-    const authToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-
-    const response = await fetch('/api/forum/toggle-like', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, id, userId, token: authToken })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || 'Error toggling like');
-    }
-
-    return {
-      success: true,
-      liked: data.liked,
-      likeCount: data.likeCount
-    };
-  } catch (error) {
-    console.error('[LIKE] Error:', error);
+    const result = await apiToggleLike(type, id);
+    // Return format matching what Forum.tsx expects
+    return { success: true, liked: result.liked, likeCount: 0 };
+  } catch (e) {
     return { success: false, liked: false, likeCount: 0 };
   }
 };
 
-/**
- * Award XP to a user
- */
-export const awardXP = async (
-  userId: number,
-  actionType: 'CREATE_TOPIC' | 'CREATE_REPLY',
-  token: string
-): Promise<void> => {
-  try {
-    // Ensure token has Bearer prefix
-    const authToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-
-    await fetch('/api/forum/award-xp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, actionType, token: authToken })
-    });
-  } catch (error) {
-    console.error('[XP] Error awarding XP:', error);
-  }
+export const awardXP = async (userId: number, actionType: 'CREATE_TOPIC' | 'CREATE_REPLY', token: string, targetId: number = 0) => {
+  // Map actionType to the values expected by registerActivity ('post' or 'reply')
+  const type = actionType === 'CREATE_TOPIC' ? 'post' : 'reply';
+  await registerActivity(type, targetId);
 };
 
+export const getUserRank = async (userId: number): Promise<UserRank | null> => {
+  return await apiFetchUserRank(userId);
+};

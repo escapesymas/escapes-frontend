@@ -139,6 +139,7 @@ export interface UserRank {
   title: string;
   xp: number;
   xpToNext: number;
+  discount: number; // Percentage (0-10)
   color: string;
   icon: string; // Emoji or icon name
 }

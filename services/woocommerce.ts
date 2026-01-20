@@ -1,6 +1,6 @@
 
 import { WOO_CONFIG, STORE_CONFIG } from '../storeData';
-import { Product, WooProduct, OrderPayload, Order, User, WooCategory, Category } from '../types';
+import { Product, WooProduct, OrderPayload, Order, User, WooCategory, Category, UserRank } from '../types';
 
 export const isConfigValid = () => {
   return WOO_CONFIG.baseUrl && WOO_CONFIG.consumerKey;
@@ -15,7 +15,7 @@ const getAuthHeaders = () => {
   };
 };
 
-const makeRequest = async (path: string, options: RequestInit = {}) => {
+export const makeRequest = async (path: string, options: RequestInit = {}) => {
   let baseUrl = WOO_CONFIG.baseUrl.replace(/\/$/, "");
 
   // Cache busting: Add timestamp to avoid caching issues with W3 Total Cache / WP REST Cache
@@ -570,6 +570,97 @@ export const searchUsers = async (query: string): Promise<{ id: number; name: st
     }));
   } catch (error) {
     console.error('[SEARCH USERS] Error:', error);
+    return [];
+  }
+};
+
+// =====================
+// PADDOCK GAMIFICATION
+// =====================
+
+/**
+ * Obtiene el rango y stats de un usuario
+ */
+export const fetchUserRank = async (userId: number): Promise<UserRank> => {
+  if (!userId || userId === 0) return {
+    level: 1, title: 'Novato', xp: 0, xpToNext: 100, discount: 0, color: '#9CA3AF', icon: '🔰'
+  };
+
+  try {
+    const { data } = await makeRequest(`/paddock/v1/user/${userId}/rank`);
+    const rank = data as any;
+
+    // Mapear colores e iconos según el título (fallback si el backend no lo envía)
+    const getRankMeta = (title: string) => {
+      switch (title) {
+        case 'Novato': return { color: '#9CA3AF', icon: '🔰' };
+        case 'Aficionado': return { color: '#60A5FA', icon: '🧢' };
+        case 'Entusiasta': return { color: '#34D399', icon: '🔥' };
+        case 'Experto': return { color: '#FBBF24', icon: '⚡' };
+        case 'Pro Racer': return { color: '#F97316', icon: '🏆' };
+        case 'Leyenda': return { color: '#EF4444', icon: '👑' };
+        default: return { color: '#9CA3AF', icon: '👤' };
+      }
+    };
+
+    const meta = getRankMeta(rank.title);
+
+    return {
+      level: rank.level,
+      title: rank.title,
+      xp: rank.xp,
+      xpToNext: rank.next_xp,
+      discount: rank.discount,
+      color: meta.color,
+      icon: meta.icon
+    };
+  } catch (error) {
+    console.error('[PADDOCK] Error fetching rank:', error);
+    return {
+      level: 1, title: 'Novato', xp: 0, xpToNext: 100, discount: 0, color: '#9CA3AF', icon: '🔰'
+    };
+  }
+};
+
+/**
+ * Alterna el Like en un post o respuesta
+ */
+export const toggleLike = async (targetType: 'topic' | 'reply', targetId: number): Promise<{ liked: boolean }> => {
+  try {
+    const { data } = await makeRequest('/paddock/v1/like', {
+      method: 'POST',
+      body: JSON.stringify({ target_type: targetType, target_id: targetId })
+    });
+    return data as { liked: boolean };
+  } catch (error) {
+    console.error('[PADDOCK] Error toggling like:', error);
+    throw error;
+  }
+};
+
+/**
+ * Registra actividad (crear post/respuesta) para ganar XP
+ */
+export const registerActivity = async (type: 'post' | 'reply', targetId: number): Promise<void> => {
+  try {
+    await makeRequest('/paddock/v1/activity', {
+      method: 'POST',
+      body: JSON.stringify({ type, target_id: targetId })
+    });
+  } catch (error) {
+    console.error('[PADDOCK] Error registering activity:', error);
+  }
+};
+
+/**
+ * Obtiene la tabla de líderes
+ */
+export const fetchLeaderboard = async (limit: number = 10): Promise<any[]> => {
+  try {
+    const { data } = await makeRequest(`/paddock/v1/leaderboard?limit=${limit}`);
+    return data as any[];
+  } catch (error) {
+    console.error('[PADDOCK] Error fetching leaderboard:', error);
     return [];
   }
 };
