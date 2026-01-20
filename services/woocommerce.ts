@@ -503,48 +503,29 @@ export const uploadFile = async (file: File): Promise<{ id: number; url: string 
 };
 
 /**
- * Sube una foto personalizada para el cliente y actualiza su metadata
- * Si userId es 0, intenta resolverlo por email.
+ * Sube una foto personalizada para el cliente usando el plugin Escapes Avatars.
+ * Requiere que el usuario esté autenticado (JWT).
  */
-export const uploadCustomerPhoto = async (userId: number, file: File, email?: string): Promise<{ success: boolean; url?: string; error?: string }> => {
-  let targetId = userId;
-
-  // Auto-resolve ID if missing
-  if ((!targetId || targetId === 0) && email) {
-    console.log('[AVATAR] User ID is 0, attempting to resolve by email:', email);
-    const user = await fetchCustomerByEmail(email);
-    if (user && user.id > 0) {
-      targetId = user.id;
-      console.log('[AVATAR] Resolved User ID:', targetId);
-    }
-  }
-
-  if (!targetId || targetId === 0) return { success: false, error: 'Usuario inválido (ID 0). No se encontró cuenta de cliente asociada.' };
-
+export const uploadCustomerPhoto = async (userId: number, file: File, token?: string): Promise<{ success: boolean; url?: string; error?: string }> => {
   try {
-    // 1. Upload file to WP Media
-    const { id, url } = await uploadFile(file);
+    const formData = new FormData();
+    formData.append('avatar', file);
 
-    // 2. Update Customer Metadata with new ID (for persistence) AND URL
-    // 2. Update Customer Metadata with new ID (for persistence) AND URL
-    // We update 'wp_user_avatar' with ID for backend/theme compatibility
-    // And '_custom_avatar' with URL for frontend easy access
-    await makeRequest(`/wc/v3/customers/${targetId}`, {
-      method: 'PUT',
-      body: JSON.stringify({
-        meta_data: [
-          { key: 'wp_user_avatar', value: id },
-          { key: '_custom_avatar', value: url }
-        ]
-      })
+    const response = await fetch(`${WOO_CONFIG.baseUrl}/wp-json/escapes/v1/avatar/upload`, {
+      method: 'POST',
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: formData,
+      credentials: 'include'
     });
 
-    const updateSuccess = true;
+    const data = await response.json();
 
-    if (updateSuccess) {
-      return { success: true, url: url };
+    if (data.success && data.avatar_url) {
+      return { success: true, url: data.avatar_url };
     } else {
-      return { success: false, error: 'Error al actualizar perfil con la nueva foto' };
+      return { success: false, error: data.message || 'Error al subir avatar' };
     }
   } catch (error: any) {
     console.error('[AVATAR] Upload failed:', error);
