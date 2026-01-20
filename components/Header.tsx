@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import { ShoppingCart, User, Menu, LogOut, Package, Settings, MessageSquare, X, ChevronRight } from 'lucide-react';
 import { STORE_CONFIG, NAV_LINKS } from '../storeData';
-import { User as UserType } from '../types';
+import { User as UserType, UserRank } from '../types';
+import { RankBadge } from './RankBadge';
 
 interface HeaderProps {
   cartCount?: number;
@@ -29,6 +30,17 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [userRank, setUserRank] = useState<UserRank | null>(null);
+
+  React.useEffect(() => {
+    if (user && user.id) {
+      import('../services/woocommerce').then(mod => {
+        mod.fetchUserRank(user.id).then(rank => {
+          if (rank) setUserRank(rank);
+        });
+      });
+    }
+  }, [user]);
 
   const filteredNavLinks = NAV_LINKS.filter(link => link.view !== 'warranty');
 
@@ -92,7 +104,10 @@ export const Header: React.FC<HeaderProps> = ({
                 ) : (
                   <User className="w-5 h-5" />
                 )}
-                {user && <span className="text-xs font-bold hidden md:block text-white">{user.firstName}</span>}
+                <div className="hidden md:flex flex-col items-start">
+                  {user && <span className="text-xs font-bold text-white leading-none mb-0.5">{user.firstName}</span>}
+                  {userRank && <RankBadge rank={userRank} size="sm" showTitle={false} />}
+                </div>
               </button>
 
               {/* User Dropdown Menu - Desktop */}
@@ -159,7 +174,8 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                   <div>
                     <p className="text-white font-bold text-sm">{user.firstName}</p>
-                    <p className="text-zinc-500 text-xs truncate max-w-[150px]">{user.email}</p>
+                    <p className="text-zinc-500 text-xs truncate max-w-[150px] mb-1">{user.email}</p>
+                    {userRank && <RankBadge rank={userRank} size="sm" />}
                   </div>
                 </div>
               )}
