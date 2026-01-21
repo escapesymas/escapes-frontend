@@ -6,8 +6,10 @@ export interface Product {
   regularPrice: number; // Added: Original price before discount
   sku: string; // Added: Product reference
   image: string;
+  images: { src: string; alt: string }[]; // All product images
   inStock: boolean;
   category: string;
+  categoryId?: number; // For related products query
   permalink?: string;
   attributes: { name: string; options: string[] }[]; // New field for dynamic filters
   description?: string;
