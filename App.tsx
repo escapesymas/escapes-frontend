@@ -466,6 +466,7 @@ function App() {
             product={selectedProduct}
             onBack={() => setCurrentView('catalog')}
             onAddToCart={(qty) => { addToCart(selectedProduct, qty); setCurrentView('cart'); }}
+            onProductClick={(product) => { setSelectedProduct(product); window.scrollTo(0, 0); }}
           />
         )}
 

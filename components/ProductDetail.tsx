@@ -1,22 +1,52 @@
 
-import React, { useState } from 'react';
-import { ArrowLeft, CheckCircle, Truck, ShieldCheck, Minus, Plus, ShoppingCart, Hash, AlertCircle, Share2, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, CheckCircle, Truck, ShieldCheck, Minus, Plus, ShoppingCart, Hash, AlertCircle, Share2, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Product } from '../types';
 import { STORE_CONFIG } from '../storeData';
 import { optimizeImage } from '../utils/imageOptimizer';
+import { fetchProducts } from '../services/woocommerce';
+import { ProductCard } from './ProductCard';
 
 interface ProductDetailProps {
   product: Product;
   onBack: () => void;
   onAddToCart?: (quantity: number) => void;
+  onProductClick?: (product: Product) => void;
 }
 
-export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToCart }) => {
+export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToCart, onProductClick }) => {
   const [quantity, setQuantity] = useState(1);
   const [copied, setCopied] = useState(false);
-  const mainImage = optimizeImage(product.image, { width: 800 });
-  const avifImage = optimizeImage(product.image, { width: 800, format: 'avif' });
-  const webpImage = optimizeImage(product.image, { width: 800, format: 'webp' });
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [loadingRelated, setLoadingRelated] = useState(true);
+
+  // Get all images (use main image as fallback if no images array)
+  const allImages = product.images && product.images.length > 0
+    ? product.images.map(img => img.src)
+    : [product.image];
+
+  const currentImage = allImages[selectedImageIndex] || product.image;
+
+  // Fetch related products
+  useEffect(() => {
+    const loadRelated = async () => {
+      setLoadingRelated(true);
+      try {
+        const { products } = await fetchProducts(undefined, product.categoryId, 1, 5);
+        // Filter out the current product
+        const filtered = products.filter(p => p.id !== product.id).slice(0, 4);
+        setRelatedProducts(filtered);
+      } catch (error) {
+        console.error('Error loading related products:', error);
+      }
+      setLoadingRelated(false);
+    };
+
+    if (product.categoryId) {
+      loadRelated();
+    }
+  }, [product.id, product.categoryId]);
 
   const formatPrice = (amount: number) => {
     return new Intl.NumberFormat('es-ES', {
@@ -31,6 +61,14 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
+  };
+
+  const handlePrevImage = () => {
+    setSelectedImageIndex(prev => (prev === 0 ? allImages.length - 1 : prev - 1));
+  };
+
+  const handleNextImage = () => {
+    setSelectedImageIndex(prev => (prev === allImages.length - 1 ? 0 : prev + 1));
   };
 
   const hasDiscount = product.regularPrice > product.price;
@@ -54,16 +92,69 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          <div className="bg-white rounded-sm overflow-hidden border border-zinc-800 aspect-square group">
-            <picture>
-              <source srcSet={avifImage} type="image/avif" />
-              <source srcSet={webpImage} type="image/webp" />
-              <img
-                src={mainImage}
-                alt={product.title}
-                className="w-full h-full object-contain p-8 group-hover:scale-105 transition-transform duration-500"
-              />
-            </picture>
+          {/* Image Gallery */}
+          <div className="space-y-4">
+            {/* Main Image */}
+            <div className="relative bg-white rounded-sm overflow-hidden border border-zinc-800 aspect-square group">
+              <picture>
+                <source srcSet={optimizeImage(currentImage, { width: 800, format: 'avif' })} type="image/avif" />
+                <source srcSet={optimizeImage(currentImage, { width: 800, format: 'webp' })} type="image/webp" />
+                <img
+                  src={optimizeImage(currentImage, { width: 800 })}
+                  alt={product.title}
+                  className="w-full h-full object-contain p-8 group-hover:scale-105 transition-transform duration-500"
+                />
+              </picture>
+
+              {/* Navigation Arrows */}
+              {allImages.length > 1 && (
+                <>
+                  <button
+                    onClick={handlePrevImage}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white p-2 rounded-full transition-colors"
+                    aria-label="Imagen anterior"
+                  >
+                    <ChevronLeft className="w-6 h-6" />
+                  </button>
+                  <button
+                    onClick={handleNextImage}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white p-2 rounded-full transition-colors"
+                    aria-label="Imagen siguiente"
+                  >
+                    <ChevronRight className="w-6 h-6" />
+                  </button>
+                </>
+              )}
+
+              {/* Image Counter */}
+              {allImages.length > 1 && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-3 py-1 rounded-full">
+                  {selectedImageIndex + 1} / {allImages.length}
+                </div>
+              )}
+            </div>
+
+            {/* Thumbnails */}
+            {allImages.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {allImages.map((img, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedImageIndex(index)}
+                    className={`flex-shrink-0 w-20 h-20 rounded-sm overflow-hidden border-2 transition-all ${selectedImageIndex === index
+                        ? 'border-racing-orange'
+                        : 'border-zinc-700 hover:border-zinc-500'
+                      }`}
+                  >
+                    <img
+                      src={optimizeImage(img, { width: 100 })}
+                      alt={`${product.title} - Imagen ${index + 1}`}
+                      className="w-full h-full object-contain bg-white p-1"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col">
@@ -127,6 +218,37 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
             </div>
           </div>
         </div>
+
+        {/* Related Products Section */}
+        {relatedProducts.length > 0 && (
+          <div className="mt-16">
+            <h2 className="text-2xl font-extrabold text-white uppercase italic mb-8">
+              También te puede interesar
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {relatedProducts.map(relProduct => (
+                <ProductCard
+                  key={relProduct.id}
+                  product={relProduct}
+                  onClick={() => onProductClick?.(relProduct)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {loadingRelated && (
+          <div className="mt-16">
+            <h2 className="text-2xl font-extrabold text-white uppercase italic mb-8">
+              También te puede interesar
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="bg-zinc-900 rounded-sm h-64 animate-pulse" />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
