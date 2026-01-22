@@ -123,10 +123,17 @@ export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick }) => {
           } catch { }
         }
 
-        // Also fetch by popular categories if asking for specific parts
-        const categorySearches: { keyword: string, categoryId?: number }[] = [
-          { keyword: 'pastillas', categoryId: undefined }, // Let WooCommerce search handle it
-        ];
+        // FALLBACK: If we found less than 10 products, also search for generic part types
+        if (allProducts.length < 10) {
+          for (const part of parts) {
+            if (userText.includes(part)) {
+              try {
+                const { products } = await fetchProducts(part, undefined, 1, 50);
+                allProducts.push(...products);
+              } catch { }
+            }
+          }
+        }
 
         // Remove duplicates
         const uniqueProducts = allProducts.filter((p, i, arr) =>
@@ -134,8 +141,8 @@ export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick }) => {
         );
 
         if (uniqueProducts.length > 0) {
-          // Limit to 30 most relevant products for context
-          productContext = uniqueProducts.slice(0, 30).map(p =>
+          // Limit to 40 most relevant products for context
+          productContext = uniqueProducts.slice(0, 40).map(p =>
             `PRODUCTO: ${p.title} | REF: [REF:${p.sku}] | PRECIO: ${p.price}€ | STOCK: ${p.inStock ? 'SÍ' : 'PEDIDO'}`
           ).join('\n');
         }
