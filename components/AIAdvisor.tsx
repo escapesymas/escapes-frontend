@@ -82,14 +82,25 @@ export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick }) => {
         .filter(m => m.id !== 'welcome')
         .map(m => ({ role: m.role, content: m.content }));
 
-      // NEW: Search for relevant products in WooCommerce based on the user's message
-      // This gives the AI real context about what's in stock
+      // IMPROVED SEARCH STRATEGY:
+      // We break down the message into keywords to find broader matches
+      // and let Gemini's "internet knowledge" do the filtering
       let productContext = '';
       try {
-        const { products: searchResults } = await fetchProducts(userMessage.content, undefined, 1, 10);
+        const keywords = userMessage.content
+          .toLowerCase()
+          .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "")
+          .split(' ')
+          .filter(word => word.length > 2);
+
+        // We take the 2 most important words (usually Part Name + Bike Model)
+        const searchQuery = keywords.slice(0, 3).join(' ');
+
+        const { products: searchResults } = await fetchProducts(searchQuery, undefined, 1, 20);
+
         if (searchResults.length > 0) {
           productContext = searchResults.map(p =>
-            `- ${p.title} (SKU: ${p.sku}) | Precio: ${p.price}€ | Stock: ${p.inStock ? 'SÍ' : 'NO'}`
+            `- [${p.sku}] ${p.title} | Precio: ${p.price}€ | Stock: ${p.inStock ? 'SÍ' : 'disponible bajo pedido'}`
           ).join('\n');
         }
       } catch (err) {
