@@ -24,7 +24,7 @@ export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick, onAddToCar
     {
       id: 'welcome',
       role: 'assistant',
-      content: '¡Hola! 👋 Soy el asesor de recambios de Escapes y Más. ¿En qué puedo ayudarte? Cuéntame tu moto (marca, modelo, año) y qué pieza necesitas.'
+      content: '¡Hola! 👋 Soy Uri, tu asesor de recambios. Dime tu moto (marca, modelo, año) y qué pieza necesitas.'
     }
   ]);
   const [inputValue, setInputValue] = useState('');
@@ -238,8 +238,8 @@ export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick, onAddToCar
               <Bot className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-white font-bold text-sm">Asesor de Recambios</h3>
-              <p className="text-zinc-500 text-xs">Escapes y Más • Online</p>
+              <h3 className="text-white font-bold text-sm">Uri</h3>
+              <p className="text-zinc-500 text-xs">Asesor de Recambios • Online</p>
             </div>
           </div>
 
