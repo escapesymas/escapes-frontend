@@ -105,12 +105,7 @@ RECUERDA: Mejor perder una venta que causar un accidente por pieza errónea.`;
                         parts: [{ text: systemPrompt }]
                     },
                     tools: [{
-                        google_search_retrieval: {
-                            dynamic_retrieval_config: {
-                                mode: "MODE_DYNAMIC",
-                                dynamic_threshold: 0.5
-                            }
-                        }
+                        google_search: {}
                     }],
                     generationConfig: {
                         temperature: 0.7,
