@@ -5,11 +5,133 @@
  * Environment Variable Required: GEMINI_API_KEY
  * Set this in Vercel Dashboard: Settings > Environment Variables
  * 
- * @version 2.0.0 - 2026-01-22
+ * @version 3.0.0 - 2026-01-22
  * - Upgraded to Gemini 2.5 Pro
- * - Added Google Search Retrieval for motorcycle compatibility verification
+ * - Added Google Search for motorcycle compatibility verification
+ * - Integrated complete CSV catalog (6571 products) for comprehensive search
  * - Products remain exclusively from store catalog
  */
+
+import fs from 'fs';
+import path from 'path';
+
+/**
+ * Parse CSV and search for products
+ * @param {string} userMessage - The user's search query
+ * @returns {string} - Formatted product context
+ */
+function searchCatalogCSV(userMessage) {
+    try {
+        // Read CSV file from public directory
+        const csvPath = path.join(process.cwd(), 'public', 'catalogo-completo.csv');
+
+        if (!fs.existsSync(csvPath)) {
+            console.error('[CSV] Catalog file not found:', csvPath);
+            return '';
+        }
+
+        const csvContent = fs.readFileSync(csvPath, 'utf-8');
+        const lines = csvContent.split('\n');
+
+        // Skip header
+        const products = [];
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+
+            // Parse CSV row (handling quoted fields)
+            const row = parseCSVRow(line);
+            if (row.length < 10) continue;
+
+            // Extract key fields
+            const sku = row[2] || '';
+            const name = row[4] || '';
+            const description = row[8] || '';
+            const price = row[26] || row[27] || '';
+            const categories = row[28] || '';
+            const brand = row[42] || '';
+
+            products.push({ sku, name, description, price, categories, brand });
+        }
+
+        // Filter products based on user query
+        const query = userMessage.toLowerCase();
+        const brands = ['honda', 'yamaha', 'kawasaki', 'suzuki', 'ducati', 'bmw', 'ktm', 'aprilia', 'triumph', 'vespa', 'piaggio', 'moto guzzi', 'harley', 'royal enfield', 'cf moto', 'kove', 'fantic', 'husqvarna', 'qj motor', 'voge', 'zontes', 'sym'];
+        const parts = ['pastillas', 'freno', 'disco', 'discos', 'escape', 'silencioso', 'silenciador', 'colector', 'catalizador', 'amortiguador', 'kit', 'tapa', 'protector'];
+
+        const mentionedBrand = brands.find(b => query.includes(b));
+        const mentionedParts = parts.filter(p => query.includes(p));
+
+        // Search strategy
+        let filtered = products.filter(p => {
+            const searchText = `${p.name} ${p.description} ${p.categories} ${p.brand}`.toLowerCase();
+
+            // Match brand if mentioned
+            if (mentionedBrand && !searchText.includes(mentionedBrand)) return false;
+
+            // Match at least one part type if mentioned
+            if (mentionedParts.length > 0) {
+                const hasPartMatch = mentionedParts.some(part => searchText.includes(part));
+                if (!hasPartMatch) return false;
+            }
+
+            return true;
+        });
+
+        // If too many results, prioritize by relevance
+        if (filtered.length > 100) {
+            // Score products by relevance
+            filtered = filtered.map(p => {
+                let score = 0;
+                const text = `${p.name} ${p.description}`.toLowerCase();
+
+                if (mentionedBrand && text.includes(mentionedBrand)) score += 10;
+                mentionedParts.forEach(part => {
+                    if (text.includes(part)) score += 5;
+                });
+
+                return { ...p, score };
+            }).sort((a, b) => b.score - a.score).slice(0, 100);
+        }
+
+        // Limit to 50 best matches
+        const limited = filtered.slice(0, 50);
+
+        // Format for Gemini
+        return limited.map(p =>
+            `PRODUCTO: ${p.name} | REF: [REF:${p.sku}] | PRECIO: ${p.price}€ | CATEGORÍA: ${p.categories} | MARCA: ${p.brand}`
+        ).join('\n');
+
+    } catch (error) {
+        console.error('[CSV] Error reading catalog:', error);
+        return '';
+    }
+}
+
+/**
+ * Parse a single CSV row handling quoted fields
+ */
+function parseCSVRow(row) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < row.length; i++) {
+        const char = row[i];
+
+        if (char === '"') {
+            inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+            result.push(current);
+            current = '';
+        } else {
+            current += char;
+        }
+    }
+    result.push(current);
+
+    return result.map(field => field.replace(/^"|"$/g, '').trim());
+}
 
 export default async function handler(req, res) {
     // CORS headers
@@ -36,11 +158,16 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { message, history = [], productContext = '' } = req.body;
+        const { message, history = [] } = req.body;
 
         if (!message) {
             return res.status(400).json({ error: 'Message is required' });
         }
+
+        // Search the complete CSV catalog
+        console.log('[CSV] Searching catalog for:', message);
+        const productContext = searchCatalogCSV(message);
+        console.log('[CSV] Found', productContext.split('\n').length, 'products');
 
         // System prompt for the AI advisor with web search instructions
         const systemPrompt = `Eres URI, el Asesor de Recambios de Escapes y Más. Tu ÚNICA función es ayudar a clientes a encontrar piezas para sus motos.
@@ -75,7 +202,7 @@ Tienes acceso a Google. ÚSALO para:
 3. Si no hay productos, di: "Actualmente no tenemos eso para tu moto. ¿Quieres que te avise cuando llegue?"
 4. SIEMPRE incluye [REF:SKU] para el botón de compra
 
-CATÁLOGO ACTUAL:
+CATÁLOGO ACTUAL (búsqueda en toda la base de datos):
 ${productContext || 'No hay productos que coincidan con tu búsqueda.'}
 
 RECUERDA: Eres Uri, solo hablas de recambios. Cualquier tema fuera de tu función lo rechazas amablemente.`;
