@@ -83,24 +83,19 @@ export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick }) => {
         .map(m => ({ role: m.role, content: m.content }));
 
       // IMPROVED SEARCH STRATEGY:
-      // We break down the message into keywords to find broader matches
-      // and let Gemini's "internet knowledge" do the filtering
       let productContext = '';
       try {
-        const keywords = userMessage.content
+        // Clean search query: "honda pcx 125" instead of "necesito pastillas honda pcx 125 de 2022"
+        const searchQuery = userMessage.content
           .toLowerCase()
-          .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "")
-          .split(' ')
-          .filter(word => word.length > 2);
+          .replace(/necesito|quiero|busco|para|tengo|una|un|de|del/g, "")
+          .trim();
 
-        // We take the 2 most important words (usually Part Name + Bike Model)
-        const searchQuery = keywords.slice(0, 3).join(' ');
-
-        const { products: searchResults } = await fetchProducts(searchQuery, undefined, 1, 20);
+        const { products: searchResults } = await fetchProducts(searchQuery, undefined, 1, 15);
 
         if (searchResults.length > 0) {
           productContext = searchResults.map(p =>
-            `- [${p.sku}] ${p.title} | Precio: ${p.price}€ | Stock: ${p.inStock ? 'SÍ' : 'disponible bajo pedido'}`
+            `PRODUCTO: ${p.title} | USAR_REFERENCIA: [REF:${p.sku}] | STOCK: ${p.inStock ? 'SÍ' : 'BAJO PEDIDO'}`
           ).join('\n');
         }
       } catch (err) {
