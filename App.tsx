@@ -12,6 +12,7 @@ import { Contact } from './components/Contact';
 import { BrandSlider } from './components/BrandSlider';
 import { PromoBanner } from './components/PromoBanner';
 import { FeaturesBanner } from './components/FeaturesBanner';
+import { AIAdvisor } from './components/AIAdvisor';
 import { STORE_CONFIG, FEATURES, BIKE_DATA } from './storeData';
 import { fetchProducts, saveUserCart, getUserCart } from './services/woocommerce';
 import { saveSession, getSession, logoutSession } from './services/auth';
@@ -538,6 +539,15 @@ function App() {
         }
       </main >
       <Footer onNavClick={handleNavClick} />
+
+      {/* AI Parts Advisor - Global Chat Widget */}
+      <AIAdvisor
+        onProductClick={(product) => {
+          setSelectedProduct(product);
+          setCurrentView('product');
+          window.scrollTo(0, 0);
+        }}
+      />
     </div >
   );
 }
