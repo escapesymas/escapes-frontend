@@ -75,9 +75,9 @@ EJEMPLO DE RESPUESTA CON PRODUCTO:
             parts: [{ text: message }]
         });
 
-        // Call Gemini API
+        // Call Gemini API (Using 2.0 Flash Experimental as 2.5 is not yet public)
         const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
             {
                 method: 'POST',
                 headers: {
@@ -92,23 +92,18 @@ EJEMPLO DE RESPUESTA CON PRODUCTO:
                         temperature: 0.7,
                         maxOutputTokens: 1024,
                         topP: 0.9
-                    },
-                    safetySettings: [
-                        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-                        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-                        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-                        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-                    ]
+                    }
                 })
             }
         );
 
         if (!response.ok) {
-            const errorData = await response.text();
-            console.error('[AI ADVISOR] Gemini API error:', errorData);
+            const errorText = await response.text();
+            console.error('[AI ADVISOR] Gemini API error:', errorText);
+
+            // WE EXPOSE THE ERROR TO THE UI FOR DEBUGGING
             return res.status(500).json({
-                error: 'Error al conectar con Gemini.',
-                details: errorData,
+                error: `Error de Google: ${errorText.substring(0, 200)}...`,
                 code: 'GEMINI_ERROR'
             });
         }
