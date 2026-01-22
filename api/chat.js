@@ -93,7 +93,7 @@ RECUERDA: Mejor perder una venta que causar un accidente por pieza errónea.`;
 
         // Call Gemini 2.5 Pro with Google Search Retrieval
         const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-05-06:generateContent?key=${apiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
             {
                 method: 'POST',
                 headers: {
