@@ -82,22 +82,65 @@ export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick }) => {
         .filter(m => m.id !== 'welcome')
         .map(m => ({ role: m.role, content: m.content }));
 
-      // IMPROVED SEARCH STRATEGY:
+      // ENHANCED SEARCH STRATEGY: Multiple searches to find more products
       let productContext = '';
       try {
-        // Clean search query: "honda pcx 125" instead of "necesito pastillas honda pcx 125 de 2022"
-        const searchQuery = userMessage.content
-          .toLowerCase()
-          .replace(/necesito|quiero|busco|para|tengo|una|un|de|del/g, "")
-          .trim();
+        const allProducts: Product[] = [];
+        const searchTerms: string[] = [];
 
-        const { products: searchResults } = await fetchProducts(searchQuery, undefined, 1, 15);
+        // Extract key terms from user message
+        const userText = userMessage.content.toLowerCase();
 
-        if (searchResults.length > 0) {
-          productContext = searchResults.map(p =>
-            `PRODUCTO: ${p.title} | USAR_REFERENCIA: [REF:${p.sku}] | STOCK: ${p.inStock ? 'SÍ' : 'BAJO PEDIDO'}`
+        // Common motorcycle brand/model patterns
+        const brands = ['honda', 'yamaha', 'kawasaki', 'suzuki', 'ducati', 'bmw', 'ktm', 'aprilia', 'triumph'];
+        const parts = ['pastillas', 'freno', 'disco', 'escape', 'silencioso', 'amortiguador', 'filtro', 'aceite'];
+
+        // Add brand searches
+        brands.forEach(brand => {
+          if (userText.includes(brand)) searchTerms.push(brand);
+        });
+
+        // Add parts searches  
+        parts.forEach(part => {
+          if (userText.includes(part)) searchTerms.push(part);
+        });
+
+        // Fallback: extract model names (z900, pcx, mt-09, etc)
+        const modelPattern = /\b([a-z]{1,3}[\s-]?\d{2,4}[a-z]?|[a-z]+\s?\d{3,4})\b/gi;
+        const models = userText.match(modelPattern);
+        if (models) searchTerms.push(...models.map(m => m.replace(/\s/g, '')));
+
+        // If no specific terms, do a general search
+        if (searchTerms.length === 0) {
+          searchTerms.push(userText.split(' ').slice(0, 3).join(' '));
+        }
+
+        // Perform multiple searches  
+        for (const term of [...new Set(searchTerms)].slice(0, 4)) {
+          try {
+            const { products } = await fetchProducts(term, undefined, 1, 25);
+            allProducts.push(...products);
+          } catch { }
+        }
+
+        // Also fetch by popular categories if asking for specific parts
+        const categorySearches: { keyword: string, categoryId?: number }[] = [
+          { keyword: 'pastillas', categoryId: undefined }, // Let WooCommerce search handle it
+        ];
+
+        // Remove duplicates
+        const uniqueProducts = allProducts.filter((p, i, arr) =>
+          arr.findIndex(x => x.id === p.id) === i
+        );
+
+        if (uniqueProducts.length > 0) {
+          // Limit to 30 most relevant products for context
+          productContext = uniqueProducts.slice(0, 30).map(p =>
+            `PRODUCTO: ${p.title} | REF: [REF:${p.sku}] | PRECIO: ${p.price}€ | STOCK: ${p.inStock ? 'SÍ' : 'PEDIDO'}`
           ).join('\n');
         }
+
+        console.log(`[AI] Found ${uniqueProducts.length} products for terms: ${searchTerms.join(', ')}`);
       } catch (err) {
         console.error('[AI] Context search error:', err);
       }
