@@ -120,42 +120,105 @@ export const fetchProducts = async (
 ): Promise<{ products: Product[], totalPages: number }> => {
   if (!isConfigValid()) throw new Error("Configuración inválida");
 
-  let path = `/wc/v3/products?per_page=${perPage}&page=${page}&status=publish&orderby=${orderBy}&order=${order}`;
-
-  if (searchQuery) path += `&search=${encodeURIComponent(searchQuery)}`;
-  if (categoryId) path += `&category=${categoryId}`;
-
   const BROKEN_IMG_URL = "https://backendescapes.com/wp-content/uploads/2026/01/Sprint20Filter20P1420Filtro20de20Aire20Yamaha20T-150202015-.jpg";
 
-  try {
-    const { data, totalPages } = await makeRequest(path);
-    const wooProducts = data as WooProduct[];
+  const mapProduct = (p: WooProduct): Product => {
+    let imageUrl = p.images.length > 0 ? p.images[0].src : '';
+    if (!imageUrl || imageUrl === BROKEN_IMG_URL) {
+      imageUrl = STORE_CONFIG.defaultProductImage;
+    }
+    return {
+      id: p.id,
+      title: p.name,
+      price: parseFloat(p.price || p.regular_price || "0"),
+      regularPrice: parseFloat(p.regular_price || p.price || "0"),
+      sku: p.sku || `REF-${p.id}`,
+      image: imageUrl,
+      images: p.images || [],
+      inStock: p.stock_status === 'instock',
+      category: p.categories.length > 0 ? p.categories[0].name : 'General',
+      categoryId: p.categories.length > 0 ? p.categories[0].id : 0,
+      permalink: p.permalink,
+      attributes: p.attributes.map(attr => ({ name: attr.name, options: attr.options })),
+      description: p.description,
+      shortDescription: p.short_description
+    };
+  };
 
-    const products = wooProducts.map(p => {
-      let imageUrl = p.images.length > 0 ? p.images[0].src : '';
-      if (!imageUrl || imageUrl === BROKEN_IMG_URL) {
-        imageUrl = STORE_CONFIG.defaultProductImage;
+  try {
+    // If no search query, just fetch normally
+    if (!searchQuery) {
+      let path = `/wc/v3/products?per_page=${perPage}&page=${page}&status=publish&orderby=${orderBy}&order=${order}`;
+      if (categoryId) path += `&category=${categoryId}`;
+
+      const { data, totalPages } = await makeRequest(path);
+      return { products: (data as WooProduct[]).map(mapProduct), totalPages };
+    }
+
+    // ENHANCED SEARCH: Search by title, SKU, and filter by description
+    const allProducts: Product[] = [];
+    const seenIds = new Set<number>();
+
+    // 1. Search by title (default WooCommerce search)
+    const titlePath = `/wc/v3/products?per_page=${perPage}&page=${page}&status=publish&orderby=${orderBy}&order=${order}&search=${encodeURIComponent(searchQuery)}${categoryId ? `&category=${categoryId}` : ''}`;
+
+    try {
+      const { data: titleResults, totalPages } = await makeRequest(titlePath);
+      for (const p of (titleResults as WooProduct[])) {
+        if (!seenIds.has(p.id)) {
+          seenIds.add(p.id);
+          allProducts.push(mapProduct(p));
+        }
       }
 
-      return {
-        id: p.id,
-        title: p.name,
-        price: parseFloat(p.price || p.regular_price || "0"),
-        regularPrice: parseFloat(p.regular_price || p.price || "0"),
-        sku: p.sku || `REF-${p.id}`,
-        image: imageUrl,
-        images: p.images || [],
-        inStock: p.stock_status === 'instock',
-        category: p.categories.length > 0 ? p.categories[0].name : 'General',
-        categoryId: p.categories.length > 0 ? p.categories[0].id : 0,
-        permalink: p.permalink,
-        attributes: p.attributes.map(attr => ({ name: attr.name, options: attr.options })),
-        description: p.description,
-        shortDescription: p.short_description
-      };
-    });
+      // If we found enough results, return early
+      if (allProducts.length >= perPage) {
+        return { products: allProducts.slice(0, perPage), totalPages };
+      }
+    } catch { }
 
-    return { products, totalPages };
+    // 2. Search by SKU
+    try {
+      const skuPath = `/wc/v3/products?per_page=${perPage}&status=publish&sku=${encodeURIComponent(searchQuery)}${categoryId ? `&category=${categoryId}` : ''}`;
+      const { data: skuResults } = await makeRequest(skuPath);
+      for (const p of (skuResults as WooProduct[])) {
+        if (!seenIds.has(p.id)) {
+          seenIds.add(p.id);
+          allProducts.push(mapProduct(p));
+        }
+      }
+    } catch { }
+
+    // 3. If still not enough results, fetch more and filter by description
+    if (allProducts.length < perPage) {
+      try {
+        // Fetch a larger set to filter locally
+        const extraPath = `/wc/v3/products?per_page=100&status=publish${categoryId ? `&category=${categoryId}` : ''}`;
+        const { data: extraResults } = await makeRequest(extraPath);
+
+        const searchLower = searchQuery.toLowerCase();
+        for (const p of (extraResults as WooProduct[])) {
+          if (!seenIds.has(p.id)) {
+            // Check if search matches description or short_description
+            const matchesDesc = (p.description || '').toLowerCase().includes(searchLower);
+            const matchesShortDesc = (p.short_description || '').toLowerCase().includes(searchLower);
+
+            if (matchesDesc || matchesShortDesc) {
+              seenIds.add(p.id);
+              allProducts.push(mapProduct(p));
+            }
+          }
+        }
+      } catch { }
+    }
+
+    // Calculate approximate total pages based on results
+    const estimatedTotal = Math.max(1, Math.ceil(allProducts.length / perPage));
+
+    return {
+      products: allProducts.slice(0, perPage),
+      totalPages: estimatedTotal
+    };
   } catch (error) {
     throw error;
   }
