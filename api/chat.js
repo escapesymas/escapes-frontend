@@ -77,7 +77,7 @@ EJEMPLO DE RESPUESTA CON PRODUCTO:
 
         // Call Gemini API
         const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
             {
                 method: 'POST',
                 headers: {
@@ -107,7 +107,8 @@ EJEMPLO DE RESPUESTA CON PRODUCTO:
             const errorData = await response.text();
             console.error('[AI ADVISOR] Gemini API error:', errorData);
             return res.status(500).json({
-                error: 'Error al conectar con el asesor. Inténtalo de nuevo.',
+                error: 'Error al conectar con Gemini.',
+                details: errorData,
                 code: 'GEMINI_ERROR'
             });
         }
