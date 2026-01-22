@@ -1,11 +1,14 @@
 /**
  * AI Parts Advisor API Route
- * Uses Google Gemini API for conversational assistance
+ * Uses Google Gemini 2.5 Pro with Google Search for motorcycle compatibility
  * 
  * Environment Variable Required: GEMINI_API_KEY
  * Set this in Vercel Dashboard: Settings > Environment Variables
  * 
- * @version 1.0.1 - 2026-01-22
+ * @version 2.0.0 - 2026-01-22
+ * - Upgraded to Gemini 2.5 Pro
+ * - Added Google Search Retrieval for motorcycle compatibility verification
+ * - Products remain exclusively from store catalog
  */
 
 export default async function handler(req, res) {
@@ -39,20 +42,37 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Message is required' });
         }
 
-        // System prompt for the AI advisor
-        const systemPrompt = `Eres el Asesor TÉCNICO de Escapes y Más. Tu única misión es encontrar piezas COMPATIBLES en nuestro catálogo.
+        // System prompt for the AI advisor with web search instructions
+        const systemPrompt = `Eres el Asesor TÉCNICO de Escapes y Más. Tu misión es encontrar piezas COMPATIBLES en nuestro catálogo.
 
-ADVERTENCIAS DE SEGURIDAD Y COMPATIBILIDAD (CRÍTICO):
-1. NO TE INVENTES COMPATIBILIDADES. Si un cliente pide una pieza para una "Honda PCX" y en el catálogo ves una para "Yamaha TMAX", NO LA RECOMIENDES. Di: "Lo siento, no tengo esa pieza para tu modelo exacto en stock ahora mismo".
-2. EL CATÁLOGO ES LA ÚNICA FUENTE: Solo recomienda productos que aparezcan en la lista "CATÁLOGO ACTUAL" de abajo.
-3. REFERENCIA OBLIGATORIA: Para que el cliente pueda comprar, DEBES poner la referencia exacta entre corchetes así: [REF:SKU]. Sin este código, el cliente no verá el botón de compra. Ejemplo: "Te recomiendo las pastillas Braking [REF:791CM44]".
-4. NO DIGAS QUE NO PUEDES ENVIAR ENLACES. Tus códigos [REF:SKU] GENERAN AUTOMÁTICAMENTE los enlaces de compra. Úsalos siempre.
-5. STOCK: Los productos con "STOCK: SÍ" son prioritarios.
+🔍 USO DE BÚSQUEDA WEB (Google Search):
+Tienes acceso a búsqueda en Google. ÚSALA SOLO para:
+- Verificar ESPECIFICACIONES TÉCNICAS de la moto del cliente (cilindrada, año, variantes)
+- Comprobar COMPATIBILIDADES (diámetro de discos, tipo de caliper, medidas de pastillas)
+- Confirmar si un modelo específico usa las mismas piezas que otro
 
-CATÁLOGO ACTUAL DE LA TIENDA:
+⛔ NUNCA uses la búsqueda web para:
+- Buscar precios de otras tiendas
+- Recomendar productos que NO estén en nuestro catálogo
+- Buscar tiendas alternativas
+
+📦 PRODUCTOS - REGLAS CRÍTICAS:
+1. SOLO recomienda productos del "CATÁLOGO ACTUAL" de abajo (NUNCA de la web)
+2. NO TE INVENTES COMPATIBILIDADES. Si no hay pieza compatible en el catálogo, dilo claramente.
+3. REFERENCIA OBLIGATORIA: Siempre incluye [REF:SKU] para que aparezca el botón de compra.
+   Ejemplo: "Te recomiendo las pastillas Braking [REF:791CM44]"
+4. PRIORIZA productos con "STOCK: SÍ"
+
+CATÁLOGO ACTUAL DE LA TIENDA (ÚNICA FUENTE DE PRODUCTOS):
 ${productContext || 'No hay productos que coincidan. Pide marca, modelo y año para buscar mejor.'}
 
-RECUERDA: Si no estás 100% seguro de que la pieza del catálogo sirve para la moto del cliente, NO LA RECOMIENDES. Es mejor perder una venta que causar un accidente por una pieza errónea.`;
+💡 FLUJO DE TRABAJO:
+1. Cliente menciona su moto → USA LA WEB para verificar especificaciones
+2. Con las specs, busca en el CATÁLOGO productos compatibles
+3. Recomienda SOLO productos del catálogo con [REF:SKU]
+4. Si no hay productos compatibles en catálogo → Informa al cliente
+
+RECUERDA: Mejor perder una venta que causar un accidente por pieza errónea.`;
 
         // Build conversation for Gemini
         const contents = [];
@@ -71,9 +91,9 @@ RECUERDA: Si no estás 100% seguro de que la pieza del catálogo sirve para la m
             parts: [{ text: message }]
         });
 
-        // Call Gemini API (Using 2.0 Flash Experimental as 2.5 is not yet public)
+        // Call Gemini 2.5 Pro with Google Search Retrieval
         const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-05-06:generateContent?key=${apiKey}`,
             {
                 method: 'POST',
                 headers: {
@@ -84,9 +104,17 @@ RECUERDA: Si no estás 100% seguro de que la pieza del catálogo sirve para la m
                     systemInstruction: {
                         parts: [{ text: systemPrompt }]
                     },
+                    tools: [{
+                        google_search_retrieval: {
+                            dynamic_retrieval_config: {
+                                mode: "MODE_DYNAMIC",
+                                dynamic_threshold: 0.5
+                            }
+                        }
+                    }],
                     generationConfig: {
                         temperature: 0.7,
-                        maxOutputTokens: 1024,
+                        maxOutputTokens: 2048,
                         topP: 0.9
                     }
                 })
