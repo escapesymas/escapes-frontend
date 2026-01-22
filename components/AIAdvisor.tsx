@@ -82,91 +82,12 @@ export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick, onAddToCar
       const history = messages
         .filter(m => m.id !== 'welcome')
         .map(m => ({ role: m.role, content: m.content }));
-
-      // ENHANCED SEARCH STRATEGY: Multiple searches to find more products
-      let productContext = '';
-      try {
-        const allProducts: Product[] = [];
-        const searchTerms: string[] = [];
-
-        // Extract key terms from user message
-        const userText = userMessage.content.toLowerCase();
-
-        // Common motorcycle brand/model patterns
-        const brands = ['honda', 'yamaha', 'kawasaki', 'suzuki', 'ducati', 'bmw', 'ktm', 'aprilia', 'triumph', 'vespa', 'piaggio'];
-        const parts = ['pastillas', 'freno', 'disco', 'discos', 'escape', 'silencioso', 'amortiguador', 'filtro', 'aceite', 'kit', 'piñon', 'corona'];
-
-        // Find which brand and part are mentioned
-        const mentionedBrand = brands.find(b => userText.includes(b));
-        const mentionedParts = parts.filter(p => userText.includes(p));
-
-        // Strategy 1: Search for brand directly (gets Honda products)
-        if (mentionedBrand) {
-          searchTerms.push(mentionedBrand);
-        }
-
-        // Strategy 2: Search for part types (gets all brake discs, etc.)
-        mentionedParts.forEach(part => searchTerms.push(part));
-
-        // Strategy 3: Combined brand + part (e.g., "honda disco")
-        if (mentionedBrand && mentionedParts.length > 0) {
-          searchTerms.push(`${mentionedBrand} ${mentionedParts[0]}`);
-        }
-
-        // Strategy 4: Extract model names (z900, pcx, mt-09, etc)
-        const modelPattern = /\b([a-z]{1,3}[\s-]?\d{2,4}[a-z]?|[a-z]+\s?\d{3,4})\b/gi;
-        const models = userText.match(modelPattern);
-        if (models) searchTerms.push(...models.map(m => m.replace(/\s/g, '')));
-
-        // If no specific terms, do a general search
-        if (searchTerms.length === 0) {
-          searchTerms.push(userText.split(' ').slice(0, 3).join(' '));
-        }
-
-        // Perform multiple searches with MORE products per search
-        for (const term of [...new Set(searchTerms)].slice(0, 5)) {
-          try {
-            const { products } = await fetchProducts(term, undefined, 1, 50); // Increased from 25 to 50
-            allProducts.push(...products);
-          } catch { }
-        }
-
-        // FALLBACK: If we found less than 15 products, fetch more generic products
-        if (allProducts.length < 15 && mentionedParts.length > 0) {
-          for (const part of mentionedParts) {
-            try {
-              const { products } = await fetchProducts(part, undefined, 1, 100); // Increased from 50 to 100
-              allProducts.push(...products);
-            } catch { }
-          }
-        }
-
-        // Remove duplicates
-        const uniqueProducts = allProducts.filter((p, i, arr) =>
-          arr.findIndex(x => x.id === p.id) === i
-        );
-
-        if (uniqueProducts.length > 0) {
-          // Limit to 50 products for context (increased from 40)
-          // Include short description to help AI understand compatibility
-          productContext = uniqueProducts.slice(0, 50).map(p => {
-            const desc = (p.shortDescription || '').replace(/<[^>]*>/g, '').substring(0, 80);
-            return `PRODUCTO: ${p.title} | REF: [REF:${p.sku}] | PRECIO: ${p.price}€ | STOCK: ${p.inStock ? 'SÍ' : 'PEDIDO'}${desc ? ` | INFO: ${desc}` : ''}`;
-          }).join('\n');
-        }
-
-        console.log(`[AI] Found ${uniqueProducts.length} products for terms: ${searchTerms.join(', ')}`);
-      } catch (err) {
-        console.error('[AI] Context search error:', err);
-      }
-
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMessage.content,
-          history: history,
-          productContext: productContext
+          history: history
         })
       });
 
