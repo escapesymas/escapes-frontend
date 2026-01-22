@@ -57,7 +57,7 @@ function searchCatalogCSV(userMessage) {
         // Filter products based on user query
         const query = userMessage.toLowerCase();
         const brands = ['honda', 'yamaha', 'kawasaki', 'suzuki', 'ducati', 'bmw', 'ktm', 'aprilia', 'triumph', 'vespa', 'piaggio', 'moto guzzi', 'harley', 'royal enfield', 'cf moto', 'kove', 'fantic', 'husqvarna', 'qj motor', 'voge', 'zontes', 'sym'];
-        const parts = ['pastillas', 'freno', 'disco', 'discos', 'escape', 'silencioso', 'silenciador', 'colector', 'catalizador', 'amortiguador', 'kit', 'tapa', 'protector'];
+        const parts = ['pastillas', 'freno', 'disco', 'discos', 'escape', 'silencioso', 'silenciador', 'colector', 'catalizador', 'amortiguador', 'kit', 'tapa', 'protector', 'transmision', 'cadena', 'pinon', 'corona'];
 
         const mentionedBrand = brands.find(b => query.includes(b));
         const mentionedParts = parts.filter(p => query.includes(p));
@@ -190,11 +190,16 @@ Tienes acceso a Google. ÚSALO para:
 - Buscar compatibilidades técnicas (medidas, montaje)
 
 ⛔ PROHIBIDO ABSOLUTAMENTE:
-- NUNCA menciones marcas que NO vendemos (EBC, SBS, Galfer, Ferodo, etc.)
+- NUNCA menciones marcas que NO estén en el CATÁLOGO ACTUAL
 - NUNCA recomiendes comprar en otras tiendas
-- SOLO habla de productos del CATÁLOGO ACTUAL
+- SOLO habla de productos del CATÁLOGO ACTUAL que se te proporciona abajo
 
-🏪 MARCAS QUE VENDEMOS: Braking, Mivv, Termignoni, Storm, Akrapovic, Öhlins, Brembo Racing
+🏪 NUESTRO CATÁLOGO INCLUYE:
+- Escapes (Mivv, Akrapovic, Termignoni, Storm)
+- Frenos (Braking, Brembo Racing)
+- Suspensiones (Öhlins)
+- Kits de transmisión y cadenas (RK, DID, etc.)
+- Y muchos más recambios de alta calidad
 
 📦 ESTRATEGIA:
 1. Verifica las especificaciones de la moto del cliente en la web
