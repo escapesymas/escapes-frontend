@@ -82,12 +82,27 @@ export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick }) => {
         .filter(m => m.id !== 'welcome')
         .map(m => ({ role: m.role, content: m.content }));
 
+      // NEW: Search for relevant products in WooCommerce based on the user's message
+      // This gives the AI real context about what's in stock
+      let productContext = '';
+      try {
+        const { products: searchResults } = await fetchProducts(userMessage.content, undefined, 1, 10);
+        if (searchResults.length > 0) {
+          productContext = searchResults.map(p =>
+            `- ${p.title} (SKU: ${p.sku}) | Precio: ${p.price}€ | Stock: ${p.inStock ? 'SÍ' : 'NO'}`
+          ).join('\n');
+        }
+      } catch (err) {
+        console.error('[AI] Context search error:', err);
+      }
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMessage.content,
-          history: history
+          history: history,
+          productContext: productContext
         })
       });
 
@@ -145,8 +160,8 @@ export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick }) => {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 ${isOpen
-            ? 'bg-zinc-800 hover:bg-zinc-700'
-            : 'bg-racing-orange hover:bg-orange-600 animate-pulse'
+          ? 'bg-zinc-800 hover:bg-zinc-700'
+          : 'bg-racing-orange hover:bg-orange-600 animate-pulse'
           }`}
         aria-label="Abrir asesor de recambios"
       >
@@ -186,8 +201,8 @@ export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick }) => {
                       )}
                     </div>
                     <div className={`rounded-lg px-4 py-2 ${message.role === 'user'
-                        ? 'bg-racing-orange text-white'
-                        : 'bg-zinc-800 text-zinc-200'
+                      ? 'bg-racing-orange text-white'
+                      : 'bg-zinc-800 text-zinc-200'
                       }`}>
                       <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                     </div>
