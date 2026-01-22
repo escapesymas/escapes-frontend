@@ -547,6 +547,11 @@ function App() {
           setCurrentView('product');
           window.scrollTo(0, 0);
         }}
+        onAddToCart={(product) => {
+          addToCart(product, 1);
+          // Show brief confirmation
+          alert(`✓ ${product.title} añadido al carrito`);
+        }}
       />
     </div >
   );

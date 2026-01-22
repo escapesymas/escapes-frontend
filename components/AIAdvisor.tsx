@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, X, Send, Loader2, Bot, User, ExternalLink, Package } from 'lucide-react';
+import { MessageSquare, X, Send, Loader2, Bot, User, ExternalLink, Package, ShoppingCart } from 'lucide-react';
 import { Product } from '../types';
 import { fetchProducts } from '../services/woocommerce';
 import { optimizeImage } from '../utils/imageOptimizer';
@@ -15,9 +15,10 @@ interface Message {
 
 interface AIAdvisorProps {
   onProductClick?: (product: Product) => void;
+  onAddToCart?: (product: Product) => void;
 }
 
-export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick }) => {
+export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick, onAddToCart }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -270,17 +271,22 @@ export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick }) => {
                       {message.products.map(product => (
                         <div
                           key={product.id}
-                          className="bg-zinc-800 border border-zinc-700 rounded-lg p-3 hover:border-racing-orange transition-colors cursor-pointer"
-                          onClick={() => onProductClick?.(product)}
+                          className="bg-zinc-800 border border-zinc-700 rounded-lg p-3 hover:border-racing-orange transition-colors"
                         >
                           <div className="flex gap-3">
                             <img
                               src={optimizeImage(product.image, { width: 80 })}
                               alt={product.title}
-                              className="w-16 h-16 object-contain bg-white rounded"
+                              className="w-16 h-16 object-contain bg-white rounded cursor-pointer"
+                              onClick={() => onProductClick?.(product)}
                             />
                             <div className="flex-1 min-w-0">
-                              <p className="text-white text-xs font-bold truncate">{product.title}</p>
+                              <p
+                                className="text-white text-xs font-bold truncate cursor-pointer hover:text-racing-orange"
+                                onClick={() => onProductClick?.(product)}
+                              >
+                                {product.title}
+                              </p>
                               <p className="text-zinc-500 text-[10px] uppercase">REF: {product.sku}</p>
                               <div className="flex items-center justify-between mt-1">
                                 <span className="text-racing-orange font-bold text-sm">{formatPrice(product.price)}</span>
@@ -289,12 +295,22 @@ export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick }) => {
                                     <Package className="w-3 h-3" /> En stock
                                   </span>
                                 ) : (
-                                  <span className="text-red-500 text-[10px]">Sin stock</span>
+                                  <span className="text-yellow-500 text-[10px]">Bajo pedido</span>
                                 )}
                               </div>
                             </div>
-                            <ExternalLink className="w-4 h-4 text-zinc-500 flex-shrink-0" />
                           </div>
+                          {/* Add to Cart Button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onAddToCart?.(product);
+                            }}
+                            className="w-full mt-2 bg-racing-orange hover:bg-orange-600 text-white text-xs font-bold uppercase py-2 px-3 rounded flex items-center justify-center gap-2 transition-colors"
+                          >
+                            <ShoppingCart className="w-4 h-4" />
+                            Añadir al Carrito
+                          </button>
                         </div>
                       ))}
                     </div>
