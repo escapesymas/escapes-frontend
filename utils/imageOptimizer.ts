@@ -30,7 +30,28 @@ export const optimizeImage = (
   options: OptimizeOptions = {}
 ): string => {
   if (!url) return '';
-  return url; // OPTIMIZATION DISABLED BY USER REQUEST
+
+  // Si la imagen ya es local o data URI, no optimizar con servicio externo
+  if (url.startsWith('data:') || url.startsWith('/')) return url;
+
+  // Construir parámetros de wsrv.nl
+  const params = new URLSearchParams();
+  params.append('url', url);
+
+  if (options.width) params.append('w', options.width.toString());
+  if (options.height) params.append('h', options.height.toString());
+  if (options.quality) params.append('q', options.quality.toString());
+  else params.append('q', '80'); // Calidad por defecto
+
+  if (options.format && options.format !== 'auto') {
+    params.append('output', options.format);
+  } else {
+    params.append('output', 'webp'); // WebP por defecto si no se especifica
+  }
+
+  if (options.fit) params.append('fit', options.fit);
+
+  return `https://wsrv.nl/?${params.toString()}`;
 };
 
 /**

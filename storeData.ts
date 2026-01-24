@@ -3,7 +3,7 @@ import { ShieldCheck, Truck, Trophy, CheckCircle2 } from 'lucide-react';
 
 // CONFIGURACIÓN DE CONEXIÓN WOOCOMMERCE
 export const WOO_CONFIG = {
-  baseUrl: "/proxy-wc",
+  baseUrl: "", // Empty because woocommerce.ts adds /wp-json and server proxies on /wp-json
   consumerKey: "ck_1525ca6e68eadc50cd7b69ae408ebb05b93c78e9",
   consumerSecret: "cs_42b5d60e45d4f6e710fa0fa0b35f1ae21964981a"
 };

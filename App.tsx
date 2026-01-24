@@ -1,7 +1,9 @@
 
-import React, { useEffect, useState, Suspense, useRef } from 'react';
-import { ArrowRight, Loader2, AlertCircle, WifiOff, XCircle, RefreshCw, Trash2, Zap, Shield, Trophy, Users, MessageSquare, ChevronLeft } from 'lucide-react';
+import React, { useEffect, useState, Suspense, useRef, useMemo, useCallback } from 'react';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { ArrowRight, Loader2, WifiOff, Trash2, ChevronLeft } from 'lucide-react';
 import { Header } from './components/Header';
+import { SEO } from './components/SEO';
 import { Footer } from './components/Footer';
 import { BikeSelector } from './components/BikeSelector';
 import { ProductCard } from './components/ProductCard';
@@ -12,7 +14,6 @@ import { Contact } from './components/Contact';
 import { BrandSlider } from './components/BrandSlider';
 import { PromoBanner } from './components/PromoBanner';
 import { FeaturesBanner } from './components/FeaturesBanner';
-import { AIAdvisor } from './components/AIAdvisor';
 import { STORE_CONFIG, FEATURES, BIKE_DATA } from './storeData';
 import { fetchProducts, saveUserCart, getUserCart } from './services/woocommerce';
 import { saveSession, getSession, logoutSession } from './services/auth';
@@ -27,19 +28,68 @@ const MyOrders = React.lazy(() => import('./components/MyOrders').then(m => ({ d
 const MyAccount = React.lazy(() => import('./components/MyAccount').then(m => ({ default: m.MyAccount })));
 const Forum = React.lazy(() => import('./components/Forum').then(m => ({ default: m.Forum })));
 const Warranty = React.lazy(() => import('./components/Warranty').then(m => ({ default: m.Warranty })));
+const AIAdvisor = React.lazy(() => import('./components/AIAdvisor').then(m => ({ default: m.AIAdvisor })));
 
 type ViewState = 'home' | 'catalog' | 'product' | 'cart' | 'checkout' | 'login' | 'register' | 'orders' | 'account' | 'categories' | 'forum' | 'contact' | 'warranty';
 
+// Known category slugs for URL matching
+const KNOWN_CATEGORIES = ['escapes', 'frenos', 'accesorios', 'protecciones', 'recambios', 'lubricantes', 'electrónica', 'suspensiones'];
+
+// Helper to parse URL path to view state
+const parsePathToView = (path: string): { view: ViewState; category?: string; productId?: string } => {
+  const cleanPath = path.toLowerCase().replace(/\/$/, ''); // Remove trailing slash
+
+  if (cleanPath === '' || cleanPath === '/') return { view: 'home' };
+  if (cleanPath === '/recambios') return { view: 'catalog' };
+  if (cleanPath === '/carrito') return { view: 'cart' };
+  if (cleanPath === '/checkout') return { view: 'checkout' };
+  if (cleanPath === '/login') return { view: 'login' };
+  if (cleanPath === '/registro') return { view: 'register' };
+  if (cleanPath.startsWith('/mi-cuenta')) return { view: 'account' };
+  if (cleanPath === '/mis-pedidos') return { view: 'orders' };
+  if (cleanPath === '/garantia') return { view: 'warranty' };
+  if (cleanPath === '/contacto') return { view: 'contact' };
+  if (cleanPath.startsWith('/foro')) return { view: 'forum' };
+  if (cleanPath === '/categorias') return { view: 'categories' };
+
+  // Check for category paths like /escapes or /escapes/123
+  const parts = cleanPath.split('/').filter(Boolean);
+  if (parts.length >= 1) {
+    const possibleCategory = parts[0];
+    if (KNOWN_CATEGORIES.includes(possibleCategory)) {
+      if (parts.length === 2) {
+        // /category/productId
+        return { view: 'product', category: possibleCategory, productId: parts[1] };
+      }
+      // /category
+      return { view: 'catalog', category: possibleCategory };
+    }
+  }
+
+  // Fallback - treat unknown paths as catalog
+  return { view: 'home' };
+};
+
 function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Initialize state from URL on first render
+  const initialParsed = parsePathToView(location.pathname);
+
+  // STATE: currentView is the source of truth
+  const [currentView, setCurrentView] = useState<ViewState>(initialParsed.view);
+  const [urlCategory, setUrlCategory] = useState<string | undefined>(initialParsed.category);
+  const [urlProductId, setUrlProductId] = useState<string | undefined>(initialParsed.productId);
+
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Start as false, set to true when fetching
   const [error, setError] = useState<string | null>(null);
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
   const [currentFilter, setCurrentFilter] = useState<string | null>(null);
-  const [currentView, setCurrentView] = useState<ViewState>('home');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [lastView, setLastView] = useState<ViewState>('home');
   const [user, setUser] = useState<User | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
 
@@ -49,166 +99,186 @@ function App() {
   const [sortBy, setSortBy] = useState<'date' | 'price' | 'price-asc'>('date');
   const catalogRef = useRef<HTMLDivElement>(null);
 
-  const [searchParams, setSearchParams] = useState<{ query?: string, categoryId?: number, bike?: BikeSelection | null }>({
-    query: undefined,
-    categoryId: undefined,
-    bike: null
-  });
+  // Parse filters from URL
+  const query = searchParams.get('q') || undefined;
+  const categoryIdParam = searchParams.get('cat');
+  const motoParam = searchParams.get('moto');
 
-  // --- LÓGICA DE DEEP LINKING (URL SYNC) ---
+
+  // Initialize Session
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const viewParam = params.get('view') as ViewState;
-    const idParam = params.get('id');
-    const catParam = params.get('cat');
-    const queryParam = params.get('q');
-    const pageParam = params.get('p');
-
     const initialize = async () => {
-      if (viewParam === 'product' && idParam) {
-        try {
-          const { products: matches } = await fetchProducts(undefined, undefined, 1, 100);
-          const found = matches.find(p => p.id === parseInt(idParam));
-          if (found) {
-            setSelectedProduct(found);
-            setCurrentView('product');
-          }
-        } catch (e) { }
-      } else if (viewParam === 'catalog') {
-        setCurrentView('catalog');
-        if (pageParam) setCurrentPage(parseInt(pageParam));
-        if (catParam) {
-          setSearchParams({ categoryId: parseInt(catParam), bike: null });
-        } else if (queryParam) {
-          setSearchParams({ query: queryParam, bike: null });
-        }
-      } else if (viewParam && ['home', 'cart', 'forum', 'contact', 'warranty', 'categories'].includes(viewParam)) {
-        setCurrentView(viewParam);
-      }
-
-      loadFeaturedProducts();
       const savedUser = getSession();
       if (savedUser) {
         let currentUser = savedUser as unknown as User;
-
-        // AUTO-REPAIR: Si el usuario tiene ID 0, intentamos recuperarlo por email
-        // Esto corrige el problema donde las actualizaciones de perfil fallan en sesiones persistentes
+        // AUTO-REPAIR Logic
         if ((!currentUser.id || currentUser.id === 0) && (currentUser.email || (savedUser as any).user_email)) {
           try {
             const email = currentUser.email || (savedUser as any).user_email;
             const { fetchCustomerByEmail } = await import('./services/woocommerce');
             const freshData = await fetchCustomerByEmail(email);
-
             if (freshData && freshData.id > 0) {
               currentUser = { ...currentUser, ...freshData, token: (savedUser as any).token };
               saveSession(currentUser);
-              console.log('[AUTH] User ID repaired from session:', currentUser.id);
             }
-          } catch (e) {
-            console.error('[AUTH] Failed to repair user ID:', e);
-          }
+          } catch (e) { console.error(e); }
         }
-
         setUser(currentUser);
 
-        // Recuperar carrito guardado del servidor
+        // Recover Cart
         if (currentUser.id && currentUser.id > 0) {
-          const savedCart = await getUserCart(currentUser.id);
-          if (savedCart.length > 0) {
-            // Cargar productos completos del carrito guardado
-            try {
+          try {
+            const savedCart = await getUserCart(currentUser.id);
+            if (savedCart.length > 0) {
               const { products: allProducts } = await fetchProducts(undefined, undefined, 1, 100);
               const restoredCart = savedCart.map(item => {
                 const product = allProducts.find(p => p.id === item.product_id);
-                if (product) {
-                  return { ...product, quantity: item.quantity };
-                }
-                return null;
+                return product ? { ...product, quantity: item.quantity } : null;
               }).filter(Boolean) as CartItem[];
-
-              if (restoredCart.length > 0) {
-                setCart(restoredCart);
-                console.log('[CART] Restored cart from server:', restoredCart.length, 'items');
-              }
-            } catch (e) {
-              console.error('[CART] Failed to restore cart:', e);
+              if (restoredCart.length > 0) setCart(restoredCart);
             }
-          }
+          } catch (e) { console.error(e); }
         }
       }
     };
-
     initialize();
-
-    const handlePopState = () => {
-      try { window.location.reload(); } catch (e) { }
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  // Analytics & Scroll Top on navigation
   useEffect(() => {
-    const params = new URLSearchParams();
-    params.set('view', currentView);
+    window.scrollTo(0, 0);
+    pageview(window.location.pathname + window.location.search);
+  }, [location.pathname, location.search]);
 
-    if (currentView === 'product' && selectedProduct) {
-      params.set('id', selectedProduct.id.toString());
-    } else if (currentView === 'catalog') {
-      if (searchParams.categoryId) params.set('cat', searchParams.categoryId.toString());
-      if (searchParams.query) params.set('q', searchParams.query);
-      if (currentPage > 1) params.set('p', currentPage.toString());
+  // URL -> State Sync (runs on location change)
+  useEffect(() => {
+    const parsed = parsePathToView(location.pathname);
+    setCurrentView(parsed.view);
+    setUrlCategory(parsed.category);
+    setUrlProductId(parsed.productId);
+
+    // If we have a product ID from URL, try to fetch it
+    if (parsed.view === 'product' && parsed.productId && !selectedProduct) {
+      const productId = parseInt(parsed.productId);
+      if (!isNaN(productId)) {
+        fetchProductById(productId);
+      }
     }
+  }, [location.pathname]);
 
-    const newUrl = `${window.location.pathname}?${params.toString()}`;
+  // Fetch product by ID helper
+  const fetchProductById = async (id: number) => {
+    setLoading(true);
     try {
-      window.history.pushState({}, '', newUrl);
+      const { fetchProductsByIds } = await import('./services/woocommerce');
+      const products = await fetchProductsByIds([id]);
+      if (products.length > 0) {
+        setSelectedProduct(products[0]);
+      }
     } catch (e) {
-      console.warn("History API restricted");
+      console.error('Error fetching product by ID', e);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    pageview(newUrl);
-  }, [currentView, selectedProduct, searchParams, currentPage]);
+  // Load Home Featured
+  useEffect(() => {
+    if (currentView === 'home') {
+      loadFeaturedProducts();
+    }
+  }, [currentView]);
+
+  // Initial data load on mount
+  useEffect(() => {
+    const initView = parsePathToView(location.pathname).view;
+    if (initView === 'home') {
+      loadFeaturedProducts();
+    } else if (initView === 'catalog') {
+      handleProductFetch(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount
+
+  // Load Catalog Data
+  useEffect(() => {
+    if (currentView === 'catalog') {
+      if (motoParam) {
+        const [brand, model, year] = motoParam.split('-');
+        setCurrentFilter(`${brand} ${model} ${year}`);
+      } else if (urlCategory) {
+        setCurrentFilter(urlCategory.charAt(0).toUpperCase() + urlCategory.slice(1));
+      } else if (query) {
+        setCurrentFilter(`Búsqueda: "${query}"`);
+      } else {
+        setCurrentFilter(null);
+      }
+
+      handleProductFetch(1);
+    }
+  }, [currentView, urlCategory, query, motoParam, currentPage, perPage, sortBy]);
+
+  // Load Product Detail - handled by URL sync effect above
 
   const loadFeaturedProducts = async () => {
     setLoading(true);
-    setCurrentFilter(null);
-    setError(null);
     try {
       const { products: all } = await fetchProducts(undefined, undefined, 1, 10);
       const curated = all.filter(p => p.image !== STORE_CONFIG.defaultProductImage).slice(0, 4);
       setProducts(curated);
     } catch (e: any) {
       setError("Error de conexión con el catálogo.");
-      setErrorDetail(e.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleProductFetch = async (page: number = 1) => {
+  const handleProductFetch = async (pageToLoad: number = 1) => {
     setLoading(true);
     setError(null);
     try {
-      // Mapear sortBy a orderby/order de WooCommerce
       const orderBy = sortBy === 'date' ? 'date' : 'price';
       const order = sortBy === 'price-asc' ? 'asc' : 'desc';
 
+      let targetCatId = categoryIdParam ? parseInt(categoryIdParam) : undefined;
+
+      // Resolve Category Slug to ID if needed
+      if (!targetCatId && urlCategory) {
+        try {
+          const { fetchCategories } = await import('./services/woocommerce');
+          const allCats = await fetchCategories();
+          const match = allCats.find(c => c.slug === urlCategory.toLowerCase() || c.name.toLowerCase() === urlCategory.toLowerCase());
+          if (match) {
+            targetCatId = match.id;
+            if (currentView === 'catalog') setCurrentFilter(match.name);
+          }
+        } catch (err) {
+          console.error("Error resolving category slug", err);
+        }
+      }
+
       const { products: matches, totalPages: pages } = await fetchProducts(
-        searchParams.query,
-        searchParams.categoryId,
-        page,
+        query,
+        targetCatId,
+        pageToLoad,
         perPage,
         orderBy,
         order
       );
-      setProducts(matches);
-      setTotalPages(pages);
-      setCurrentPage(page);
 
-      // Scroll al inicio del catálogo si estamos navegando páginas
-      if (page > 1 || (currentView === 'catalog' && catalogRef.current)) {
-        catalogRef.current?.scrollIntoView({ behavior: 'smooth' });
+      // Filter by Moto locally if API doesn't support it yet
+      let finalProducts = matches;
+      if (motoParam) {
+        const [brand, model] = motoParam.split('-');
+        finalProducts = matches.filter(p =>
+          p.title.toLowerCase().includes(brand.toLowerCase()) ||
+          p.description?.toLowerCase().includes(brand.toLowerCase())
+        );
       }
+
+      setProducts(finalProducts);
+      setTotalPages(pages);
+      setCurrentPage(pageToLoad);
     } catch (e: any) {
       setError("Error cargando productos");
       setErrorDetail(e.message);
@@ -217,53 +287,35 @@ function App() {
     }
   };
 
+  const handleTextSearch = (q: string) => {
+    setSearchParams({ q });
+    navigate(`/recambios?q=${q}`);
+  };
+
   const handleBikeSearch = (selection: BikeSelection) => {
-    setCurrentView('catalog');
-    setCurrentPage(1);
-    setSearchParams({ query: `${selection.brand} ${selection.model}`, categoryId: undefined, bike: selection });
-    setCurrentFilter(`${selection.brand} ${selection.model} ${selection.year}`);
+    const param = `${selection.brand}-${selection.model}-${selection.year}`;
+    setSearchParams({ moto: param });
+    navigate(`/recambios?moto=${param}`);
   };
 
-  const handleTextSearch = (query: string) => {
-    setCurrentView('catalog');
-    setCurrentPage(1);
-    setSearchParams({ query, categoryId: undefined, bike: null });
-    setCurrentFilter(`Búsqueda: "${query}"`);
+  const handleNavClick = (target: ViewState, cat?: string) => {
+    if (target === 'home') navigate('/');
+    else if (target === 'catalog') navigate(cat ? `/${cat.toLowerCase()}` : '/recambios');
+    else if (target === 'cart') navigate('/carrito');
+    else if (target === 'orders') navigate('/mis-pedidos');
+    else if (target === 'account') navigate('/mi-cuenta');
+    else if (target === 'login') navigate('/login');
+    else if (target === 'forum') navigate('/foro');
+    else if (target === 'contact') navigate('/contacto');
+    else if (target === 'warranty') navigate('/garantia');
+    else if (target === 'categories') navigate('/categorias');
   };
-
-  const handleCategorySelect = (categoryId: number, categoryName: string) => {
-    setCurrentView('catalog');
-    setCurrentPage(1);
-    setSearchParams({ query: undefined, categoryId, bike: null });
-    setCurrentFilter(categoryName);
-  };
-
-  useEffect(() => {
-    if (currentView === 'catalog') {
-      handleProductFetch(1);
-    }
-  }, [searchParams, perPage, sortBy]);
 
   const handleClearFilters = () => {
-    if (currentView === 'home') {
-      loadFeaturedProducts();
-    } else {
-      setCurrentPage(1);
-      setSearchParams({ query: undefined, categoryId: undefined, bike: null });
-      setCurrentFilter(null);
-    }
-  };
-
-  const handleNavClick = (view: ViewState, category?: string) => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    if (view === 'catalog' && category) {
-      handleCategorySelect(0, category);
-    } else {
-      setCurrentView(view);
-      setSelectedProduct(null);
-      if (view === 'home') loadFeaturedProducts();
-      if (view === 'catalog' && !category) handleClearFilters();
-    }
+    setCurrentFilter(null);
+    setSearchParams({});
+    navigate('/recambios');
+    handleProductFetch(1);
   };
 
   const addToCart = (product: Product, quantity: number = 1) => {
@@ -278,13 +330,10 @@ function App() {
     });
   };
 
-  // Sincronizar carrito con el servidor cuando cambia (para usuarios logueados)
+  // Sync Cart with Server
   useEffect(() => {
     if (user && user.id && user.id > 0 && cart.length > 0) {
-      const cartData = cart.map(item => ({
-        product_id: item.id,
-        quantity: item.quantity
-      }));
+      const cartData = cart.map(item => ({ product_id: item.id, quantity: item.quantity }));
       saveUserCart(user.id, cartData);
     }
   }, [cart, user]);
@@ -292,32 +341,18 @@ function App() {
   const renderPagination = () => {
     if (totalPages <= 1 || loading) return null;
 
-    // Genera un rango inteligente de páginas a mostrar
     const getPageRange = () => {
       const delta = 2; // Páginas a mostrar a cada lado de la actual
       const range: (number | string)[] = [];
-
-      // Siempre mostrar primera página
       range.push(1);
-
-      // Calcular inicio y fin del rango central
       const start = Math.max(2, currentPage - delta);
       const end = Math.min(totalPages - 1, currentPage + delta);
-
-      // Agregar elipsis si hay hueco después de la primera página
       if (start > 2) range.push('...');
-
-      // Agregar páginas del rango central
       for (let i = start; i <= end; i++) {
         range.push(i);
       }
-
-      // Agregar elipsis si hay hueco antes de la última página
       if (end < totalPages - 1) range.push('...');
-
-      // Siempre mostrar última página (si hay más de 1)
       if (totalPages > 1) range.push(totalPages);
-
       return range;
     };
 
@@ -413,7 +448,7 @@ function App() {
             <ProductCard
               key={product.id}
               product={product}
-              onClick={(p) => { setSelectedProduct(p); setCurrentView('product'); }}
+              onClick={(p) => { setSelectedProduct(p); navigate(`/${p.category.toLowerCase()}/${p.id}`); }} // Using ID as slug part for now until slug util exists
               onAddToCart={() => addToCart(product, 1)}
             />
           ))}
@@ -423,78 +458,115 @@ function App() {
     );
   };
 
+  // SEO Logic
+  const seoData = useMemo(() => {
+    switch (currentView) {
+      case 'home':
+        return {
+          title: 'Tienda de Escapes y Recambios para Moto',
+          description: 'Encuentra los mejores escapes y accesorios para tu moto. Akrapovic, Mivv, Arrow y más al mejor precio.',
+          canonical: '/'
+        };
+      case 'catalog':
+        const catName = urlCategory ? urlCategory.charAt(0).toUpperCase() + urlCategory.slice(1) : 'Catálogo';
+        const metaDesc = query
+          ? `Resultados de búsqueda para "${query}" en Escapes y Más.`
+          : `Compra ${catName.toLowerCase()} online. Gran variedad de marcas y modelos para tu moto.`;
+        return {
+          title: query ? `Buscar: ${query}` : `${catName} para Moto`,
+          description: metaDesc,
+          canonical: urlCategory ? `/${urlCategory}` : '/recambios'
+        };
+      case 'product':
+        if (selectedProduct) {
+          const cleanDesc = selectedProduct.description?.replace(/<[^>]*>/g, '').substring(0, 160).trim() || `Comprar ${selectedProduct.title}`;
+          return {
+            title: selectedProduct.title,
+            description: cleanDesc,
+            canonical: `/${selectedProduct.category?.toLowerCase() || 'recambios'}/${selectedProduct.id}`,
+            image: selectedProduct.image
+          };
+        }
+        return { title: 'Cargando producto...', canonical: '' };
+      case 'contact':
+        return { title: 'Contacto', description: 'Contacta con nuestro equipo para dudas sobre escapes y recambios.', canonical: '/contacto' };
+      case 'cart':
+        return { title: 'Carrito', canonical: '/carrito' };
+      case 'checkout':
+        return { title: 'Finalizar Compra', canonical: '/checkout' };
+      default:
+        return { title: 'Escapes y Más', canonical: window.location.pathname };
+    }
+  }, [currentView, urlCategory, selectedProduct, query]);
+
   return (
     <div className="min-h-screen flex flex-col bg-black w-full overflow-x-hidden">
+      <SEO {...seoData} />
       <Header
         cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)}
         user={user}
-        onCartClick={() => setCurrentView('cart')}
-        onLogoClick={() => { setCurrentView('home'); setSelectedProduct(null); loadFeaturedProducts(); }}
-        onLoginClick={() => { setLastView(currentView); setCurrentView('login'); }}
-        onLogoutClick={() => { setUser(null); logoutSession(); setCurrentView('home'); }}
-        onOrdersClick={() => setCurrentView('orders')}
-        onAccountClick={() => setCurrentView('account')}
+        onCartClick={() => navigate('/carrito')}
+        onLogoClick={() => navigate('/')}
+        onLoginClick={() => navigate('/login')}
+        onLogoutClick={() => { setUser(null); logoutSession(); navigate('/'); }}
+        onOrdersClick={() => navigate('/mis-pedidos')}
+        onAccountClick={() => navigate('/mi-cuenta')}
         onNavClick={handleNavClick}
       />
 
       <main className="flex-grow w-full">
         <Suspense fallback={<div className="h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 text-racing-orange animate-spin" /></div>}>
-          {currentView === 'login' && <Login onLoginSuccess={(u) => { setUser(u); saveSession(u); setCurrentView(lastView); }} onBack={() => setCurrentView(lastView)} onRegisterClick={() => setCurrentView('register')} />}
-          {currentView === 'register' && <Register onRegisterSuccess={() => setCurrentView('login')} onBack={() => setCurrentView('login')} onGoToLogin={() => setCurrentView('login')} />}
-          {currentView === 'forum' && <Forum user={user} onBack={() => setCurrentView('home')} onLoginRequest={() => setCurrentView('login')} />}
-          {currentView === 'categories' && <CategoryBrowser onSelectCategory={handleCategorySelect} onBack={() => setCurrentView('home')} />}
-          {currentView === 'checkout' && <Checkout cart={cart} user={user} onBack={() => setCurrentView('cart')} onOrderComplete={() => { setCart([]); setCurrentView('home'); }} onLoginSuccess={(u) => { setUser(u); saveSession(u); }} />}
-          {currentView === 'orders' && user && <MyOrders user={user} onBack={() => setCurrentView('home')} />}
-          {currentView === 'account' && user && <MyAccount user={user} onBack={() => setCurrentView('home')} onUpdateUser={setUser} />}
-          {currentView === 'warranty' && <Warranty user={user} onBack={() => setCurrentView('home')} onLoginRequest={() => { setLastView('warranty'); setCurrentView('login'); }} />}
-          {currentView === 'contact' && <Contact onBack={() => setCurrentView('home')} />}
-        </Suspense>
+          {currentView === 'login' && <Login onLoginSuccess={(u) => { setUser(u); saveSession(u); navigate(-1); }} onBack={() => navigate(-1)} onRegisterClick={() => navigate('/registro')} />}
+          {currentView === 'register' && <Register onRegisterSuccess={() => navigate('/login')} onBack={() => navigate('/login')} onGoToLogin={() => navigate('/login')} />}
+          {currentView === 'forum' && <Forum user={user} onBack={() => navigate('/')} onLoginRequest={() => navigate('/login')} />}
+          {currentView === 'categories' && <CategoryBrowser onSelectCategory={(_, name) => navigate(`/${name.toLowerCase()}`)} onBack={() => navigate('/')} />}
+          {currentView === 'checkout' && <Checkout cart={cart} user={user} onBack={() => navigate('/carrito')} onOrderComplete={() => { setCart([]); navigate('/'); }} onLoginSuccess={(u) => { setUser(u); saveSession(u); }} />}
+          {currentView === 'orders' && user && <MyOrders user={user} onBack={() => navigate('/')} />}
+          {currentView === 'account' && user && <MyAccount user={user} onBack={() => navigate('/')} onUpdateUser={setUser} />}
+          {currentView === 'warranty' && <Warranty user={user} onBack={() => navigate('/')} onLoginRequest={() => navigate('/login')} />}
+          {currentView === 'contact' && <Contact onBack={() => navigate('/')} />}
 
-        {currentView === 'cart' && (
-          <Cart
-            items={cart}
-            user={user}
-            onUpdateQuantity={(id, delta) => setCart(p => p.map(i => i.id === id ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i))}
-            onRemove={(id) => setCart(p => p.filter(i => i.id !== id))}
-            onCheckout={() => setCurrentView('checkout')}
-            onContinueShopping={() => setCurrentView('catalog')}
-            onRestoreCart={(items) => setCart(items)}
-          />
-        )}
+          {currentView === 'cart' && (
+            <Cart
+              items={cart}
+              user={user}
+              onUpdateQuantity={(id, delta) => setCart(p => p.map(i => i.id === id ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i))}
+              onRemove={(id) => setCart(p => p.filter(i => i.id !== id))}
+              onCheckout={() => navigate('/checkout')}
+              onContinueShopping={() => navigate('/recambios')}
+              onRestoreCart={(items) => setCart(items)}
+            />
+          )}
 
-        {currentView === 'product' && selectedProduct && (
-          <ProductDetail
-            product={selectedProduct}
-            onBack={() => setCurrentView('catalog')}
-            onAddToCart={(qty) => { addToCart(selectedProduct, qty); setCurrentView('cart'); }}
-            onProductClick={(product) => { setSelectedProduct(product); window.scrollTo(0, 0); }}
-          />
-        )}
+          {currentView === 'product' && selectedProduct && (
+            <ProductDetail
+              product={selectedProduct}
+              onBack={() => navigate(-1)}
+              onAddToCart={(qty) => { addToCart(selectedProduct, qty); navigate('/carrito'); }}
+              onProductClick={(product) => { setSelectedProduct(product); navigate(`/producto/${product.id}`); }}
+            />
+          )}
 
-        {currentView === 'home' && (
-          <>
-            <section className="relative h-[500px] flex items-center justify-center bg-zinc-900 overflow-hidden">
-              <picture className="absolute inset-0 w-full h-full">
-                <source media="(max-width: 640px)" srcSet={`https://wsrv.nl/?url=${encodeURIComponent(STORE_CONFIG.heroImage)}&w=600&h=800&fit=cover&output=webp&q=75`} />
-                <source media="(max-width: 1024px)" srcSet={`https://wsrv.nl/?url=${encodeURIComponent(STORE_CONFIG.heroImage)}&w=1200&output=webp&q=80`} />
-                <img src={`https://wsrv.nl/?url=${encodeURIComponent(STORE_CONFIG.heroImage)}&w=1920&output=webp&q=80`} className="w-full h-full object-cover opacity-40 grayscale" alt="Taller Moto" fetchPriority="high" loading="eager" />
-              </picture>
-              <div className="relative z-10 text-center px-4">
-                <h1 className="text-5xl md:text-7xl font-extrabold text-white uppercase italic mb-4">
-                  {STORE_CONFIG.heroTitle}
-                </h1>
-                <p className="text-racing-orange font-bold uppercase tracking-widest text-xl">{STORE_CONFIG.heroSubtitle}</p>
-              </div>
-            </section>
-            <PromoBanner onForumClick={() => handleNavClick('forum')} />
-            <FeaturesBanner />
-            <BrandSlider />
-          </>
-        )
-        }
+          {currentView === 'home' && (
+            <>
+              <section className="relative h-[500px] flex items-center justify-center bg-zinc-900 overflow-hidden">
+                <picture className="absolute inset-0 w-full h-full">
+                  <source media="(max-width: 640px)" srcSet={optimizeImage(STORE_CONFIG.heroImage, { width: 600, height: 800, fit: 'cover', format: 'webp' })} />
+                  <source media="(max-width: 1024px)" srcSet={optimizeImage(STORE_CONFIG.heroImage, { width: 1200, format: 'webp' })} />
+                  <img src={optimizeImage(STORE_CONFIG.heroImage, { width: 1920 })} className="w-full h-full object-cover opacity-40 grayscale" alt="Taller Moto" fetchPriority="high" />
+                </picture>
+                <div className="relative z-10 text-center px-4">
+                  <h1 className="text-5xl md:text-7xl font-extrabold text-white uppercase italic mb-4">{STORE_CONFIG.heroTitle}</h1>
+                  <p className="text-racing-orange font-bold uppercase tracking-widest text-xl">{STORE_CONFIG.heroSubtitle}</p>
+                </div>
+              </section>
+              <PromoBanner onForumClick={() => navigate('/foro')} />
+              <FeaturesBanner />
+              <BrandSlider />
+            </>
+          )}
 
-        {
-          currentView === 'catalog' && (
+          {currentView === 'catalog' && (
             <div ref={catalogRef}>
               <section className="pt-32 pb-12 bg-zinc-950">
                 <BikeSelector onSearch={handleBikeSearch} onTextSearch={handleTextSearch} isLoading={loading} bikeData={BIKE_DATA} />
@@ -532,28 +604,19 @@ function App() {
                     </div>
                   </div>
                 </div>
+
                 {renderProductGrid()}
               </section>
             </div>
-          )
-        }
-      </main >
+          )}
+        </Suspense>
+      </main>
       <Footer onNavClick={handleNavClick} />
 
-      {/* AI Parts Advisor - Global Chat Widget */}
-      <AIAdvisor
-        onProductClick={(product) => {
-          setSelectedProduct(product);
-          setCurrentView('product');
-          window.scrollTo(0, 0);
-        }}
-        onAddToCart={(product) => {
-          addToCart(product, 1);
-          // Show brief confirmation
-          alert(`✓ ${product.title} añadido al carrito`);
-        }}
-      />
-    </div >
+      <Suspense fallback={null}>
+        <AIAdvisor onProductClick={(p) => { setSelectedProduct(p); navigate(`/producto/${p.id}`); }} onAddToCart={(p) => addToCart(p)} />
+      </Suspense>
+    </div>
   );
 }
 
