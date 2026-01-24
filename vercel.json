@@ -5,8 +5,12 @@
       "destination": "/api/$1"
     },
     {
+      "source": "/wp-json/(.*)",
+      "destination": "/api/proxy?path=$1"
+    },
+    {
       "source": "/proxy-wc/wp-json/(.*)",
-      "destination": "https://backendescapes.com/wp-json/$1"
+      "destination": "/api/proxy?path=$1"
     },
     {
       "source": "/((?!api/|robots\\.txt|sitemap\\.xml|favicon\\.ico).*)",

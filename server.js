@@ -21,6 +21,14 @@ const PROXY_TARGET_URL = 'https://backendescapes.com';
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
+app.use(express.urlencoded({ limit: '100mb', extended: true }));
+
+// DEBUG: Log all incoming requests
+app.use((req, res, next) => {
+  console.log(`[SERVER] Incoming: ${req.method} ${req.url}`);
+  next();
+});
+
 // Servir archivos estáticos del build de React
 app.use(express.static(join(__dirname, 'dist')));
 
@@ -392,6 +400,7 @@ app.post('/api/warranty', async (req, res) => {
 
 // --- RUTA CATCH-ALL PARA SPA ---
 app.get('*', (req, res) => {
+  console.log(`[SERVER] Fallback to index.html for: ${req.url}`);
   res.sendFile(join(__dirname, 'dist', 'index.html'));
 });
 

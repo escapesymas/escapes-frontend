@@ -26,6 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       headers: {
         "Authorization": `Basic ${auth}`,
         "Content-Type": "application/json",
+        "User-Agent": "EscapesApp/1.0"
       },
       body: JSON.stringify({
         email,
@@ -50,7 +51,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Cliente creado exitosamente, ahora hacer login para obtener token JWT
     const loginRes = await fetch(`${PROXY_TARGET_URL}/wp-json/jwt-auth/v1/token`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "EscapesApp/1.0"
+      },
       body: JSON.stringify({ username, password }),
     });
 

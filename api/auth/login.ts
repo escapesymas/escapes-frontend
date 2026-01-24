@@ -19,7 +19,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // 1. Authenticate with JWT
     const wp = await fetch(`${PROXY_TARGET_URL}/wp-json/jwt-auth/v1/token`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "EscapesApp/1.0"
+      },
       body: JSON.stringify({ username, password }),
     });
 
