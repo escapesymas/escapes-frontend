@@ -34,6 +34,7 @@ const addProxyHeaders = (req) => {
   delete headers.origin;
   delete headers.referer;
   delete headers.connection;
+  delete headers.cookie; // IMPORTANTE: Eliminar cookies para evitar que WP redirija al frontend
 
   const auth = Buffer.from(`${WOO_CONSUMER_KEY}:${WOO_CONSUMER_SECRET}`).toString('base64');
 
@@ -111,6 +112,7 @@ app.post('/api/auth/register', async (req, res) => {
       headers: {
         "Authorization": `Basic ${auth}`,
         "Content-Type": "application/json",
+        "User-Agent": "EscapesApp/1.0"
       },
       body: JSON.stringify({
         email,
@@ -172,7 +174,10 @@ app.post('/api/auth/login', async (req, res) => {
   try {
     const wp = await fetch(`${PROXY_TARGET_URL}/wp-json/jwt-auth/v1/token`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "EscapesApp/1.0"
+      },
       body: JSON.stringify({ username, password }),
     });
 
