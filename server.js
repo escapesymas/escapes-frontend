@@ -59,6 +59,15 @@ const handleProxyResponse = async (targetUrl, req, res) => {
       body: ['GET', 'HEAD'].includes(req.method) ? undefined : JSON.stringify(req.body)
     });
 
+    console.log(`[PROXY] <-- ${response.status} ${response.statusText} | Content-Type: ${response.headers.get('content-type')}`);
+
+    if (!response.ok) {
+      // Clone the response to read body without consuming it for the pipe
+      const clone = response.clone();
+      const text = await clone.text();
+      console.log(`[PROXY] Body Snippet: ${text.substring(0, 500)}`);
+    }
+
     response.headers.forEach((value, key) => {
       const lowerKey = key.toLowerCase();
       if (!['content-encoding', 'transfer-encoding', 'connection'].includes(lowerKey)) {

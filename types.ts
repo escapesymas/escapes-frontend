@@ -1,4 +1,3 @@
-
 export interface Product {
   id: number;
   title: string;
@@ -9,6 +8,7 @@ export interface Product {
   images: { src: string; alt: string }[]; // All product images
   inStock: boolean;
   category: string;
+  categorySlug?: string; // Added: URL safe category name
   categoryId?: number; // For related products query
   permalink?: string;
   attributes: { name: string; options: string[] }[]; // New field for dynamic filters
@@ -57,7 +57,7 @@ export interface WooProduct {
   regular_price: string;
   sku: string; // Added
   stock_status: string;
-  categories: { id: number; name: string }[];
+  categories: { id: number; name: string; slug: string }[];
   images: { id: number; src: string; alt: string }[];
   attributes: { id: number; name: string; options: string[] }[];
   permalink: string;
@@ -68,6 +68,7 @@ export interface WooProduct {
 export interface WooCategory {
   id: number;
   name: string;
+  slug: string; // Added for URL matching
   parent: number;
   description: string;
   image: { src: string } | null;
@@ -77,6 +78,7 @@ export interface WooCategory {
 export interface Category {
   id: number;
   name: string;
+  slug: string;
   parent: number;
   description: string;
   image: string;
