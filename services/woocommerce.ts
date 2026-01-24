@@ -3,13 +3,13 @@ import { WOO_CONFIG, STORE_CONFIG } from '../storeData';
 import { Product, WooProduct, OrderPayload, Order, User, WooCategory, Category, UserRank } from '../types';
 
 export const isConfigValid = () => {
-  return WOO_CONFIG.baseUrl && WOO_CONFIG.consumerKey;
+  // baseUrl can be empty string for relative URLs, only check it's defined
+  return WOO_CONFIG.baseUrl !== undefined && WOO_CONFIG.consumerKey;
 };
 
 const getAuthHeaders = () => {
-  const credentials = btoa(`${WOO_CONFIG.consumerKey}:${WOO_CONFIG.consumerSecret}`);
+  // NOTE: Authorization is handled by server.js proxy, not needed here
   return {
-    'Authorization': `Basic ${credentials}`,
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   };
@@ -70,6 +70,7 @@ export const fetchCategories = async (): Promise<Category[]> => {
     return wooCats.map(c => ({
       id: c.id,
       name: c.name,
+      slug: c.slug,
       parent: c.parent,
       description: c.description,
       image: c.image ? c.image.src : '',

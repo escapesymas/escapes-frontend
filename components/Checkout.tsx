@@ -577,15 +577,15 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
             )}
 
             <form id="shipping-form" className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input required name="firstName" placeholder="Nombre" value={formData.firstName} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500" />
-              <input required name="lastName" placeholder="Apellidos" value={formData.lastName} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500" />
-              <input required name="email" type="email" placeholder="Email (Obligatorio)" value={formData.email} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500 md:col-span-2" />
-              <input required name="address" placeholder="Dirección completa" value={formData.address} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500 md:col-span-2" />
+              <input required name="firstName" placeholder="Nombre" autoComplete="given-name" value={formData.firstName} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white text-base rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500" />
+              <input required name="lastName" placeholder="Apellidos" autoComplete="family-name" value={formData.lastName} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white text-base rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500" />
+              <input required name="email" type="email" placeholder="Email (Obligatorio)" autoComplete="email" value={formData.email} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white text-base rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500 md:col-span-2" />
+              <input required name="address" placeholder="Dirección completa" autoComplete="street-address" value={formData.address} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white text-base rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500 md:col-span-2" />
               <div className="grid grid-cols-2 gap-4">
-                <input required name="city" placeholder="Ciudad" value={formData.city} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500" />
-                <input required name="zip" placeholder="Código Postal" value={formData.zip} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500" />
+                <input required name="city" placeholder="Ciudad" autoComplete="address-level2" value={formData.city} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white text-base rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500" />
+                <input required name="zip" placeholder="Código Postal" autoComplete="postal-code" inputMode="numeric" pattern="[0-9]*" value={formData.zip} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white text-base rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500" />
               </div>
-              <input required name="phone" placeholder="Teléfono" value={formData.phone} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500 md:col-span-2" />
+              <input required name="phone" placeholder="Teléfono" autoComplete="tel" inputMode="numeric" pattern="[0-9]*" value={formData.phone} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white text-base rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500 md:col-span-2" />
             </form>
           </section>
 
