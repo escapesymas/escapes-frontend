@@ -22,3 +22,6 @@ node_modules*
 
 # Backups
 escapes-react-backup-*.zip
+
+# Prompts
+prompt_seo_wpo.md

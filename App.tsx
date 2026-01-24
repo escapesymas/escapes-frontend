@@ -448,7 +448,7 @@ function App() {
             <ProductCard
               key={product.id}
               product={product}
-              onClick={(p) => { setSelectedProduct(p); navigate(`/${p.category.toLowerCase()}/${p.id}`); }} // Using ID as slug part for now until slug util exists
+              onClick={(p) => { setSelectedProduct(p); navigate(`/${p.categorySlug || 'recambios'}/${p.id}`); }} // Using ID as slug part for now until slug util exists
               onAddToCart={() => addToCart(product, 1)}
             />
           ))}
@@ -483,7 +483,7 @@ function App() {
           return {
             title: selectedProduct.title,
             description: cleanDesc,
-            canonical: `/${selectedProduct.category?.toLowerCase() || 'recambios'}/${selectedProduct.id}`,
+            canonical: `/${selectedProduct.categorySlug || 'recambios'}/${selectedProduct.id}`,
             image: selectedProduct.image
           };
         }

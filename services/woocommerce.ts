@@ -42,7 +42,9 @@ export const makeRequest = async (path: string, options: RequestInit = {}) => {
 
     const contentType = response.headers.get("content-type");
     if (!contentType || !contentType.includes("application/json")) {
-      throw new Error(`Error del Servidor (${response.status}): Respuesta no JSON.`);
+      const text = await response.text();
+      // Throw error with first 200 chars of body
+      throw new Error(`Error del Servidor (${response.status}): Respuesta no JSON. Body: ${text.substring(0, 200)}`);
     }
 
     // Capturamos el total de páginas de los headers
@@ -97,6 +99,7 @@ export const fetchProductsByIds = async (ids: number[]): Promise<Product[]> => {
       regularPrice: parseFloat(p.regular_price) || parseFloat(p.price) || 0,
       image: p.images?.[0]?.src || '',
       category: p.categories?.[0]?.name || '',
+      categorySlug: p.categories?.[0]?.slug || 'recambios',
       categoryId: p.categories?.[0]?.id || 0,
       description: p.short_description || p.description || '',
       stock: p.stock_quantity ?? (p.stock_status === 'instock' ? 99 : 0),
@@ -138,6 +141,7 @@ export const fetchProducts = async (
       images: p.images || [],
       inStock: p.stock_status === 'instock',
       category: p.categories.length > 0 ? p.categories[0].name : 'General',
+      categorySlug: p.categories.length > 0 ? p.categories[0].slug : 'recambios',
       categoryId: p.categories.length > 0 ? p.categories[0].id : 0,
       permalink: p.permalink,
       attributes: p.attributes.map(attr => ({ name: attr.name, options: attr.options })),
