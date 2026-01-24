@@ -6,13 +6,15 @@ interface SEOProps {
     description?: string;
     canonical?: string;
     image?: string;
+    type?: string;
 }
 
 export const SEO: React.FC<SEOProps> = ({
     title,
     description,
     canonical,
-    image
+    image,
+    type = 'website'
 }) => {
     const siteName = 'Escapes y Más';
     const fullTitle = title.includes(siteName) ? title : `${title} | ${siteName}`;
@@ -29,7 +31,7 @@ export const SEO: React.FC<SEOProps> = ({
             <meta property="og:title" content={fullTitle} />
             {description && <meta property="og:description" content={description} />}
             <meta property="og:site_name" content={siteName} />
-            <meta property="og:type" content="website" />
+            <meta property="og:type" content={type} />
             {fullCanonical && <meta property="og:url" content={fullCanonical} />}
             {image && <meta property="og:image" content={image} />}
 
