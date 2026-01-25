@@ -39,7 +39,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
 
   return (
     <div className="group bg-racing-carbon border border-zinc-800 hover:border-racing-orange/50 transition-all duration-300 rounded-sm overflow-hidden flex flex-col h-full">
-      <Link to={`/${product.categorySlug ? product.categorySlug : 'recambios'}/${product.id}`} className="block relative aspect-square overflow-hidden bg-white">
+      <Link
+        to={`/${product.categorySlug ? product.categorySlug : 'recambios'}/${product.id}`}
+        className="block relative aspect-square overflow-hidden bg-white"
+        onClick={() => onClick?.(product)}
+      >
         {!isDefaultImage && (
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10" />
         )}
@@ -89,7 +93,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
         <span className="text-zinc-500 text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1 truncate">
           {product.category}
         </span>
-        <Link to={`/${product.categorySlug ? product.categorySlug : 'recambios'}/${product.id}`}>
+        <Link
+          to={`/${product.categorySlug ? product.categorySlug : 'recambios'}/${product.id}`}
+          onClick={() => onClick?.(product)}
+        >
           <h3 className="text-white font-bold text-sm md:text-lg leading-tight mb-2 group-hover:text-racing-orange transition-colors line-clamp-2">
             {product.title}
           </h3>
