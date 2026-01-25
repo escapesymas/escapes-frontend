@@ -20,7 +20,7 @@ export const SEO: React.FC<SEOProps> = ({
 }) => {
     const siteName = 'Escapes y Más';
     const fullTitle = title.includes(siteName) ? title : `${title} | ${siteName}`;
-    const baseUrl = 'https://escapesymas.com';
+    const baseUrl = 'https://www.escapesymas.com';
     const fullCanonical = canonical ? `${baseUrl}${canonical}` : undefined;
 
     return (
