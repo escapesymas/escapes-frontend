@@ -632,11 +632,13 @@ function App() {
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
-                      <span className="text-zinc-500 text-xs uppercase">Mostrar:</span>
+                      <label htmlFor="perPage" className="text-zinc-500 text-xs uppercase">Mostrar:</label>
                       <select
+                        id="perPage"
                         value={perPage}
                         onChange={(e) => { setPerPage(Number(e.target.value)); setCurrentPage(1); }}
                         className="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer"
+                        aria-label="Productos por página"
                       >
                         <option value={10}>10</option>
                         <option value={20}>20</option>
@@ -644,11 +646,13 @@ function App() {
                       </select>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-zinc-500 text-xs uppercase">Ordenar:</span>
+                      <label htmlFor="sortBy" className="text-zinc-500 text-xs uppercase">Ordenar:</label>
                       <select
+                        id="sortBy"
                         value={sortBy}
                         onChange={(e) => { setSortBy(e.target.value as 'date' | 'price' | 'price-asc'); setCurrentPage(1); }}
                         className="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer"
+                        aria-label="Ordenar productos"
                       >
                         <option value="date">Relevancia</option>
                         <option value="price">Precio: Mayor a menor</option>
@@ -658,7 +662,9 @@ function App() {
                   </div>
                 </div>
 
-                {renderProductGrid()}
+                <div className="min-h-[500px]">
+                  {renderProductGrid()}
+                </div>
               </section>
             </div>
           )}
