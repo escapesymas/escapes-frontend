@@ -476,9 +476,10 @@ function App() {
     return (
       <>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-          {products.map(product => (
+          {products.map((product, index) => (
             <ProductCard
               key={product.id}
+              priority={index < 4}
               product={product}
               onClick={(p) => { setSelectedProduct(p); navigate(`/${p.categorySlug || 'recambios'}/${p.id}`); }} // Using ID as slug part for now until slug util exists
               onAddToCart={() => addToCart(product, 1)}
@@ -516,7 +517,27 @@ function App() {
             title: selectedProduct.title,
             description: cleanDesc,
             canonical: `/${selectedProduct.categorySlug || 'recambios'}/${selectedProduct.id}`,
-            image: selectedProduct.image
+            image: selectedProduct.image,
+            jsonLd: {
+              "@context": "https://schema.org",
+              "@type": "Product",
+              "name": selectedProduct.title,
+              "image": [selectedProduct.image],
+              "description": cleanDesc,
+              "sku": selectedProduct.sku,
+              "brand": {
+                "@type": "Brand",
+                "name": selectedProduct.title.split(' ')[0] // Simple heuristic
+              },
+              "offers": {
+                "@type": "Offer",
+                "url": `https://escapesymas.com/${selectedProduct.categorySlug || 'recambios'}/${selectedProduct.id}`,
+                "priceCurrency": "EUR",
+                "price": selectedProduct.price,
+                "availability": selectedProduct.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+                "itemCondition": "https://schema.org/NewCondition"
+              }
+            }
           };
         }
         return { title: 'Cargando producto...', canonical: '' };

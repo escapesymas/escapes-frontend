@@ -7,6 +7,7 @@ interface SEOProps {
     canonical?: string;
     image?: string;
     type?: string;
+    jsonLd?: Record<string, any>;
 }
 
 export const SEO: React.FC<SEOProps> = ({
@@ -14,7 +15,8 @@ export const SEO: React.FC<SEOProps> = ({
     description,
     canonical,
     image,
-    type = 'website'
+    type = 'website',
+    jsonLd
 }) => {
     const siteName = 'Escapes y Más';
     const fullTitle = title.includes(siteName) ? title : `${title} | ${siteName}`;
@@ -40,6 +42,13 @@ export const SEO: React.FC<SEOProps> = ({
             <meta name="twitter:title" content={fullTitle} />
             {description && <meta name="twitter:description" content={description} />}
             {image && <meta name="twitter:image" content={image} />}
+
+            {/* Structured Data */}
+            {jsonLd && (
+                <script type="application/ld+json">
+                    {JSON.stringify(jsonLd)}
+                </script>
+            )}
         </Helmet>
     );
 };
