@@ -21,12 +21,24 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(true);
 
+  // Image Fallback State
+  const [imgSrc, setImgSrc] = useState<string>("");
+  const [imageError, setImageError] = useState(false);
+
   // Get all images (use main image as fallback if no images array)
   const allImages = product.images && product.images.length > 0
     ? product.images.map(img => img.src)
     : [product.image];
 
   const currentImage = allImages[selectedImageIndex] || product.image;
+
+  // Reset image state when selection changes or product changes
+  useEffect(() => {
+    // Attempt to use optimized version first
+    const opt = optimizeImage(currentImage, { width: 800 });
+    setImgSrc(opt);
+    setImageError(false);
+  }, [currentImage, product.id]);
 
   // Fetch related products
   useEffect(() => {
@@ -97,10 +109,20 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
             {/* Main Image */}
             <div className="relative bg-white rounded-sm overflow-hidden border border-zinc-800 aspect-square group">
               <picture>
-                <source srcSet={optimizeImage(currentImage, { width: 800, format: 'avif' })} type="image/avif" />
-                <source srcSet={optimizeImage(currentImage, { width: 800, format: 'webp' })} type="image/webp" />
+                {!imageError && (
+                  <>
+                    <source srcSet={optimizeImage(currentImage, { width: 800, format: 'avif' })} type="image/avif" />
+                    <source srcSet={optimizeImage(currentImage, { width: 800, format: 'webp' })} type="image/webp" />
+                  </>
+                )}
                 <img
-                  src={optimizeImage(currentImage, { width: 800 })}
+                  src={imageError ? currentImage : imgSrc}
+                  onError={() => {
+                    if (!imageError) {
+                      setImgSrc(currentImage); // Fallback to original
+                      setImageError(true);
+                    }
+                  }}
                   alt={product.title}
                   className="w-full h-full object-contain p-8 group-hover:scale-105 transition-transform duration-500"
                 />
@@ -142,12 +164,16 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
                     key={index}
                     onClick={() => setSelectedImageIndex(index)}
                     className={`flex-shrink-0 w-20 h-20 rounded-sm overflow-hidden border-2 transition-all ${selectedImageIndex === index
-                        ? 'border-racing-orange'
-                        : 'border-zinc-700 hover:border-zinc-500'
+                      ? 'border-racing-orange'
+                      : 'border-zinc-700 hover:border-zinc-500'
                       }`}
                   >
                     <img
                       src={optimizeImage(img, { width: 100 })}
+                      onError={(e) => {
+                        // Fallback for thumbnails directly to src
+                        e.currentTarget.src = img;
+                      }}
                       alt={`${product.title} - Imagen ${index + 1}`}
                       className="w-full h-full object-contain bg-white p-1"
                     />
