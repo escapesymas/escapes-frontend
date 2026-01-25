@@ -41,7 +41,7 @@ export const optimizeImage = (
   if (options.width) params.append('w', options.width.toString());
   if (options.height) params.append('h', options.height.toString());
   if (options.quality) params.append('q', options.quality.toString());
-  else params.append('q', '80'); // Calidad por defecto
+  else params.append('q', '75'); // Balanced quality/speed
 
   if (options.format && options.format !== 'auto') {
     params.append('output', options.format);
@@ -84,7 +84,6 @@ export const generatePictureElement = (
 
   return `
     <picture>
-      <source srcset="${optimizeImage(url, { width, format: 'avif' })}" type="image/avif">
       <source srcset="${optimizeImage(url, { width, format: 'webp' })}" type="image/webp">
       <img src="${optimizeImage(url, { width })}" alt="${alt}" class="${className || ''}" loading="lazy">
     </picture>

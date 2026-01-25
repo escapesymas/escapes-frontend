@@ -111,8 +111,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
               <picture>
                 {!imageError && (
                   <>
-                    <source srcSet={optimizeImage(currentImage, { width: 800, format: 'avif' })} type="image/avif" />
-                    <source srcSet={optimizeImage(currentImage, { width: 800, format: 'webp' })} type="image/webp" />
+                    <source srcSet={optimizeImage(currentImage, { width: 800, format: 'webp', quality: 80 })} type="image/webp" />
                   </>
                 )}
                 <img
@@ -124,6 +123,9 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
                     }
                   }}
                   alt={product.title}
+                  loading="eager"
+                  // @ts-ignore
+                  fetchPriority="high"
                   className="w-full h-full object-contain p-8 group-hover:scale-105 transition-transform duration-500"
                 />
               </picture>
