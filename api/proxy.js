@@ -38,9 +38,12 @@ export default async function handler(req, res) {
             body: ['GET', 'HEAD'].includes(req.method) ? undefined : JSON.stringify(req.body)
         });
 
-        // Copy response headers
+        // Copy response headers, but strip encoding/length ones as we are sending a new buffer
         response.headers.forEach((value, key) => {
-            res.setHeader(key, value);
+            const lowerKey = key.toLowerCase();
+            if (!['content-encoding', 'content-length', 'transfer-encoding', 'connection'].includes(lowerKey)) {
+                res.setHeader(key, value);
+            }
         });
 
         const buffer = await response.arrayBuffer();
