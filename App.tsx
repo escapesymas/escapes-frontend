@@ -204,14 +204,14 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run once on mount
 
-  // Load Catalog Data
+  // 1. Refetch when FILTERS change (Reset to Page 1)
   useEffect(() => {
     if (currentView === 'catalog') {
       if (motoParam) {
         const [brand, model, year] = motoParam.split('-');
         setCurrentFilter(`${brand} ${model} ${year}`);
       } else if (urlCategory) {
-        // Decode URL to display proper text (e.g. "Portamatrículas" instead of "Portamatr%C3%ADculas")
+        // Decode URL to display proper text
         const decoded = decodeURIComponent(urlCategory);
         setCurrentFilter(decoded.charAt(0).toUpperCase() + decoded.slice(1));
       } else if (query) {
@@ -220,9 +220,22 @@ function App() {
         setCurrentFilter(null);
       }
 
+      // ONLY reset to page 1 if the filters actually changed (handled by dependency array)
+      setCurrentPage(1);
       handleProductFetch(1);
     }
-  }, [currentView, urlCategory, query, motoParam, currentPage, perPage, sortBy]);
+  }, [currentView, urlCategory, query, motoParam, perPage, sortBy]); // Removed currentPage from deps
+
+  // 2. Refetch when PAGE changes (Do not reset page)
+  useEffect(() => {
+    if (currentView === 'catalog') {
+      // Avoid fetching if page is 1 (handled by filter effect above) 
+      // UNLESS we are strictly paging. 
+      // Actually, simplest is to just fetch. Use a ref to prevent double-fetch if needed, or rely on request de-duping/state.
+      // But we removed currentPage from the above effect, so this isolates the page change.
+      handleProductFetch(currentPage);
+    }
+  }, [currentPage]);
 
   // Load Product Detail - handled by URL sync effect above
 

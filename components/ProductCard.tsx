@@ -27,9 +27,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
   const isDefaultImage = product.image === STORE_CONFIG.defaultProductImage;
 
   // Use optimized image initially, but allow fallback
-  const displayImage = optimizeImage(product.image, { width: 400, height: 400, fit: 'cover' });
-  const avifImage = optimizeImage(product.image, { width: 400, height: 400, format: 'avif', fit: 'cover' });
-  const webpImage = optimizeImage(product.image, { width: 400, height: 400, format: 'webp', fit: 'cover' });
+  // SKIP optimization for default placeholder to avoid CORS/404 issues on external services
+  const displayImage = isDefaultImage ? product.image : optimizeImage(product.image, { width: 400, height: 400, fit: 'cover' });
+  const avifImage = isDefaultImage ? '' : optimizeImage(product.image, { width: 400, height: 400, format: 'avif', fit: 'cover' });
+  const webpImage = isDefaultImage ? '' : optimizeImage(product.image, { width: 400, height: 400, format: 'webp', fit: 'cover' });
 
   // Reset state when product changes
   React.useEffect(() => {
