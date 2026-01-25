@@ -11,8 +11,11 @@ const WOO_CONSUMER_KEY = process.env.WOO_CONSUMER_KEY || 'ck_1525ca6e68eadc50cd7
 const WOO_CONSUMER_SECRET = process.env.WOO_CONSUMER_SECRET || 'cs_42b5d60e45d4f6e710fa0fa0b35f1ae21964981a';
 const PROXY_TARGET_URL = 'https://backendescapes.com';
 
-// Configure Multer to use /tmp (required for Vercel/Lambda)
-const upload = multer({ dest: '/tmp' });
+// Configure Multer to use Memory Storage (Avoids disk write permission issues in Vercel)
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
 
 // IMPORTANT: Disable Vercel's default body parser so Multer can handle the stream
 export const config = {
@@ -28,33 +31,42 @@ export default async function handler(req, res) {
     }
 
     try {
+        console.log('[UPLOAD API] Incio de request...');
+
         // 1. Run Multer Middleware
         await new Promise((resolve, reject) => {
             upload.single('avatar')(req, res, (err) => {
-                if (err) reject(err);
+                if (err) {
+                    console.error('[UPLOAD API] Multer error:', err);
+                    reject(err);
+                }
                 else resolve();
             });
         });
 
-        // 2. Validate File
+        console.log('[UPLOAD API] Multer procesado.');
+
+        // 2. Validate File & User
         if (!req.file) {
+            console.error('[UPLOAD API] No file received');
             return res.status(400).json({ success: false, message: 'No se ha subido ningún archivo' });
         }
 
         const { userId } = req.body || {};
-        const filePath = req.file.path;
-        console.log(`[UPLOAD API] Recibido archivo para userId: ${userId}, path: ${filePath}`);
-
         if (!userId) {
+            console.error('[UPLOAD API] No userId received');
             return res.status(400).json({ success: false, message: 'userId no proporcionado' });
         }
 
-        // 3. Prepare FormData for WordPress
-        // USE BUFFER instead of Stream for max compatibility with native fetch + form-data in all envs
-        const fileBuffer = fs.readFileSync(filePath);
+        console.log(`[UPLOAD API] Procesando archivo: ${req.file.originalname} (${req.file.mimetype}) para User: ${userId}`);
 
+        // 3. Prepare FormData for WordPress
+        // Using Buffer from memory storage
         const form = new FormData();
-        form.append('file', fileBuffer, req.file.originalname);
+        form.append('file', req.file.buffer, {
+            filename: req.file.originalname,
+            contentType: req.file.mimetype,
+        });
         form.append('title', `Avatar User ${userId}`);
         form.append('caption', 'Avatar subido desde el frontend');
 
@@ -62,6 +74,7 @@ export default async function handler(req, res) {
         const auth = Buffer.from(`${WOO_CONSUMER_KEY}:${WOO_CONSUMER_SECRET}`).toString('base64');
 
         // 5. POST to WordPress Media Library
+        console.log('[UPLOAD API] Enviando a WordPress...');
         const wpRes = await fetch(`${PROXY_TARGET_URL}/wp-json/wp/v2/media`, {
             method: 'POST',
             headers: {
@@ -71,15 +84,11 @@ export default async function handler(req, res) {
             body: form
         });
 
-        // Clean up temp file immediately
-        if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-        }
-
         if (!wpRes.ok) {
             const errText = await wpRes.text();
-            console.error('[UPLOAD API] Error WP:', errText);
-            return res.status(wpRes.status).json({ success: false, message: `Error WP: ${wpRes.statusText}`, details: errText });
+            console.error(`[UPLOAD API] Error WP (${wpRes.status}):`, errText);
+            // Return 200 with success: false to handle gracefully in frontend
+            return res.status(200).json({ success: false, message: `Error WP: ${wpRes.status}`, details: errText });
         }
 
         const mediaData = await wpRes.json();
@@ -89,7 +98,7 @@ export default async function handler(req, res) {
         console.log('[UPLOAD API] Imagen subida a WP ID:', mediaId);
 
         // 6. Update WooCommerce Customer Metadata
-        const updateRes = await fetch(`${PROXY_TARGET_URL}/wp-json/wc/v3/customers/${userId}`, {
+        await fetch(`${PROXY_TARGET_URL}/wp-json/wc/v3/customers/${userId}`, {
             method: 'PUT',
             headers: {
                 'Authorization': `Basic ${auth}`,
@@ -103,15 +112,16 @@ export default async function handler(req, res) {
             })
         });
 
-        if (!updateRes.ok) {
-            console.warn('[UPLOAD API] Usuario no actualizado, pero imagen subida.');
-        }
-
         // Success response
         return res.status(200).json({ success: true, url: avatarUrl, id: mediaId });
 
     } catch (error) {
-        console.error('[UPLOAD API] Error crítico:', error);
-        return res.status(500).json({ success: false, message: error.message || 'Error interno del servidor' });
+        console.error('[UPLOAD API] CRITICAL ERROR:', error);
+        // Ensure JSON response even on crash
+        return res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor de subidas',
+            error: error.message
+        });
     }
 }
