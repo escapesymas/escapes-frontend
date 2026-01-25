@@ -508,7 +508,8 @@ function App() {
         return {
           title: query ? `Buscar: ${query}` : `${catName} para Moto`,
           description: metaDesc,
-          canonical: urlCategory ? `/${urlCategory}` : '/recambios'
+          // Explicitly set /recambios for root catalog to disambiguate from home
+          canonical: (!urlCategory || urlCategory === 'recambios') ? '/recambios' : `/${urlCategory}`
         };
       case 'product':
         if (selectedProduct) {
