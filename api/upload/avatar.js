@@ -41,14 +41,20 @@ export default async function handler(req, res) {
             return res.status(400).json({ success: false, message: 'No se ha subido ningún archivo' });
         }
 
-        const { userId } = req.body;
+        const { userId } = req.body || {};
         const filePath = req.file.path;
         console.log(`[UPLOAD API] Recibido archivo para userId: ${userId}, path: ${filePath}`);
 
+        if (!userId) {
+            return res.status(400).json({ success: false, message: 'userId no proporcionado' });
+        }
+
         // 3. Prepare FormData for WordPress
-        const fileStream = fs.createReadStream(filePath);
+        // USE BUFFER instead of Stream for max compatibility with native fetch + form-data in all envs
+        const fileBuffer = fs.readFileSync(filePath);
+
         const form = new FormData();
-        form.append('file', fileStream, req.file.originalname);
+        form.append('file', fileBuffer, req.file.originalname);
         form.append('title', `Avatar User ${userId}`);
         form.append('caption', 'Avatar subido desde el frontend');
 
