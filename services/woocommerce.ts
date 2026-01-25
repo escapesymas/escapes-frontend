@@ -579,8 +579,8 @@ export const uploadFile = async (file: File): Promise<{ id: number; url: string 
 export const uploadCustomerPhoto = async (userId: number, file: File, token?: string): Promise<{ success: boolean; url?: string; error?: string }> => {
   try {
     const formData = new FormData();
+    formData.append('userId', userId.toString()); // Metadatos PRIMERO
     formData.append('avatar', file);
-    formData.append('userId', userId.toString());
 
     // Usar nuestro endpoint local en server.js (o Vercel function)
     const response = await fetch(`/api/upload/avatar`, {
