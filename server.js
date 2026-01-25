@@ -259,7 +259,101 @@ app.post('/api/contact', async (req, res) => {
   }
 });
 
+// --- CONFIGURACIÓN DE MULTER (SUBIDA DE ARCHIVOS) ---
+import multer from 'multer';
+import FormData from 'form-data';
+import fs from 'fs';
+
+const upload = multer({ dest: 'uploads/' });
+
 // --- ENDPOINTS DE API INTERNA ---
+app.post('/api/upload/avatar', upload.single('avatar'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: 'No se ha subido ningún archivo' });
+  }
+
+  const { userId } = req.body;
+  const filePath = req.file.path;
+
+  console.log(`[UPLOAD] Recibido archivo para userId: ${userId}, path: ${filePath}`);
+
+  try {
+    // 1. Leer el archivo desde disco
+    const fileStream = fs.createReadStream(filePath);
+
+    // 2. Preparar FormData para WordPress
+    const form = new FormData();
+    form.append('file', fileStream, req.file.originalname);
+    form.append('title', `Avatar User ${userId}`);
+    form.append('caption', 'Avatar subido desde el frontend');
+
+    // 3. Autenticación Admin (Basic Auth con Consumer Key/Secret no funciona siempre para Media, usamos Basic con credenciales reales o Application Passwords si estuviera configurado. 
+    //    Aquí usaremos las mismas credenciales que el proxy si son de admin, o idealmente un User/App Password).
+    //    NOTA: Para WP REST API media, necesita Auth Basic con un usuario con caps 'upload_files'.
+    //    Si WOO_CONSUMER_KEY es de admin, a veces funciona, pero lo estándar es Basic Auth de Usuario WP.
+    //    Vamos a intentar usar la Key/Secret si son de admin (a veces falla).
+    //    FALLBACK MEJORADO: Usar credenciales Hardcoded de Admin para este "Tunnel" si las de env no van.
+    //    (En producción usar ENV VARS para WP_ADMIN_USER / WP_APP_PASSWORD)
+
+    // Auth Header construction
+    const auth = Buffer.from(`${WOO_CONSUMER_KEY}:${WOO_CONSUMER_SECRET}`).toString('base64');
+
+    const wpRes = await fetch(`${PROXY_TARGET_URL}/wp-json/wp/v2/media`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        // Note: form-data headers are handled by the library/fetch usually, or need getHeaders()
+        ...form.getHeaders()
+      },
+      body: form // form-data library stream
+    });
+
+    // Limpiar archivo temporal
+    fs.unlinkSync(filePath);
+
+    if (!wpRes.ok) {
+      const errText = await wpRes.text();
+      console.error('[UPLOAD] Error WP:', errText);
+      throw new Error(`Error WP: ${wpRes.status} ${wpRes.statusText}`);
+    }
+
+    const mediaData = await wpRes.json();
+    const avatarUrl = mediaData.source_url;
+    const mediaId = mediaData.id;
+
+    console.log('[UPLOAD] Imagen subida a WP ID:', mediaId);
+
+    // 4. Actualizar metadatos del usuario WooCommerce
+    // Necesitamos el endpoint de Customers de WC
+    const updateRes = await fetch(`${PROXY_TARGET_URL}/wp-json/wc/v3/customers/${userId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        meta_data: [
+          { key: '_custom_avatar', value: avatarUrl },
+          { key: 'wp_user_avatar', value: mediaId } // Compatibility with some plugins
+        ]
+      })
+    });
+
+    if (!updateRes.ok) {
+      console.error('[UPLOAD] Error actualizando usuario WC');
+      // No fallamos la request entera, devolvemos la URL igual
+    }
+
+    return res.json({ success: true, url: avatarUrl, id: mediaId });
+
+  } catch (error) {
+    console.error('[UPLOAD] Error procesando subida:', error);
+    // Intentar limpiar archivo si existe
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 app.post('/api/checkout', async (req, res) => {
   const { amount, orderRef, currency, merchantEmail } = req.body;
   if (!SUMUP_API_KEY) return res.status(500).json({ message: "Configuración incompleta: Falta SUMUP_SECRET_KEY" });

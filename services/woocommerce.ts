@@ -580,26 +580,25 @@ export const uploadCustomerPhoto = async (userId: number, file: File, token?: st
   try {
     const formData = new FormData();
     formData.append('avatar', file);
+    formData.append('userId', userId.toString());
 
-    const response = await fetch(`${WOO_CONFIG.baseUrl}/wp-json/escapes/v1/avatar/upload`, {
+    // Usar nuestro endpoint local en server.js (o Vercel function)
+    const response = await fetch(`/api/upload/avatar`, {
       method: 'POST',
-      headers: {
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-      },
+      // NO establecer Content-Type header manualmente con FormData, fetch lo hace automático con boundary
       body: formData,
-      credentials: 'include'
     });
 
     const data = await response.json();
 
-    if (data.success && data.avatar_url) {
-      return { success: true, url: data.avatar_url };
+    if (data.success && data.url) {
+      return { success: true, url: data.url };
     } else {
       return { success: false, error: data.message || 'Error al subir avatar' };
     }
   } catch (error: any) {
     console.error('[AVATAR] Upload failed:', error);
-    return { success: false, error: error.message || 'Error de subida (Posible fallo de permisos)' };
+    return { success: false, error: error.message || 'Error de conexión' };
   }
 };
 

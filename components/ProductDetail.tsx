@@ -108,27 +108,32 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
           <div className="space-y-4">
             {/* Main Image */}
             <div className="relative bg-white rounded-sm overflow-hidden border border-zinc-800 aspect-square group">
-              <picture>
-                {!imageError && (
-                  <>
-                    <source srcSet={optimizeImage(currentImage, { width: 800, format: 'webp', quality: 80 })} type="image/webp" />
-                  </>
-                )}
+              {/* Advanced Responsive Image */}
+              {!imageError ? (
                 <img
-                  src={imageError ? currentImage : imgSrc}
-                  onError={() => {
-                    if (!imageError) {
-                      setImgSrc(currentImage); // Fallback to original
-                      setImageError(true);
-                    }
-                  }}
+                  src={optimizeImage(currentImage, { width: 800 })} // Fallback src
+                  srcSet={`
+                      ${optimizeImage(currentImage, { width: 400, format: 'webp' })} 400w,
+                      ${optimizeImage(currentImage, { width: 800, format: 'webp' })} 800w,
+                      ${optimizeImage(currentImage, { width: 1200, format: 'webp' })} 1200w
+                    `}
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 800px"
                   alt={product.title}
                   loading="eager"
                   // @ts-ignore
                   fetchPriority="high"
+                  width="800"
+                  height="800"
                   className="w-full h-full object-contain p-8 group-hover:scale-105 transition-transform duration-500"
+                  onError={() => setImageError(true)}
                 />
-              </picture>
+              ) : (
+                <img
+                  src={currentImage} // Original URL fallback
+                  alt={product.title}
+                  className="w-full h-full object-contain p-8"
+                />
+              )}
 
               {/* Navigation Arrows */}
               {allImages.length > 1 && (
