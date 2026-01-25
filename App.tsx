@@ -52,21 +52,22 @@ const parsePathToView = (path: string): { view: ViewState; category?: string; pr
   if (cleanPath.startsWith('/foro')) return { view: 'forum' };
   if (cleanPath === '/categorias') return { view: 'categories' };
 
-  // Check for category paths like /escapes or /escapes/123
+  // Check for generic Product URL pattern: /category/123 or /category/123-slug
   const parts = cleanPath.split('/').filter(Boolean);
+
   if (parts.length >= 1) {
-    const possibleCategory = parts[0];
-    if (KNOWN_CATEGORIES.includes(possibleCategory)) {
-      if (parts.length === 2) {
-        // /category/productId
-        return { view: 'product', category: possibleCategory, productId: parts[1] };
-      }
-      // /category
-      return { view: 'catalog', category: possibleCategory };
+    // If second part exists and starts with a number, assume it's a product
+    if (parts.length >= 2 && /^\d+/.test(parts[1])) {
+      return { view: 'product', category: parts[0], productId: parts[1] };
     }
+
+    // Otherwise, treat first part as category (e.g. /coronas, /escapes)
+    // We implicitly trust that any single path segment might be a valid category
+    // This allows WooCommerce categories like 'coronas' to work without hardcoding
+    return { view: 'catalog', category: parts[0] };
   }
 
-  // Fallback - treat unknown paths as catalog
+  // Fallback
   return { view: 'home' };
 };
 

@@ -13,6 +13,9 @@ interface ProductCardProps {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAddToCart }) => {
+  const [imgSrc, setImgSrc] = React.useState<string>("");
+  const [imageError, setImageError] = React.useState(false);
+
   const formatPrice = (amount: number) => {
     return new Intl.NumberFormat('es-ES', {
       style: 'currency',
@@ -23,9 +26,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
   const hasDiscount = product.regularPrice > product.price;
   const isDefaultImage = product.image === STORE_CONFIG.defaultProductImage;
 
+  // Use optimized image initially, but allow fallback
   const displayImage = optimizeImage(product.image, { width: 400, height: 400, fit: 'cover' });
   const avifImage = optimizeImage(product.image, { width: 400, height: 400, format: 'avif', fit: 'cover' });
   const webpImage = optimizeImage(product.image, { width: 400, height: 400, format: 'webp', fit: 'cover' });
+
+  // Reset state when product changes
+  React.useEffect(() => {
+    setImgSrc(displayImage);
+    setImageError(false);
+  }, [product.image]);
 
   return (
     <div className="group bg-racing-carbon border border-zinc-800 hover:border-racing-orange/50 transition-all duration-300 rounded-sm overflow-hidden flex flex-col h-full">
@@ -35,10 +45,20 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
         )}
 
         <picture>
-          <source srcSet={avifImage} type="image/avif" />
-          <source srcSet={webpImage} type="image/webp" />
+          {!imageError && (
+            <>
+              <source srcSet={avifImage} type="image/avif" />
+              <source srcSet={webpImage} type="image/webp" />
+            </>
+          )}
           <img
-            src={displayImage}
+            src={imageError ? product.image : imgSrc}
+            onError={() => {
+              if (!imageError) {
+                setImgSrc(product.image); // Fallback to original
+                setImageError(true); // Stop using picture sources
+              }
+            }}
             alt={product.title}
             loading="lazy"
             width="400"
