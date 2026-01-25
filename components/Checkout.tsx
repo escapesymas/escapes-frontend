@@ -87,6 +87,7 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
 
   // Rank Discount State
   const [userRank, setUserRank] = useState<{ discount: number, title: string } | null>(null);
+  const [isRankLoading, setIsRankLoading] = useState(true);
 
   useEffect(() => {
     if (props.user && props.user.id) {
@@ -95,8 +96,11 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
           if (rank && rank.discount > 0) {
             setUserRank({ discount: rank.discount, title: rank.title });
           }
+          setIsRankLoading(false);
         });
       });
+    } else {
+      setIsRankLoading(false);
     }
   }, [props.user]);
 
@@ -110,12 +114,13 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
 
   // Initialize SumUp and create pending order when user is logged in
   useEffect(() => {
-    if (props.user && !sumupCheckoutId) {
+    // WAIT for rank to be loaded to ensure TOTAL is correct before initializing SumUp
+    if (props.user && !sumupCheckoutId && !isRankLoading) {
       loadSumUpScriptAndInit();
       // Crear pedido pendiente para tracking de abandonos
       createPendingOrder();
     }
-  }, [props.user]);
+  }, [props.user, isRankLoading]);
 
   // Crear pedido pendiente en WooCommerce
   const createPendingOrder = async () => {
