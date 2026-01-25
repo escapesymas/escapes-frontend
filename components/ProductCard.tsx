@@ -10,9 +10,10 @@ interface ProductCardProps {
   product: Product;
   onClick?: (product: Product) => void;
   onAddToCart?: () => void;
+  priority?: boolean;
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAddToCart }) => {
+export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAddToCart, priority = false }) => {
   const [imgSrc, setImgSrc] = React.useState<string>("");
   const [imageError, setImageError] = React.useState(false);
 
@@ -65,7 +66,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
               }
             }}
             alt={product.title}
-            loading="lazy"
+            loading={priority ? "eager" : "lazy"}
+            // @ts-ignore
+            fetchPriority={priority ? "high" : "auto"}
             width="400"
             height="400"
             className={`w-full h-full transition-transform duration-500 ${isDefaultImage
