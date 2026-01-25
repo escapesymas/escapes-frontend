@@ -159,9 +159,12 @@ function App() {
     setUrlProductId(parsed.productId);
 
     // If we have a product ID from URL, try to fetch it
-    if (parsed.view === 'product' && parsed.productId && !selectedProduct) {
+    if (parsed.view === 'product' && parsed.productId) {
       const productId = parseInt(parsed.productId);
-      if (!isNaN(productId)) {
+
+      // Fetch if no product is selected OR if the selected product ID doesn't match URL
+      if (!isNaN(productId) && (!selectedProduct || selectedProduct.id !== productId)) {
+        console.log(`[APP] URL changed to product ${productId}, fetching...`);
         fetchProductById(productId);
       }
     }
