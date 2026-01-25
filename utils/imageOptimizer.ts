@@ -41,7 +41,7 @@ export const optimizeImage = (
   if (options.width) params.append('w', options.width.toString());
   if (options.height) params.append('h', options.height.toString());
   if (options.quality) params.append('q', options.quality.toString());
-  else params.append('q', '75'); // Balanced quality/speed
+  else params.append('q', '70'); // Balanced quality/speed (Reduced from 75 for better compression)
 
   if (options.format && options.format !== 'auto') {
     params.append('output', options.format);
