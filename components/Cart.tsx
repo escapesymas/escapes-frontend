@@ -127,7 +127,8 @@ export const Cart: React.FC<CartProps> = ({
   const discountAmount = userRank ? (subtotal * userRank.discount) / 100 : 0;
 
   // Shipping logic updated: always charges shipping (calculated per shipment, using fixed base for now)
-  const shippingCost = 9.95;
+  const shippingThreshold = 150;
+  const shippingCost = subtotal > shippingThreshold ? 0 : 9.95;
 
   const total = subtotal + shippingCost - discountAmount;
   const itemsCount = items.reduce((acc, item) => acc + item.quantity, 0);
