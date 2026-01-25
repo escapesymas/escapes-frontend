@@ -134,7 +134,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
             }}
             className="bg-zinc-800 hover:bg-racing-orange text-white p-2 md:p-3 rounded-sm transition-colors duration-200 shadow-lg"
             title="Añadir al carrito"
-            aria-label="Añadir al carrito"
+            aria-label={`Añadir ${product.title} al carrito`}
           >
             <ShoppingCart className="w-4 h-4 md:w-5 md:h-5" />
           </button>
