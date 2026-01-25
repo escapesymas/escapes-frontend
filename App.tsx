@@ -211,7 +211,9 @@ function App() {
         const [brand, model, year] = motoParam.split('-');
         setCurrentFilter(`${brand} ${model} ${year}`);
       } else if (urlCategory) {
-        setCurrentFilter(urlCategory.charAt(0).toUpperCase() + urlCategory.slice(1));
+        // Decode URL to display proper text (e.g. "Portamatrículas" instead of "Portamatr%C3%ADculas")
+        const decoded = decodeURIComponent(urlCategory);
+        setCurrentFilter(decoded.charAt(0).toUpperCase() + decoded.slice(1));
       } else if (query) {
         setCurrentFilter(`Búsqueda: "${query}"`);
       } else {
@@ -251,10 +253,23 @@ function App() {
         try {
           const { fetchCategories } = await import('./services/woocommerce');
           const allCats = await fetchCategories();
-          const match = allCats.find(c => c.slug === urlCategory.toLowerCase() || c.name.toLowerCase() === urlCategory.toLowerCase());
+
+          const decodedUrlCat = decodeURIComponent(urlCategory).toLowerCase();
+
+          const match = allCats.find(c =>
+            c.slug.toLowerCase() === decodedUrlCat ||
+            c.name.toLowerCase() === decodedUrlCat ||
+            // Fallback: Check if decoded URL contains the slug (handle partials like 'portamatriculas' vs 'portamatrículas')
+            c.slug.normalize("NFD").replace(/[\u0300-\u036f]/g, "") === decodedUrlCat.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          );
+
           if (match) {
             targetCatId = match.id;
             if (currentView === 'catalog') setCurrentFilter(match.name);
+          } else {
+            // If no exact match found, it might be a sub-category or custom route not in main list
+            // Try to search by slug directly in product fetch if ID resolution fails
+            console.warn(`[CATALOG] Category ID resolution failed for: ${urlCategory}`);
           }
         } catch (err) {
           console.error("Error resolving category slug", err);
