@@ -104,6 +104,7 @@ const ProductSearchInput = ({
 };
 
 export const Warranty: React.FC<WarrantyProps> = ({ user, onBack, onLoginRequest }) => {
+  console.log('Warranty component mounting');
   const [formData, setFormData] = useState({
     requestType: 'warranty', // 'warranty' or 'return'
     invoiceNumber: '',
@@ -113,6 +114,12 @@ export const Warranty: React.FC<WarrantyProps> = ({ user, onBack, onLoginRequest
     email: '',
     phone: '',
   });
+
+  const [products, setProducts] = useState<WarrantyProduct[]>([{ name: '', issue: '' }]);
+  const [images, setImages] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
@@ -170,12 +177,6 @@ export const Warranty: React.FC<WarrantyProps> = ({ user, onBack, onLoginRequest
       }
     }
   };
-
-  const [products, setProducts] = useState<WarrantyProduct[]>([{ name: '', issue: '' }]);
-  const [images, setImages] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
