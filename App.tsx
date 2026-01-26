@@ -30,8 +30,9 @@ const MyAccount = React.lazy(() => import('./components/MyAccount').then(m => ({
 const Forum = React.lazy(() => import('./components/Forum').then(m => ({ default: m.Forum })));
 const Warranty = React.lazy(() => import('./components/Warranty').then(m => ({ default: m.Warranty })));
 const AIAdvisor = React.lazy(() => import('./components/AIAdvisor').then(m => ({ default: m.AIAdvisor })));
+const SocialFeed = React.lazy(() => import('./components/social/SocialFeed').then(m => ({ default: m.SocialFeed })));
 
-type ViewState = 'home' | 'catalog' | 'product' | 'cart' | 'checkout' | 'login' | 'register' | 'orders' | 'account' | 'categories' | 'forum' | 'contact' | 'warranty';
+type ViewState = 'home' | 'catalog' | 'product' | 'cart' | 'checkout' | 'login' | 'register' | 'orders' | 'account' | 'categories' | 'forum' | 'contact' | 'warranty' | 'social';
 
 // Known category slugs for URL matching
 const KNOWN_CATEGORIES = ['escapes', 'frenos', 'accesorios', 'protecciones', 'recambios', 'lubricantes', 'electrónica', 'suspensiones'];
@@ -50,7 +51,8 @@ const parsePathToView = (path: string): { view: ViewState; category?: string; pr
   if (cleanPath === '/mis-pedidos') return { view: 'orders' };
   if (cleanPath === '/garantia') return { view: 'warranty' };
   if (cleanPath === '/contacto') return { view: 'contact' };
-  if (cleanPath.startsWith('/foro')) return { view: 'forum' };
+  if (cleanPath.startsWith('/foro') || cleanPath.startsWith('/paddock')) return { view: 'forum' }; // Map Paddock to Forum component
+  if (cleanPath === '/social') return { view: 'social' };
   if (cleanPath === '/categorias') return { view: 'categories' };
 
   // Check for generic Product URL pattern: /category/123 or /category/123-slug
@@ -338,7 +340,8 @@ function App() {
     else if (target === 'orders') navigate('/mis-pedidos');
     else if (target === 'account') navigate('/mi-cuenta');
     else if (target === 'login') navigate('/login');
-    else if (target === 'forum') navigate('/foro');
+    else if (target === 'forum') navigate('/paddock');
+    else if (target === 'social') navigate('/social');
     else if (target === 'contact') navigate('/contacto');
     else if (target === 'warranty') navigate('/garantia');
     else if (target === 'categories') navigate('/categorias');
@@ -610,6 +613,7 @@ function App() {
           {currentView === 'orders' && user && <MyOrders user={user} onBack={() => navigate('/')} />}
           {currentView === 'account' && user && <MyAccount user={user} onBack={() => navigate('/')} onUpdateUser={setUser} />}
           {currentView === 'warranty' && <Warranty user={user} onBack={() => navigate('/')} onLoginRequest={() => navigate('/login')} />}
+          {currentView === 'social' && <SocialFeed user={user} onBack={() => navigate('/')} onLoginRequest={() => navigate('/login')} />}
           {currentView === 'contact' && <Contact onBack={() => navigate('/')} />}
 
           {currentView === 'cart' && (

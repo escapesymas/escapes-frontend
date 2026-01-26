@@ -41,7 +41,8 @@ export const NAV_LINKS: { label: string; view: string; category?: string; highli
   { label: 'Inicio', view: 'home' },
   { label: 'Para tu moto', view: 'catalog' },
   { label: 'Categorías', view: 'categories' },
-  { label: 'Paddock', view: 'forum', highlight: true },
+  { label: 'The Pit Lane (Muro)', view: 'social' },
+  { label: 'Paddock (Foro)', view: 'forum', highlight: true },
   { label: 'Garantías', view: 'warranty' },
   { label: 'Contacto', view: 'contact' },
 ];
