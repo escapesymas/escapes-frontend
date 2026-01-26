@@ -31,14 +31,15 @@ const Forum = React.lazy(() => import('./components/Forum').then(m => ({ default
 const Warranty = React.lazy(() => import('./components/Warranty').then(m => ({ default: m.Warranty })));
 const AIAdvisor = React.lazy(() => import('./components/AIAdvisor').then(m => ({ default: m.AIAdvisor })));
 const SocialFeed = React.lazy(() => import('./components/social/SocialFeed').then(m => ({ default: m.SocialFeed })));
+const UserProfile = React.lazy(() => import('./components/social/UserProfile').then(m => ({ default: m.UserProfile })));
 
-type ViewState = 'home' | 'catalog' | 'product' | 'cart' | 'checkout' | 'login' | 'register' | 'orders' | 'account' | 'categories' | 'forum' | 'contact' | 'warranty' | 'social';
+type ViewState = 'home' | 'catalog' | 'product' | 'cart' | 'checkout' | 'login' | 'register' | 'orders' | 'account' | 'categories' | 'forum' | 'contact' | 'warranty' | 'social' | 'user_profile';
 
 // Known category slugs for URL matching
 const KNOWN_CATEGORIES = ['escapes', 'frenos', 'accesorios', 'protecciones', 'recambios', 'lubricantes', 'electrónica', 'suspensiones'];
 
 // Helper to parse URL path to view state
-const parsePathToView = (path: string): { view: ViewState; category?: string; productId?: string } => {
+const parsePathToView = (path: string): { view: ViewState; category?: string; productId?: string; userId?: string } => {
   const cleanPath = path.toLowerCase().replace(/\/$/, ''); // Remove trailing slash
 
   if (cleanPath === '' || cleanPath === '/') return { view: 'home' };
@@ -51,6 +52,10 @@ const parsePathToView = (path: string): { view: ViewState; category?: string; pr
   if (cleanPath === '/mis-pedidos') return { view: 'orders' };
   if (cleanPath === '/garantia') return { view: 'warranty' };
   if (cleanPath === '/contacto') return { view: 'contact' };
+  if (cleanPath.startsWith('/paddock/user/')) {
+    const parts = cleanPath.split('/paddock/user/');
+    if (parts.length > 1) return { view: 'user_profile', userId: parts[1] };
+  }
   if (cleanPath.startsWith('/foro') || cleanPath.startsWith('/paddock')) return { view: 'forum' }; // Map Paddock to Forum component
   if (cleanPath === '/social') return { view: 'social' };
   if (cleanPath === '/categorias') return { view: 'categories' };
@@ -614,6 +619,7 @@ function App() {
           {currentView === 'account' && user && <MyAccount user={user} onBack={() => navigate('/')} onUpdateUser={setUser} />}
           {currentView === 'warranty' && <Warranty user={user} onBack={() => navigate('/')} onLoginRequest={() => navigate('/login')} />}
           {currentView === 'social' && <SocialFeed user={user} onBack={() => navigate('/')} onLoginRequest={() => navigate('/login')} />}
+          {currentView === 'user_profile' && <UserProfile currentUser={user} targetUserId={parseInt(parsePathToView(location.pathname).userId || '0')} onBack={() => window.history.back()} onLoginRequest={() => navigate('/login')} />}
           {currentView === 'contact' && <Contact onBack={() => navigate('/')} />}
 
           {currentView === 'cart' && (
