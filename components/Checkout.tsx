@@ -5,6 +5,7 @@ import { CartItem, User as UserType } from '../types';
 import { createOrder, updateOrderStatus } from '../services/woocommerce';
 import { createSumUpCheckout } from '../services/sumup';
 import { loginUser, registerUser } from '../services/auth';
+import { trackPurchase } from '../utils/analytics';
 
 interface CheckoutProps {
   cart: CartItem[];
@@ -414,6 +415,14 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
 
     if (result.success) {
       setOrderId(result.id || 0);
+
+      // Track Purchase
+      trackPurchase(
+        transactionId,
+        total,
+        props.cart
+      );
+
       setStep('success');
     } else {
       console.error("Error creating order after payment:", result.error);

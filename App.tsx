@@ -18,7 +18,7 @@ import { ProductSkeleton } from './components/ProductSkeleton';
 import { STORE_CONFIG, FEATURES, BIKE_DATA } from './storeData';
 import { fetchProducts, saveUserCart, getUserCart } from './services/woocommerce';
 import { saveSession, getSession, logoutSession } from './services/auth';
-import { pageview } from './services/analytics';
+import { trackPageView, trackViewItem, trackAddToCart } from './utils/analytics';
 import { Product, BikeSelection, CartItem, User } from './types';
 import { optimizeImage } from './utils/imageOptimizer';
 
@@ -149,7 +149,7 @@ function App() {
   // Analytics & Scroll Top on navigation
   useEffect(() => {
     window.scrollTo(0, 0);
-    pageview(window.location.pathname + window.location.search);
+    trackPageView(window.location.pathname + window.location.search);
   }, [location.pathname, location.search]);
 
   // URL -> State Sync (runs on location change)
@@ -352,6 +352,7 @@ function App() {
   };
 
   const addToCart = (product: Product, quantity: number = 1) => {
+    trackAddToCart(product, quantity);
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
@@ -482,7 +483,11 @@ function App() {
               key={product.id}
               priority={index < 4}
               product={product}
-              onClick={(p) => { setSelectedProduct(p); navigate(`/${p.categorySlug || 'recambios'}/${p.id}`); }} // Using ID as slug part for now until slug util exists
+              onClick={(p) => {
+                setSelectedProduct(p);
+                trackViewItem(p);
+                navigate(`/${p.categorySlug || 'recambios'}/${p.id}`);
+              }} // Using ID as slug part for now until slug util exists
               onAddToCart={() => addToCart(product, 1)}
             />
           ))}
@@ -656,7 +661,11 @@ function App() {
                         key={product.id}
                         priority={true}
                         product={product}
-                        onClick={(p) => { setSelectedProduct(p); navigate(`/${p.categorySlug || 'recambios'}/${p.id}`); }}
+                        onClick={(p) => {
+                          setSelectedProduct(p);
+                          trackViewItem(p);
+                          navigate(`/${p.categorySlug || 'recambios'}/${p.id}`);
+                        }}
                         onAddToCart={() => addToCart(product, 1)}
                       />
                     ))}
