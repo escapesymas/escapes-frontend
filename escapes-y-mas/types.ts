@@ -14,7 +14,6 @@ export interface Product {
   attributes: { name: string; options: string[] }[]; // New field for dynamic filters
   description?: string;
   shortDescription?: string;
-  brand?: string; // Added for Schema.org
 }
 
 export interface CartItem extends Product {
