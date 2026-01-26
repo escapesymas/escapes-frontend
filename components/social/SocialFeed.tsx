@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Loader2, Sparkles } from 'lucide-react';
+import { ArrowLeft, Loader2, Sparkles, AlertCircle } from 'lucide-react';
 import { User as UserType } from '../../types';
 import { PostCard } from './PostCard';
 import { PostComposer } from './PostComposer';
+import { fetchSocialFeed, createSocialPost, toggleLike, sendReply, SocialPostType } from '../../services/socialApi';
+import { uploadFile } from '../../services/woocommerce';
 
 interface SocialFeedProps {
     user: UserType | null;
@@ -10,90 +12,90 @@ interface SocialFeedProps {
     onLoginRequest: () => void;
 }
 
-// Temporary Mock Data Interface
-interface SocialPost {
-    id: number;
-    author: {
-        id: number;
-        name: string;
-        avatar: string;
-        rank: any;
-        timeAgo: string;
-    };
-    content: {
-        text: string;
-        image?: string;
-    };
-    metrics: {
-        likes: number;
-        comments: number;
-        liked: boolean;
-    };
-}
-
 export const SocialFeed: React.FC<SocialFeedProps> = ({ user, onBack, onLoginRequest }) => {
-    const [posts, setPosts] = useState<SocialPost[]>([]);
+    const [posts, setPosts] = useState<SocialPostType[]>([]);
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    // Initial Mock Load
-    useEffect(() => {
-        // Simulate API fetch delay
-        setTimeout(() => {
-            setPosts([
-                {
-                    id: 1,
-                    author: {
-                        id: 101,
-                        name: "Marc Moto",
-                        avatar: "",
-                        rank: { level: 5, title: 'Pro Racer', color: '#F97316', icon: '🏆' },
-                        timeAgo: "Hace 2h"
-                    },
-                    content: {
-                        text: "¡Acabo de instalar el Akrapovic en mi MT-07! 🚀 El sonido es brutal.",
-                        image: "https://images.unsplash.com/photo-1568772585407-9366f95166b9?q=80&w=1200&auto=format&fit=crop"
-                    },
-                    metrics: { likes: 24, comments: 5, liked: false }
-                },
-                {
-                    id: 2,
-                    author: {
-                        id: 102,
-                        name: "Laura Racing",
-                        avatar: "",
-                        rank: { level: 3, title: 'Entusiasta', color: '#34D399', icon: '🔥' },
-                        timeAgo: "Hace 5h"
-                    },
-                    content: {
-                        text: "¿Alguien va al circuito de Jerez este fin de semana? Estaré probando nuevos frenos Brembo.",
-                    },
-                    metrics: { likes: 12, comments: 8, liked: true }
-                }
-            ]);
+    const loadFeed = async (p = 1) => {
+        try {
+            const data = await fetchSocialFeed(p);
+            if (data.length === 0) {
+                setHasMore(false);
+            } else {
+                setPosts(prev => p === 1 ? data : [...prev, ...data]);
+            }
+        } catch (err) {
+            setError("Error al cargar el muro.");
+        } finally {
             setLoading(false);
-        }, 1000);
+        }
+    };
+
+    useEffect(() => {
+        loadFeed(1);
     }, []);
 
     const handleCreatePost = async (text: string, image?: File) => {
-        // Optimistic Update
-        const newPost: SocialPost = {
-            id: Date.now(),
-            author: {
-                id: user?.id || 0,
-                name: user?.firstName || 'Usuario',
-                avatar: user?.avatarUrl || '',
-                rank: null, // Should fetch real rank
-                timeAgo: "Ahora"
-            },
-            content: {
-                text: text,
-                image: image ? URL.createObjectURL(image) : undefined
-            },
-            metrics: { likes: 0, comments: 0, liked: false }
-        };
+        if (!user || user.id === 0 || !user.token) {
+            onLoginRequest();
+            return;
+        }
 
-        setPosts([newPost, ...posts]);
-        // Here we would call API
+        try {
+            let mediaIds: number[] = [];
+
+            // Upload Image first if exists
+            if (image) {
+                try {
+                    const uploadResult = await uploadFile(image);
+                    mediaIds.push(uploadResult.id);
+                } catch (e) {
+                    console.error("Error subiendo imagen", e);
+                    alert("Error al subir la imagen. Inténtalo de nuevo.");
+                    return;
+                }
+            }
+
+            const result = await createSocialPost(user.token, text, mediaIds);
+
+            if (result.success && result.post) {
+                // Prepend new post
+                setPosts([result.post, ...posts]);
+            } else {
+                alert(result.error || "No se pudo publicar.");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error de conexión.");
+        }
+    };
+
+    const handleLike = async (post: SocialPostType) => {
+        if (!user || !user.token) {
+            onLoginRequest();
+            return;
+        }
+        // Optimistic update handled in PostCard mostly, but we trigger API here
+        await toggleLike(user.token, 'social_post', post.id);
+    };
+
+    const handleComment = async (postId: number, text: string) => {
+        if (!user || !user.token) {
+            onLoginRequest();
+            return;
+        }
+        const result = await sendReply(user.token, postId, text);
+        if (result.success) {
+            // Update comments count locally
+            setPosts(prev => prev.map(p =>
+                p.id === postId
+                    ? { ...p, metrics: { ...p.metrics, comments: p.metrics.comments + 1 } }
+                    : p
+            ));
+        }
     };
 
     return (
@@ -119,8 +121,16 @@ export const SocialFeed: React.FC<SocialFeedProps> = ({ user, onBack, onLoginReq
                 {/* Composer */}
                 <PostComposer user={user} onPost={handleCreatePost} onLoginRequest={onLoginRequest} />
 
+                {/* Error State */}
+                {error && (
+                    <div className="bg-red-900/20 border border-red-800 p-4 rounded-sm mb-6 flex items-center gap-3">
+                        <AlertCircle className="w-5 h-5 text-red-500" />
+                        <span className="text-red-200 text-sm">{error}</span>
+                    </div>
+                )}
+
                 {/* Feed */}
-                {loading ? (
+                {loading && page === 1 ? (
                     <div className="flex flex-col items-center py-10 gap-2">
                         <Loader2 className="w-8 h-8 text-cyan-500 animate-spin" />
                         <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Sincronizando Muro...</p>
@@ -130,15 +140,42 @@ export const SocialFeed: React.FC<SocialFeedProps> = ({ user, onBack, onLoginReq
                         {posts.map(post => (
                             <PostCard
                                 key={post.id}
-                                {...post}
-                                onLike={() => { }}
-                                onComment={() => { }}
+                                id={post.id}
+                                author={post.author}
+                                content={post.content}
+                                metrics={post.metrics}
+                                onLike={() => handleLike(post)}
+                                onCommentSubmit={(text) => handleComment(post.id, text)}
                             />
                         ))}
 
-                        <div className="p-8 text-center bg-zinc-900/30 border border-zinc-800/50 rounded-sm mt-8 border-dashed">
-                            <p className="text-zinc-500 text-sm">Has llegado al final del pit lane por hoy. 🏁</p>
-                        </div>
+                        {!loading && hasMore && (
+                            <div className="py-4 text-center">
+                                <button
+                                    onClick={() => {
+                                        const nextPage = page + 1;
+                                        setPage(nextPage);
+                                        loadFeed(nextPage);
+                                    }}
+                                    className="text-racing-orange hover:text-white text-xs font-bold uppercase tracking-widest transition-colors"
+                                >
+                                    Cargar más actividad...
+                                </button>
+                            </div>
+                        )}
+
+                        {!hasMore && posts.length > 0 && (
+                            <div className="p-8 text-center bg-zinc-900/30 border border-zinc-800/50 rounded-sm mt-8 border-dashed">
+                                <p className="text-zinc-500 text-sm">Has llegado al final del pit lane por hoy. 🏁</p>
+                            </div>
+                        )}
+
+                        {!loading && posts.length === 0 && !error && (
+                            <div className="p-12 text-center">
+                                <p className="text-zinc-400 font-bold mb-2">Aún no hay actividad en el muro.</p>
+                                <p className="text-zinc-600 text-sm">Sé el primero en publicar algo.</p>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
