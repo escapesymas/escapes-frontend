@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { optimizeImage } from '../utils/imageOptimizer';
 
 interface Brand {
     name: string;
@@ -56,7 +57,7 @@ export function BrandSlider() {
                             className="flex-shrink-0 mx-6 md:mx-12 select-none"
                         >
                             <img
-                                src={`/brands/${brand.logo}`}
+                                src={optimizeImage(`/brands/${brand.logo}`, { width: 150, format: 'webp' })}
                                 alt={brand.name}
                                 width={140}
                                 height={60}

@@ -14,6 +14,7 @@ import { Contact } from './components/Contact';
 import { BrandSlider } from './components/BrandSlider';
 import { PromoBanner } from './components/PromoBanner';
 import { FeaturesBanner } from './components/FeaturesBanner';
+import { ProductSkeleton } from './components/ProductSkeleton';
 import { STORE_CONFIG, FEATURES, BIKE_DATA } from './storeData';
 import { fetchProducts, saveUserCart, getUserCart } from './services/woocommerce';
 import { saveSession, getSession, logoutSession } from './services/auth';
@@ -640,6 +641,29 @@ function App() {
                   <p className="text-racing-orange font-bold uppercase tracking-widest text-xl">{STORE_CONFIG.heroSubtitle}</p>
                 </div>
               </section>
+
+              {/* Featured Products Section */}
+              <section className="py-12 bg-zinc-950 container mx-auto px-4">
+                <h2 className="text-2xl font-bold text-white uppercase italic mb-8 border-l-4 border-racing-orange pl-4">Productos Destacados</h2>
+                {loading ? (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {[1, 2, 3, 4].map(i => <ProductSkeleton key={i} />)}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {products.slice(0, 4).map((product, index) => (
+                      <ProductCard
+                        key={product.id}
+                        priority={true}
+                        product={product}
+                        onClick={(p) => { setSelectedProduct(p); navigate(`/${p.categorySlug || 'recambios'}/${p.id}`); }}
+                        onAddToCart={() => addToCart(product, 1)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+
               <PromoBanner onForumClick={() => navigate('/foro')} />
               <FeaturesBanner />
               <BrandSlider />
@@ -690,7 +714,11 @@ function App() {
                 </div>
 
                 <div className="min-h-[500px]">
-                  {renderProductGrid()}
+                  {loading ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                      {[...Array(8)].map((_, i) => <ProductSkeleton key={i} />)}
+                    </div>
+                  ) : renderProductGrid()}
                 </div>
               </section>
             </div>
