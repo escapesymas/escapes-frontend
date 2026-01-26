@@ -46,7 +46,7 @@ export const SEO: React.FC<SEOProps> = ({
             {/* Structured Data */}
             {jsonLd && (
                 <script type="application/ld+json">
-                    {JSON.stringify(jsonLd)}
+                    {Array.isArray(jsonLd) ? JSON.stringify(jsonLd) : JSON.stringify(jsonLd)}
                 </script>
             )}
         </Helmet>

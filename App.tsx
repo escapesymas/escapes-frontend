@@ -519,26 +519,52 @@ function App() {
             description: cleanDesc,
             canonical: `/${selectedProduct.categorySlug || 'recambios'}/${selectedProduct.id}`,
             image: selectedProduct.image,
-            jsonLd: {
-              "@context": "https://schema.org",
-              "@type": "Product",
-              "name": selectedProduct.title,
-              "image": [selectedProduct.image],
-              "description": cleanDesc,
-              "sku": selectedProduct.sku,
-              "brand": {
-                "@type": "Brand",
-                "name": selectedProduct.title.split(' ')[0] // Simple heuristic
+            jsonLd: [
+              {
+                "@context": "https://schema.org",
+                "@type": "Product",
+                "name": selectedProduct.title,
+                "image": [selectedProduct.image],
+                "description": cleanDesc,
+                "sku": selectedProduct.sku,
+                "brand": {
+                  "@type": "Brand",
+                  "name": selectedProduct.brand || "Generico"
+                },
+                "offers": {
+                  "@type": "Offer",
+                  "url": `https://escapesymas.com/${selectedProduct.categorySlug || 'recambios'}/${selectedProduct.id}`,
+                  "priceCurrency": "EUR",
+                  "price": selectedProduct.price,
+                  "availability": selectedProduct.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+                  "itemCondition": "https://schema.org/NewCondition"
+                }
               },
-              "offers": {
-                "@type": "Offer",
-                "url": `https://escapesymas.com/${selectedProduct.categorySlug || 'recambios'}/${selectedProduct.id}`,
-                "priceCurrency": "EUR",
-                "price": selectedProduct.price,
-                "availability": selectedProduct.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-                "itemCondition": "https://schema.org/NewCondition"
+              {
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                  {
+                    "@type": "ListItem",
+                    "position": 1,
+                    "name": "Home",
+                    "item": "https://escapesymas.com/"
+                  },
+                  {
+                    "@type": "ListItem",
+                    "position": 2,
+                    "name": selectedProduct.category || "Recambios",
+                    "item": `https://escapesymas.com/${selectedProduct.categorySlug || 'recambios'}`
+                  },
+                  {
+                    "@type": "ListItem",
+                    "position": 3,
+                    "name": selectedProduct.title,
+                    "item": `https://escapesymas.com/${selectedProduct.categorySlug || 'recambios'}/${selectedProduct.id}`
+                  }
+                ]
               }
-            }
+            ]
           };
         }
         return { title: 'Cargando producto...', canonical: '' };
