@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User as UserIcon, MapPin, Save, ArrowLeft, Mail, Phone, Loader2, CheckCircle, Camera, X, Lock, Upload } from 'lucide-react';
 import { User, UserRank } from '../types';
-import { updateCustomer, fetchAvatars, updateCustomerAvatar, uploadCustomerPhoto, AvatarOption } from '../services/woocommerce';
-import { getUserRank } from '../services/forum';
+import { updateCustomer, fetchAvatars, updateCustomerAvatar, uploadCustomerPhoto, AvatarOption, fetchUserRank } from '../services/woocommerce';
+
 import { RankBadge } from './RankBadge';
 
 interface MyAccountProps {
@@ -49,7 +49,7 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
   // Load user rank
   useEffect(() => {
     if (user.id) {
-      getUserRank(user.id).then(rank => {
+      fetchUserRank(user.id).then(rank => {
         if (rank) setUserRank(rank);
       });
     }
