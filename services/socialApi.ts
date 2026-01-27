@@ -92,24 +92,6 @@ export const createSocialPost = async (
 /**
  * PADDOCK: Obtener categorías
  */
-const MOCK_CATEGORIES: PaddockCategory[] = [
-    { id: 101, title: 'Mecánica General', description: 'Dudas sobre mantenimiento, reparaciones y bricolaje.', count: 34, icon: 'wrench' },
-    { id: 102, title: 'Circuitos y Tandas', description: 'Organización de rodadas, tiempos y consejos de pilotaje.', count: 12, icon: 'flag' },
-    { id: 103, title: 'Rutas y Quedadas', description: 'Encuentra compañeros para salir de ruta el fin de semana.', count: 56, icon: 'map' },
-    { id: 104, title: 'Compra-Venta', description: 'Mercadillo de piezas y motos entre particulares.', count: 8, icon: 'shopping-cart' }
-];
-
-const MOCK_THREADS: PaddockThread[] = [
-    {
-        id: 1, title: '¿Qué aceite recomiendan para una R1 2020?', content: 'Hola a todos, estoy por hacer el cambio de aceite...', author: { id: 10, name: 'Marc Márquez', avatar: '' },
-        metrics: { views: 120, replies: 5, likes: 12 }, is_pinned: false, created_at: new Date().toISOString()
-    },
-    {
-        id: 2, title: 'MEJORADA: Lista de circuitos en España', content: 'Aquí os dejo un recopilatorio de los mejores circuitos...', author: { id: 11, name: 'Admin', avatar: '' },
-        metrics: { views: 500, replies: 25, likes: 80 }, is_pinned: true, created_at: new Date().toISOString()
-    }
-];
-
 /**
  * PADDOCK: Obtener categorías
  */
@@ -128,10 +110,10 @@ export const fetchPaddockCategories = async (): Promise<PaddockCategory[]> => {
                 icon: undefined // Icon not provided by API
             }));
         }
-        return MOCK_CATEGORIES;
+        return [];
     } catch (error) {
-        console.warn('[PADDOCK] API failed, using MOCK data', error);
-        return MOCK_CATEGORIES;
+        console.warn('[PADDOCK] API failed', error);
+        return [];
     }
 };
 
@@ -150,10 +132,10 @@ export const fetchPaddockThreads = async (categoryId: number, page: number = 1):
         // Fallback for flat array if implementation differs from doc
         if (Array.isArray(data) && data.length > 0) return data as PaddockThread[];
 
-        return MOCK_THREADS;
+        return [];
     } catch (error) {
-        console.warn('[PADDOCK] API failed, using MOCK data', error);
-        return MOCK_THREADS;
+        console.warn('[PADDOCK] API failed', error);
+        return [];
     }
 };
 
