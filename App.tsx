@@ -27,7 +27,7 @@ const Login = React.lazy(() => import('./components/Login').then(m => ({ default
 const Register = React.lazy(() => import('./components/Register').then(m => ({ default: m.Register })));
 const MyOrders = React.lazy(() => import('./components/MyOrders').then(m => ({ default: m.MyOrders })));
 const MyAccount = React.lazy(() => import('./components/MyAccount').then(m => ({ default: m.MyAccount })));
-const Forum = React.lazy(() => import('./components/Forum').then(m => ({ default: m.Forum })));
+const Paddock = React.lazy(() => import('./components/social/Paddock').then(m => ({ default: m.Paddock })));
 const Warranty = React.lazy(() => import('./components/Warranty').then(m => ({ default: m.Warranty })));
 const AIAdvisor = React.lazy(() => import('./components/AIAdvisor').then(m => ({ default: m.AIAdvisor })));
 const SocialFeed = React.lazy(() => import('./components/social/SocialFeed').then(m => ({ default: m.SocialFeed })));
@@ -612,7 +612,7 @@ function App() {
         <Suspense fallback={<div className="h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 text-racing-orange animate-spin" /></div>}>
           {currentView === 'login' && <Login onLoginSuccess={(u) => { setUser(u); saveSession(u); navigate(-1); }} onBack={() => navigate(-1)} onRegisterClick={() => navigate('/registro')} />}
           {currentView === 'register' && <Register onRegisterSuccess={() => navigate('/login')} onBack={() => navigate('/login')} onGoToLogin={() => navigate('/login')} />}
-          {currentView === 'forum' && <Forum user={user} onBack={() => navigate('/')} onLoginRequest={() => navigate('/login')} />}
+          {currentView === 'forum' && <Paddock user={user} onBack={() => navigate('/')} onLoginRequest={() => navigate('/login')} />}
           {currentView === 'categories' && <CategoryBrowser onSelectCategory={(_, name) => navigate(`/${name.toLowerCase()}`)} onBack={() => navigate('/')} />}
           {currentView === 'checkout' && <Checkout cart={cart} user={user} onBack={() => navigate('/carrito')} onOrderComplete={() => { setCart([]); navigate('/'); }} onLoginSuccess={(u) => { setUser(u); saveSession(u); }} />}
           {currentView === 'orders' && user && <MyOrders user={user} onBack={() => navigate('/')} />}

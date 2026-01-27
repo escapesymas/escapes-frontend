@@ -251,7 +251,7 @@ export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick, onAddToCar
               <div className="flex justify-start">
                 <div className="flex items-center gap-2 bg-zinc-800 rounded-lg px-4 py-3">
                   <Loader2 className="w-4 h-4 text-racing-orange animate-spin" />
-                  <span className="text-zinc-400 text-sm">Pensando...</span>
+                  <span className="text-zinc-400 text-sm">Escribiendo...</span>
                 </div>
               </div>
             )}
