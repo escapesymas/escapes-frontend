@@ -39,9 +39,9 @@ export const FriendList: React.FC<FriendListProps> = ({ currentUser, friends, on
                 <Search className="absolute left-3 top-3.5 w-5 h-5 text-zinc-500" />
             </form>
 
-            {/* Creating a Search Results Section */}
+            {/* Search Results */}
             {searchResults.length > 0 && (
-                <div className="bg-zinc-900/50 border border-zinc-800 p-4 rounded-sm animate-fade-in">
+                <div className="bg-zinc-900/50 border border-zinc-800 p-4 rounded-sm animate-fade-in mb-6">
                     <h3 className="text-zinc-500 text-xs font-bold uppercase mb-3">Resultados de búsqueda</h3>
                     <div className="space-y-2">
                         {searchResults.map(user => (
@@ -59,11 +59,24 @@ export const FriendList: React.FC<FriendListProps> = ({ currentUser, friends, on
                 </div>
             )}
 
-            {/* Helper text if no friends */}
-            {friends.length === 0 && !searchResults.length && (
-                <div className="text-center py-10 border border-dashed border-zinc-800 rounded-sm">
-                    <p className="text-zinc-500 text-sm">Tu lista de pits está vacía. ¡Busca otros pilotos!</p>
+            {/* Friends Grid */}
+            {friends.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {friends.map(friend => (
+                        <Link key={friend.id} to={`/paddock/user/${friend.id}`} className="bg-zinc-900 border border-zinc-800 p-4 rounded-sm flex items-center gap-3 hover:border-zinc-600 transition-colors group">
+                            <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                                {friend.avatar ? <img src={friend.avatar} className="w-full h-full object-cover" /> : <User className="w-5 h-5 text-zinc-500" />}
+                            </div>
+                            <span className="text-white font-bold text-sm truncate group-hover:text-racing-orange transition-colors">{friend.name}</span>
+                        </Link>
+                    ))}
                 </div>
+            ) : (
+                !searchResults.length && (
+                    <div className="text-center py-10 border border-dashed border-zinc-800 rounded-sm">
+                        <p className="text-zinc-500 text-sm">Tu lista de pits está vacía. ¡Busca otros pilotos!</p>
+                    </div>
+                )
             )}
         </div>
     );

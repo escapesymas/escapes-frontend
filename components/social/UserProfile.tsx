@@ -3,6 +3,7 @@ import { ArrowLeft, User, UserPlus, UserCheck, Loader2, MessageSquare, Heart, Us
 import { User as UserType } from '../../types';
 import { getUserProfile, manageFriendship, UserProfileFull } from '../../services/socialApi';
 import { PostCard } from './PostCard';
+import { FriendList } from './FriendList';
 import { RankBadge } from '../RankBadge';
 import { Link } from 'react-router-dom';
 
@@ -181,22 +182,11 @@ export const UserProfile: React.FC<UserProfileProps> = ({ currentUser, targetUse
                     )}
 
                     {activeTab === 'friends' && (
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            {profile.friends.length > 0 ? (
-                                profile.friends.map(friend => (
-                                    <Link key={friend.id} to={`/paddock/user/${friend.id}`} className="bg-zinc-900 border border-zinc-800 p-4 rounded-sm flex items-center gap-3 hover:border-zinc-600 transition-colors group">
-                                        <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
-                                            {friend.avatar ? <img src={friend.avatar} className="w-full h-full object-cover" /> : <User className="w-5 h-5 text-zinc-500" />}
-                                        </div>
-                                        <span className="text-white font-bold text-sm truncate group-hover:text-racing-orange transition-colors">{friend.name}</span>
-                                    </Link>
-                                ))
-                            ) : (
-                                <div className="col-span-full p-8 text-center text-zinc-500 text-sm">
-                                    Este piloto rueda solo por ahora.
-                                </div>
-                            )}
-                        </div>
+                        <FriendList
+                            currentUser={currentUser}
+                            friends={profile.friends}
+                            onFriendAction={loadProfile}
+                        />
                     )}
                 </div>
             </div>
