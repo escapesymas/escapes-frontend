@@ -216,7 +216,10 @@ function App() {
   useEffect(() => {
     if (currentView === 'catalog') {
       if (motoParam) {
-        const [brand, model, year] = motoParam.split('-');
+        // Decode in case it's URL encoded
+        const cleanParam = decodeURIComponent(motoParam);
+        const separator = cleanParam.includes('|') ? '|' : '-';
+        const [brand, model, year] = cleanParam.split(separator);
         setCurrentFilter(`${brand} ${model} ${year}`);
       } else if (urlCategory) {
         // Decode URL to display proper text
@@ -309,11 +312,44 @@ function App() {
       // Filter by Moto locally if API doesn't support it yet
       let finalProducts = matches;
       if (motoParam) {
-        const [brand, model] = motoParam.split('-');
-        finalProducts = matches.filter(p =>
-          p.title.toLowerCase().includes(brand.toLowerCase()) ||
-          p.description?.toLowerCase().includes(brand.toLowerCase())
-        );
+        let brand, model, year;
+
+        // Support new pipe format and legacy dash format (best effort)
+        if (motoParam.includes('|')) {
+          [brand, model, year] = motoParam.split('|');
+        } else {
+          // Legacy or simple format
+          const parts = motoParam.split('-');
+          brand = parts[0];
+          // Try to reconstruct model if it had dashes, but this is ambiguous without the new separator
+          // Assuming worst case just take the rest? No, legacy was Brand-Model-Year. 
+          // If model has dashes, legacy was broken.
+          model = parts[1];
+        }
+
+        if (brand) {
+          finalProducts = matches.filter(p => {
+            const text = (p.title + ' ' + (p.description || '')).toLowerCase();
+            const brandMatch = text.includes(brand.toLowerCase());
+
+            if (!model) return brandMatch;
+
+            // Smart Model Matching
+            // 1. Exact phrase match
+            if (text.includes(model.toLowerCase())) return true;
+
+            // 2. Normalized match (remove spaces/dashes) e.g. "S1000RR" matches "S 1000 RR"
+            const normalizedText = text.replace(/[\s-]/g, '');
+            const normalizedModel = model.replace(/[\s-]/g, '').toLowerCase();
+            if (normalizedText.includes(normalizedModel)) return true;
+
+            // 3. Token match (if model is "Africa Twin", match "Africa" and "Twin")
+            const modelTokens = model.toLowerCase().split(/[\s-]+/).filter(t => t.length > 1);
+            if (modelTokens.length > 0 && modelTokens.every(token => text.includes(token))) return true;
+
+            return false;
+          });
+        }
       }
 
       setProducts(finalProducts);
@@ -333,9 +369,9 @@ function App() {
   };
 
   const handleBikeSearch = (selection: BikeSelection) => {
-    const param = `${selection.brand}-${selection.model}-${selection.year}`;
+    const param = `${selection.brand}|${selection.model}|${selection.year}`;
     setSearchParams({ moto: param });
-    navigate(`/recambios?moto=${param}`);
+    navigate(`/recambios?moto=${encodeURIComponent(param)}`);
   };
 
   const handleNavClick = (target: ViewState, cat?: string) => {
