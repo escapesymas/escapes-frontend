@@ -116,10 +116,21 @@ const MOCK_THREADS: PaddockThread[] = [
 export const fetchPaddockCategories = async (): Promise<PaddockCategory[]> => {
     try {
         const { data } = await makeRequest(`${API_BASE}/paddock/categories`);
-        if (Array.isArray(data) && data.length > 0) return data as PaddockCategory[];
-        return MOCK_CATEGORIES; // Fallback if empty array returned
+
+        // Doc returns { id, name, slug, count, description }
+        // App expects { id, title, description, count, icon? }
+        if (Array.isArray(data) && data.length > 0) {
+            return data.map((cat: any) => ({
+                id: cat.id,
+                title: cat.name, // Map name -> title
+                description: cat.description,
+                count: cat.count,
+                icon: undefined // Icon not provided by API
+            }));
+        }
+        return MOCK_CATEGORIES;
     } catch (error) {
-        console.warn('[PADDOCK] API failed, using MOCK data');
+        console.warn('[PADDOCK] API failed, using MOCK data', error);
         return MOCK_CATEGORIES;
     }
 };
@@ -130,10 +141,18 @@ export const fetchPaddockCategories = async (): Promise<PaddockCategory[]> => {
 export const fetchPaddockThreads = async (categoryId: number, page: number = 1): Promise<PaddockThread[]> => {
     try {
         const { data } = await makeRequest(`${API_BASE}/paddock/threads?category_id=${categoryId}&page=${page}`);
+
+        // Doc returns { data: [...], has_more: boolean }
+        if (data && Array.isArray(data.data)) {
+            return data.data as PaddockThread[];
+        }
+
+        // Fallback for flat array if implementation differs from doc
         if (Array.isArray(data) && data.length > 0) return data as PaddockThread[];
-        return MOCK_THREADS; // Fallback
+
+        return MOCK_THREADS;
     } catch (error) {
-        console.warn('[PADDOCK] API failed, using MOCK data');
+        console.warn('[PADDOCK] API failed, using MOCK data', error);
         return MOCK_THREADS;
     }
 };
@@ -314,9 +333,12 @@ export const manageFriendship = async (
     targetId: number
 ): Promise<{ success: boolean; status?: string; error?: string }> => {
     try {
-        const { data } = await makeRequest(`${API_BASE}/friends/manage`, {
+        // Doc specifies /friends/request and action: 'send' for adding
+        const apiAction = action === 'add' ? 'send' : action;
+
+        const { data } = await makeRequest(`${API_BASE}/friends/request`, {
             method: 'POST',
-            body: JSON.stringify({ action, target_id: targetId }),
+            body: JSON.stringify({ action: apiAction, target_id: targetId }),
             headers: { 'Authorization': `Bearer ${token}` }
         });
         return { success: true, status: data.status };
