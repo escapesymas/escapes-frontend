@@ -139,6 +139,34 @@ export const createPaddockThread = async (
 };
 
 /**
+ * PADDOCK: Obtener detalle de hilo y respuestas
+ */
+export const fetchPaddockThread = async (threadId: number): Promise<{ thread: PaddockThread; replies: any[] } | null> => {
+    try {
+        const { data } = await makeRequest(`${API_BASE}/paddock/thread/${threadId}`);
+        return data as { thread: PaddockThread; replies: any[] };
+    } catch (error) {
+        console.error('[PADDOCK] Error fetching thread:', error);
+        return null;
+    }
+};
+
+/**
+ * PADDOCK: Eliminar Hilo
+ */
+export const deletePaddockThread = async (token: string, threadId: number): Promise<{ success: boolean; error?: string }> => {
+    try {
+        await makeRequest(`${API_BASE}/paddock/thread/${threadId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message || 'Error al eliminar hilo' };
+    }
+};
+
+/**
  * INTERACCIONES: Dar Like (toggle)
  */
 export const toggleLike = async (
