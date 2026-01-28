@@ -16,7 +16,7 @@ import { PromoBanner } from './components/PromoBanner';
 import { FeaturesBanner } from './components/FeaturesBanner';
 import { ProductSkeleton } from './components/ProductSkeleton';
 import { STORE_CONFIG, FEATURES, BIKE_DATA, CATEGORIES } from './storeData';
-import { fetchProducts, saveUserCart, getUserCart } from './services/woocommerce';
+import { fetchProducts, saveUserCart, getUserCart, fetchCategories } from './services/woocommerce';
 import { saveSession, getSession, logoutSession } from './services/auth';
 import { trackPageView, trackViewItem, trackAddToCart } from './utils/analytics';
 import { Product, BikeSelection, CartItem, User } from './types';
@@ -109,7 +109,7 @@ function App() {
   const catalogRef = useRef<HTMLDivElement>(null);
 
   // Parse filters from URL
-  const { fetchCategories } = require('./services/woocommerce'); // Helper for dynamic categories
+
 
   // Parse filters from URL
   const query = searchParams.get('q') || undefined;
