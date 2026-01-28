@@ -95,26 +95,54 @@ export const createSocialPost = async (
 /**
  * PADDOCK: Obtener categorías
  */
-export const fetchPaddockCategories = async (): Promise<PaddockCategory[]> => {
-    try {
-        const { data } = await makeRequest(`${API_BASE}/paddock/categories`);
+// --- STATIC DATA ---
 
-        // Doc returns { id, name, slug, count, description }
-        // App expects { id, title, description, count, icon? }
-        if (Array.isArray(data) && data.length > 0) {
-            return data.map((cat: any) => ({
-                id: cat.id,
-                title: cat.name, // Map name -> title
-                description: cat.description,
-                count: cat.count,
-                icon: undefined // Icon not provided by API
-            }));
-        }
-        return [];
-    } catch (error) {
-        console.warn('[PADDOCK] API failed', error);
-        return [];
+export const SPAIN_PROVINCES = [
+    "Álava", "Albacete", "Alicante", "Almería", "Asturias", "Ávila", "Badajoz", "Barcelona", "Burgos", "Cáceres",
+    "Cádiz", "Cantabria", "Castellón", "Ciudad Real", "Córdoba", "Cuenca", "Girona", "Granada", "Guadalajara",
+    "Guipúzcoa", "Huelva", "Huesca", "Illes Balears", "Jaén", "La Coruña", "La Rioja", "Las Palmas", "León",
+    "Lleida", "Lugo", "Madrid", "Málaga", "Murcia", "Navarra", "Ourense", "Palencia", "Pontevedra", "Salamanca",
+    "Santa Cruz de Tenerife", "Segovia", "Sevilla", "Soria", "Tarragona", "Teruel", "Toledo", "Valencia",
+    "Valladolid", "Vizcaya", "Zamora", "Zaragoza"
+].sort();
+
+export const STATIC_CATEGORIES: PaddockCategory[] = [
+    {
+        id: 101, // ID textual handled as number for compatibility
+        title: 'Paddock General',
+        description: 'Charlas sobre motociclismo, actualidad y off-topic.',
+        icon: 'message-square',
+        count: 0
+    },
+    {
+        id: 102,
+        title: 'Mecánica y Taller',
+        description: 'Dudas técnicas, bricos, mantenimientos y averías.',
+        icon: 'wrench',
+        count: 0
+    },
+    {
+        id: 103, // market_bikes
+        title: 'Compraventa Motos',
+        description: 'EXCLUSIVO MOTOS. Prohibido recambios.',
+        icon: 'bike',
+        count: 0
+    },
+    {
+        id: 104, // routes
+        title: 'Rutas y Quedadas',
+        description: 'Organiza salidas por tu zona. Navegación por provincias.',
+        icon: 'compass',
+        count: 0
     }
+];
+
+/**
+ * PADDOCK: Obtener categorías
+ */
+export const fetchPaddockCategories = async (): Promise<PaddockCategory[]> => {
+    // Return static categories immediately
+    return STATIC_CATEGORIES;
 };
 
 /**
