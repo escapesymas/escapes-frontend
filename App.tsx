@@ -15,7 +15,7 @@ import { BrandSlider } from './components/BrandSlider';
 import { PromoBanner } from './components/PromoBanner';
 import { FeaturesBanner } from './components/FeaturesBanner';
 import { ProductSkeleton } from './components/ProductSkeleton';
-import { STORE_CONFIG, FEATURES, BIKE_DATA } from './storeData';
+import { STORE_CONFIG, FEATURES, BIKE_DATA, CATEGORIES } from './storeData';
 import { fetchProducts, saveUserCart, getUserCart } from './services/woocommerce';
 import { saveSession, getSession, logoutSession } from './services/auth';
 import { trackPageView, trackViewItem, trackAddToCart } from './utils/analytics';
@@ -109,9 +109,30 @@ function App() {
   const catalogRef = useRef<HTMLDivElement>(null);
 
   // Parse filters from URL
+  const { fetchCategories } = require('./services/woocommerce'); // Helper for dynamic categories
+
+  // Parse filters from URL
   const query = searchParams.get('q') || undefined;
   const categoryIdParam = searchParams.get('cat');
   const motoParam = searchParams.get('moto');
+  const brandParam = searchParams.get('brand'); // New Brand Filter
+
+  const [brands, setBrands] = useState<{ name: string; logo: string }[]>([]);
+
+  // Load Brands for Filter
+  useEffect(() => {
+    fetch('/brands.txt')
+      .then(res => res.text())
+      .then(text => {
+        const lines = text.split('\n').filter(line => line.trim() !== '');
+        const parsed = lines.map(line => {
+          const [name, logo] = line.split(',');
+          return { name: name?.trim(), logo: logo?.trim() };
+        }).filter(b => b.name);
+        setBrands(parsed);
+      })
+      .catch(e => console.error("Error loading brands", e));
+  }, []);
 
 
   // Initialize Session
@@ -235,7 +256,7 @@ function App() {
       setCurrentPage(1);
       handleProductFetch(1);
     }
-  }, [currentView, urlCategory, query, motoParam, perPage, sortBy]); // Removed currentPage from deps
+  }, [currentView, urlCategory, query, motoParam, brandParam, perPage, sortBy]); // Added brandParam
 
   // 2. Refetch when PAGE changes (Do not reset page)
   useEffect(() => {
@@ -300,8 +321,28 @@ function App() {
         }
       }
 
+      // 3. COMBINE SEARCH TERMS FOR SERVER-SIDE FILTERING
+      // This forces the server to search across Title, SKU and Description
+      const searchTerms: string[] = [];
+
+      if (query) searchTerms.push(query);
+
+      if (motoParam) {
+        const cleanParam = decodeURIComponent(motoParam);
+        const separator = cleanParam.includes('|') ? '|' : '-';
+        const [brand, model, year] = cleanParam.split(separator);
+        // Inject vehicle info into search
+        searchTerms.push(`${brand} ${model} ${year}`);
+      }
+
+      if (brandParam) {
+        searchTerms.push(brandParam);
+      }
+
+      const combinedQuery = searchTerms.length > 0 ? searchTerms.join(' ') : undefined;
+
       const { products: matches, totalPages: pages } = await fetchProducts(
-        query,
+        combinedQuery,
         targetCatId,
         pageToLoad,
         perPage,
@@ -309,50 +350,8 @@ function App() {
         order
       );
 
-      // Filter by Moto locally if API doesn't support it yet
-      let finalProducts = matches;
-      if (motoParam) {
-        let brand, model, year;
-
-        // Support new pipe format and legacy dash format (best effort)
-        if (motoParam.includes('|')) {
-          [brand, model, year] = motoParam.split('|');
-        } else {
-          // Legacy or simple format
-          const parts = motoParam.split('-');
-          brand = parts[0];
-          // Try to reconstruct model if it had dashes, but this is ambiguous without the new separator
-          // Assuming worst case just take the rest? No, legacy was Brand-Model-Year. 
-          // If model has dashes, legacy was broken.
-          model = parts[1];
-        }
-
-        if (brand) {
-          finalProducts = matches.filter(p => {
-            const text = (p.title + ' ' + (p.description || '')).toLowerCase();
-            const brandMatch = text.includes(brand.toLowerCase());
-
-            if (!model) return brandMatch;
-
-            // Smart Model Matching
-            // 1. Exact phrase match
-            if (text.includes(model.toLowerCase())) return true;
-
-            // 2. Normalized match (remove spaces/dashes) e.g. "S1000RR" matches "S 1000 RR"
-            const normalizedText = text.replace(/[\s-]/g, '');
-            const normalizedModel = model.replace(/[\s-]/g, '').toLowerCase();
-            if (normalizedText.includes(normalizedModel)) return true;
-
-            // 3. Token match (if model is "Africa Twin", match "Africa" and "Twin")
-            const modelTokens = model.toLowerCase().split(/[\s-]+/).filter(t => t.length > 1);
-            if (modelTokens.length > 0 && modelTokens.every(token => text.includes(token))) return true;
-
-            return false;
-          });
-        }
-      }
-
-      setProducts(finalProducts);
+      // No client-side filtering needed anymore as we are using the enhanced server search
+      setProducts(matches);
       setTotalPages(pages);
       setCurrentPage(pageToLoad);
     } catch (e: any) {
@@ -731,39 +730,79 @@ function App() {
                 <BikeSelector onSearch={handleBikeSearch} onTextSearch={handleTextSearch} isLoading={loading} bikeData={BIKE_DATA} />
               </section>
               <section className="py-12 bg-zinc-950 min-h-screen container mx-auto px-4 border-t border-zinc-900">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
-                  <div className="flex items-center gap-4">
-                    <h2 className="text-2xl font-bold text-white uppercase italic">{currentFilter || "Catálogo"}</h2>
-                    {currentFilter && <button onClick={handleClearFilters} className="text-zinc-500 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2"><Trash2 className="w-4 h-4" /> Limpiar</button>}
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <label htmlFor="perPage" className="text-zinc-500 text-xs uppercase">Mostrar:</label>
-                      <select
-                        id="perPage"
-                        value={perPage}
-                        onChange={(e) => { setPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                        className="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer"
-                        aria-label="Productos por página"
-                      >
-                        <option value={10}>10</option>
-                        <option value={20}>20</option>
-                        <option value={50}>50</option>
-                      </select>
+                <div className="flex flex-col gap-6 mb-10">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div className="flex items-center gap-4">
+                      <h2 className="text-2xl font-bold text-white uppercase italic">{currentFilter || "Catálogo"}</h2>
+                      {(currentFilter || brandParam || motoParam) && (
+                        <button onClick={handleClearFilters} className="text-zinc-500 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2">
+                          <Trash2 className="w-4 h-4" /> Limpiar
+                        </button>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <label htmlFor="sortBy" className="text-zinc-500 text-xs uppercase">Ordenar:</label>
+
+                    <div className="flex flex-wrap items-center gap-4">
+                      {/* Brand Filter */}
                       <select
-                        id="sortBy"
-                        value={sortBy}
-                        onChange={(e) => { setSortBy(e.target.value as 'date' | 'price' | 'price-asc'); setCurrentPage(1); }}
-                        className="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer"
-                        aria-label="Ordenar productos"
+                        value={brandParam || ''}
+                        onChange={(e) => {
+                          const newParams = new URLSearchParams(searchParams);
+                          if (e.target.value) newParams.set('brand', e.target.value);
+                          else newParams.delete('brand');
+                          setSearchParams(newParams);
+                          navigate(`/recambios?${newParams.toString()}`);
+                        }}
+                        className="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer max-w-[150px]"
                       >
-                        <option value="date">Relevancia</option>
-                        <option value="price">Precio: Mayor a menor</option>
-                        <option value="price-asc">Precio: Menor a mayor</option>
+                        <option value="">Todas las Marcas</option>
+                        {brands.map(b => (
+                          <option key={b.name} value={b.name}>{b.name}</option>
+                        ))}
                       </select>
+
+                      {/* Category Filter */}
+                      <select
+                        value={urlCategory || ''}
+                        onChange={(e) => {
+                          if (e.target.value) handleNavClick('catalog', e.target.value);
+                          else handleNavClick('catalog');
+                        }}
+                        className="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer max-w-[150px]"
+                      >
+                        <option value="">Todas las Categorías</option>
+                        {CATEGORIES.map(c => (
+                          <option key={c.id} value={c.name}>{c.name}</option>
+                        ))}
+                      </select>
+
+                      <div className="h-6 w-px bg-zinc-800 hidden md:block" />
+
+                      <div className="flex items-center gap-2">
+                        <label htmlFor="perPage" className="text-zinc-500 text-xs uppercase hidden md:inline">Mostrar:</label>
+                        <select
+                          id="perPage"
+                          value={perPage}
+                          onChange={(e) => { setPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                          className="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer"
+                        >
+                          <option value={10}>10</option>
+                          <option value={20}>20</option>
+                          <option value={50}>50</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label htmlFor="sortBy" className="text-zinc-500 text-xs uppercase hidden md:inline">Ordenar:</label>
+                        <select
+                          id="sortBy"
+                          value={sortBy}
+                          onChange={(e) => { setSortBy(e.target.value as 'date' | 'price' | 'price-asc'); setCurrentPage(1); }}
+                          className="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer"
+                        >
+                          <option value="date">Relevancia</option>
+                          <option value="price">Precio: Mayor a menor</option>
+                          <option value="price-asc">Precio: Menor a mayor</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
                 </div>
