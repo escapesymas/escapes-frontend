@@ -14,27 +14,65 @@ const FORUM_ICONS: Record<string, any> = {
   'support': LifeBuoy
 };
 
+// --- STATIC CATEGORIES & HIERARCHY ---
+
+export const STATIC_CATEGORIES = [
+  {
+    id: 'general',
+    title: 'Paddock General',
+    description: 'Charlas sobre motociclismo, actualiadad y off-topic.',
+    icon: MessageSquare,
+    bg: 'bg-blue-100',
+    color: 'text-blue-600'
+  },
+  {
+    id: 'mechanic',
+    title: 'Mecánica y Taller',
+    description: 'Dudas técnicas, bricos, mantenimientos y averías.',
+    icon: Wrench,
+    bg: 'bg-orange-100',
+    color: 'text-orange-600'
+  },
+  {
+    id: 'market_bikes',
+    title: 'Compraventa Motos',
+    description: 'EXCLUSIVO MOTOS. Prohibido recambios o equipamiento.',
+    icon: Bike,
+    bg: 'bg-green-100',
+    color: 'text-green-600'
+  },
+  {
+    id: 'routes',
+    title: 'Rutas y Quedadas',
+    description: 'Organiza salidas por tu zona. Navegación por provincias.',
+    icon: Compass,
+    bg: 'bg-red-100',
+    color: 'text-red-600'
+  }
+];
+
+export const SPAIN_PROVINCES = [
+  "Álava", "Albacete", "Alicante", "Almería", "Asturias", "Ávila", "Badajoz", "Barcelona", "Burgos", "Cáceres",
+  "Cádiz", "Cantabria", "Castellón", "Ciudad Real", "Córdoba", "Cuenca", "Girona", "Granada", "Guadalajara",
+  "Guipúzcoa", "Huelva", "Huesca", "Illes Balears", "Jaén", "La Coruña", "La Rioja", "Las Palmas", "León",
+  "Lleida", "Lugo", "Madrid", "Málaga", "Murcia", "Navarra", "Ourense", "Palencia", "Pontevedra", "Salamanca",
+  "Santa Cruz de Tenerife", "Segovia", "Sevilla", "Soria", "Tarragona", "Teruel", "Toledo", "Valencia",
+  "Valladolid", "Vizcaya", "Zamora", "Zaragoza"
+].sort();
+
 /**
  * 1. OBTENER CATEGORÍAS
- * Se mappea la taxonomía 'paddock_category' a nuestro tipo ForumCategory
+ * Devuelve las categorías estáticas definidas para la App.
  */
 export const fetchForumCategories = async (): Promise<ForumCategory[]> => {
-  try {
-    // Native WP Categories
-    const { data } = await makeRequest('/wp/v2/categories?hide_empty=false&per_page=20');
-
-    return (data as any[]).map(cat => ({
-      id: String(cat.id),
-      title: cat.name,
-      description: cat.description || 'Espacio de discusión',
-      icon: FORUM_ICONS['brands'] || MessageSquare, // Logic to pick icon based on slug/id could be improved here
-      topicCount: cat.count || 0
-    }));
-  } catch (error) {
-    console.error("Error fetching forum categories:", error);
-    // Fallback if no categories exist yet
-    return [];
-  }
+  // Return static categories immediately
+  return STATIC_CATEGORIES.map(cat => ({
+    id: cat.id,
+    title: cat.title,
+    description: cat.description,
+    icon: cat.icon,
+    topicCount: 0 // Dynamic count logic would handle this differently
+  }));
 };
 
 /**

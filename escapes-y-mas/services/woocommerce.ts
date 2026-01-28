@@ -123,3 +123,28 @@ export const fetchProducts = async (
     throw error;
   }
 };
+
+// --- GAMIFICATION STUBS (To support forum.ts) ---
+
+export const toggleLike = async (type: string, id: number, token: string): Promise<{ liked: boolean; likeCount: number }> => {
+  // En una implementación real, esto llamaría a un endpoint de gamificación
+  console.log(`[Mock] Toggling like for ${type} ${id}`);
+  return { liked: true, likeCount: Math.floor(Math.random() * 10) + 1 };
+};
+
+export const registerActivity = async (action: string, id: number, token: string): Promise<void> => {
+  console.log(`[Mock] Registered activity: ${action} on ${id}`);
+};
+
+export const fetchUserRank = async (userId: number): Promise<UserRank | null> => {
+  // Rank mock
+  return {
+    level: 5,
+    title: "Piloto Experto",
+    xp: 2500,
+    xpToNext: 5000,
+    discount: 5,
+    color: "#eab308",
+    icon: "🏆"
+  };
+};
