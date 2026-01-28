@@ -221,6 +221,109 @@ export const BIKE_DATABASE: BikeModel[] = [
     { id: 'cfmoto-650nk', brand: 'CFMoto', model: '650NK', years: ['2019-2024'], type: 'Naked' },
     { id: 'cfmoto-800nk', brand: 'CFMoto', model: '800NK', years: ['2023-2024'], type: 'Naked' },
     { id: 'cfmoto-800mt', brand: 'CFMoto', model: '800MT', years: ['2021-2024'], type: 'Adventure' },
+
+    // ==========================================
+    //                 SCOOTERS
+    // ==========================================
+
+    // YAMAHA SCOOTERS
+    { id: 'yamaha-tmax500', brand: 'Yamaha', model: 'TMAX 500', years: ['2001-2011'], type: 'Scooter' },
+    { id: 'yamaha-tmax530', brand: 'Yamaha', model: 'TMAX 530', years: ['2012-2019'], type: 'Scooter' },
+    // TMAX 560 already exists
+    { id: 'yamaha-xmax125', brand: 'Yamaha', model: 'XMAX 125', years: ['2010-2024'], type: 'Scooter' },
+    { id: 'yamaha-xmax400', brand: 'Yamaha', model: 'XMAX 400', years: ['2013-2021'], type: 'Scooter' },
+    { id: 'yamaha-nmax125', brand: 'Yamaha', model: 'NMAX 125', years: ['2015-2024'], type: 'Scooter' },
+    { id: 'yamaha-nmax155', brand: 'Yamaha', model: 'NMAX 155', years: ['2015-2024'], type: 'Scooter' },
+    { id: 'yamaha-tricity125', brand: 'Yamaha', model: 'Tricity 125', years: ['2014-2024'], type: 'Scooter' },
+    { id: 'yamaha-tricity300', brand: 'Yamaha', model: 'Tricity 300', years: ['2020-2024'], type: 'Scooter' },
+    { id: 'yamaha-delight', brand: 'Yamaha', model: "D'elight 125", years: ['2017-2024'], type: 'Scooter' },
+
+    // HONDA SCOOTERS
+    { id: 'honda-pcx125', brand: 'Honda', model: 'PCX 125', years: ['2010-2024'], type: 'Scooter' },
+    { id: 'honda-sh125i', brand: 'Honda', model: 'SH 125i', years: ['2001-2024'], type: 'Scooter' },
+    { id: 'honda-sh150i', brand: 'Honda', model: 'SH 150i', years: ['2001-2024'], type: 'Scooter' },
+    { id: 'honda-sh300i', brand: 'Honda', model: 'SH 300i', years: ['2007-2020'], type: 'Scooter' },
+    { id: 'honda-sh350i', brand: 'Honda', model: 'SH 350i', years: ['2021-2024'], type: 'Scooter' },
+    { id: 'honda-shmode', brand: 'Honda', model: 'SH Mode 125', years: ['2014-2024'], type: 'Scooter' },
+    { id: 'honda-forza125', brand: 'Honda', model: 'Forza 125', years: ['2015-2024'], type: 'Scooter' },
+    { id: 'honda-forza300', brand: 'Honda', model: 'Forza 300', years: ['2013-2020'], type: 'Scooter' },
+    { id: 'honda-forza350', brand: 'Honda', model: 'Forza 350', years: ['2021-2024'], type: 'Scooter' },
+    { id: 'honda-adv350', brand: 'Honda', model: 'ADV 350', years: ['2022-2024'], type: 'Scooter' },
+    { id: 'honda-vision110', brand: 'Honda', model: 'Vision 110', years: ['2012-2024'], type: 'Scooter' },
+
+    // PIAGGIO
+    { id: 'piaggio-liberty125', brand: 'Piaggio', model: 'Liberty 125', years: ['2000-2024'], type: 'Scooter' },
+    { id: 'piaggio-medley125', brand: 'Piaggio', model: 'Medley 125', years: ['2016-2024'], type: 'Scooter' },
+    { id: 'piaggio-beverly300', brand: 'Piaggio', model: 'Beverly 300', years: ['2010-2024'], type: 'Scooter' },
+    { id: 'piaggio-beverly400', brand: 'Piaggio', model: 'Beverly 400', years: ['2021-2024'], type: 'Scooter' },
+    { id: 'piaggio-mp3-300', brand: 'Piaggio', model: 'MP3 300', years: ['2010-2024'], type: 'Scooter' },
+    { id: 'piaggio-mp3-400', brand: 'Piaggio', model: 'MP3 400', years: ['2008-2024'], type: 'Scooter' },
+    { id: 'piaggio-mp3-500', brand: 'Piaggio', model: 'MP3 500', years: ['2011-2024'], type: 'Scooter' },
+    { id: 'piaggio-mp3-530', brand: 'Piaggio', model: 'MP3 530 Exclusive', years: ['2023-2024'], type: 'Scooter' },
+
+    // VESPA
+    { id: 'vespa-primavera125', brand: 'Vespa', model: 'Primavera 125', years: ['2014-2024'], type: 'Scooter' },
+    { id: 'vespa-sprint125', brand: 'Vespa', model: 'Sprint 125', years: ['2014-2024'], type: 'Scooter' },
+    { id: 'vespa-gts125', brand: 'Vespa', model: 'GTS 125', years: ['2005-2024'], type: 'Scooter' },
+    { id: 'vespa-gts300', brand: 'Vespa', model: 'GTS 300', years: ['2008-2024'], type: 'Scooter' },
+
+    // KYMCO
+    { id: 'kymco-agility125', brand: 'Kymco', model: 'Agility City 125', years: ['2009-2024'], type: 'Scooter' },
+    { id: 'kymco-agility-s125', brand: 'Kymco', model: 'Agility S 125', years: ['2023-2024'], type: 'Scooter' },
+    { id: 'kymco-superdink125', brand: 'Kymco', model: 'Super Dink 125', years: ['2009-2024'], type: 'Scooter' },
+    { id: 'kymco-superdink350', brand: 'Kymco', model: 'Super Dink 350', years: ['2017-2024'], type: 'Scooter' },
+    { id: 'kymco-ak550', brand: 'Kymco', model: 'AK 550', years: ['2017-2024'], type: 'Scooter' },
+    { id: 'kymco-dtx125', brand: 'Kymco', model: 'DTX 125', years: ['2022-2024'], type: 'Scooter' },
+    { id: 'kymco-dtx350', brand: 'Kymco', model: 'DTX 350', years: ['2022-2024'], type: 'Scooter' },
+    { id: 'kymco-skytown125', brand: 'Kymco', model: 'Sky Town 125', years: ['2024'], type: 'Scooter' },
+    { id: 'kymco-xtown125', brand: 'Kymco', model: 'X-Town CT 125', years: ['2020-2024'], type: 'Scooter' },
+
+    // SYM
+    { id: 'sym-symphony125', brand: 'SYM', model: 'Symphony 125', years: ['2010-2024'], type: 'Scooter' },
+    { id: 'sym-jet14', brand: 'SYM', model: 'Jet 14 125', years: ['2017-2024'], type: 'Scooter' },
+    { id: 'sym-jetx125', brand: 'SYM', model: 'Jet X 125', years: ['2021-2024'], type: 'Scooter' },
+    { id: 'sym-cruisym125', brand: 'SYM', model: 'Cruisym 125', years: ['2018-2024'], type: 'Scooter' },
+    { id: 'sym-cruisym300', brand: 'SYM', model: 'Cruisym 300', years: ['2018-2024'], type: 'Scooter' },
+    { id: 'sym-maxsym400', brand: 'SYM', model: 'Maxsym 400', years: ['2021-2024'], type: 'Scooter' },
+    { id: 'sym-maxsymtl', brand: 'SYM', model: 'Maxsym TL 508', years: ['2020-2024'], type: 'Scooter' },
+    { id: 'sym-joyride300', brand: 'SYM', model: 'Joyride 300', years: ['2022-2024'], type: 'Scooter' },
+
+    // SUZUKI SCOOTERS
+    { id: 'suzuki-burgman125', brand: 'Suzuki', model: 'Burgman 125', years: ['2002-2024'], type: 'Scooter' },
+    { id: 'suzuki-burgman200', brand: 'Suzuki', model: 'Burgman 200', years: ['2007-2021'], type: 'Scooter' },
+    { id: 'suzuki-burgman400', brand: 'Suzuki', model: 'Burgman 400', years: ['1999-2024'], type: 'Scooter' },
+    { id: 'suzuki-address125', brand: 'Suzuki', model: 'Address 125', years: ['2015-2024'], type: 'Scooter' },
+
+    // BMW SCOOTERS
+    { id: 'bmw-c400x', brand: 'BMW', model: 'C 400 X', years: ['2018-2024'], type: 'Scooter' },
+    { id: 'bmw-c400gt', brand: 'BMW', model: 'C 400 GT', years: ['2019-2024'], type: 'Scooter' },
+    { id: 'bmw-c650sport', brand: 'BMW', model: 'C 650 Sport', years: ['2016-2021'], type: 'Scooter' },
+    { id: 'bmw-c650gt', brand: 'BMW', model: 'C 650 GT', years: ['2012-2021'], type: 'Scooter' },
+    { id: 'bmw-ce04', brand: 'BMW', model: 'CE 04', years: ['2022-2024'], type: 'Scooter' },
+
+    // APRILIA SCOOTERS
+    { id: 'aprilia-srgt125', brand: 'Aprilia', model: 'SR GT 125', years: ['2022-2024'], type: 'Scooter' },
+    { id: 'aprilia-srgt200', brand: 'Aprilia', model: 'SR GT 200', years: ['2022-2024'], type: 'Scooter' },
+    { id: 'aprilia-sxr50', brand: 'Aprilia', model: 'SXR 50', years: ['2021-2024'], type: 'Scooter' },
+
+    // PEUGEOT
+    { id: 'peugeot-tweet125', brand: 'Peugeot', model: 'Tweet 125', years: ['2010-2024'], type: 'Scooter' },
+    { id: 'peugeot-django125', brand: 'Peugeot', model: 'Django 125', years: ['2014-2024'], type: 'Scooter' },
+    { id: 'peugeot-metropolis400', brand: 'Peugeot', model: 'Metropolis 400', years: ['2013-2024'], type: 'Scooter' },
+    { id: 'peugeot-xp400', brand: 'Peugeot', model: 'XP400', years: ['2023-2024'], type: 'Scooter' },
+
+    // ZONTES
+    { id: 'zontes-m125', brand: 'Zontes', model: 'M125', years: ['2022-2024'], type: 'Scooter' },
+    { id: 'zontes-m310', brand: 'Zontes', model: 'M310', years: ['2021-2023'], type: 'Scooter' },
+    { id: 'zontes-m350', brand: 'Zontes', model: 'M350', years: ['2023-2024'], type: 'Scooter' },
+    { id: 'zontes-e125', brand: 'Zontes', model: 'E125', years: ['2024'], type: 'Scooter' },
+    { id: 'zontes-e350', brand: 'Zontes', model: 'E350', years: ['2023-2024'], type: 'Scooter' },
+    { id: 'zontes-d125', brand: 'Zontes', model: 'D125', years: ['2024'], type: 'Scooter' },
+    { id: 'zontes-d350', brand: 'Zontes', model: 'D350', years: ['2024'], type: 'Scooter' },
+
+    // VOGE
+    { id: 'voge-sr4', brand: 'Voge', model: 'SR4 Max', years: ['2023-2024'], type: 'Scooter' },
+    { id: 'voge-sr1', brand: 'Voge', model: 'SR1', years: ['2024'], type: 'Scooter' },
 ];
 
 // Helper para obtener marcas únicas
