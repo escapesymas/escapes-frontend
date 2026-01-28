@@ -95,7 +95,13 @@ export const createSocialPost = async (
 /**
  * PADDOCK: Obtener categorías
  */
-// --- STATIC DATA ---
+// --- CONFIGURACIÓN UI CATEGORÍAS (Mapeo por ID o Título aprox) ---
+const UI_CATEGORY_CONFIG: Record<string, Partial<PaddockCategory>> = {
+    'general': { icon: 'message-square', id: 101 }, // Fallback keys
+    'mecanica': { icon: 'wrench', id: 102 },
+    'compraventa': { icon: 'bike', id: 103 },
+    'rutas': { icon: 'compass', id: 104 }
+};
 
 export const SPAIN_PROVINCES = [
     "Álava", "Albacete", "Alicante", "Almería", "Asturias", "Ávila", "Badajoz", "Barcelona", "Burgos", "Cáceres",
@@ -106,43 +112,54 @@ export const SPAIN_PROVINCES = [
     "Valladolid", "Vizcaya", "Zamora", "Zaragoza"
 ].sort();
 
-export const STATIC_CATEGORIES: PaddockCategory[] = [
-    {
-        id: 101, // ID textual handled as number for compatibility
-        title: 'Paddock General',
-        description: 'Charlas sobre motociclismo, actualidad y off-topic.',
-        icon: 'message-square',
-        count: 0
-    },
-    {
-        id: 102,
-        title: 'Mecánica y Taller',
-        description: 'Dudas técnicas, bricos, mantenimientos y averías.',
-        icon: 'wrench',
-        count: 0
-    },
-    {
-        id: 103, // market_bikes
-        title: 'Compraventa Motos',
-        description: 'EXCLUSIVO MOTOS. Prohibido recambios.',
-        icon: 'bike',
-        count: 0
-    },
-    {
-        id: 104, // routes
-        title: 'Rutas y Quedadas',
-        description: 'Organiza salidas por tu zona. Navegación por provincias.',
-        icon: 'compass',
-        count: 0
-    }
-];
-
 /**
  * PADDOCK: Obtener categorías
+ * @returns Lista de categorías (reales del backend con metadatos UI inyectados)
  */
 export const fetchPaddockCategories = async (): Promise<PaddockCategory[]> => {
-    // Return static categories immediately
-    return STATIC_CATEGORIES;
+    try {
+        const { data } = await makeRequest(`${API_BASE}/paddock/categories`);
+
+        if (Array.isArray(data) && data.length > 0) {
+            return data.map((cat: any) => {
+                // Detectar tipo de categoría por título para asignar icono/descripción
+                const titleLower = cat.name.toLowerCase();
+                let config = UI_CATEGORY_CONFIG['general']; // Default
+
+                if (titleLower.includes('mecanica') || titleLower.includes('taller')) config = UI_CATEGORY_CONFIG['mecanica'];
+                else if (titleLower.includes('venta') || titleLower.includes('motos')) config = UI_CATEGORY_CONFIG['compraventa'];
+                else if (titleLower.includes('ruta') || titleLower.includes('quedada')) config = UI_CATEGORY_CONFIG['rutas'];
+
+                return {
+                    id: cat.id, // IMPORTANTE: Usar ID real del backend
+                    title: cat.name,
+                    description: cat.description || config!.description || 'Espacio de discusión',
+                    count: cat.count || 0,
+                    icon: config!.icon
+                };
+            });
+        }
+
+        // Si no hay categorías en el backend, devolvemos las estáticas (Solo para desarrollo/visualización)
+        console.warn("[PADDOCK] No categories found, using static fallback.");
+        return Object.values(UI_CATEGORY_CONFIG).map((conf, index) => ({
+            id: conf.id!,
+            title: ['Paddock General', 'Mecánica y Taller', 'Compraventa Motos', 'Rutas y Quedadas'][index],
+            description: 'Categoría predefinida',
+            count: 0,
+            icon: conf.icon
+        }));
+
+    } catch (error) {
+        console.error('[PADDOCK] API failed, using static fallback', error);
+        // Fallback estático en caso de error
+        return [
+            { id: 101, title: 'Paddock General', description: 'Charlas generales', icon: 'message-square', count: 0 },
+            { id: 102, title: 'Mecánica y Taller', description: 'Dudas técnicas', icon: 'wrench', count: 0 },
+            { id: 103, title: 'Compraventa Motos', description: 'Solo motos completas', icon: 'bike', count: 0 },
+            { id: 104, title: 'Rutas y Quedadas', description: 'Organiza tus salidas', icon: 'compass', count: 0 }
+        ];
+    }
 };
 
 /**
