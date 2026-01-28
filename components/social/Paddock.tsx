@@ -239,8 +239,10 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
                                     <div
                                         key={cat.id}
                                         onClick={() => {
-                                            // 104 is the hardcoded ID for 'Rutas y Quedadas'
-                                            if (cat.id === 104) {
+                                            // Detect 'Routes' category dynamically (by title or if it was mapped with compass icon)
+                                            const isRoutes = cat.title.toLowerCase().includes('rita') || cat.title.toLowerCase().includes('ruta') || cat.title.toLowerCase().includes('quedada');
+
+                                            if (isRoutes) {
                                                 navigateTo('provinces');
                                             } else {
                                                 setSelectedCategory(cat);
@@ -269,11 +271,16 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
                                 <button
                                     key={province}
                                     onClick={() => {
-                                        // We treat province as a pseudo-category or filter.
-                                        // For now, mapping it to the generic Routes category but forcing a tag/filter would be ideal.
-                                        // Here we just navigate to threads of category 104, but we'd ideally filter by province content.
-                                        setSelectedCategory(categories.find(c => c.id === 104) || null);
-                                        navigateTo('threads', { cat: '104', province: province });
+                                        // Find the routes category dynamically
+                                        const routeCat = categories.find(c => c.title.toLowerCase().includes('ruta') || c.title.toLowerCase().includes('quedada'));
+
+                                        if (routeCat) {
+                                            setSelectedCategory(routeCat);
+                                            // Pass province as a filter or tag if supported, for now just context
+                                            navigateTo('threads', { cat: String(routeCat.id), province: province });
+                                        } else {
+                                            alert("No se encontró la categoría de Rutas en el sistema.");
+                                        }
                                     }}
                                     className="bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 p-4 rounded-lg text-left text-zinc-300 hover:text-white transition-colors text-sm font-medium flex items-center justify-between group"
                                 >
@@ -294,7 +301,7 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
                                 <p className="text-zinc-400 text-sm max-w-2xl">{selectedCategory?.description}</p>
                             </div>
 
-                            {selectedCategory?.id === 103 && (
+                            {selectedCategory?.title.toLowerCase().includes('venta') && (
                                 <div className="bg-yellow-500/10 border border-yellow-500/50 p-3 rounded-lg flex items-center gap-3 text-yellow-200 w-full md:w-auto mt-4 md:mt-0">
                                     <AlertCircle className="w-5 h-5 flex-shrink-0" />
                                     <span className="text-xs font-bold">SOLO MOTOS COMPLETAS. Prohibido recambios.</span>
