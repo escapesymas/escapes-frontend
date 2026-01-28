@@ -9,7 +9,7 @@ import { User as UserType } from '../../types';
 import {
     fetchPaddockCategories, fetchPaddockThreads, createPaddockThread,
     fetchPaddockThread, sendReply, toggleLike, deletePaddockThread,
-    PaddockCategory, PaddockThread
+    PaddockCategory, PaddockThread, SPAIN_PROVINCES
 } from '../../services/socialApi'; // Correct path to services
 import { RichTextEditor } from '../RichTextEditor'; // Assuming this is reusable
 import { SEO } from '../SEO';
@@ -229,7 +229,6 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
                                     El corazón de la comunidad. Comparte conocimientos, organiza rutas y discute sobre mecánica.
                                 </p>
                             </div>
-                            {/* Stats or Search bar could go here */}
                         </div>
 
                         {loading ? (
@@ -239,27 +238,50 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
                                 {categories.map(cat => (
                                     <div
                                         key={cat.id}
-                                        onClick={() => { setSelectedCategory(cat); navigateTo('threads', { cat: String(cat.id) }); }}
+                                        onClick={() => {
+                                            // 104 is the hardcoded ID for 'Rutas y Quedadas'
+                                            if (cat.id === 104) {
+                                                navigateTo('provinces');
+                                            } else {
+                                                setSelectedCategory(cat);
+                                                navigateTo('threads', { cat: String(cat.id) });
+                                            }
+                                        }}
                                         className="group bg-zinc-900/50 border border-zinc-800 hover:border-racing-orange/50 p-6 rounded-xl cursor-pointer transition-all duration-300 hover:bg-zinc-900 relative overflow-hidden"
                                     >
-                                        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity transform rotate-12 scale-150">
-                                            <MessageSquare className="w-32 h-32 text-racing-orange" />
-                                        </div>
-
                                         <div className="relative z-10">
-                                            <div className="w-12 h-12 bg-zinc-800 rounded-lg flex items-center justify-center mb-4 group-hover:bg-racing-orange transition-colors shadow-lg shadow-black/50">
-                                                <MessageSquare className="w-6 h-6 text-zinc-400 group-hover:text-white" />
-                                            </div>
                                             <h3 className="text-xl font-bold text-white uppercase italic mb-2 group-hover:text-racing-orange transition-colors">{cat.title}</h3>
                                             <p className="text-zinc-500 text-sm mb-4 min-h-[40px]">{cat.description}</p>
-                                            <div className="flex items-center gap-4 text-xs font-mono text-zinc-600">
-                                                <span className="flex items-center gap-1"><Hash className="w-3 h-3" /> {cat.count || 0} temas</span>
-                                            </div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* --- VIEW: PROVINCES (HIERARCHY) --- */}
+                {view === 'provinces' && (
+                    <div className="animate-fade-in">
+                        <h2 className="text-2xl font-bold text-white uppercase italic mb-6 border-l-4 border-racing-orange pl-4">Selecciona tu Zona</h2>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                            {SPAIN_PROVINCES.map(province => (
+                                <button
+                                    key={province}
+                                    onClick={() => {
+                                        // We treat province as a pseudo-category or filter.
+                                        // For now, mapping it to the generic Routes category but forcing a tag/filter would be ideal.
+                                        // Here we just navigate to threads of category 104, but we'd ideally filter by province content.
+                                        setSelectedCategory(categories.find(c => c.id === 104) || null);
+                                        navigateTo('threads', { cat: '104', province: province });
+                                    }}
+                                    className="bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 p-4 rounded-lg text-left text-zinc-300 hover:text-white transition-colors text-sm font-medium flex items-center justify-between group"
+                                >
+                                    {province}
+                                    <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 text-racing-orange transition-opacity" />
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 )}
 
@@ -271,6 +293,14 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
                                 <h1 className="text-3xl font-bold text-white uppercase italic mb-1">{selectedCategory?.title}</h1>
                                 <p className="text-zinc-400 text-sm max-w-2xl">{selectedCategory?.description}</p>
                             </div>
+
+                            {selectedCategory?.id === 103 && (
+                                <div className="bg-yellow-500/10 border border-yellow-500/50 p-3 rounded-lg flex items-center gap-3 text-yellow-200 w-full md:w-auto mt-4 md:mt-0">
+                                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                                    <span className="text-xs font-bold">SOLO MOTOS COMPLETAS. Prohibido recambios.</span>
+                                </div>
+                            )}
+
                             <button
                                 onClick={() => user ? navigateTo('create_thread', { cat: categoryId! }) : onLoginRequest()}
                                 className="bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase text-sm py-3 px-6 rounded-lg shadow-lg shadow-orange-900/20 transition-all active:scale-95 flex items-center gap-2"
