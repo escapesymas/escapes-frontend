@@ -223,6 +223,99 @@ export const BIKE_DATABASE: BikeModel[] = [
     { id: 'cfmoto-800mt', brand: 'CFMoto', model: '800MT', years: ['2021-2024'], type: 'Adventure' },
 
     // ==========================================
+    //                 BENELLI
+    // ==========================================
+    { id: 'benelli-trk502', brand: 'Benelli', model: 'TRK 502 / X', years: ['2017-2024'], type: 'Adventure' },
+    { id: 'benelli-trk702', brand: 'Benelli', model: 'TRK 702 / X', years: ['2023-2024'], type: 'Adventure' },
+    { id: 'benelli-leoncino500', brand: 'Benelli', model: 'Leoncino 500 / Trail', years: ['2017-2024'], type: 'Naked' },
+    { id: 'benelli-leoncino800', brand: 'Benelli', model: 'Leoncino 800 / Trail', years: ['2022-2024'], type: 'Naked' },
+    { id: 'benelli-bn125', brand: 'Benelli', model: 'BN 125', years: ['2018-2024'], type: 'Naked' },
+    { id: 'benelli-imperiale400', brand: 'Benelli', model: 'Imperiale 400', years: ['2019-2024'], type: 'Cruiser' },
+    { id: 'benelli-752s', brand: 'Benelli', model: '752S', years: ['2019-2023'], type: 'Naked' },
+
+    // ==========================================
+    //                  VOGE
+    // ==========================================
+    { id: 'voge-300rally', brand: 'Voge', model: '300 Rally', years: ['2022-2024'], type: 'Adventure' },
+    { id: 'voge-300ds', brand: 'Voge', model: '300 DS', years: ['2020-2024'], type: 'Adventure' },
+    { id: 'voge-300ac', brand: 'Voge', model: '300 AC', years: ['2020-2024'], type: 'Naked' },
+    { id: 'voge-500ds', brand: 'Voge', model: '500 DS / DSX', years: ['2019-2023'], type: 'Adventure' },
+    { id: 'voge-525dsx', brand: 'Voge', model: '525 DSX', years: ['2023-2024'], type: 'Adventure' },
+    { id: 'voge-500ac', brand: 'Voge', model: '500 AC', years: ['2021-2024'], type: 'Naked' },
+    { id: 'voge-900dsx', brand: 'Voge', model: '900 DSX', years: ['2024'], type: 'Adventure' },
+    { id: 'voge-525acx', brand: 'Voge', model: '525 ACX', years: ['2023-2024'], type: 'Naked' },
+
+    // ==========================================
+    //                 ZONTES
+    // ==========================================
+    { id: 'zontes-g1-125', brand: 'Zontes', model: 'G1 125 / X', years: ['2020-2024'], type: 'Naked' },
+    { id: 'zontes-u-125', brand: 'Zontes', model: 'U 125', years: ['2020-2024'], type: 'Naked' },
+    { id: 'zontes-u1-125', brand: 'Zontes', model: 'U1 125', years: ['2021-2024'], type: 'Adventure' },
+    { id: 'zontes-gk125', brand: 'Zontes', model: 'GK 125', years: ['2022-2024'], type: 'Naked' },
+    { id: 'zontes-gk350', brand: 'Zontes', model: 'GK 350', years: ['2022-2024'], type: 'Naked' },
+    { id: 'zontes-t310', brand: 'Zontes', model: 'T-310', years: ['2019-2023'], type: 'Adventure' },
+    { id: 'zontes-t350', brand: 'Zontes', model: 'T-350', years: ['2023-2024'], type: 'Adventure' },
+    { id: 'zontes-r310', brand: 'Zontes', model: 'R-310', years: ['2019-2023'], type: 'Naked' },
+    { id: 'zontes-r350', brand: 'Zontes', model: 'R-350', years: ['2023-2024'], type: 'Naked' },
+    { id: 'zontes-x350', brand: 'Zontes', model: 'X-350', years: ['2023-2024'], type: 'Touring' },
+
+    // ==========================================
+    //                 MACBOR
+    // ==========================================
+    { id: 'macbor-xr1', brand: 'Macbor', model: 'Montana XR1 125', years: ['2017-2024'], type: 'Adventure' },
+    { id: 'macbor-xr3', brand: 'Macbor', model: 'Montana XR3 250', years: ['2017-2022'], type: 'Adventure' },
+    { id: 'macbor-xr5', brand: 'Macbor', model: 'Montana XR5 500', years: ['2020-2024'], type: 'Adventure' },
+    { id: 'macbor-rockster', brand: 'Macbor', model: 'Rockster 125 / Flat', years: ['2017-2024'], type: 'Cruiser' },
+    { id: 'macbor-eightmile125', brand: 'Macbor', model: 'Eight Mile 125', years: ['2019-2024'], type: 'Naked' },
+    { id: 'macbor-eightmile500', brand: 'Macbor', model: 'Eight Mile 500 SCR/STR', years: ['2021-2024'], type: 'Naked' },
+    { id: 'macbor-fun', brand: 'Macbor', model: 'Fun 125 Plus', years: ['2019-2024'], type: 'Naked' },
+
+    // ==========================================
+    //                 KEEWAY
+    // ==========================================
+    { id: 'keeway-rkf125', brand: 'Keeway', model: 'RKF 125', years: ['2018-2024'], type: 'Naked' },
+    { id: 'keeway-vcruise', brand: 'Keeway', model: 'V-Cruise 125', years: ['2022-2024'], type: 'Cruiser' },
+    { id: 'keeway-superlight', brand: 'Keeway', model: 'Superlight 125', years: ['2006-2024'], type: 'Cruiser' },
+    { id: 'keeway-vieste125', brand: 'Keeway', model: 'Vieste 125', years: ['2020-2024'], type: 'Scooter' },
+    { id: 'keeway-vieste300', brand: 'Keeway', model: 'Vieste 300', years: ['2020-2024'], type: 'Scooter' },
+    { id: 'keeway-xlight', brand: 'Keeway', model: 'X-Light 125', years: ['2023-2024'], type: 'Naked' },
+
+    // ==========================================
+    //                QJ MOTOR
+    // ==========================================
+    { id: 'qj-srk400', brand: 'QJ Motor', model: 'SRK 400', years: ['2022-2024'], type: 'Naked' },
+    { id: 'qj-srk700', brand: 'QJ Motor', model: 'SRK 700', years: ['2023-2024'], type: 'Naked' },
+    { id: 'qj-srk125s', brand: 'QJ Motor', model: 'SRK 125 S', years: ['2023-2024'], type: 'Naked' },
+    { id: 'qj-srt550', brand: 'QJ Motor', model: 'SRT 550 / X', years: ['2022-2024'], type: 'Adventure' },
+    { id: 'qj-srt700', brand: 'QJ Motor', model: 'SRT 700 X', years: ['2023-2024'], type: 'Adventure' },
+    { id: 'qj-srt800', brand: 'QJ Motor', model: 'SRT 800 / X', years: ['2022-2024'], type: 'Adventure' },
+    { id: 'qj-srv300', brand: 'QJ Motor', model: 'SRV 300 / 350', years: ['2023-2024'], type: 'Cruiser' },
+    { id: 'qj-srv125', brand: 'QJ Motor', model: 'SRV 125', years: ['2023-2024'], type: 'Cruiser' },
+
+    // ==========================================
+    //               MOTO GUZZI
+    // ==========================================
+    { id: 'guzzi-v7', brand: 'Moto Guzzi', model: 'V7 Stone / Special', years: ['2008-2024'], type: 'Naked' },
+    { id: 'guzzi-v85tt', brand: 'Moto Guzzi', model: 'V85 TT', years: ['2019-2024'], type: 'Adventure' },
+    { id: 'guzzi-v100', brand: 'Moto Guzzi', model: 'V100 Mandello', years: ['2023-2024'], type: 'Touring' },
+    { id: 'guzzi-stelvio', brand: 'Moto Guzzi', model: 'Stelvio', years: ['2024'], type: 'Adventure' },
+
+    // ==========================================
+    //                 INDIAN
+    // ==========================================
+    { id: 'indian-scout', brand: 'Indian', model: 'Scout / Bobber', years: ['2015-2024'], type: 'Cruiser' },
+    { id: 'indian-ftr', brand: 'Indian', model: 'FTR 1200 / S', years: ['2019-2024'], type: 'Naked' },
+    { id: 'indian-chief', brand: 'Indian', model: 'Chief', years: ['2022-2024'], type: 'Cruiser' },
+
+    // ==========================================
+    //                 BRIXTON
+    // ==========================================
+    { id: 'brixton-cromwell125', brand: 'Brixton', model: 'Cromwell 125', years: ['2017-2024'], type: 'Naked' },
+    { id: 'brixton-crossfire125', brand: 'Brixton', model: 'Crossfire 125', years: ['2022-2024'], type: 'Naked' },
+    { id: 'brixton-crossfire500', brand: 'Brixton', model: 'Crossfire 500 / X', years: ['2020-2024'], type: 'Naked' },
+    { id: 'brixton-cromwell1200', brand: 'Brixton', model: 'Cromwell 1200', years: ['2022-2024'], type: 'Naked' },
+
+    // ==========================================
     //                 SCOOTERS
     // ==========================================
 
