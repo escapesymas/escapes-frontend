@@ -331,8 +331,8 @@ function App() {
         const cleanParam = decodeURIComponent(motoParam);
         const separator = cleanParam.includes('|') ? '|' : '-';
         const [brand, model, year] = cleanParam.split(separator);
-        // Inject vehicle info into search
-        searchTerms.push(`${brand} ${model} ${year}`);
+        // Inject vehicle info into search - BROAD SEARCH (No Year) to find compatible consumables
+        searchTerms.push(`${brand} ${model}`);
       }
 
       if (brandParam) {
