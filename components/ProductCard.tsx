@@ -40,10 +40,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
   }, [product.image]);
 
   return (
-    <div className="group bg-racing-carbon border border-zinc-800 hover:border-racing-orange/50 transition-all duration-300 rounded-sm overflow-hidden flex flex-col h-full">
+    <div className="group bg-white dark:bg-racing-carbon border border-zinc-200 dark:border-zinc-800 hover:border-racing-orange/50 transition-all duration-300 rounded-sm overflow-hidden flex flex-col h-full shadow-sm dark:shadow-none">
       <Link
         to={`/${product.categorySlug ? product.categorySlug : 'recambios'}/${product.id}`}
-        className="block relative aspect-square overflow-hidden bg-white"
+        className="block relative aspect-square overflow-hidden bg-gray-100 dark:bg-white"
         onClick={() => onClick?.(product)}
       >
         {!isDefaultImage && (
@@ -80,7 +80,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
 
         <div className="absolute top-2 left-2 z-20 flex flex-col gap-2">
           {product.inStock && (
-            <span className="bg-green-500/90 text-black text-[10px] md:text-xs font-bold px-1.5 py-0.5 uppercase rounded-sm flex items-center gap-1 backdrop-blur-sm w-fit shadow-md">
+            <span className="bg-green-500/90 text-white text-[10px] md:text-xs font-bold px-1.5 py-0.5 uppercase rounded-sm flex items-center gap-1 backdrop-blur-sm w-fit shadow-md">
               <CheckCircle className="w-3 h-3" /> Stock
             </span>
           )}
@@ -101,26 +101,26 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
           to={`/${product.categorySlug ? product.categorySlug : 'recambios'}/${product.id}`}
           onClick={() => onClick?.(product)}
         >
-          <h3 className="text-white font-bold text-sm md:text-lg leading-tight mb-2 group-hover:text-racing-orange transition-colors line-clamp-2">
+          <h3 className="text-zinc-900 dark:text-white font-bold text-sm md:text-lg leading-tight mb-2 group-hover:text-racing-orange transition-colors line-clamp-2">
             {product.title}
           </h3>
         </Link>
 
-        <div className="mt-auto pt-3 md:pt-4 flex items-end justify-between border-t border-zinc-800">
+        <div className="mt-auto pt-3 md:pt-4 flex items-end justify-between border-t border-zinc-100 dark:border-zinc-800">
           <div className="flex flex-col">
             {hasDiscount ? (
               <>
                 <p className="text-racing-red text-[10px] md:text-xs font-bold line-through mb-0.5">
                   {formatPrice(product.regularPrice)}
                 </p>
-                <p className="text-lg md:text-2xl font-bold text-white leading-none">
+                <p className="text-lg md:text-2xl font-bold text-zinc-900 dark:text-white leading-none">
                   {formatPrice(product.price)}
                 </p>
               </>
             ) : (
               <>
                 <p className="text-zinc-400 text-[10px] md:text-xs mb-1">Precio unitario</p>
-                <p className="text-lg md:text-2xl font-bold text-white leading-none">
+                <p className="text-lg md:text-2xl font-bold text-zinc-900 dark:text-white leading-none">
                   {formatPrice(product.price)}
                 </p>
               </>
@@ -132,7 +132,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
               e.stopPropagation();
               onAddToCart?.();
             }}
-            className="bg-zinc-800 hover:bg-racing-orange text-white p-2 md:p-3 rounded-sm transition-colors duration-200 shadow-lg"
+            className="bg-zinc-100 dark:bg-zinc-800 hover:bg-racing-orange dark:hover:bg-racing-orange text-zinc-900 dark:text-white hover:text-white p-2 md:p-3 rounded-sm transition-colors duration-200 shadow-sm"
             title="Añadir al carrito"
             aria-label={`Añadir ${product.title} al carrito`}
           >
