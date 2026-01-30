@@ -38,17 +38,17 @@ export function BrandSlider() {
     const displayBrands = [...brands, ...brands, ...brands, ...brands, ...brands, ...brands];
 
     return (
-        <section className="py-8 md:py-12 bg-zinc-950 border-y border-zinc-900 overflow-hidden relative group">
+        <section className="py-8 md:py-12 bg-white dark:bg-zinc-950 border-y border-zinc-200 dark:border-zinc-900 overflow-hidden relative group">
             <div className="container mx-auto px-4 mb-6 md:mb-8">
-                <h2 className="text-xl md:text-2xl font-bold text-white uppercase italic border-l-4 border-racing-orange pl-4">
+                <h2 className="text-xl md:text-2xl font-bold text-zinc-900 dark:text-white uppercase italic border-l-4 border-racing-orange pl-4">
                     Nuestras Marcas
                 </h2>
             </div>
 
             <div className="relative w-full flex overflow-hidden mask-linear-fade">
                 {/* Degradados laterales para suavizar la entrada/salida */}
-                <div className="absolute inset-y-0 left-0 w-8 md:w-24 z-10 bg-gradient-to-r from-zinc-950 to-transparent pointer-events-none" />
-                <div className="absolute inset-y-0 right-0 w-8 md:w-24 z-10 bg-gradient-to-l from-zinc-950 to-transparent pointer-events-none" />
+                <div className="absolute inset-y-0 left-0 w-8 md:w-24 z-10 bg-gradient-to-r from-white dark:from-zinc-950 to-transparent pointer-events-none" />
+                <div className="absolute inset-y-0 right-0 w-8 md:w-24 z-10 bg-gradient-to-l from-white dark:from-zinc-950 to-transparent pointer-events-none" />
 
                 <div className="flex animate-marquee hover:pause-animation items-center">
                     {displayBrands.map((brand, index) => (

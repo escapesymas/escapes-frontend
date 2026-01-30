@@ -752,7 +752,7 @@ function App() {
                           setSearchParams(newParams);
                           navigate(`/recambios?${newParams.toString()}`);
                         }}
-                        className="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer max-w-[150px]"
+                        className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer max-w-[150px]"
                       >
                         <option value="">Todas las Marcas</option>
                         {brands.map(b => (
@@ -767,7 +767,7 @@ function App() {
                           if (e.target.value) handleNavClick('catalog', e.target.value);
                           else handleNavClick('catalog');
                         }}
-                        className="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer max-w-[150px]"
+                        className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer max-w-[150px]"
                       >
                         <option value="">Todas las Categorías</option>
                         {CATEGORIES.map(c => (
@@ -775,7 +775,7 @@ function App() {
                         ))}
                       </select>
 
-                      <div className="h-6 w-px bg-zinc-800 hidden md:block" />
+                      <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-800 hidden md:block" />
 
                       <div className="flex items-center gap-2">
                         <label htmlFor="perPage" className="text-zinc-500 text-xs uppercase hidden md:inline">Mostrar:</label>
@@ -783,7 +783,7 @@ function App() {
                           id="perPage"
                           value={perPage}
                           onChange={(e) => { setPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                          className="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer"
+                          className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer"
                         >
                           <option value={10}>10</option>
                           <option value={20}>20</option>
@@ -796,7 +796,7 @@ function App() {
                           id="sortBy"
                           value={sortBy}
                           onChange={(e) => { setSortBy(e.target.value as 'date' | 'price' | 'price-asc'); setCurrentPage(1); }}
-                          className="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer"
+                          className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer"
                         >
                           <option value="date">Relevancia</option>
                           <option value="price">Precio: Mayor a menor</option>
