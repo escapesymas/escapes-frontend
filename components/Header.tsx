@@ -4,7 +4,7 @@ import { ShoppingCart, User, Menu, LogOut, Package, Settings, MessageSquare, X, 
 import { STORE_CONFIG, NAV_LINKS } from '../storeData';
 import { User as UserType, UserRank } from '../types';
 import { RankBadge } from './RankBadge';
-import { ThemeToggle } from './ThemeToggle';
+
 
 interface HeaderProps {
   cartCount?: number;
@@ -88,8 +88,7 @@ export const Header: React.FC<HeaderProps> = ({
             ))}
           </nav>
 
-          {/* Theme Toggle */}
-          <ThemeToggle />
+
 
           <div className="flex items-center gap-3 md:gap-5">
             {/* User Profile Button with Dropdown */}
