@@ -629,7 +629,7 @@ function App() {
   }, [currentView, urlCategory, selectedProduct, query]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-black w-full overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-black w-full overflow-x-hidden">
       <SEO {...seoData} />
       <Header
         cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)}
@@ -693,8 +693,8 @@ function App() {
               </section>
 
               {/* Featured Products Section */}
-              <section className="py-12 bg-zinc-950 container mx-auto px-4">
-                <h2 className="text-2xl font-bold text-white uppercase italic mb-8 border-l-4 border-racing-orange pl-4">Productos Destacados</h2>
+              <section className="py-12 bg-white dark:bg-zinc-950 container mx-auto px-4">
+                <h2 className="text-2xl font-bold text-zinc-900 dark:text-white uppercase italic mb-8 border-l-4 border-racing-orange pl-4">Productos Destacados</h2>
                 {loading ? (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[1, 2, 3, 4].map(i => <ProductSkeleton key={i} />)}
@@ -726,14 +726,14 @@ function App() {
 
           {currentView === 'catalog' && (
             <div ref={catalogRef}>
-              <section className="pt-32 pb-12 bg-zinc-950">
+              <section className="pt-32 pb-12 bg-white dark:bg-zinc-950">
                 <BikeSelector onSearch={handleBikeSearch} onTextSearch={handleTextSearch} isLoading={loading} bikeData={BIKE_DATA} />
               </section>
-              <section className="py-12 bg-zinc-950 min-h-screen container mx-auto px-4 border-t border-zinc-900">
+              <section className="py-12 bg-white dark:bg-zinc-950 min-h-screen container mx-auto px-4 border-t border-zinc-200 dark:border-zinc-900">
                 <div className="flex flex-col gap-6 mb-10">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div className="flex items-center gap-4">
-                      <h2 className="text-2xl font-bold text-white uppercase italic">{currentFilter || "Catálogo"}</h2>
+                      <h2 className="text-2xl font-bold text-zinc-900 dark:text-white uppercase italic">{currentFilter || "Catálogo"}</h2>
                       {(currentFilter || brandParam || motoParam) && (
                         <button onClick={handleClearFilters} className="text-zinc-500 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2">
                           <Trash2 className="w-4 h-4" /> Limpiar

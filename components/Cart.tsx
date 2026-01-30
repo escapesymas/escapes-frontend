@@ -136,11 +136,11 @@ export const Cart: React.FC<CartProps> = ({
   if (items.length === 0) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4 animate-fade-in">
-        <div className="bg-zinc-900 p-6 rounded-full mb-6">
-          <ShoppingBag className="w-12 h-12 text-zinc-600" />
+        <div className="bg-zinc-100 dark:bg-zinc-900 p-6 rounded-full mb-6">
+          <ShoppingBag className="w-12 h-12 text-zinc-400 dark:text-zinc-600" />
         </div>
-        <h2 className="text-2xl font-bold text-white mb-2 uppercase italic">Tu carrito está vacío</h2>
-        <p className="text-zinc-500 mb-8 max-w-md">
+        <h2 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2 uppercase italic">Tu carrito está vacío</h2>
+        <p className="text-zinc-600 dark:text-zinc-500 mb-8 max-w-md">
           Parece que aún no has añadido ninguna pieza para tu moto. Revisa nuestro catálogo para encontrar lo que necesitas.
         </p>
 
@@ -156,7 +156,7 @@ export const Cart: React.FC<CartProps> = ({
             <button
               onClick={handleFetchPendingOrders}
               disabled={isRecovering}
-              className="bg-zinc-800 hover:bg-zinc-700 text-white font-bold uppercase tracking-wide py-3 px-8 rounded-sm transition-colors flex items-center gap-2 border border-zinc-700"
+              className="bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white font-bold uppercase tracking-wide py-3 px-8 rounded-sm transition-colors flex items-center gap-2 border border-zinc-300 dark:border-zinc-700"
             >
               {isRecovering ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -170,7 +170,7 @@ export const Cart: React.FC<CartProps> = ({
 
         {/* Error Message */}
         {recoveryError && (
-          <div className="mt-6 bg-red-900/20 border border-red-800 text-red-200 px-4 py-2 rounded-sm text-sm">
+          <div className="mt-6 bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-200 px-4 py-2 rounded-sm text-sm">
             {recoveryError}
           </div>
         )}
@@ -178,17 +178,17 @@ export const Cart: React.FC<CartProps> = ({
         {/* Pending Orders List */}
         {pendingOrders && pendingOrders.length > 0 && (
           <div className="mt-8 w-full max-w-lg">
-            <h3 className="text-white font-bold uppercase text-sm mb-4">Pedidos pendientes encontrados:</h3>
+            <h3 className="text-zinc-900 dark:text-white font-bold uppercase text-sm mb-4">Pedidos pendientes encontrados:</h3>
             <div className="space-y-3">
               {pendingOrders.map(order => (
                 <div
                   key={order.id}
-                  className="bg-zinc-900 border border-zinc-800 p-4 rounded-sm flex justify-between items-center hover:border-zinc-700 transition-colors"
+                  className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4 rounded-sm flex justify-between items-center hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors shadow-sm dark:shadow-none"
                 >
                   <div className="text-left">
                     <div className="flex items-center gap-2 mb-1">
                       <Package className="w-4 h-4 text-racing-orange" />
-                      <span className="text-white font-bold">Pedido #{order.id}</span>
+                      <span className="text-zinc-900 dark:text-white font-bold">Pedido #{order.id}</span>
                     </div>
                     <p className="text-zinc-500 text-xs">
                       {order.line_items.length} productos • {formatPrice(parseFloat(order.total))}
@@ -215,8 +215,8 @@ export const Cart: React.FC<CartProps> = ({
 
   return (
     <div className="container mx-auto px-4 py-8 animate-fade-in">
-      <h1 className="text-3xl font-extrabold text-white uppercase italic mb-8 flex items-center gap-3">
-        Carrito de Compra <span className="text-zinc-600 text-lg not-italic font-normal">({itemsCount} productos)</span>
+      <h1 className="text-3xl font-extrabold text-zinc-900 dark:text-white uppercase italic mb-8 flex items-center gap-3">
+        Carrito de Compra <span className="text-zinc-500 dark:text-zinc-600 text-lg not-italic font-normal">({itemsCount} productos)</span>
       </h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -224,9 +224,9 @@ export const Cart: React.FC<CartProps> = ({
         {/* Cart Items List */}
         <div className="lg:col-span-2 space-y-4">
           {items.map((item) => (
-            <div key={item.id} className="bg-racing-carbon border border-zinc-800 p-4 rounded-sm flex flex-col sm:flex-row gap-4 items-center sm:items-stretch group hover:border-zinc-700 transition-colors">
+            <div key={item.id} className="bg-white dark:bg-racing-carbon border border-zinc-200 dark:border-zinc-800 p-4 rounded-sm flex flex-col sm:flex-row gap-4 items-center sm:items-stretch group hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors shadow-sm dark:shadow-none">
               {/* Image */}
-              <div className="w-24 h-24 bg-white rounded-sm overflow-hidden flex-shrink-0 p-2">
+              <div className="w-24 h-24 bg-gray-50 dark:bg-white rounded-sm overflow-hidden flex-shrink-0 p-2 border border-zinc-100 dark:border-none">
                 <img
                   src={optimizeImage(item.image, { width: 100 })}
                   alt={item.title}
@@ -239,30 +239,30 @@ export const Cart: React.FC<CartProps> = ({
               {/* Details */}
               <div className="flex-grow text-center sm:text-left">
                 <div className="flex justify-between items-start mb-1">
-                  <h3 className="text-white font-bold uppercase text-sm md:text-base leading-tight">
+                  <h3 className="text-zinc-900 dark:text-white font-bold uppercase text-sm md:text-base leading-tight">
                     {item.title}
                   </h3>
                 </div>
-                <p className="text-zinc-500 text-xs mb-4">{item.category}</p>
+                <p className="text-zinc-500 dark:text-zinc-500 text-xs mb-4">{item.category}</p>
 
                 <div className="flex items-center justify-between sm:justify-start gap-6">
-                  <div className="font-bold text-white">
+                  <div className="font-bold text-zinc-900 dark:text-white">
                     {formatPrice(item.price)}
                   </div>
 
                   {/* Quantity Controls */}
-                  <div className="flex items-center bg-zinc-900 border border-zinc-700 rounded-sm">
+                  <div className="flex items-center bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-sm">
                     <button
                       onClick={() => onUpdateQuantity(item.id, -1)}
-                      className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                      className="p-1.5 text-zinc-500 dark:text-zinc-400 hover:text-racing-orange dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
                       disabled={item.quantity <= 1}
                     >
                       <Minus className="w-3 h-3" />
                     </button>
-                    <span className="w-8 text-center text-white text-sm font-bold">{item.quantity}</span>
+                    <span className="w-8 text-center text-zinc-900 dark:text-white text-sm font-bold">{item.quantity}</span>
                     <button
                       onClick={() => onUpdateQuantity(item.id, 1)}
-                      className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                      className="p-1.5 text-zinc-500 dark:text-zinc-400 hover:text-racing-orange dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
                     >
                       <Plus className="w-3 h-3" />
                     </button>
@@ -277,7 +277,7 @@ export const Cart: React.FC<CartProps> = ({
                 </div>
                 <button
                   onClick={() => onRemove(item.id)}
-                  className="text-zinc-600 hover:text-red-500 transition-colors p-2"
+                  className="text-zinc-400 dark:text-zinc-600 hover:text-red-500 transition-colors p-2"
                   title="Eliminar producto"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -288,7 +288,7 @@ export const Cart: React.FC<CartProps> = ({
 
           <button
             onClick={onContinueShopping}
-            className="text-zinc-400 hover:text-white text-sm font-bold uppercase flex items-center gap-2 mt-6 transition-colors"
+            className="text-zinc-500 dark:text-zinc-400 hover:text-racing-orange dark:hover:text-white text-sm font-bold uppercase flex items-center gap-2 mt-6 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" /> Continuar comprando
           </button>
@@ -296,13 +296,13 @@ export const Cart: React.FC<CartProps> = ({
 
         {/* Order Summary */}
         <div className="lg:col-span-1">
-          <div className="bg-racing-carbon border border-zinc-800 p-6 rounded-sm sticky top-24">
-            <h3 className="text-white font-bold uppercase mb-6 tracking-wide text-lg">Resumen del Pedido</h3>
+          <div className="bg-white dark:bg-racing-carbon border border-zinc-200 dark:border-zinc-800 p-6 rounded-sm sticky top-24 shadow-sm dark:shadow-none">
+            <h3 className="text-zinc-900 dark:text-white font-bold uppercase mb-6 tracking-wide text-lg">Resumen del Pedido</h3>
 
-            <div className="space-y-3 mb-6 border-b border-zinc-800 pb-6">
-              <div className="flex justify-between text-zinc-400 text-sm">
+            <div className="space-y-3 mb-6 border-b border-zinc-100 dark:border-zinc-800 pb-6">
+              <div className="flex justify-between text-zinc-600 dark:text-zinc-400 text-sm">
                 <span>Subtotal</span>
-                <span className="text-white font-medium">{formatPrice(subtotal)}</span>
+                <span className="text-zinc-900 dark:text-white font-medium">{formatPrice(subtotal)}</span>
               </div>
 
               {userRank && (
@@ -312,11 +312,11 @@ export const Cart: React.FC<CartProps> = ({
                 </div>
               )}
 
-              <div className="flex justify-between text-zinc-400 text-sm">
+              <div className="flex justify-between text-zinc-600 dark:text-zinc-400 text-sm">
                 <span>Envío (Despacho 24/48h)</span>
-                <span className="text-white font-medium">{formatPrice(shippingCost)}</span>
+                <span className="text-zinc-900 dark:text-white font-medium">{formatPrice(shippingCost)}</span>
               </div>
-              <div className="bg-zinc-900/50 p-3 rounded-sm border border-zinc-800 flex gap-2 items-start mt-2">
+              <div className="bg-gray-50 dark:bg-zinc-900/50 p-3 rounded-sm border border-zinc-200 dark:border-zinc-800 flex gap-2 items-start mt-2">
                 <AlertCircle className="w-4 h-4 text-racing-orange flex-shrink-0 mt-0.5" />
                 <p className="text-[10px] text-zinc-500 leading-tight">
                   Nota: El despacho se realiza en 24/48h. El plazo de entrega final depende del transportista.
@@ -325,9 +325,9 @@ export const Cart: React.FC<CartProps> = ({
             </div>
 
             <div className="flex justify-between items-end mb-6">
-              <span className="text-white font-bold uppercase">Total</span>
+              <span className="text-zinc-900 dark:text-white font-bold uppercase">Total</span>
               <div className="text-right">
-                <span className="text-3xl font-bold text-white block leading-none">{formatPrice(total)}</span>
+                <span className="text-3xl font-bold text-zinc-900 dark:text-white block leading-none">{formatPrice(total)}</span>
                 <span className="text-zinc-500 text-xs">Impuestos incluidos</span>
               </div>
             </div>
@@ -341,9 +341,9 @@ export const Cart: React.FC<CartProps> = ({
 
             <div className="mt-4 flex justify-center gap-2">
               {/* Mock Payment Icons */}
-              <div className="w-8 h-5 bg-zinc-700 rounded-sm opacity-50"></div>
-              <div className="w-8 h-5 bg-zinc-700 rounded-sm opacity-50"></div>
-              <div className="w-8 h-5 bg-zinc-700 rounded-sm opacity-50"></div>
+              <div className="w-8 h-5 bg-zinc-200 dark:bg-zinc-700 rounded-sm opacity-50"></div>
+              <div className="w-8 h-5 bg-zinc-200 dark:bg-zinc-700 rounded-sm opacity-50"></div>
+              <div className="w-8 h-5 bg-zinc-200 dark:bg-zinc-700 rounded-sm opacity-50"></div>
             </div>
           </div>
         </div>

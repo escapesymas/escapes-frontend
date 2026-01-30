@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom/client';
 import { HelmetProvider } from 'react-helmet-async';
 import { BrowserRouter } from 'react-router-dom';
 import MainRoutes from './Routes';
+import { ThemeProvider } from './components/ThemeProvider';
 import './index.css';
 
 const rootElement = document.getElementById('root');
@@ -13,9 +14,11 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <HelmetProvider>
-      <BrowserRouter>
-        <MainRoutes />
-      </BrowserRouter>
+      <ThemeProvider defaultTheme="dark" storageKey="escapes-theme">
+        <BrowserRouter>
+          <MainRoutes />
+        </BrowserRouter>
+      </ThemeProvider>
     </HelmetProvider>
   </React.StrictMode>
 );

@@ -4,6 +4,7 @@ import { ShoppingCart, User, Menu, LogOut, Package, Settings, MessageSquare, X, 
 import { STORE_CONFIG, NAV_LINKS } from '../storeData';
 import { User as UserType, UserRank } from '../types';
 import { RankBadge } from './RankBadge';
+import { ThemeToggle } from './ThemeToggle';
 
 interface HeaderProps {
   cartCount?: number;
@@ -51,7 +52,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full bg-racing-carbon/95 backdrop-blur-md border-b border-zinc-800">
+      <header className="sticky top-0 z-50 w-full bg-white/95 dark:bg-racing-carbon/95 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
 
           <div className="flex items-center gap-2 md:gap-4">
@@ -86,6 +87,9 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             ))}
           </nav>
+
+          {/* Theme Toggle */}
+          <ThemeToggle />
 
           <div className="flex items-center gap-3 md:gap-5">
             {/* User Profile Button with Dropdown */}
@@ -147,11 +151,11 @@ export const Header: React.FC<HeaderProps> = ({
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-[60] flex md:hidden">
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)}></div>
-          <div className="relative w-4/5 max-w-sm bg-zinc-950 h-full border-r border-zinc-800 shadow-2xl flex flex-col animate-fade-in-right">
+          <div className="relative w-4/5 max-w-sm bg-white dark:bg-zinc-950 h-full border-r border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col animate-fade-in-right">
 
-            <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-racing-carbon">
-              <span className="text-lg font-black uppercase italic text-white">Menú</span>
-              <button onClick={() => setIsMobileMenuOpen(false)} className="text-zinc-400 hover:text-white" aria-label="Cerrar menú">
+            <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-gray-50 dark:bg-racing-carbon">
+              <span className="text-lg font-black uppercase italic text-zinc-900 dark:text-white">Menú</span>
+              <button onClick={() => setIsMobileMenuOpen(false)} className="text-zinc-500 hover:text-racing-orange dark:text-zinc-400 dark:hover:text-white" aria-label="Cerrar menú">
                 <X className="w-6 h-6" />
               </button>
             </div>
