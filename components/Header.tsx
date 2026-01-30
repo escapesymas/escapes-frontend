@@ -57,7 +57,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           <div className="flex items-center gap-2 md:gap-4">
             <button
-              className="md:hidden text-zinc-400 hover:text-white"
+              className="md:hidden text-zinc-600 hover:text-racing-orange dark:text-zinc-400 dark:hover:text-white transition-colors"
               onClick={() => setIsMobileMenuOpen(true)}
               aria-label="Abrir menú"
             >
@@ -70,7 +70,7 @@ export const Header: React.FC<HeaderProps> = ({
                 alt={STORE_CONFIG.name}
                 width="150"
                 height="48"
-                className="h-8 md:h-12 w-auto object-contain transition-transform group-hover:scale-105"
+                className="h-8 md:h-12 w-auto object-contain transition-transform group-hover:scale-105 invert dark:invert-0"
               />
             </div>
           </div>
@@ -80,7 +80,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 key={idx}
                 onClick={() => onNavClick(link.view || 'catalog', link.category)}
-                className={`text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-1.5 ${link.highlight ? 'text-racing-orange hover:text-white' : 'text-zinc-400 hover:text-white'}`}
+                className={`text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-1.5 ${link.highlight ? 'text-racing-orange hover:text-black dark:hover:text-white' : 'text-zinc-600 dark:text-zinc-400 hover:text-racing-orange dark:hover:text-white'}`}
               >
                 {link.view === 'forum' && <MessageSquare className="w-3.5 h-3.5" />}
                 {link.label}
@@ -96,7 +96,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="relative">
               <button
                 onClick={() => user ? setIsUserMenuOpen(!isUserMenuOpen) : onLoginClick?.()}
-                className="text-zinc-400 hover:text-white transition-colors flex items-center gap-2"
+                className="text-zinc-600 dark:text-zinc-400 hover:text-racing-orange dark:hover:text-white transition-colors flex items-center gap-2"
                 aria-label="Perfil de usuario"
               >
                 {user?.avatarUrl ? (
@@ -109,26 +109,26 @@ export const Header: React.FC<HeaderProps> = ({
                   <User className="w-5 h-5" />
                 )}
                 <div className="hidden md:flex flex-col items-start">
-                  {user && <span className="text-xs font-bold text-white leading-none mb-0.5">{user.firstName}</span>}
+                  {user && <span className="text-xs font-bold text-zinc-900 dark:text-white leading-none mb-0.5">{user.firstName}</span>}
                   {userRank && <RankBadge rank={userRank} size="sm" showTitle={false} />}
                 </div>
               </button>
 
               {/* User Dropdown Menu - Desktop */}
               {isUserMenuOpen && user && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-zinc-900 border border-zinc-800 shadow-2xl rounded-sm py-2 animate-fade-in z-50">
-                  <div className="px-4 py-2 border-b border-zinc-800 mb-2">
-                    <p className="text-white text-sm font-bold truncate">{user.firstName} {user.lastName}</p>
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl rounded-sm py-2 animate-fade-in z-50">
+                  <div className="px-4 py-2 border-b border-zinc-200 dark:border-zinc-800 mb-2">
+                    <p className="text-zinc-900 dark:text-white text-sm font-bold truncate">{user.firstName} {user.lastName}</p>
                     <p className="text-zinc-500 text-xs truncate">{user.email}</p>
                   </div>
-                  <button onClick={() => { setIsUserMenuOpen(false); onOrdersClick?.(); }} className="w-full text-left px-4 py-2 text-xs font-bold uppercase text-zinc-400 hover:bg-zinc-800 hover:text-white flex items-center gap-2">
+                  <button onClick={() => { setIsUserMenuOpen(false); onOrdersClick?.(); }} className="w-full text-left px-4 py-2 text-xs font-bold uppercase text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white flex items-center gap-2">
                     <Package className="w-4 h-4" /> Mis Pedidos
                   </button>
-                  <button onClick={() => { setIsUserMenuOpen(false); onAccountClick?.(); }} className="w-full text-left px-4 py-2 text-xs font-bold uppercase text-zinc-400 hover:bg-zinc-800 hover:text-white flex items-center gap-2">
+                  <button onClick={() => { setIsUserMenuOpen(false); onAccountClick?.(); }} className="w-full text-left px-4 py-2 text-xs font-bold uppercase text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white flex items-center gap-2">
                     <Settings className="w-4 h-4" /> Mi Cuenta
                   </button>
-                  <div className="border-t border-zinc-800 mt-2 pt-2">
-                    <button onClick={() => { setIsUserMenuOpen(false); onLogoutClick?.(); }} className="w-full text-left px-4 py-2 text-xs font-bold uppercase text-red-500 hover:bg-zinc-800 flex items-center gap-2">
+                  <div className="border-t border-zinc-200 dark:border-zinc-800 mt-2 pt-2">
+                    <button onClick={() => { setIsUserMenuOpen(false); onLogoutClick?.(); }} className="w-full text-left px-4 py-2 text-xs font-bold uppercase text-red-600 dark:text-red-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2">
                       <LogOut className="w-4 h-4" /> Salir
                     </button>
                   </div>
@@ -136,7 +136,7 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </div>
 
-            <button onClick={onCartClick} className="relative text-zinc-400 hover:text-white transition-colors" aria-label="Carrito">
+            <button onClick={onCartClick} className="relative text-zinc-600 dark:text-zinc-400 hover:text-racing-orange dark:hover:text-white transition-colors" aria-label="Carrito">
               <ShoppingCart className="w-5 h-5" />
               {cartCount > 0 && (
                 <span className="absolute -top-2 -right-2 bg-racing-orange text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
