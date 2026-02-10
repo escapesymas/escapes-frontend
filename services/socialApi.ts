@@ -113,12 +113,12 @@ export const SPAIN_PROVINCES = [
 ].sort();
 
 /**
- * PADDOCK: Obtener categorías
+ * Paddock: Obtener categorías
  * @returns Lista de categorías (reales del backend con metadatos UI inyectados)
  */
 export const fetchPaddockCategories = async (): Promise<PaddockCategory[]> => {
     try {
-        const { data } = await makeRequest(`${API_BASE}/paddock/categories`);
+        const { data } = await makeRequest(`${API_BASE}/categories`);
 
         if (Array.isArray(data) && data.length > 0) {
             return data.map((cat: any) => {
@@ -167,7 +167,7 @@ export const fetchPaddockCategories = async (): Promise<PaddockCategory[]> => {
  */
 export const fetchPaddockThreads = async (categoryId: number, page: number = 1): Promise<PaddockThread[]> => {
     try {
-        const { data } = await makeRequest(`${API_BASE}/paddock/threads?category_id=${categoryId}&page=${page}`);
+        const { data } = await makeRequest(`${API_BASE}/threads?category_id=${categoryId}&page=${page}`);
 
         // Doc returns { data: [...], has_more: boolean }
         if (data && Array.isArray(data.data)) {
@@ -194,7 +194,7 @@ export const createPaddockThread = async (
     content: string
 ): Promise<{ success: boolean; id?: number; error?: string }> => {
     try {
-        const { data } = await makeRequest(`${API_BASE}/paddock/thread/create`, {
+        const { data } = await makeRequest(`${API_BASE}/thread/create`, {
             method: 'POST',
             body: JSON.stringify({ category_id: categoryId, title, content }),
             headers: {
@@ -212,7 +212,7 @@ export const createPaddockThread = async (
  */
 export const fetchPaddockThread = async (threadId: number): Promise<{ thread: PaddockThread; replies: any[] } | null> => {
     try {
-        const { data } = await makeRequest(`${API_BASE}/paddock/thread/${threadId}`);
+        const { data } = await makeRequest(`${API_BASE}/thread/${threadId}`);
         return data as { thread: PaddockThread; replies: any[] };
     } catch (error) {
         console.error('[PADDOCK] Error fetching thread:', error);
@@ -225,7 +225,7 @@ export const fetchPaddockThread = async (threadId: number): Promise<{ thread: Pa
  */
 export const deletePaddockThread = async (token: string, threadId: number): Promise<{ success: boolean; error?: string }> => {
     try {
-        await makeRequest(`${API_BASE}/paddock/thread/${threadId}`, {
+        await makeRequest(`${API_BASE}/thread/${threadId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
