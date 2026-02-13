@@ -822,7 +822,7 @@ function App() {
       <Footer onNavClick={handleNavClick} />
 
       <Suspense fallback={null}>
-        <AIAdvisor onProductClick={(p) => { setSelectedProduct(p); navigate(`/producto/${p.id}`); }} onAddToCart={(p) => addToCart(p)} />
+        <AIAdvisor onProductClick={(p) => { setSelectedProduct(p); navigate(`/producto/${p.id}`); }} onAddToCart={(p) => addToCart(p)} user={user} onLoginRequest={() => navigate('/login')} />
       </Suspense>
     </div>
   );
