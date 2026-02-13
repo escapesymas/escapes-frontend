@@ -321,7 +321,7 @@ ${productContext || 'No hay productos que coincidan con la búsqueda. Pide al cl
 
         // Call Gemini 2.5 Pro Preview with Google Search Retrieval
         const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-05-06:generateContent?key=${apiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${apiKey}`,
             {
                 method: 'POST',
                 headers: {
