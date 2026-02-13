@@ -208,7 +208,7 @@ export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick, onAddToCar
       }
 
       const tagType = matchResult[1]; // REF or PEDIDO
-      const tagValue = matchResult[2]; // SKU or Bihr reference
+      const tagValue = matchResult[2]; // SKU or extended catalog reference
 
       if (tagType === 'REF') {
         const product = productMap.get(tagValue.toUpperCase());
@@ -318,7 +318,7 @@ export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick, onAddToCar
     setSendingPedido(null);
   };
 
-  // Render a card for Nivel 2 (catálogo Bihr — bajo pedido)
+  // Render a card for Nivel 2 (catálogo extendido — bajo pedido)
   const renderPedidoCard = (referencia: string, key: number) => {
     const status = pedidoStatus[referencia];
     const isSending = sendingPedido === referencia;
@@ -333,7 +333,7 @@ export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick, onAddToCar
             <Truck className="w-5 h-5 text-yellow-500" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-yellow-500 text-[10px] font-bold uppercase">Bajo Pedido — Catálogo Bihr</p>
+            <p className="text-yellow-500 text-[10px] font-bold uppercase">Bajo Pedido — Catálogo Extendido</p>
             <p className="text-white text-xs">Ref: {referencia}</p>
             <p className="text-zinc-400 text-[10px] mt-0.5">Plazo: 2-5 días laborables</p>
           </div>
