@@ -1,16 +1,23 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, X, Send, Loader2, Bot, User, ExternalLink, Package, ShoppingCart } from 'lucide-react';
+import { MessageSquare, X, Send, Loader2, Bot, User, ExternalLink, Package, ShoppingCart, Truck } from 'lucide-react';
 import { Product } from '../types';
-import { fetchProducts } from '../services/woocommerce';
+import { makeRequest } from '../services/woocommerce';
 import { optimizeImage } from '../utils/imageOptimizer';
+
+interface PedidoProduct {
+  referencia: string;
+}
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  rawContent?: string;
   productRefs?: string[];
+  pedidoRefs?: string[];
   products?: Product[];
+  pedidoProducts?: PedidoProduct[];
 }
 
 interface AIAdvisorProps {
@@ -43,21 +50,42 @@ export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick, onAddToCar
     if (skus.length === 0) return [];
 
     try {
-      // Search for products matching the SKUs
       const allProducts: Product[] = [];
+      const seenIds = new Set<number>();
+
+      // Fetch each SKU with exact match via WooCommerce API
       for (const sku of skus) {
-        const { products } = await fetchProducts(sku, undefined, 1, 5);
-        const matches = products.filter(p =>
-          p.sku?.toLowerCase().includes(sku.toLowerCase()) ||
-          p.title?.toLowerCase().includes(sku.toLowerCase())
-        );
-        allProducts.push(...matches);
+        try {
+          const { data } = await makeRequest(`/wc/v3/products?sku=${encodeURIComponent(sku)}&status=publish&per_page=1`);
+          const results = data as any[];
+          for (const p of results) {
+            if (!seenIds.has(p.id)) {
+              seenIds.add(p.id);
+              allProducts.push({
+                id: p.id,
+                title: p.name,
+                price: parseFloat(p.price || p.regular_price || '0'),
+                regularPrice: parseFloat(p.regular_price || p.price || '0'),
+                sku: p.sku || `REF-${p.id}`,
+                image: p.images?.length > 0 ? p.images[0].src : '',
+                images: p.images || [],
+                inStock: p.stock_status === 'instock',
+                category: p.categories?.length > 0 ? p.categories[0].name : 'General',
+                categorySlug: p.categories?.length > 0 ? p.categories[0].slug : 'recambios',
+                categoryId: p.categories?.length > 0 ? p.categories[0].id : 0,
+                permalink: p.permalink,
+                attributes: (p.attributes || []).map((attr: any) => ({ name: attr.name, options: attr.options })),
+                description: p.description,
+                shortDescription: p.short_description
+              });
+            }
+          }
+        } catch (err) {
+          console.warn('[AI] SKU lookup failed for:', sku, err);
+        }
       }
-      // Remove duplicates
-      const unique = allProducts.filter((p, i, arr) =>
-        arr.findIndex(x => x.id === p.id) === i
-      );
-      return unique.slice(0, 3); // Max 3 products
+
+      return allProducts;
     } catch (error) {
       console.error('[AI] Error searching products:', error);
       return [];
@@ -94,18 +122,24 @@ export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick, onAddToCar
       const data = await response.json();
 
       if (data.success) {
-        // Find products if there are refs
+        // Find store products if there are refs
         let products: Product[] = [];
         if (data.productRefs && data.productRefs.length > 0) {
           products = await findProductsBySku(data.productRefs);
         }
 
+        // Build pedido products list
+        const pedidoProducts: PedidoProduct[] = (data.pedidoRefs || []).map((ref: string) => ({ referencia: ref }));
+
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
           content: data.response,
+          rawContent: data.rawResponse,
           productRefs: data.productRefs,
-          products: products
+          pedidoRefs: data.pedidoRefs,
+          products: products,
+          pedidoProducts: pedidoProducts
         };
 
         setMessages(prev => [...prev, assistantMessage]);
@@ -138,6 +172,141 @@ export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick, onAddToCar
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(price);
   };
+
+  // Render message content with inline product cards
+  const renderMessageContent = (message: Message) => {
+    // For user messages or messages without product refs, just show text
+    if (message.role === 'user' || (!message.products?.length && !message.pedidoProducts?.length)) {
+      return <p className="text-sm whitespace-pre-wrap">{message.content}</p>;
+    }
+
+    // Build a product map by SKU for quick lookup
+    const productMap = new Map<string, Product>();
+    for (const p of (message.products || [])) {
+      if (p.sku) productMap.set(p.sku.toUpperCase(), p);
+    }
+
+    // Use rawContent to split text around [REF:SKU] and [PEDIDO:REF] tags
+    const raw = message.rawContent || message.content;
+    const segments: React.ReactNode[] = [];
+    const tagPattern = /\[(REF|PEDIDO):([^\]]+)\]/g;
+    let lastIndex = 0;
+    let matchResult;
+    let segIndex = 0;
+
+    while ((matchResult = tagPattern.exec(raw)) !== null) {
+      // Add text before the tag
+      if (matchResult.index > lastIndex) {
+        const textBefore = raw.substring(lastIndex, matchResult.index).trim();
+        if (textBefore) {
+          segments.push(<p key={`t-${segIndex++}`} className="text-sm whitespace-pre-wrap">{textBefore}</p>);
+        }
+      }
+
+      const tagType = matchResult[1]; // REF or PEDIDO
+      const tagValue = matchResult[2]; // SKU or Bihr reference
+
+      if (tagType === 'REF') {
+        const product = productMap.get(tagValue.toUpperCase());
+        if (product) {
+          segments.push(renderProductCard(product, segIndex++));
+        }
+      } else if (tagType === 'PEDIDO') {
+        segments.push(renderPedidoCard(tagValue, segIndex++));
+      }
+
+      lastIndex = matchResult.index + matchResult[0].length;
+    }
+
+    // Add remaining text after last tag
+    if (lastIndex < raw.length) {
+      const remaining = raw.substring(lastIndex).trim();
+      if (remaining) {
+        segments.push(<p key={`t-${segIndex++}`} className="text-sm whitespace-pre-wrap">{remaining}</p>);
+      }
+    }
+
+    // Fallback if no segments were produced
+    if (segments.length === 0) {
+      return <p className="text-sm whitespace-pre-wrap">{message.content}</p>;
+    }
+
+    return <div className="space-y-2">{segments}</div>;
+  };
+
+  // Render a product card for Nivel 1 (tienda online)
+  const renderProductCard = (product: Product, key: number) => (
+    <div
+      key={`card-${key}`}
+      className="bg-zinc-800/80 border border-zinc-700 rounded-lg p-3 hover:border-racing-orange transition-all duration-200 my-2"
+    >
+      <div className="flex gap-3">
+        <img
+          src={optimizeImage(product.image, { width: 80 })}
+          alt={product.title}
+          className="w-16 h-16 object-contain bg-white rounded cursor-pointer flex-shrink-0"
+          onClick={() => onProductClick?.(product)}
+        />
+        <div className="flex-1 min-w-0">
+          <p
+            className="text-white text-xs font-bold line-clamp-2 cursor-pointer hover:text-racing-orange transition-colors"
+            onClick={() => onProductClick?.(product)}
+          >
+            {product.title}
+          </p>
+          <p className="text-zinc-500 text-[10px] uppercase mt-0.5">REF: {product.sku}</p>
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-racing-orange font-bold text-sm">{formatPrice(product.price)}</span>
+            {product.inStock ? (
+              <span className="text-green-500 text-[10px] flex items-center gap-1">
+                <Package className="w-3 h-3" /> En stock
+              </span>
+            ) : (
+              <span className="text-yellow-500 text-[10px]">Bajo pedido</span>
+            )}
+          </div>
+        </div>
+      </div>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onAddToCart?.(product);
+        }}
+        className="w-full mt-2 bg-racing-orange hover:bg-orange-600 text-white text-xs font-bold uppercase py-2 px-3 rounded flex items-center justify-center gap-2 transition-colors"
+      >
+        <ShoppingCart className="w-4 h-4" />
+        Añadir al Carrito
+      </button>
+    </div>
+  );
+
+  // Render a card for Nivel 2 (catálogo Bihr — bajo pedido)
+  const renderPedidoCard = (referencia: string, key: number) => (
+    <div
+      key={`pedido-${key}`}
+      className="bg-zinc-800/80 border border-yellow-600/40 rounded-lg p-3 my-2"
+    >
+      <div className="flex items-center gap-2">
+        <div className="w-10 h-10 bg-yellow-600/20 rounded flex items-center justify-center flex-shrink-0">
+          <Truck className="w-5 h-5 text-yellow-500" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-yellow-500 text-[10px] font-bold uppercase">Bajo Pedido — Catálogo Bihr</p>
+          <p className="text-white text-xs">Ref: {referencia}</p>
+          <p className="text-zinc-400 text-[10px] mt-0.5">Plazo: 2-5 días laborables</p>
+        </div>
+      </div>
+      <a
+        href={`https://wa.me/34XXXXXXXXX?text=Hola, me interesa el producto con referencia ${referencia} del catálogo Bihr`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold uppercase py-2 px-3 rounded flex items-center justify-center gap-2 transition-colors"
+      >
+        <ExternalLink className="w-4 h-4" />
+        Solicitar por WhatsApp
+      </a>
+    </div>
+  );
 
   return (
     <>
@@ -189,60 +358,9 @@ export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick, onAddToCar
                       ? 'bg-racing-orange text-white'
                       : 'bg-zinc-800 text-zinc-200'
                       }`}>
-                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      {renderMessageContent(message)}
                     </div>
                   </div>
-
-                  {/* Product Cards */}
-                  {message.products && message.products.length > 0 && (
-                    <div className="mt-3 space-y-2 ml-10">
-                      {message.products.map(product => (
-                        <div
-                          key={product.id}
-                          className="bg-zinc-800 border border-zinc-700 rounded-lg p-3 hover:border-racing-orange transition-colors"
-                        >
-                          <div className="flex gap-3">
-                            <img
-                              src={optimizeImage(product.image, { width: 80 })}
-                              alt={product.title}
-                              className="w-16 h-16 object-contain bg-white rounded cursor-pointer"
-                              onClick={() => onProductClick?.(product)}
-                            />
-                            <div className="flex-1 min-w-0">
-                              <p
-                                className="text-white text-xs font-bold truncate cursor-pointer hover:text-racing-orange"
-                                onClick={() => onProductClick?.(product)}
-                              >
-                                {product.title}
-                              </p>
-                              <p className="text-zinc-500 text-[10px] uppercase">REF: {product.sku}</p>
-                              <div className="flex items-center justify-between mt-1">
-                                <span className="text-racing-orange font-bold text-sm">{formatPrice(product.price)}</span>
-                                {product.inStock ? (
-                                  <span className="text-green-500 text-[10px] flex items-center gap-1">
-                                    <Package className="w-3 h-3" /> En stock
-                                  </span>
-                                ) : (
-                                  <span className="text-yellow-500 text-[10px]">Bajo pedido</span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          {/* Add to Cart Button */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onAddToCart?.(product);
-                            }}
-                            className="w-full mt-2 bg-racing-orange hover:bg-orange-600 text-white text-xs font-bold uppercase py-2 px-3 rounded flex items-center justify-center gap-2 transition-colors"
-                          >
-                            <ShoppingCart className="w-4 h-4" />
-                            Añadir al Carrito
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
             ))}
