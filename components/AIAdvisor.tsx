@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, X, Send, Loader2, Bot, User, ExternalLink, Package, ShoppingCart, Truck } from 'lucide-react';
-import { Product } from '../types';
+import { MessageSquare, X, Send, Loader2, Bot, User as UserIcon, ExternalLink, Package, ShoppingCart, Truck, LogIn, CheckCircle, AlertCircle } from 'lucide-react';
+import { Product, User } from '../types';
 import { makeRequest } from '../services/woocommerce';
 import { optimizeImage } from '../utils/imageOptimizer';
 
@@ -23,10 +23,14 @@ interface Message {
 interface AIAdvisorProps {
   onProductClick?: (product: Product) => void;
   onAddToCart?: (product: Product) => void;
+  user?: User | null;
+  onLoginRequest?: () => void;
 }
 
-export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick, onAddToCart }) => {
+export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick, onAddToCart, user, onLoginRequest }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [sendingPedido, setSendingPedido] = useState<string | null>(null); // referencia being sent
+  const [pedidoStatus, setPedidoStatus] = useState<Record<string, 'success' | 'error'>>({}); // track results
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
@@ -280,33 +284,111 @@ export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick, onAddToCar
     </div>
   );
 
+  // Handle pedido request via email/API
+  const handlePedidoRequest = async (referencia: string) => {
+    if (!user) {
+      onLoginRequest?.();
+      return;
+    }
+
+    setSendingPedido(referencia);
+    try {
+      const response = await fetch('/api/pedido', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          referencia,
+          userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
+          userEmail: user.email,
+          userId: user.id,
+          mensaje: `Solicitud desde el asesor Uri`
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setPedidoStatus(prev => ({ ...prev, [referencia]: 'success' }));
+      } else {
+        setPedidoStatus(prev => ({ ...prev, [referencia]: 'error' }));
+      }
+    } catch (error) {
+      console.error('[PEDIDO] Error:', error);
+      setPedidoStatus(prev => ({ ...prev, [referencia]: 'error' }));
+    }
+    setSendingPedido(null);
+  };
+
   // Render a card for Nivel 2 (catálogo Bihr — bajo pedido)
-  const renderPedidoCard = (referencia: string, key: number) => (
-    <div
-      key={`pedido-${key}`}
-      className="bg-zinc-800/80 border border-yellow-600/40 rounded-lg p-3 my-2"
-    >
-      <div className="flex items-center gap-2">
-        <div className="w-10 h-10 bg-yellow-600/20 rounded flex items-center justify-center flex-shrink-0">
-          <Truck className="w-5 h-5 text-yellow-500" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-yellow-500 text-[10px] font-bold uppercase">Bajo Pedido — Catálogo Bihr</p>
-          <p className="text-white text-xs">Ref: {referencia}</p>
-          <p className="text-zinc-400 text-[10px] mt-0.5">Plazo: 2-5 días laborables</p>
-        </div>
-      </div>
-      <a
-        href={`https://wa.me/34XXXXXXXXX?text=Hola, me interesa el producto con referencia ${referencia} del catálogo Bihr`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold uppercase py-2 px-3 rounded flex items-center justify-center gap-2 transition-colors"
+  const renderPedidoCard = (referencia: string, key: number) => {
+    const status = pedidoStatus[referencia];
+    const isSending = sendingPedido === referencia;
+
+    return (
+      <div
+        key={`pedido-${key}`}
+        className="bg-zinc-800/80 border border-yellow-600/40 rounded-lg p-3 my-2"
       >
-        <ExternalLink className="w-4 h-4" />
-        Solicitar por WhatsApp
-      </a>
-    </div>
-  );
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10 bg-yellow-600/20 rounded flex items-center justify-center flex-shrink-0">
+            <Truck className="w-5 h-5 text-yellow-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-yellow-500 text-[10px] font-bold uppercase">Bajo Pedido — Catálogo Bihr</p>
+            <p className="text-white text-xs">Ref: {referencia}</p>
+            <p className="text-zinc-400 text-[10px] mt-0.5">Plazo: 2-5 días laborables</p>
+          </div>
+        </div>
+
+        {/* Status: already sent */}
+        {status === 'success' && (
+          <div className="w-full mt-2 bg-green-600/20 border border-green-600/40 text-green-400 text-xs font-bold uppercase py-2 px-3 rounded flex items-center justify-center gap-2">
+            <CheckCircle className="w-4 h-4" />
+            Solicitud enviada — Te contactaremos por email
+          </div>
+        )}
+
+        {status === 'error' && (
+          <div className="mt-2 space-y-1">
+            <div className="w-full bg-red-600/20 border border-red-600/40 text-red-400 text-xs py-2 px-3 rounded flex items-center gap-2">
+              <AlertCircle className="w-4 h-4" />
+              Error al enviar. Inténtalo de nuevo.
+            </div>
+            <button
+              onClick={() => handlePedidoRequest(referencia)}
+              className="w-full bg-racing-orange hover:bg-orange-600 text-white text-xs font-bold uppercase py-2 px-3 rounded flex items-center justify-center gap-2 transition-colors"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
+
+        {/* Not yet sent */}
+        {!status && (
+          user ? (
+            <button
+              onClick={() => handlePedidoRequest(referencia)}
+              disabled={isSending}
+              className="w-full mt-2 bg-racing-orange hover:bg-orange-600 disabled:bg-zinc-700 text-white text-xs font-bold uppercase py-2 px-3 rounded flex items-center justify-center gap-2 transition-colors"
+            >
+              {isSending ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Enviando solicitud...</>
+              ) : (
+                <><Send className="w-4 h-4" /> Solicitar Pedido</>
+              )}
+            </button>
+          ) : (
+            <button
+              onClick={() => onLoginRequest?.()}
+              className="w-full mt-2 bg-zinc-700 hover:bg-zinc-600 text-white text-xs font-bold uppercase py-2 px-3 rounded flex items-center justify-center gap-2 transition-colors"
+            >
+              <LogIn className="w-4 h-4" />
+              Inicia sesión para solicitar
+            </button>
+          )
+        )}
+      </div>
+    );
+  };
 
   return (
     <>
@@ -349,7 +431,7 @@ export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick, onAddToCar
                     <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${message.role === 'user' ? 'bg-zinc-700' : 'bg-racing-orange'
                       }`}>
                       {message.role === 'user' ? (
-                        <User className="w-4 h-4 text-white" />
+                        <UserIcon className="w-4 h-4 text-white" />
                       ) : (
                         <Bot className="w-4 h-4 text-white" />
                       )}
