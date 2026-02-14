@@ -58,7 +58,32 @@ const API_BASE = '/paddock/v1';
 export const fetchSocialFeed = async (page: number = 1): Promise<SocialPostType[]> => {
     try {
         const { data } = await makeRequest(`${API_BASE}/feed?page=${page}`);
-        return data as SocialPostType[];
+
+        // Backend returns { data: [...], has_more: boolean }
+        const posts = Array.isArray(data) ? data : (data?.data || []);
+        if (!Array.isArray(posts)) return [];
+
+        // Map backend fields to frontend SocialPostType interface
+        return posts.map((p: any) => ({
+            id: p.id,
+            author: {
+                id: p.author?.id || 0,
+                name: p.author?.name || 'Anónimo',
+                avatar: p.author?.avatar || '',
+                rank: p.author?.rank || null,
+                timeAgo: p.date || p.created_at || ''
+            },
+            content: {
+                text: p.content || '',
+                media: p.media || []
+            },
+            metrics: {
+                likes: p.likes_count || 0,
+                comments: p.comments_count || 0,
+                liked: p.is_liked || false
+            },
+            created_at: p.date || p.created_at || ''
+        }));
     } catch (error) {
         console.error('[SOCIAL] Error fetching feed:', error);
         return [];
