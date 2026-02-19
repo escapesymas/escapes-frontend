@@ -122,7 +122,7 @@ export const createSocialPost = async (
  */
 // --- CONFIGURACIÓN UI CATEGORÍAS (Mapeo por ID o Título aprox) ---
 const UI_CATEGORY_CONFIG: Record<string, Partial<PaddockCategory>> = {
-    'general': { icon: 'message-square', id: 101 }, // Fallback keys
+    'general': { icon: 'message-square', id: 0 }, // Changed from 101 to 0 to match uncategorized threads
     'mecanica': { icon: 'wrench', id: 102 },
     'compraventa': { icon: 'bike', id: 103 },
     'rutas': { icon: 'compass', id: 104 }
@@ -168,7 +168,7 @@ export const fetchPaddockCategories = async (): Promise<PaddockCategory[]> => {
         // Si no hay categorías en el backend, devolvemos las estáticas (Solo para desarrollo/visualización)
         console.warn("[PADDOCK] No categories found, using static fallback.");
         return Object.values(UI_CATEGORY_CONFIG).map((conf, index) => ({
-            id: conf.id!,
+            id: conf.id ?? index,
             title: ['Paddock General', 'Mecánica y Taller', 'Compraventa Motos', 'Rutas y Quedadas'][index],
             description: 'Categoría predefinida',
             count: 0,
@@ -179,7 +179,7 @@ export const fetchPaddockCategories = async (): Promise<PaddockCategory[]> => {
         console.error('[PADDOCK] API failed, using static fallback', error);
         // Fallback estático en caso de error
         return [
-            { id: 101, title: 'Paddock General', description: 'Charlas generales', icon: 'message-square', count: 0 },
+            { id: 0, title: 'Paddock General', description: 'Charlas generales', icon: 'message-square', count: 0 },
             { id: 102, title: 'Mecánica y Taller', description: 'Dudas técnicas', icon: 'wrench', count: 0 },
             { id: 103, title: 'Compraventa Motos', description: 'Solo motos completas', icon: 'bike', count: 0 },
             { id: 104, title: 'Rutas y Quedadas', description: 'Organiza tus salidas', icon: 'compass', count: 0 }
