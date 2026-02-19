@@ -524,15 +524,16 @@ function App() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
           {products.map((product, index) => (
             <ProductCard
-              key={product.id}
+              key={product?.id || `p-${index}`}
               priority={index < 4}
               product={product}
               onClick={(p) => {
+                if (!p?.id) return;
                 setSelectedProduct(p);
                 trackViewItem(p);
                 navigate(`/${p.categorySlug || 'recambios'}/${p.id}`);
-              }} // Using ID as slug part for now until slug util exists
-              onAddToCart={() => addToCart(product, 1)}
+              }}
+              onAddToCart={() => product && addToCart(product, 1)}
             />
           ))}
         </div>
