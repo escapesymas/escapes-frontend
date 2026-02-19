@@ -89,7 +89,7 @@ class Paddock_XP
         ));
     }
 
-    private static function ensure_user_stats($user_id)
+    public static function ensure_user_stats($user_id)
     {
         global $wpdb;
         $table = $wpdb->prefix . 'paddock_user_stats';

@@ -1,11 +1,25 @@
 import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
-    const { path } = req.query; // Capture the intended path from query string or rewrite
+    const { path, media } = req.query;
 
-    // NOTE: When using vercel.json rewrite like: 
-    // "source": "/wp-json/(.*)", "destination": "/api/proxy?path=$1"
-    // The 'path' query param will contain the captured group.
+    // Handle Media Proxying (e.g. /api/proxy?media=wp-content/uploads/...)
+    if (media) {
+        const mediaUrl = `https://backendescapes.com/${media}`;
+        console.log(`[PROXY] Fetching Media: ${mediaUrl}`);
+        try {
+            const mRes = await fetch(mediaUrl);
+            mRes.headers.forEach((v, k) => {
+                if (!['content-encoding', 'transfer-encoding', 'connection'].includes(k.toLowerCase())) {
+                    res.setHeader(k, v);
+                }
+            });
+            const mBuf = await mRes.arrayBuffer();
+            return res.status(mRes.status).send(Buffer.from(mBuf));
+        } catch (e) {
+            return res.status(502).json({ error: "Media fetch failed" });
+        }
+    }
 
     if (!path) {
         return res.status(400).json({ error: "Missing path parameter" });

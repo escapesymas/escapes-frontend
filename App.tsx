@@ -5,6 +5,7 @@ import { ArrowRight, Loader2, WifiOff, Trash2, ChevronLeft } from 'lucide-react'
 import { Header } from './components/Header';
 import { SEO } from './components/SEO';
 import { Footer } from './components/Footer';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { BikeSelector } from './components/BikeSelector';
 import { ProductCard } from './components/ProductCard';
 import { ProductDetail } from './components/ProductDetail';
@@ -54,7 +55,7 @@ const parsePathToView = (path: string): { view: ViewState; category?: string; pr
   if (cleanPath === '/contacto') return { view: 'contact' };
   if (cleanPath.startsWith('/paddock/user/')) {
     const parts = cleanPath.split('/paddock/user/');
-    if (parts.length > 1) return { view: 'user_profile', userId: parts[1] };
+    if (parts.length > 1 && parts[1]) return { view: 'user_profile', userId: parts[1].split('/')[0] };
   }
   if (cleanPath.startsWith('/foro') || cleanPath.startsWith('/paddock')) return { view: 'forum' }; // Map Paddock to Forum component
   if (cleanPath === '/social') return { view: 'social' };
@@ -629,202 +630,204 @@ function App() {
   }, [currentView, urlCategory, selectedProduct, query]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-black w-full overflow-x-hidden">
-      <SEO {...seoData} />
-      <Header
-        cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)}
-        user={user}
-        onCartClick={() => navigate('/carrito')}
-        onLogoClick={() => navigate('/')}
-        onLoginClick={() => navigate('/login')}
-        onLogoutClick={() => { setUser(null); logoutSession(); navigate('/'); }}
-        onOrdersClick={() => navigate('/mis-pedidos')}
-        onAccountClick={() => navigate('/mi-cuenta')}
-        onNavClick={handleNavClick}
-      />
+    <ErrorBoundary>
+      <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-black w-full overflow-x-hidden">
+        <SEO {...seoData} />
+        <Header
+          cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)}
+          user={user}
+          onCartClick={() => navigate('/carrito')}
+          onLogoClick={() => navigate('/')}
+          onLoginClick={() => navigate('/login')}
+          onLogoutClick={() => { setUser(null); logoutSession(); navigate('/'); }}
+          onOrdersClick={() => navigate('/mis-pedidos')}
+          onAccountClick={() => navigate('/mi-cuenta')}
+          onNavClick={handleNavClick}
+        />
 
-      <main className="flex-grow w-full">
-        <Suspense fallback={<div className="h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 text-racing-orange animate-spin" /></div>}>
-          {currentView === 'login' && <Login onLoginSuccess={(u) => { setUser(u); saveSession(u); navigate(-1); }} onBack={() => navigate(-1)} onRegisterClick={() => navigate('/registro')} />}
-          {currentView === 'register' && <Register onRegisterSuccess={() => navigate('/login')} onBack={() => navigate('/login')} onGoToLogin={() => navigate('/login')} />}
-          {currentView === 'forum' && <Paddock user={user} onBack={() => navigate('/')} onLoginRequest={() => navigate('/login')} />}
-          {currentView === 'categories' && <CategoryBrowser onSelectCategory={(_, name) => navigate(`/${name.toLowerCase()}`)} onBack={() => navigate('/')} />}
-          {currentView === 'checkout' && <Checkout cart={cart} user={user} onBack={() => navigate('/carrito')} onOrderComplete={() => { setCart([]); navigate('/'); }} onLoginSuccess={(u) => { setUser(u); saveSession(u); }} />}
-          {currentView === 'orders' && user && <MyOrders user={user} onBack={() => navigate('/')} />}
-          {currentView === 'account' && user && <MyAccount user={user} onBack={() => navigate('/')} onUpdateUser={setUser} />}
-          {currentView === 'warranty' && <Warranty user={user} onBack={() => navigate('/')} onLoginRequest={() => navigate('/login')} />}
-          {currentView === 'social' && <SocialFeed user={user} onBack={() => navigate('/')} onLoginRequest={() => navigate('/login')} />}
-          {currentView === 'user_profile' && <UserProfile currentUser={user} targetUserId={parseInt(parsePathToView(location.pathname).userId || '0')} onBack={() => window.history.back()} onLoginRequest={() => navigate('/login')} />}
-          {currentView === 'contact' && <Contact onBack={() => navigate('/')} />}
+        <main className="flex-grow w-full">
+          <Suspense fallback={<div className="h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 text-racing-orange animate-spin" /></div>}>
+            {currentView === 'login' && <Login onLoginSuccess={(u) => { setUser(u); saveSession(u); navigate(-1); }} onBack={() => navigate(-1)} onRegisterClick={() => navigate('/registro')} />}
+            {currentView === 'register' && <Register onRegisterSuccess={() => navigate('/login')} onBack={() => navigate('/login')} onGoToLogin={() => navigate('/login')} />}
+            {currentView === 'forum' && <Paddock user={user} onBack={() => navigate('/')} onLoginRequest={() => navigate('/login')} />}
+            {currentView === 'categories' && <CategoryBrowser onSelectCategory={(_, name) => navigate(`/${name.toLowerCase()}`)} onBack={() => navigate('/')} />}
+            {currentView === 'checkout' && <Checkout cart={cart} user={user} onBack={() => navigate('/carrito')} onOrderComplete={() => { setCart([]); navigate('/'); }} onLoginSuccess={(u) => { setUser(u); saveSession(u); }} />}
+            {currentView === 'orders' && user && <MyOrders user={user} onBack={() => navigate('/')} />}
+            {currentView === 'account' && user && <MyAccount user={user} onBack={() => navigate('/')} onUpdateUser={setUser} />}
+            {currentView === 'warranty' && <Warranty user={user} onBack={() => navigate('/')} onLoginRequest={() => navigate('/login')} />}
+            {currentView === 'social' && <SocialFeed user={user} onBack={() => navigate('/')} onLoginRequest={() => navigate('/login')} />}
+            {currentView === 'user_profile' && <UserProfile currentUser={user} targetUserId={parseInt(parsePathToView(location.pathname).userId || '0')} onBack={() => window.history.back()} onLoginRequest={() => navigate('/login')} />}
+            {currentView === 'contact' && <Contact onBack={() => navigate('/')} />}
 
-          {currentView === 'cart' && (
-            <Cart
-              items={cart}
-              user={user}
-              onUpdateQuantity={(id, delta) => setCart(p => p.map(i => i.id === id ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i))}
-              onRemove={(id) => setCart(p => p.filter(i => i.id !== id))}
-              onCheckout={() => navigate('/checkout')}
-              onContinueShopping={() => navigate('/recambios')}
-              onRestoreCart={(items) => setCart(items)}
-            />
-          )}
+            {currentView === 'cart' && (
+              <Cart
+                items={cart}
+                user={user}
+                onUpdateQuantity={(id, delta) => setCart(p => p.map(i => i.id === id ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i))}
+                onRemove={(id) => setCart(p => p.filter(i => i.id !== id))}
+                onCheckout={() => navigate('/checkout')}
+                onContinueShopping={() => navigate('/recambios')}
+                onRestoreCart={(items) => setCart(items)}
+              />
+            )}
 
-          {currentView === 'product' && selectedProduct && (
-            <ProductDetail
-              product={selectedProduct}
-              onBack={() => navigate(-1)}
-              onAddToCart={(qty) => { addToCart(selectedProduct, qty); navigate('/carrito'); }}
-              onProductClick={(product) => { setSelectedProduct(product); navigate(`/producto/${product.id}`); }}
-            />
-          )}
+            {currentView === 'product' && selectedProduct && (
+              <ProductDetail
+                product={selectedProduct}
+                onBack={() => navigate(-1)}
+                onAddToCart={(qty) => { addToCart(selectedProduct, qty); navigate('/carrito'); }}
+                onProductClick={(product) => { setSelectedProduct(product); navigate(`/producto/${product.id}`); }}
+              />
+            )}
 
-          {currentView === 'home' && (
-            <>
-              <section className="relative h-[500px] flex items-center justify-center bg-zinc-900 overflow-hidden">
-                <picture className="absolute inset-0 w-full h-full">
-                  <source media="(max-width: 640px)" srcSet={optimizeImage(STORE_CONFIG.heroImage, { width: 600, height: 800, fit: 'cover', format: 'webp' })} />
-                  <source media="(max-width: 1024px)" srcSet={optimizeImage(STORE_CONFIG.heroImage, { width: 1200, format: 'webp' })} />
-                  <img src={optimizeImage(STORE_CONFIG.heroImage, { width: 1920 })} className="w-full h-full object-cover opacity-40 grayscale" alt="Taller Moto" fetchPriority="high" />
-                </picture>
-                <div className="relative z-10 text-center px-4">
-                  <h1 className="text-5xl md:text-7xl font-extrabold text-white uppercase italic mb-4">{STORE_CONFIG.heroTitle}</h1>
-                  <p className="text-racing-orange font-bold uppercase tracking-widest text-xl">{STORE_CONFIG.heroSubtitle}</p>
-                </div>
-              </section>
-
-              {/* Featured Products Section */}
-              <section className="py-12 bg-white dark:bg-zinc-950 container mx-auto px-4">
-                <h2 className="text-2xl font-bold text-zinc-900 dark:text-white uppercase italic mb-8 border-l-4 border-racing-orange pl-4">Productos Destacados</h2>
-                {loading ? (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {[1, 2, 3, 4].map(i => <ProductSkeleton key={i} />)}
+            {currentView === 'home' && (
+              <>
+                <section className="relative h-[500px] flex items-center justify-center bg-zinc-900 overflow-hidden">
+                  <picture className="absolute inset-0 w-full h-full">
+                    <source media="(max-width: 640px)" srcSet={optimizeImage(STORE_CONFIG.heroImage, { width: 600, height: 800, fit: 'cover', format: 'webp' })} />
+                    <source media="(max-width: 1024px)" srcSet={optimizeImage(STORE_CONFIG.heroImage, { width: 1200, format: 'webp' })} />
+                    <img src={optimizeImage(STORE_CONFIG.heroImage, { width: 1920 })} className="w-full h-full object-cover opacity-40 grayscale" alt="Taller Moto" fetchPriority="high" />
+                  </picture>
+                  <div className="relative z-10 text-center px-4">
+                    <h1 className="text-5xl md:text-7xl font-extrabold text-white uppercase italic mb-4">{STORE_CONFIG.heroTitle}</h1>
+                    <p className="text-racing-orange font-bold uppercase tracking-widest text-xl">{STORE_CONFIG.heroSubtitle}</p>
                   </div>
-                ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {products.slice(0, 4).map((product, index) => (
-                      <ProductCard
-                        key={product.id}
-                        priority={true}
-                        product={product}
-                        onClick={(p) => {
-                          setSelectedProduct(p);
-                          trackViewItem(p);
-                          navigate(`/${p.categorySlug || 'recambios'}/${p.id}`);
-                        }}
-                        onAddToCart={() => addToCart(product, 1)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </section>
+                </section>
 
-              <PromoBanner onForumClick={() => navigate('/foro')} />
-              <FeaturesBanner />
-              <BrandSlider />
-            </>
-          )}
-
-          {currentView === 'catalog' && (
-            <div ref={catalogRef}>
-              <section className="pt-32 pb-12 bg-white dark:bg-zinc-950">
-                <BikeSelector onSearch={handleBikeSearch} onTextSearch={handleTextSearch} isLoading={loading} bikeData={BIKE_DATA} />
-              </section>
-              <section className="py-12 bg-white dark:bg-zinc-950 min-h-screen container mx-auto px-4 border-t border-zinc-200 dark:border-zinc-900">
-                <div className="flex flex-col gap-6 mb-10">
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div className="flex items-center gap-4">
-                      <h2 className="text-2xl font-bold text-zinc-900 dark:text-white uppercase italic">{currentFilter || "Catálogo"}</h2>
-                      {(currentFilter || brandParam || motoParam) && (
-                        <button onClick={handleClearFilters} className="text-zinc-500 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2">
-                          <Trash2 className="w-4 h-4" /> Limpiar
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-4">
-                      {/* Brand Filter */}
-                      <select
-                        value={brandParam || ''}
-                        onChange={(e) => {
-                          const newParams = new URLSearchParams(searchParams);
-                          if (e.target.value) newParams.set('brand', e.target.value);
-                          else newParams.delete('brand');
-                          setSearchParams(newParams);
-                          navigate(`/recambios?${newParams.toString()}`);
-                        }}
-                        className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer max-w-[150px]"
-                      >
-                        <option value="">Todas las Marcas</option>
-                        {brands.map(b => (
-                          <option key={b.name} value={b.name}>{b.name}</option>
-                        ))}
-                      </select>
-
-                      {/* Category Filter */}
-                      <select
-                        value={urlCategory || ''}
-                        onChange={(e) => {
-                          if (e.target.value) handleNavClick('catalog', e.target.value);
-                          else handleNavClick('catalog');
-                        }}
-                        className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer max-w-[150px]"
-                      >
-                        <option value="">Todas las Categorías</option>
-                        {CATEGORIES.map(c => (
-                          <option key={c.id} value={c.name}>{c.name}</option>
-                        ))}
-                      </select>
-
-                      <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-800 hidden md:block" />
-
-                      <div className="flex items-center gap-2">
-                        <label htmlFor="perPage" className="text-zinc-500 text-xs uppercase hidden md:inline">Mostrar:</label>
-                        <select
-                          id="perPage"
-                          value={perPage}
-                          onChange={(e) => { setPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                          className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer"
-                        >
-                          <option value={10}>10</option>
-                          <option value={20}>20</option>
-                          <option value={50}>50</option>
-                        </select>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <label htmlFor="sortBy" className="text-zinc-500 text-xs uppercase hidden md:inline">Ordenar:</label>
-                        <select
-                          id="sortBy"
-                          value={sortBy}
-                          onChange={(e) => { setSortBy(e.target.value as 'date' | 'price' | 'price-asc'); setCurrentPage(1); }}
-                          className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer"
-                        >
-                          <option value="date">Relevancia</option>
-                          <option value="price">Precio: Mayor a menor</option>
-                          <option value="price-asc">Precio: Menor a mayor</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="min-h-[500px]">
+                {/* Featured Products Section */}
+                <section className="py-12 bg-white dark:bg-zinc-950 container mx-auto px-4">
+                  <h2 className="text-2xl font-bold text-zinc-900 dark:text-white uppercase italic mb-8 border-l-4 border-racing-orange pl-4">Productos Destacados</h2>
                   {loading ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                      {[...Array(8)].map((_, i) => <ProductSkeleton key={i} />)}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {[1, 2, 3, 4].map(i => <ProductSkeleton key={i} />)}
                     </div>
-                  ) : renderProductGrid()}
-                </div>
-              </section>
-            </div>
-          )}
-        </Suspense>
-      </main>
-      <Footer onNavClick={handleNavClick} />
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {products.slice(0, 4).map((product, index) => (
+                        <ProductCard
+                          key={product.id}
+                          priority={true}
+                          product={product}
+                          onClick={(p) => {
+                            setSelectedProduct(p);
+                            trackViewItem(p);
+                            navigate(`/${p.categorySlug || 'recambios'}/${p.id}`);
+                          }}
+                          onAddToCart={() => addToCart(product, 1)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </section>
 
-      <Suspense fallback={null}>
-        <AIAdvisor onProductClick={(p) => { setSelectedProduct(p); navigate(`/producto/${p.id}`); }} onAddToCart={(p) => addToCart(p)} user={user} onLoginRequest={() => navigate('/login')} />
-      </Suspense>
-    </div>
+                <PromoBanner onForumClick={() => navigate('/foro')} />
+                <FeaturesBanner />
+                <BrandSlider />
+              </>
+            )}
+
+            {currentView === 'catalog' && (
+              <div ref={catalogRef}>
+                <section className="pt-32 pb-12 bg-white dark:bg-zinc-950">
+                  <BikeSelector onSearch={handleBikeSearch} onTextSearch={handleTextSearch} isLoading={loading} bikeData={BIKE_DATA} />
+                </section>
+                <section className="py-12 bg-white dark:bg-zinc-950 min-h-screen container mx-auto px-4 border-t border-zinc-200 dark:border-zinc-900">
+                  <div className="flex flex-col gap-6 mb-10">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                      <div className="flex items-center gap-4">
+                        <h2 className="text-2xl font-bold text-zinc-900 dark:text-white uppercase italic">{currentFilter || "Catálogo"}</h2>
+                        {(currentFilter || brandParam || motoParam) && (
+                          <button onClick={handleClearFilters} className="text-zinc-500 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2">
+                            <Trash2 className="w-4 h-4" /> Limpiar
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-4">
+                        {/* Brand Filter */}
+                        <select
+                          value={brandParam || ''}
+                          onChange={(e) => {
+                            const newParams = new URLSearchParams(searchParams);
+                            if (e.target.value) newParams.set('brand', e.target.value);
+                            else newParams.delete('brand');
+                            setSearchParams(newParams);
+                            navigate(`/recambios?${newParams.toString()}`);
+                          }}
+                          className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer max-w-[150px]"
+                        >
+                          <option value="">Todas las Marcas</option>
+                          {brands.map(b => (
+                            <option key={b.name} value={b.name}>{b.name}</option>
+                          ))}
+                        </select>
+
+                        {/* Category Filter */}
+                        <select
+                          value={urlCategory || ''}
+                          onChange={(e) => {
+                            if (e.target.value) handleNavClick('catalog', e.target.value);
+                            else handleNavClick('catalog');
+                          }}
+                          className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer max-w-[150px]"
+                        >
+                          <option value="">Todas las Categorías</option>
+                          {CATEGORIES.map(c => (
+                            <option key={c.id} value={c.name}>{c.name}</option>
+                          ))}
+                        </select>
+
+                        <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-800 hidden md:block" />
+
+                        <div className="flex items-center gap-2">
+                          <label htmlFor="perPage" className="text-zinc-500 text-xs uppercase hidden md:inline">Mostrar:</label>
+                          <select
+                            id="perPage"
+                            value={perPage}
+                            onChange={(e) => { setPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer"
+                          >
+                            <option value={10}>10</option>
+                            <option value={20}>20</option>
+                            <option value={50}>50</option>
+                          </select>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label htmlFor="sortBy" className="text-zinc-500 text-xs uppercase hidden md:inline">Ordenar:</label>
+                          <select
+                            id="sortBy"
+                            value={sortBy}
+                            onChange={(e) => { setSortBy(e.target.value as 'date' | 'price' | 'price-asc'); setCurrentPage(1); }}
+                            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer"
+                          >
+                            <option value="date">Relevancia</option>
+                            <option value="price">Precio: Mayor a menor</option>
+                            <option value="price-asc">Precio: Menor a mayor</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="min-h-[500px]">
+                    {loading ? (
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                        {[...Array(8)].map((_, i) => <ProductSkeleton key={i} />)}
+                      </div>
+                    ) : renderProductGrid()}
+                  </div>
+                </section>
+              </div>
+            )}
+          </Suspense>
+        </main>
+        <Footer onNavClick={handleNavClick} />
+
+        <Suspense fallback={null}>
+          <AIAdvisor onProductClick={(p) => { setSelectedProduct(p); navigate(`/producto/${p.id}`); }} onAddToCart={(p) => addToCart(p)} user={user} onLoginRequest={() => navigate('/login')} />
+        </Suspense>
+      </div>
+    </ErrorBoundary>
   );
 }
 

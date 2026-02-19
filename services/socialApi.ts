@@ -370,7 +370,7 @@ export const getUserProfile = async (
     userId: number
 ): Promise<UserProfileFull | null> => {
     try {
-        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const headers: Record<string, string> = token ? { 'Authorization': `Bearer ${token}` } : {};
         const { data } = await makeRequest(`${API_BASE}/user/${userId}/full-profile`, { headers });
         return data as UserProfileFull;
     } catch (error) {
@@ -399,10 +399,67 @@ export const manageFriendship = async (
     }
 };
 
-export const searchUsers = async (query: string): Promise<{ id: number; name: string; avatar: string }[]> => {
+export const searchUsers = async (query: string): Promise<{ id: number; name: string; avatar: string; rank?: any }[]> => {
     try {
         const { data } = await makeRequest(`${API_BASE}/users/search?q=${encodeURIComponent(query)}`);
-        return data; // Assuming straight array return
+        return data;
+    } catch (error) {
+        return [];
+    }
+};
+
+/**
+ * SOCIAL: Obtener notificaciones
+ */
+export const fetchNotifications = async (token: string): Promise<any[]> => {
+    try {
+        const { data } = await makeRequest(`${API_BASE}/notifications`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        return data || [];
+    } catch (error) {
+        return [];
+    }
+};
+
+/**
+ * SOCIAL: Marcar notificaciones como leídas
+ */
+export const markNotificationsRead = async (token: string): Promise<boolean> => {
+    try {
+        await makeRequest(`${API_BASE}/notifications/read`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        return true;
+    } catch (error) {
+        return false;
+    }
+};
+
+/**
+ * SOCIAL: Toggle Follow
+ */
+export const toggleFollow = async (token: string, targetId: number): Promise<{ following: boolean }> => {
+    try {
+        const { data } = await makeRequest(`${API_BASE}/follow`, {
+            method: 'POST',
+            body: JSON.stringify({ target_id: targetId }),
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        return data;
+    } catch (error) {
+        return { following: false };
+    }
+};
+
+/**
+ * SOCIAL: Obtener Galería de Usuario
+ */
+export const fetchUserGallery = async (userId: number): Promise<any[]> => {
+    try {
+        const { data } = await makeRequest(`${API_BASE}/user/${userId}/gallery`);
+        return data || [];
     } catch (error) {
         return [];
     }
