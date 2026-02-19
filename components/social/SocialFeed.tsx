@@ -28,6 +28,7 @@ export const SocialFeed: React.FC<SocialFeedProps> = ({ user, onBack, onLoginReq
                 setPosts(prev => p === 1 ? data : [...prev, ...data]);
             }
         } catch (err) {
+            console.error("Feed error:", err);
             setError("Error al cargar el muro.");
         } finally {
             setLoading(false);
@@ -137,13 +138,13 @@ export const SocialFeed: React.FC<SocialFeedProps> = ({ user, onBack, onLoginReq
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {posts.map(post => (
+                        {posts.filter(p => p && p.author).map(post => (
                             <PostCard
                                 key={post.id}
                                 id={post.id}
                                 author={post.author}
-                                content={post.content}
-                                metrics={post.metrics}
+                                content={post.content || { text: '' }}
+                                metrics={post.metrics || { likes: 0, comments: 0, liked: false }}
                                 onLike={() => handleLike(post)}
                                 onCommentSubmit={(text) => handleComment(post.id, text)}
                             />

@@ -34,9 +34,18 @@ export const optimizeImage = (
   // Si la imagen ya es local o data URI, no optimizar con servicio externo
   if (url.startsWith('data:') || url.startsWith('/')) return url;
 
+  // Determine the source URL. If it's our backend, wrap it in our proxy to bypass hotlink protection
+  let sourceUrl = url;
+  if (url.startsWith('https://backendescapes.com/')) {
+    const relativePath = url.replace('https://backendescapes.com/', '');
+    // We use the full Vercel URL here because wsrv.nl needs a public URL
+    const publicProxyUrl = `https://escapes-react.vercel.app/api/proxy?media=${encodeURIComponent(relativePath)}`;
+    sourceUrl = publicProxyUrl;
+  }
+
   // Construir parámetros de wsrv.nl
   const params = new URLSearchParams();
-  params.append('url', url);
+  params.append('url', sourceUrl);
 
   if (options.width) params.append('w', options.width.toString());
   if (options.height) params.append('h', options.height.toString());

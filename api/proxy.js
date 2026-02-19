@@ -5,12 +5,21 @@ export default async function handler(req, res) {
 
     // Handle Media Proxying (e.g. /api/proxy?media=wp-content/uploads/...)
     if (media) {
-        const mediaUrl = `https://backendescapes.com/${media}`;
+        let mediaUrl = media;
+        if (!media.startsWith('http')) {
+            mediaUrl = `https://backendescapes.com/${media}`;
+        }
         console.log(`[PROXY] Fetching Media: ${mediaUrl}`);
         try {
-            const mRes = await fetch(mediaUrl);
+            const mRes = await fetch(mediaUrl, {
+                headers: {
+                    'Referer': 'https://backendescapes.com/',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                }
+            });
             mRes.headers.forEach((v, k) => {
-                if (!['content-encoding', 'transfer-encoding', 'connection'].includes(k.toLowerCase())) {
+                const lk = k.toLowerCase();
+                if (!['content-encoding', 'transfer-encoding', 'connection', 'content-length'].includes(lk)) {
                     res.setHeader(k, v);
                 }
             });

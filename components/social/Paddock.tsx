@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
     MessageSquare, Clock, Hash, ChevronRight, ArrowLeft, Send,
     User, Loader2, PlusCircle, AlertCircle, CheckCircle,
-    Trash2, Heart, Share2, Search
+    Trash2, Heart, Share2, Search, RefreshCw
 } from 'lucide-react';
 import { User as UserType } from '../../types';
 import {
@@ -158,8 +158,8 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
 
     const getPageTitle = () => {
         if (view === 'categories') return 'Paddock - Foro';
-        if (selectedCategory && view === 'threads') return `${selectedCategory.title} | Paddock`;
-        if (selectedThread && view === 'thread_detail') return `${selectedThread.title}`;
+        if (selectedCategory && view === 'threads') return `${selectedCategory?.title || 'Categoría'} | Paddock`;
+        if (selectedThread && view === 'thread_detail') return `${selectedThread?.title || 'Tema'}`;
         return 'Paddock';
     };
 
@@ -220,10 +220,17 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
                 {/* --- VIEW: CATEGORIES --- */}
                 {view === 'categories' && (
                     <div className="animate-fade-in">
-                        <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-4">
+                        <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-4 w-full">
                             <div>
-                                <h1 className="text-4xl md:text-5xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter mb-2">
+                                <h1 className="text-4xl md:text-5xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter mb-2 flex items-center gap-4">
                                     THE <span className="text-transparent bg-clip-text bg-gradient-to-r from-racing-orange to-red-600">PADDOCK</span>
+                                    <button
+                                        onClick={() => sync()}
+                                        className="p-2 text-zinc-500 hover:text-racing-orange transition-colors"
+                                        title="Sincronizar"
+                                    >
+                                        <RefreshCw className={`w-6 h-6 ${loading ? 'animate-spin text-racing-orange' : ''}`} />
+                                    </button>
                                 </h1>
                                 <p className="text-zinc-600 dark:text-zinc-400 max-w-xl">
                                     El corazón de la comunidad. Comparte conocimientos, organiza rutas y discute sobre mecánica.
@@ -329,15 +336,15 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
                             </div>
                         ) : (
                             <div className="space-y-2">
-                                {threads.map(thread => (
+                                {threads.filter(t => t && t.author).map(thread => (
                                     <div
                                         key={thread.id}
                                         onClick={() => { setSelectedThread(thread); navigateTo('thread_detail', { cat: categoryId!, thread: String(thread.id) }); }}
                                         className="group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-racing-orange/50 p-4 rounded-lg cursor-pointer transition-all hover:bg-gray-50 dark:hover:bg-zinc-800/80 flex items-center gap-4 shadow-sm dark:shadow-none"
                                     >
-                                        <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                                        <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform overflow-hidden">
                                             {thread.author?.avatar ? (
-                                                <img src={thread.author.avatar} alt={thread.author.name} className="w-full h-full object-cover rounded-full" />
+                                                <img src={thread.author.avatar.startsWith('http') ? `/api/proxy?media=${thread.author.avatar.replace('https://backendescapes.com/', '')}` : thread.author.avatar} alt={thread.author?.name} className="w-full h-full object-cover rounded-full" />
                                             ) : (
                                                 <User className="w-5 h-5 text-zinc-400 dark:text-zinc-500" />
                                             )}
@@ -346,12 +353,12 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
                                         <div className="flex-grow min-w-0">
                                             <div className="flex items-center gap-2 mb-1">
                                                 {thread.is_pinned && <span className="bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-full">Fijado</span>}
-                                                <h3 className="text-zinc-900 dark:text-white font-bold text-base truncate group-hover:text-racing-orange transition-colors">{thread.title}</h3>
+                                                <h3 className="text-zinc-900 dark:text-white font-bold text-base truncate group-hover:text-racing-orange transition-colors">{thread.title || 'Sin Título'}</h3>
                                             </div>
                                             <div className="flex items-center gap-3 text-xs text-zinc-500">
                                                 <span className="text-zinc-500 dark:text-zinc-400 font-medium">Por {thread.author?.name || 'Anónimo'}</span>
                                                 <span>•</span>
-                                                <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {new Date(thread.created_at).toLocaleDateString()}</span>
+                                                <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {thread.created_at ? new Date(thread.created_at).toLocaleDateString() : '---'}</span>
                                             </div>
                                         </div>
 
@@ -420,14 +427,14 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
                                 <div className="p-6 md:p-8 bg-gray-50/50 dark:bg-zinc-950/30 border-b border-zinc-200 dark:border-zinc-800">
                                     <div className="flex items-center gap-3 mb-6">
                                         <div className="w-12 h-12 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden border-2 border-zinc-300 dark:border-zinc-700">
-                                            {selectedThread.author.avatar ? (
-                                                <img src={selectedThread.author.avatar} alt={selectedThread.author.name} className="w-full h-full object-cover" />
+                                            {selectedThread.author?.avatar ? (
+                                                <img src={selectedThread.author.avatar.startsWith('http') ? `/api/proxy?media=${selectedThread.author.avatar.replace('https://backendescapes.com/', '')}` : selectedThread.author.avatar} alt={selectedThread.author?.name} className="w-full h-full object-cover" />
                                             ) : <User className="w-6 h-6 text-zinc-400 dark:text-zinc-500 m-auto mt-2" />}
                                         </div>
                                         <div>
-                                            <h3 className="text-zinc-900 dark:text-white font-bold text-lg">{selectedThread.author.name}</h3>
+                                            <h3 className="text-zinc-900 dark:text-white font-bold text-lg">{selectedThread.author?.name || 'Piloto Anónimo'}</h3>
                                             <p className="text-zinc-500 text-xs flex items-center gap-2">
-                                                <Clock className="w-3 h-3" /> {new Date(selectedThread.created_at).toLocaleDateString()}
+                                                <Clock className="w-3 h-3" /> {selectedThread.created_at ? new Date(selectedThread.created_at).toLocaleDateString() : '---'}
                                             </p>
                                         </div>
                                     </div>
@@ -441,7 +448,7 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
                                 <div className="p-4 bg-gray-50 dark:bg-zinc-950 flex justify-between items-center text-sm">
                                     <div className="flex gap-4">
                                         <button className="flex items-center gap-2 text-zinc-500 hover:text-racing-orange transition-colors font-bold uppercase text-xs">
-                                            <Heart className="w-4 h-4" /> {selectedThread.metrics.likes} Likes
+                                            <Heart className="w-4 h-4" /> {selectedThread.metrics?.likes || 0} Likes
                                         </button>
                                         <button className="flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors font-bold uppercase text-xs">
                                             <Share2 className="w-4 h-4" /> Compartir
