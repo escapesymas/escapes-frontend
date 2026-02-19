@@ -3,9 +3,9 @@ import { ShieldCheck, Truck, Trophy, CheckCircle2 } from 'lucide-react';
 
 // CONFIGURACIÓN DE CONEXIÓN WOOCOMMERCE
 export const WOO_CONFIG = {
-  baseUrl: "https://backendescapes.com", // Mobile requires absolute URL
-  consumerKey: "ck_1525ca6e68eadc50cd7b69ae408ebb05b93c78e9",
-  consumerSecret: "cs_42b5d60e45d4f6e710fa0fa0b35f1ae21964981a"
+  baseUrl: "", // Empty for web proxy (Vercel) usage
+  consumerKey: "ck_d3b44ee68cb5f6e3e222da8dde30ac733f1c859f",
+  consumerSecret: "cs_bc248d17e08ea49c04100e129b5798e6006c8fdd"
 };
 
 // CONFIGURACIÓN DE PAGOS (SUMUP)

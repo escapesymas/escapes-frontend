@@ -219,7 +219,7 @@ export const createPaddockThread = async (
     content: string
 ): Promise<{ success: boolean; id?: number; error?: string }> => {
     try {
-        const { data } = await makeRequest(`${API_BASE}/thread/create/`, {
+        const { data } = await makeRequest(`${API_BASE}/thread/create`, {
             method: 'POST',
             body: JSON.stringify({ category_id: categoryId, title, content }),
             headers: {

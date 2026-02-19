@@ -24,8 +24,9 @@ export default async function handler(req, res) {
     delete headers['x-vercel-forwarded-for'];
 
     // Add Auth manually as the client doesn't send it (handled by proxy)
-    const WOO_CONSUMER_KEY = process.env.WOO_CONSUMER_KEY || 'ck_1525ca6e68eadc50cd7b69ae408ebb05b93c78e9';
-    const WOO_CONSUMER_SECRET = process.env.WOO_CONSUMER_SECRET || 'cs_42b5d60e45d4f6e710fa0fa0b35f1ae21964981a';
+    // Verified WORKING keys (200 OK)
+    const WOO_CONSUMER_KEY = process.env.WOO_CONSUMER_KEY || 'ck_d3b44ee68cb5f6e3e222da8dde30ac733f1c859f';
+    const WOO_CONSUMER_SECRET = process.env.WOO_CONSUMER_SECRET || 'cs_bc248d17e08ea49c04100e129b5798e6006c8fdd';
     const auth = Buffer.from(`${WOO_CONSUMER_KEY}:${WOO_CONSUMER_SECRET}`).toString('base64');
 
     headers['Authorization'] = `Basic ${auth}`;
