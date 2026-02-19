@@ -19,7 +19,7 @@ define('PADDOCK_PLUGIN_URL', plugin_dir_url(__FILE__));
 
 // Include core classes
 require_once PADDOCK_PLUGIN_DIR . 'includes/class-paddock-db.php';
-// require_once PADDOCK_PLUGIN_DIR . 'includes/class-paddock-cpt.php'; // Removed: Using native posts
+require_once PADDOCK_PLUGIN_DIR . 'includes/class-paddock-cpt.php'; // Re-added: Using custom posts
 require_once PADDOCK_PLUGIN_DIR . 'includes/class-paddock-xp.php';
 require_once PADDOCK_PLUGIN_DIR . 'includes/class-paddock-discounts.php';
 require_once PADDOCK_PLUGIN_DIR . 'includes/class-paddock-api.php';
@@ -40,8 +40,8 @@ class Paddock_Gamification
 		// Activation hook for DB creation
 		register_activation_hook(__FILE__, ['Paddock_DB', 'create_tables']);
 
-		// Init Custom Post Types - REMOVED
-		// add_action( 'init', [ 'Paddock_CPT', 'register_cpts' ] );
+		// Init Custom Post Types
+		Paddock_CPT::init();
 
 		// Init REST API
 		add_action('rest_api_init', ['Paddock_API', 'register_routes']);
