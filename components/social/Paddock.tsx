@@ -55,33 +55,34 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
         loadCategories();
     }, []);
 
+    const handleRefreshSync = async () => {
+        if (view === 'threads' && categoryId) {
+            setLoading(true);
+            const catId = parseInt(categoryId);
+            // Ensure category is selected
+            if (!selectedCategory || selectedCategory.id !== catId) {
+                const cats = categories.length ? categories : await fetchPaddockCategories();
+                const found = cats.find(c => c.id === catId);
+                if (found) setSelectedCategory(found);
+            }
+            const data = await fetchPaddockThreads(catId);
+            setThreads(data);
+            setLoading(false);
+        } else if (view === 'thread_detail' && threadId) {
+            setLoading(true);
+            const tId = parseInt(threadId);
+            const result = await fetchPaddockThread(tId);
+            if (result) {
+                setSelectedThread(result.thread);
+                setReplies(result.replies);
+            }
+            setLoading(false);
+        }
+    };
+
     // Sync View with URL
     useEffect(() => {
-        const sync = async () => {
-            if (view === 'threads' && categoryId) {
-                setLoading(true);
-                const catId = parseInt(categoryId);
-                // Ensure category is selected
-                if (!selectedCategory || selectedCategory.id !== catId) {
-                    const cats = categories.length ? categories : await fetchPaddockCategories();
-                    const found = cats.find(c => c.id === catId);
-                    if (found) setSelectedCategory(found);
-                }
-                const data = await fetchPaddockThreads(catId);
-                setThreads(data);
-                setLoading(false);
-            } else if (view === 'thread_detail' && threadId) {
-                setLoading(true);
-                const tId = parseInt(threadId);
-                const result = await fetchPaddockThread(tId);
-                if (result) {
-                    setSelectedThread(result.thread);
-                    setReplies(result.replies);
-                }
-                setLoading(false);
-            }
-        };
-        sync();
+        handleRefreshSync();
     }, [view, categoryId, threadId, categories.length]); // Dependencies
 
     // --- ACTIONS ---
@@ -225,7 +226,7 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
                                 <h1 className="text-4xl md:text-5xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter mb-2 flex items-center gap-4">
                                     THE <span className="text-transparent bg-clip-text bg-gradient-to-r from-racing-orange to-red-600">PADDOCK</span>
                                     <button
-                                        onClick={() => sync()}
+                                        onClick={() => handleRefreshSync()}
                                         className="p-2 text-zinc-500 hover:text-racing-orange transition-colors"
                                         title="Sincronizar"
                                     >
