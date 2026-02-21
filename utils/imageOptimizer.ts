@@ -34,28 +34,27 @@ export const optimizeImage = (
   // Si la imagen ya es local o data URI, no optimizar con servicio externo
   if (url.startsWith('data:') || url.startsWith('/')) return url;
 
-  // Determine the source URL. If it's our backend, wrap it in our proxy to bypass hotlink protection
-  let sourceUrl = url;
+  // BYPASS wsrv.nl completely for backend images.
+  // Plesk's hotlink protection blocks external services (wsrv.nl) from fetching our images,
+  // causing "This image was hotlinked" placeholders. Instead, serve them directly through our proxy.
   if (url.startsWith('https://backendescapes.com/')) {
     const relativePath = url.replace('https://backendescapes.com/', '');
-    // We use the full Vercel URL here because wsrv.nl needs a public URL
-    const publicProxyUrl = `https://escapes-react.vercel.app/api/proxy?media=${encodeURIComponent(relativePath)}`;
-    sourceUrl = publicProxyUrl;
+    return `/api/proxy?media=${encodeURIComponent(relativePath)}`;
   }
 
-  // Construir parámetros de wsrv.nl
+  // For non-backend images, use wsrv.nl optimization as before
   const params = new URLSearchParams();
-  params.append('url', sourceUrl);
+  params.append('url', url);
 
   if (options.width) params.append('w', options.width.toString());
   if (options.height) params.append('h', options.height.toString());
   if (options.quality) params.append('q', options.quality.toString());
-  else params.append('q', '70'); // Balanced quality/speed (Reduced from 75 for better compression)
+  else params.append('q', '70');
 
   if (options.format && options.format !== 'auto') {
     params.append('output', options.format);
   } else {
-    params.append('output', 'webp'); // WebP por defecto si no se especifica
+    params.append('output', 'webp');
   }
 
   if (options.fit) params.append('fit', options.fit);
