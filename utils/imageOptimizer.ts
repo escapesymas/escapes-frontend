@@ -34,12 +34,26 @@ export const optimizeImage = (
   // Si la imagen ya es local o data URI, no optimizar con servicio externo
   if (url.startsWith('data:') || url.startsWith('/')) return url;
 
-  // BYPASS wsrv.nl completely for backend images.
-  // Plesk's hotlink protection blocks external services (wsrv.nl) from fetching our images,
-  // causing "This image was hotlinked" placeholders. Instead, serve them directly through our proxy.
+  // Backend images: use wsrv.nl but with our PROXY URL as the source
+  // instead of the backend URL directly. This avoids Plesk's hotlink protection
+  // (which blocks wsrv.nl from fetching backendescapes.com) while still getting
+  // full image optimization (resize, WebP/AVIF, compression).
   if (url.startsWith('https://backendescapes.com/')) {
     const relativePath = url.replace('https://backendescapes.com/', '');
-    return `/api/proxy?media=${encodeURIComponent(relativePath)}`;
+    const proxyUrl = `https://www.escapesymas.com/api/proxy?media=${encodeURIComponent(relativePath)}`;
+
+    const params = new URLSearchParams();
+    params.append('url', proxyUrl);
+    if (options.width) params.append('w', options.width.toString());
+    if (options.height) params.append('h', options.height.toString());
+    params.append('q', (options.quality || 70).toString());
+    if (options.format && options.format !== 'auto') {
+      params.append('output', options.format);
+    } else {
+      params.append('output', 'webp');
+    }
+    if (options.fit) params.append('fit', options.fit);
+    return `https://wsrv.nl/?${params.toString()}`;
   }
 
   // For non-backend images, use wsrv.nl optimization as before
