@@ -34,16 +34,21 @@ export const optimizeImage = (
   // Si la imagen ya es local o data URI, no optimizar con servicio externo
   if (url.startsWith('data:') || url.startsWith('/')) return url;
 
-  // Backend images: serve through our proxy to bypass Plesk hotlink protection.
-  // wsrv.nl is blocked even when routing through our proxy, so we serve directly.
-  // Width/format params are passed for potential future server-side optimization.
+  // Backend images: route through wsrv.nl for optimization (resize + WebP/AVIF).
+  // Hotlink protection has been disabled on Plesk, so wsrv.nl can fetch directly.
   if (url.startsWith('https://backendescapes.com/')) {
-    const relativePath = url.replace('https://backendescapes.com/', '');
     const params = new URLSearchParams();
-    params.append('media', relativePath);
+    params.append('url', url);
     if (options.width) params.append('w', options.width.toString());
-    if (options.format) params.append('fmt', options.format);
-    return `/api/proxy?${params.toString()}`;
+    if (options.height) params.append('h', options.height.toString());
+    params.append('q', (options.quality || 70).toString());
+    if (options.format && options.format !== 'auto') {
+      params.append('output', options.format);
+    } else {
+      params.append('output', 'webp');
+    }
+    if (options.fit) params.append('fit', options.fit);
+    return `https://wsrv.nl/?${params.toString()}`;
   }
 
   // For non-backend images, use wsrv.nl optimization as before
