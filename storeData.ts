@@ -23,7 +23,7 @@ export const STORE_CONFIG = {
   contactEmail: "info@escapesymas.com",
   heroTitle: "Equipamiento Pro",
   heroSubtitle: "Para Pilotos Exigentes",
-  heroImage: "/hero"
+  heroImage: "/hero.avif"
 };
 
 // CARACTERÍSTICAS DESTACADAS (TRUST SIGNALS)
