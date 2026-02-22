@@ -684,15 +684,20 @@ function App() {
             {currentView === 'home' && (
               <>
                 <section className="relative h-[500px] flex items-center justify-center bg-zinc-900 overflow-hidden">
-                  <img
-                    src={STORE_CONFIG.heroImage}
-                    className="absolute inset-0 w-full h-full object-cover opacity-40 grayscale"
-                    alt="Taller Moto"
-                    fetchPriority="high"
-                    width="1920"
-                    height="500"
-                    decoding="async"
-                  />
+                  <picture className="absolute inset-0 w-full h-full">
+                    <source media="(max-width: 480px)" srcSet="/hero-sm.avif" type="image/avif" />
+                    <source media="(max-width: 768px)" srcSet="/hero-md.avif" type="image/avif" />
+                    <source srcSet="/hero-lg.avif" type="image/avif" />
+                    <img
+                      src="/hero-lg.avif"
+                      className="w-full h-full object-cover opacity-40 grayscale"
+                      alt="Taller Moto"
+                      fetchPriority="high"
+                      width="1280"
+                      height="1920"
+                      decoding="async"
+                    />
+                  </picture>
                   <div className="relative z-10 text-center px-4">
                     <h1 className="text-5xl md:text-7xl font-extrabold text-white uppercase italic mb-4">{STORE_CONFIG.heroTitle}</h1>
                     <p className="text-racing-orange font-bold uppercase tracking-widest text-xl">{STORE_CONFIG.heroSubtitle}</p>
