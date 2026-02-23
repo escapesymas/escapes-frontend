@@ -1,5 +1,4 @@
 import fetch from 'node-fetch';
-import sharp from 'sharp';
 
 export default async function handler(req, res) {
     const { path, media, w, h, fmt } = req.query;
@@ -26,9 +25,11 @@ export default async function handler(req, res) {
             const mBuf = Buffer.from(await mRes.arrayBuffer());
             const contentType = mRes.headers.get('content-type') || '';
 
-            // Only optimize actual images with sharp
+            // Only optimize actual images when params are present
             if (contentType.startsWith('image/') && (w || h || fmt)) {
                 try {
+                    const sharpModule = await import('sharp');
+                    const sharp = sharpModule.default;
                     let pipeline = sharp(mBuf);
 
                     // Resize if width or height specified
@@ -96,7 +97,6 @@ export default async function handler(req, res) {
     delete headers['x-vercel-forwarded-for'];
 
     // Add Auth manually as the client doesn't send it (handled by proxy)
-    // Verified WORKING keys (200 OK)
     const WOO_CONSUMER_KEY = process.env.WOO_CONSUMER_KEY || 'ck_d3b44ee68cb5f6e3e222da8dde30ac733f1c859f';
     const WOO_CONSUMER_SECRET = process.env.WOO_CONSUMER_SECRET || 'cs_bc248d17e08ea49c04100e129b5798e6006c8fdd';
     const auth = Buffer.from(`${WOO_CONSUMER_KEY}:${WOO_CONSUMER_SECRET}`).toString('base64');
@@ -120,7 +120,6 @@ export default async function handler(req, res) {
         });
 
         const buffer = await response.arrayBuffer();
-        const contentType = response.headers.get('content-type');
 
         res.status(response.status);
         res.send(Buffer.from(buffer));
