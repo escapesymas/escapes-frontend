@@ -27,7 +27,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick }) => {
                 className="h-12 w-auto object-contain"
               />
             </div>
-            <p className="text-zinc-600 dark:text-zinc-500 leading-relaxed">
+            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
               Especialistas en sistemas de escape y recambios de alto rendimiento.
               Elevamos tu experiencia en pista y carretera con las mejores marcas del mercado.
             </p>
@@ -52,7 +52,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick }) => {
                 <li key={idx}>
                   <button
                     onClick={() => onNavClick(link.view)}
-                    className="text-zinc-600 dark:text-zinc-500 hover:text-racing-orange transition-colors flex items-center gap-2 uppercase font-bold text-xs"
+                    className="text-zinc-600 dark:text-zinc-400 hover:text-racing-orange transition-colors flex items-center gap-2 uppercase font-bold text-xs"
                   >
                     <span className="w-1.5 h-1.5 bg-zinc-300 dark:bg-zinc-800 rounded-full"></span>
                     {link.label}
@@ -60,13 +60,13 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick }) => {
                 </li>
               ))}
               <li>
-                <button onClick={() => onNavClick('account')} className="text-zinc-600 dark:text-zinc-500 hover:text-racing-orange transition-colors flex items-center gap-2 uppercase font-bold text-xs">
+                <button onClick={() => onNavClick('account')} className="text-zinc-600 dark:text-zinc-400 hover:text-racing-orange transition-colors flex items-center gap-2 uppercase font-bold text-xs">
                   <span className="w-1.5 h-1.5 bg-zinc-300 dark:bg-zinc-800 rounded-full"></span>
                   Mi Cuenta
                 </button>
               </li>
               <li>
-                <button onClick={() => onNavClick('orders')} className="text-zinc-600 dark:text-zinc-500 hover:text-racing-orange transition-colors flex items-center gap-2 uppercase font-bold text-xs">
+                <button onClick={() => onNavClick('orders')} className="text-zinc-600 dark:text-zinc-400 hover:text-racing-orange transition-colors flex items-center gap-2 uppercase font-bold text-xs">
                   <span className="w-1.5 h-1.5 bg-zinc-300 dark:bg-zinc-800 rounded-full"></span>
                   Seguimiento de Pedidos
                 </button>
@@ -92,7 +92,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick }) => {
           {/* NEWSLETTER */}
           <div>
             <h3 className="text-zinc-900 dark:text-white font-bold uppercase mb-6 tracking-wide border-b border-zinc-200 dark:border-zinc-800 pb-2 inline-block">Newsletter</h3>
-            <p className="text-zinc-600 dark:text-zinc-500 mb-4 text-xs">
+            <p className="text-zinc-600 dark:text-zinc-400 mb-4 text-xs">
               Recibe ofertas exclusivas, novedades de Racing y códigos de descuento.
             </p>
             <div className="flex flex-col gap-2">
@@ -105,14 +105,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick }) => {
                 Suscribirse
               </button>
             </div>
-            <p className="text-zinc-500 dark:text-zinc-600 text-[10px] mt-2 italic">
+            <p className="text-zinc-600 dark:text-zinc-500 text-[10px] mt-2 italic">
               *No enviamos spam. Solo adrenalina.
             </p>
           </div>
         </div>
 
         <div className="border-t border-zinc-200 dark:border-zinc-900 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-zinc-500 dark:text-zinc-600 text-xs">
+          <p className="text-zinc-600 dark:text-zinc-500 text-xs">
             © 2024 {STORE_CONFIG.name}. Todos los derechos reservados.
           </p>
           <div className="flex gap-4">

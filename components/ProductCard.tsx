@@ -94,7 +94,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
       </Link>
 
       <div className="p-3 md:p-4 flex flex-col flex-grow">
-        <span className="text-zinc-500 text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1 truncate">
+        <span className="text-zinc-600 dark:text-zinc-400 text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1 truncate">
           {product.category}
         </span>
         <Link
