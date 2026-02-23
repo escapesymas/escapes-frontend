@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, Suspense, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { ArrowRight, Loader2, WifiOff, Trash2, ChevronLeft } from 'lucide-react';
+import { ArrowRight, Loader2, WifiOff, Trash2, ChevronLeft, Package, Truck, ShieldCheck } from 'lucide-react';
 import { Header } from './components/Header';
 import { SEO } from './components/SEO';
 import { Footer } from './components/Footer';
@@ -105,6 +105,7 @@ function App() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCatalogProducts, setTotalCatalogProducts] = useState(0);
   const [perPage, setPerPage] = useState(20);
   const [sortBy, setSortBy] = useState<'date' | 'price' | 'price-asc'>('date');
   const catalogRef = useRef<HTMLDivElement>(null);
@@ -275,9 +276,10 @@ function App() {
   const loadFeaturedProducts = async () => {
     setLoading(true);
     try {
-      const { products: all } = await fetchProducts(undefined, undefined, 1, 10);
+      const { products: all, totalProducts } = await fetchProducts(undefined, undefined, 1, 10);
       const curated = all.filter(p => p.image !== STORE_CONFIG.defaultProductImage).slice(0, 4);
       setProducts(curated);
+      if (totalProducts > 0) setTotalCatalogProducts(totalProducts);
     } catch (e: any) {
       setError("Error de conexión con el catálogo.");
     } finally {
@@ -342,7 +344,7 @@ function App() {
 
       const combinedQuery = searchTerms.length > 0 ? searchTerms.join(' ') : undefined;
 
-      const { products: matches, totalPages: pages } = await fetchProducts(
+      const { products: matches, totalPages: pages, totalProducts } = await fetchProducts(
         combinedQuery,
         targetCatId,
         pageToLoad,
@@ -354,6 +356,7 @@ function App() {
       // No client-side filtering needed anymore as we are using the enhanced server search
       setProducts(matches);
       setTotalPages(pages);
+      if (totalProducts > 0) setTotalCatalogProducts(totalProducts);
       setCurrentPage(pageToLoad);
     } catch (e: any) {
       setError("Error cargando productos");
@@ -701,6 +704,43 @@ function App() {
                   <div className="relative z-10 text-center px-4">
                     <h1 className="text-5xl md:text-7xl font-extrabold text-white uppercase italic mb-4">{STORE_CONFIG.heroTitle}</h1>
                     <p className="text-racing-orange font-bold uppercase tracking-widest text-xl">{STORE_CONFIG.heroSubtitle}</p>
+                  </div>
+                </section>
+
+                {/* Stock Counter Bar */}
+                <section className="bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 border-t border-b border-zinc-700/50">
+                  <div className="container mx-auto px-4 py-5">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                      <div className="flex items-center justify-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-racing-orange/20 flex items-center justify-center">
+                          <Package className="w-5 h-5 text-racing-orange" />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-2xl md:text-3xl font-extrabold text-white italic">
+                            {totalCatalogProducts > 0 ? totalCatalogProducts.toLocaleString('es-ES') : '...'}
+                          </p>
+                          <p className="text-xs text-zinc-400 uppercase tracking-wider">Productos en stock</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-racing-orange/20 flex items-center justify-center">
+                          <Truck className="w-5 h-5 text-racing-orange" />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-bold text-white">Envío Rápido</p>
+                          <p className="text-xs text-zinc-400">Península y Canarias</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-racing-orange/20 flex items-center justify-center">
+                          <ShieldCheck className="w-5 h-5 text-racing-orange" />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-bold text-white">Garantía Oficial</p>
+                          <p className="text-xs text-zinc-400">Distribuidores autorizados</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </section>
 
