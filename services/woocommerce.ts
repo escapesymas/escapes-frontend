@@ -47,15 +47,16 @@ export const makeRequest = async (path: string, options: RequestInit = {}) => {
       throw new Error(`Error del Servidor (${response.status}): Respuesta no JSON. Body: ${text.substring(0, 200)}`);
     }
 
-    // Capturamos el total de páginas de los headers
+    // Capturamos el total de páginas y productos de los headers
     const totalPages = parseInt(response.headers.get('x-wp-totalpages') || '1');
+    const totalProducts = parseInt(response.headers.get('x-wp-total') || '0');
     const data = await response.json();
 
     if (!response.ok) {
       throw new Error(data.message || `API Error: ${response.status}`);
     }
 
-    return { data, totalPages };
+    return { data, totalPages, totalProducts };
 
   } catch (error: any) {
     console.error("[API FETCH ERROR]", error);
@@ -121,7 +122,7 @@ export const fetchProducts = async (
   perPage: number = 20,
   orderBy: string = 'date',
   order: string = 'desc'
-): Promise<{ products: Product[], totalPages: number }> => {
+): Promise<{ products: Product[], totalPages: number, totalProducts: number }> => {
   if (!isConfigValid()) throw new Error("Configuración inválida");
 
   const BROKEN_IMG_URL = "https://backendescapes.com/wp-content/uploads/2026/01/Sprint20Filter20P1420Filtro20de20Aire20Yamaha20T-150202015-.jpg";
@@ -156,8 +157,8 @@ export const fetchProducts = async (
       let path = `/wc/v3/products?per_page=${perPage}&page=${page}&status=publish&orderby=${orderBy}&order=${order}`;
       if (categoryId) path += `&category=${categoryId}`;
 
-      const { data, totalPages } = await makeRequest(path);
-      return { products: (data as WooProduct[]).map(mapProduct), totalPages };
+      const { data, totalPages, totalProducts } = await makeRequest(path);
+      return { products: (data as WooProduct[]).map(mapProduct), totalPages, totalProducts };
     }
 
     // ENHANCED SEARCH: Search by title, SKU, and filter by description
@@ -178,7 +179,7 @@ export const fetchProducts = async (
 
       // If we found enough results, return early
       if (allProducts.length >= perPage) {
-        return { products: allProducts.slice(0, perPage), totalPages };
+        return { products: allProducts.slice(0, perPage), totalPages, totalProducts: allProducts.length };
       }
     } catch { }
 
@@ -222,7 +223,8 @@ export const fetchProducts = async (
 
     return {
       products: allProducts.slice(0, perPage),
-      totalPages: estimatedTotal
+      totalPages: estimatedTotal,
+      totalProducts: allProducts.length
     };
   } catch (error) {
     throw error;

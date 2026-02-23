@@ -1,9 +1,10 @@
 import fetch from 'node-fetch';
+import sharp from 'sharp';
 
 export default async function handler(req, res) {
-    const { path, media } = req.query;
+    const { path, media, w, h, fmt } = req.query;
 
-    // Handle Media Proxying (e.g. /api/proxy?media=wp-content/uploads/...)
+    // Handle Media Proxying with optional Sharp optimization
     if (media) {
         let mediaUrl = media;
         if (!media.startsWith('http')) {
@@ -17,14 +18,62 @@ export default async function handler(req, res) {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                 }
             });
+
+            if (!mRes.ok) {
+                return res.status(mRes.status).json({ error: `Upstream returned ${mRes.status}` });
+            }
+
+            const mBuf = Buffer.from(await mRes.arrayBuffer());
+            const contentType = mRes.headers.get('content-type') || '';
+
+            // Only optimize actual images with sharp
+            if (contentType.startsWith('image/') && (w || h || fmt)) {
+                try {
+                    let pipeline = sharp(mBuf);
+
+                    // Resize if width or height specified
+                    const width = w ? parseInt(w) : undefined;
+                    const height = h ? parseInt(h) : undefined;
+                    if (width || height) {
+                        pipeline = pipeline.resize(width, height, {
+                            fit: 'inside',
+                            withoutEnlargement: true,
+                        });
+                    }
+
+                    // Convert format (default to webp for best compression)
+                    const format = fmt || 'webp';
+                    if (format === 'webp') {
+                        pipeline = pipeline.webp({ quality: 75 });
+                    } else if (format === 'avif') {
+                        pipeline = pipeline.avif({ quality: 60 });
+                    } else {
+                        pipeline = pipeline.jpeg({ quality: 75 });
+                    }
+
+                    const optimized = await pipeline.toBuffer();
+
+                    const mimeMap = { webp: 'image/webp', avif: 'image/avif', jpeg: 'image/jpeg', jpg: 'image/jpeg' };
+                    res.setHeader('Content-Type', mimeMap[format] || 'image/webp');
+                    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+                    res.setHeader('Vary', 'Accept');
+                    console.log(`[PROXY] Optimized: ${mBuf.length} -> ${optimized.length} bytes (${format}, ${width || 'auto'}x${height || 'auto'})`);
+                    return res.status(200).send(optimized);
+                } catch (sharpErr) {
+                    console.warn('[PROXY] Sharp optimization failed, serving raw:', sharpErr.message);
+                    // Fall through to serve raw if sharp fails
+                }
+            }
+
+            // Serve raw image (no optimization params or sharp failed)
             mRes.headers.forEach((v, k) => {
                 const lk = k.toLowerCase();
                 if (!['content-encoding', 'transfer-encoding', 'connection', 'content-length'].includes(lk)) {
                     res.setHeader(k, v);
                 }
             });
-            const mBuf = await mRes.arrayBuffer();
-            return res.status(mRes.status).send(Buffer.from(mBuf));
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+            return res.status(mRes.status).send(mBuf);
         } catch (e) {
             return res.status(502).json({ error: "Media fetch failed" });
         }
