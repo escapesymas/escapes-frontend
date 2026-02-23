@@ -55,20 +55,20 @@
   <!-- Pre-conexión a orígenes críticos -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://wsrv.nl">
-  <link rel="dns-prefetch" href="https://wsrv.nl">
 
   <!-- Pre-carga de la fuente crítica para romper la cadena de dependencia -->
   <link rel="preload" href="https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7W0Q5nw.woff2"
     as="font" type="font/woff2" crossorigin>
 
-  <!-- Pre-carga de la imagen LCP solo en página de inicio -->
+  <!-- Pre-carga responsive de la imagen LCP solo en página de inicio -->
   <script>
     if (window.location.pathname === '/' || window.location.pathname === '') {
+      var w = window.innerWidth;
+      var img = w <= 480 ? '/hero-sm.avif' : w <= 768 ? '/hero-md.avif' : '/hero-lg.avif';
       var link = document.createElement('link');
       link.rel = 'preload';
       link.as = 'image';
-      link.href = '/hero-lg.avif';
+      link.href = img;
       link.type = 'image/avif';
       link.fetchPriority = 'high';
       document.head.appendChild(link);
