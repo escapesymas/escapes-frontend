@@ -101,18 +101,18 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick }) => {
                 placeholder="Tu email..."
                 className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-3 text-zinc-900 dark:text-white rounded-sm focus:border-racing-orange focus:outline-none text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
               />
-              <button className="bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase py-3 rounded-sm transition-colors text-xs tracking-widest">
+              <button className="bg-orange-700 hover:bg-orange-600 text-white font-bold uppercase py-3 rounded-sm transition-colors text-xs tracking-widest">
                 Suscribirse
               </button>
             </div>
-            <p className="text-zinc-600 dark:text-zinc-500 text-[10px] mt-2 italic">
+            <p className="text-zinc-600 dark:text-zinc-400 text-[10px] mt-2 italic">
               *No enviamos spam. Solo adrenalina.
             </p>
           </div>
         </div>
 
         <div className="border-t border-zinc-200 dark:border-zinc-900 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-zinc-600 dark:text-zinc-500 text-xs">
+          <p className="text-zinc-600 dark:text-zinc-400 text-xs">
             © 2024 {STORE_CONFIG.name}. Todos los derechos reservados.
           </p>
           <div className="flex gap-4">
