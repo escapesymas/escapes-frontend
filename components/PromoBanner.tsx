@@ -40,7 +40,7 @@ export const PromoBanner: React.FC<PromoBannerProps> = ({ onForumClick }) => {
                     <div className="flex-shrink-0">
                         <button
                             onClick={onForumClick}
-                            className="group bg-white text-racing-orange px-8 py-4 rounded-sm font-black uppercase text-sm tracking-wider hover:bg-zinc-950 hover:text-white transition-all duration-300 shadow-2xl hover:shadow-white/20 flex items-center gap-2 border-2 border-white hover:border-racing-orange"
+                            className="group bg-white text-orange-700 px-8 py-4 rounded-sm font-black uppercase text-sm tracking-wider hover:bg-zinc-950 hover:text-white transition-all duration-300 shadow-2xl hover:shadow-white/20 flex items-center gap-2 border-2 border-white hover:border-racing-orange"
                         >
                             <span>Ir al Paddock</span>
                             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
