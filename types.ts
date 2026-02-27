@@ -27,6 +27,12 @@ export interface BikeSelection {
   year: string;
 }
 
+export interface TireSelection {
+  width: string;
+  profile: string;
+  rim: string;
+}
+
 export interface BikeDataStructure {
   brands: string[];
   models: Record<string, string[]>;

@@ -1,6 +1,7 @@
 
 import { WOO_CONFIG, STORE_CONFIG } from '../storeData';
 import { Product, WooProduct, OrderPayload, Order, User, WooCategory, Category, UserRank } from '../types';
+import { optimizeImage } from '../utils/imageOptimizer';
 
 export const isConfigValid = () => {
   // baseUrl can be empty string for relative URLs, only check it's defined
@@ -138,8 +139,8 @@ export const fetchProducts = async (
       price: parseFloat(p.price || p.regular_price || "0"),
       regularPrice: parseFloat(p.regular_price || p.price || "0"),
       sku: p.sku || `REF-${p.id}`,
-      image: imageUrl,
-      images: p.images || [],
+      image: optimizeImage(imageUrl, { width: 800 }), // Optimize for general list view
+      images: (p.images || []).map(img => ({ ...img, src: optimizeImage(img.src) })),
       inStock: p.stock_status === 'instock',
       category: p.categories.length > 0 ? p.categories[0].name : 'General',
       categorySlug: p.categories.length > 0 ? p.categories[0].slug : 'recambios',

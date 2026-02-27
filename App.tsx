@@ -20,7 +20,7 @@ import { STORE_CONFIG, FEATURES, BIKE_DATA, CATEGORIES } from './storeData';
 import { fetchProducts, saveUserCart, getUserCart, fetchCategories } from './services/woocommerce';
 import { saveSession, getSession, logoutSession } from './services/auth';
 import { trackPageView, trackViewItem, trackAddToCart } from './utils/analytics';
-import { Product, BikeSelection, CartItem, User } from './types';
+import { Product, BikeSelection, TireSelection, CartItem, User } from './types';
 import { optimizeImage } from './utils/imageOptimizer';
 
 const Checkout = React.lazy(() => import('./components/Checkout').then(m => ({ default: m.Checkout })));
@@ -118,6 +118,7 @@ function App() {
   const categoryIdParam = searchParams.get('cat');
   const motoParam = searchParams.get('moto');
   const brandParam = searchParams.get('brand'); // New Brand Filter
+  const tireParam = searchParams.get('tire'); // New Tire Filter
 
   const [brands, setBrands] = useState<{ name: string; logo: string }[]>([]);
 
@@ -244,6 +245,8 @@ function App() {
         const separator = cleanParam.includes('|') ? '|' : '-';
         const [brand, model, year] = cleanParam.split(separator);
         setCurrentFilter(`${brand} ${model} ${year}`);
+      } else if (tireParam) {
+        setCurrentFilter(`Neumáticos: ${tireParam}`);
       } else if (urlCategory) {
         // Decode URL to display proper text
         const decoded = decodeURIComponent(urlCategory);
@@ -258,7 +261,7 @@ function App() {
       setCurrentPage(1);
       handleProductFetch(1);
     }
-  }, [currentView, urlCategory, query, motoParam, brandParam, perPage, sortBy]); // Added brandParam
+  }, [currentView, urlCategory, query, motoParam, brandParam, tireParam, perPage, sortBy]); // Added tireParam
 
   // 2. Refetch when PAGE changes (Do not reset page)
   useEffect(() => {
@@ -342,6 +345,13 @@ function App() {
         searchTerms.push(brandParam);
       }
 
+      if (tireParam) {
+        // We push the tire measure to search. 
+        // We use space as separator for broad matching (120 70 17)
+        const cleanTire = tireParam.replace(/[/\-]/g, ' ');
+        searchTerms.push(cleanTire);
+      }
+
       const combinedQuery = searchTerms.length > 0 ? searchTerms.join(' ') : undefined;
 
       const { products: matches, totalPages: pages, totalProducts } = await fetchProducts(
@@ -375,6 +385,12 @@ function App() {
     const param = `${selection.brand}|${selection.model}|${selection.year}`;
     setSearchParams({ moto: param });
     navigate(`/recambios?moto=${encodeURIComponent(param)}`);
+  };
+
+  const handleTireSearch = (selection: TireSelection) => {
+    const param = `${selection.width}/${selection.profile}-${selection.rim}`;
+    setSearchParams({ tire: param });
+    navigate(`/recambios?tire=${encodeURIComponent(param)}`);
   };
 
   const handleNavClick = (target: ViewState, cat?: string) => {
@@ -779,7 +795,13 @@ function App() {
             {currentView === 'catalog' && (
               <div ref={catalogRef}>
                 <section className="pt-32 pb-12 bg-white dark:bg-zinc-950">
-                  <BikeSelector onSearch={handleBikeSearch} onTextSearch={handleTextSearch} isLoading={loading} bikeData={BIKE_DATA} />
+                  <BikeSelector
+                    onSearch={handleBikeSearch}
+                    onTireSearch={handleTireSearch}
+                    onTextSearch={handleTextSearch}
+                    isLoading={loading}
+                    bikeData={BIKE_DATA}
+                  />
                 </section>
                 <section className="py-12 bg-white dark:bg-zinc-950 min-h-screen container mx-auto px-4 border-t border-zinc-200 dark:border-zinc-900">
                   <div className="flex flex-col gap-6 mb-10">
