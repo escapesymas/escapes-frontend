@@ -16,7 +16,7 @@ import { BrandSlider } from './components/BrandSlider';
 import { PromoBanner } from './components/PromoBanner';
 import { FeaturesBanner } from './components/FeaturesBanner';
 import { ProductSkeleton } from './components/ProductSkeleton';
-import { STORE_CONFIG, FEATURES, BIKE_DATA, CATEGORIES } from './storeData';
+import { STORE_CONFIG, FEATURES, BIKE_DATA, CATEGORIES, TIRE_CATEGORY_ID } from './storeData';
 import { fetchProducts, saveUserCart, getUserCart, fetchCategories } from './services/woocommerce';
 import { saveSession, getSession, logoutSession } from './services/auth';
 import { trackPageView, trackViewItem, trackAddToCart } from './utils/analytics';
@@ -299,8 +299,10 @@ function App() {
 
       let targetCatId = categoryIdParam ? parseInt(categoryIdParam) : undefined;
 
-      // Resolve Category Slug to ID if needed
-      if (!targetCatId && urlCategory) {
+      // Restrict to Tires category if searching by tire dimension
+      if (tireParam) {
+        targetCatId = TIRE_CATEGORY_ID;
+      } else if (!targetCatId && urlCategory) {
         try {
           const { fetchCategories } = await import('./services/woocommerce');
           const allCats = await fetchCategories();
