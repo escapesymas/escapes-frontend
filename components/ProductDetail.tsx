@@ -46,6 +46,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
       setLoadingRelated(true);
       try {
         let searchQuery: string | undefined;
+        let currentDim: string | undefined;
 
         // TIRE RECOMMENDATION LOGIC
         // If it's in the tire category (296), try to match dimensions
@@ -53,23 +54,36 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
           // Extract dimensions from title (e.g. 120/70-17 or 120/70ZR17)
           const dimMatch = product.title.match(/(\d{2,3}[\/\-\s]\d{2,3}[\/\-\s]?R?\d{2})/i);
           if (dimMatch) {
-            searchQuery = dimMatch[0].replace(/[/\-]/g, ' ');
+            currentDim = dimMatch[0].toLowerCase().replace(/[\/\-\s]/g, ''); // canonical: 1207017
+            searchQuery = dimMatch[0].replace(/[/\-]/g, ' '); // broad search: 120 70 17
             console.log(`[RELATED] Tire detected, searching for dimension: ${searchQuery}`);
           }
         }
 
-        const { products } = await fetchProducts(searchQuery, product.categoryId, 1, 10);
+        // Fetch a larger pool to filter strictly locally
+        const { products } = await fetchProducts(searchQuery, product.categoryId, 1, 20);
 
-        // Filter out current product and prioritize in-stock
-        const filtered = products
-          .filter(p => p.id !== product.id)
+        let filtered = products.filter(p => p.id !== product.id);
+
+        // If we are looking for a specific tire dimension
+        if (currentDim) {
+          filtered = filtered.filter(p => {
+            const pMatch = p.title.match(/(\d{2,3}[\/\-\s]\d{2,3}[\/\-\s]?R?\d{2})/i);
+            if (!pMatch) return false;
+            const pDim = pMatch[0].toLowerCase().replace(/[\/\-\s]/g, '');
+            return pDim === currentDim;
+          });
+        }
+
+        // Final sort and slice
+        const finalResults = filtered
           .sort((a, b) => {
             if (a.inStock === b.inStock) return 0;
             return a.inStock ? -1 : 1;
           })
           .slice(0, 4);
 
-        setRelatedProducts(filtered);
+        setRelatedProducts(finalResults);
       } catch (error) {
         console.error('Error loading related products:', error);
       }
