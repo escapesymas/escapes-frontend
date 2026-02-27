@@ -79,9 +79,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
         </picture>
 
         <div className="absolute top-2 left-2 z-20 flex flex-col gap-2">
-          {product.inStock && (
+          {product.inStock ? (
             <span className="bg-green-500/90 text-white text-[10px] md:text-xs font-bold px-1.5 py-0.5 uppercase rounded-sm flex items-center gap-1 backdrop-blur-sm w-fit shadow-md">
               <CheckCircle className="w-3 h-3" /> Stock
+            </span>
+          ) : (
+            <span className="bg-red-600/90 text-white text-[10px] md:text-xs font-bold px-1.5 py-0.5 uppercase rounded-sm flex items-center gap-1 backdrop-blur-sm w-fit shadow-md">
+              <ShoppingCart className="w-3 h-3" /> Sin Stock
             </span>
           )}
         </div>

@@ -45,9 +45,30 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
     const loadRelated = async () => {
       setLoadingRelated(true);
       try {
-        const { products } = await fetchProducts(undefined, product.categoryId, 1, 5);
-        // Filter out the current product
-        const filtered = products.filter(p => p.id !== product.id).slice(0, 4);
+        let searchQuery: string | undefined;
+
+        // TIRE RECOMMENDATION LOGIC
+        // If it's in the tire category (296), try to match dimensions
+        if (product.categoryId === 296) {
+          // Extract dimensions from title (e.g. 120/70-17 or 120/70ZR17)
+          const dimMatch = product.title.match(/(\d{2,3}[\/\-\s]\d{2,3}[\/\-\s]?R?\d{2})/i);
+          if (dimMatch) {
+            searchQuery = dimMatch[0].replace(/[/\-]/g, ' ');
+            console.log(`[RELATED] Tire detected, searching for dimension: ${searchQuery}`);
+          }
+        }
+
+        const { products } = await fetchProducts(searchQuery, product.categoryId, 1, 10);
+
+        // Filter out current product and prioritize in-stock
+        const filtered = products
+          .filter(p => p.id !== product.id)
+          .sort((a, b) => {
+            if (a.inStock === b.inStock) return 0;
+            return a.inStock ? -1 : 1;
+          })
+          .slice(0, 4);
+
         setRelatedProducts(filtered);
       } catch (error) {
         console.error('Error loading related products:', error);
@@ -232,14 +253,15 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="p-4 border border-zinc-200 dark:border-zinc-800 rounded-sm bg-gray-50 dark:bg-zinc-900/30 flex items-center gap-3">
-                <Truck className="w-6 h-6 text-racing-orange" />
-                <div><p className="text-zinc-900 dark:text-white text-xs font-bold uppercase leading-tight">Envío 24/48h</p><p className="text-zinc-500 text-[10px]">Despacho rápido</p></div>
-              </div>
-              <div className="p-4 border border-zinc-200 dark:border-zinc-800 rounded-sm bg-gray-50 dark:bg-zinc-900/30 flex items-center gap-3">
-                <ShieldCheck className="w-6 h-6 text-racing-orange" />
-                <div><p className="text-zinc-900 dark:text-white text-xs font-bold uppercase leading-tight">Garantía</p><p className="text-zinc-500 text-[10px]">3 años oficial</p></div>
+            <div className="mb-6">
+              <div className="p-4 border border-zinc-200 dark:border-zinc-800 rounded-sm bg-gray-50 dark:bg-zinc-900/30 flex items-center gap-4">
+                <div className="bg-racing-orange/10 p-2 rounded-sm">
+                  <Truck className="w-6 h-6 text-racing-orange" />
+                </div>
+                <div>
+                  <p className="text-zinc-900 dark:text-white text-sm font-bold uppercase leading-tight">Envío 24/48h</p>
+                  <p className="text-zinc-500 text-xs">Despacho rápido desde almacén central</p>
+                </div>
               </div>
             </div>
 
