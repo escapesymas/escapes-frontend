@@ -61,6 +61,10 @@
   <link rel="preload" href="https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7W0Q5nw.woff2"
     as="font" type="font/woff2" crossorigin>
 
+  <!-- Pre-carga de CSS y logo para LCP -->
+  <link rel="preload" href="/logo-cabecera.svg" as="image" type="image/svg+xml">
+  <link rel="preload" href="/favicon.png" as="image" type="image/png">
+
   <!-- Pre-carga responsive de la imagen LCP solo en página de inicio -->
   <script>
     if (window.location.pathname === '/' || window.location.pathname === '') {
@@ -89,19 +93,21 @@
   <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 
-  <!-- Google Analytics - Loaded after DOM for better performance -->
+  <!-- Google Analytics - Fully Deferred -->
   <script>
     window.addEventListener('load', function () {
-      var ga = document.createElement('script');
-      ga.src = 'https://www.googletagmanager.com/gtag/js?id=G-380Z8BCKGF';
-      ga.async = true;
-      document.head.appendChild(ga);
-      ga.onload = function () {
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
-        gtag('js', new Date());
-        gtag('config', 'G-380Z8BCKGF');
-      };
+      setTimeout(function () {
+        var ga = document.createElement('script');
+        ga.src = 'https://www.googletagmanager.com/gtag/js?id=G-380Z8BCKGF';
+        ga.async = true;
+        document.head.appendChild(ga);
+        ga.onload = function () {
+          window.dataLayer = window.dataLayer || [];
+          function gtag() { dataLayer.push(arguments); }
+          gtag('js', new Date());
+          gtag('config', 'G-380Z8BCKGF', { 'custom_map': { 'dimension1': 'device_type' } });
+        };
+      }, 3000); // 3 seconds delay to avoid TBT impact
     });
   </script>
 </body>

@@ -28,10 +28,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
   const isDefaultImage = product.image === STORE_CONFIG.defaultProductImage;
 
   // Use optimized image initially, but allow fallback
-  // SKIP optimization for default placeholder to avoid CORS/404 issues on external services
-  const displayImage = isDefaultImage ? product.image : optimizeImage(product.image, { width: 250, height: 250, fit: 'cover' });
-  const avifImage = isDefaultImage ? '' : optimizeImage(product.image, { width: 250, height: 250, format: 'avif', fit: 'cover' });
-  const webpImage = isDefaultImage ? '' : optimizeImage(product.image, { width: 250, height: 250, format: 'webp', fit: 'cover' });
+  // Use 300px for base (mobile/desktop cards) and 600px for retina srcSet
+  const displayImage = isDefaultImage ? product.image : optimizeImage(product.image, { width: 300, height: 300, fit: 'cover' });
+  const srcSet = isDefaultImage ? '' : `${optimizeImage(product.image, { width: 300, height: 300, fit: 'cover' })} 1x, ${optimizeImage(product.image, { width: 600, height: 600, fit: 'cover' })} 2x`;
+
 
   // Reset state when product changes
   React.useEffect(() => {
@@ -59,6 +59,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
           )}
           <img
             src={imageError ? product.image : imgSrc}
+            srcSet={!imageError ? srcSet : undefined}
             onError={() => {
               if (!imageError) {
                 setImgSrc(product.image); // Fallback to original
@@ -69,8 +70,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
             loading={priority ? "eager" : "lazy"}
             // @ts-ignore
             fetchPriority={priority ? "high" : "auto"}
-            width="250"
-            height="250"
+            width="300"
+            height="300"
             className={`w-full h-full transition-transform duration-500 ${isDefaultImage
               ? 'object-contain p-4 md:p-8 group-hover:scale-110 opacity-100'
               : 'object-cover group-hover:scale-105'

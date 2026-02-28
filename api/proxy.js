@@ -26,7 +26,7 @@ export default async function handler(req, res) {
             const contentType = mRes.headers.get('content-type') || '';
 
             // Only optimize actual images when params are present
-            if (contentType.startsWith('image/') && (w || h || fmt)) {
+            if (contentType.startsWith('image/') && (w || h || fmt || req.query.fit)) {
                 try {
                     const sharpModule = await import('sharp');
                     const sharp = sharpModule.default;
@@ -35,9 +35,11 @@ export default async function handler(req, res) {
                     // Resize if width or height specified
                     const width = w ? parseInt(w) : undefined;
                     const height = h ? parseInt(h) : undefined;
+                    const fit = req.query.fit || 'inside';
+
                     if (width || height) {
                         pipeline = pipeline.resize(width, height, {
-                            fit: 'inside',
+                            fit: fit,
                             withoutEnlargement: true,
                         });
                     }

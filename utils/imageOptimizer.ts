@@ -34,17 +34,29 @@ export const optimizeImage = (
   // Si la imagen ya es local o data URI, no optimizar con servicio externo
   if (url.startsWith('data:') || url.startsWith('/')) return url;
 
-  // Backend images: serve through our Vercel proxy with sharp optimization.
-  // The proxy resizes and converts images server-side (bypasses Plesk hotlink protection).
-  if (url.startsWith('https://backendescapes.com/')) {
-    const relativePath = url.replace('https://backendescapes.com/', '');
-    const params = new URLSearchParams();
-    params.append('media', relativePath);
-    if (options.width) params.append('w', options.width.toString());
-    if (options.height) params.append('h', options.height.toString());
-    // Default to webp for optimal compression
-    params.append('fmt', options.format && options.format !== 'auto' ? options.format : 'webp');
-    return `/api/proxy?${params.toString()}`;
+  // Handle already proxied URLs or backend URLs
+  const isProxied = url.startsWith('/api/proxy?');
+  const isBackend = url.startsWith('https://backendescapes.com/');
+
+  if (isProxied || isBackend) {
+    let relativePath = '';
+    if (isProxied) {
+      const urlObj = new URL(url, 'https://dummy.com');
+      relativePath = urlObj.searchParams.get('media') || '';
+    } else {
+      relativePath = url.replace('https://backendescapes.com/', '');
+    }
+
+    if (relativePath) {
+      const params = new URLSearchParams();
+      params.append('media', relativePath);
+      if (options.width) params.append('w', options.width.toString());
+      if (options.height) params.append('h', options.height.toString());
+      if (options.fit) params.append('fit', options.fit);
+      // Default to webp for optimal compression
+      params.append('fmt', options.format && options.format !== 'auto' ? options.format : 'webp');
+      return `/api/proxy?${params.toString()}`;
+    }
   }
 
   // For non-backend images, use wsrv.nl optimization as before
