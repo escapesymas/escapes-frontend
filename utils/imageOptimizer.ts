@@ -41,8 +41,14 @@ export const optimizeImage = (
   if (isProxied || isBackend) {
     let relativePath = '';
     if (isProxied) {
-      const urlObj = new URL(url, 'https://dummy.com');
-      relativePath = urlObj.searchParams.get('media') || '';
+      try {
+        const urlObj = new URL(url, 'https://dummy.com');
+        relativePath = urlObj.searchParams.get('media') || '';
+      } catch (e) {
+        // Fallback for malformed URLs
+        const match = url.match(/[?&]media=([^&]+)/);
+        relativePath = match ? decodeURIComponent(match[1]) : '';
+      }
     } else {
       relativePath = url.replace('https://backendescapes.com/', '');
     }

@@ -17,7 +17,7 @@ import { PromoBanner } from './components/PromoBanner';
 import { FeaturesBanner } from './components/FeaturesBanner';
 import { ProductSkeleton } from './components/ProductSkeleton';
 import { STORE_CONFIG, FEATURES, BIKE_DATA, CATEGORIES, TIRE_CATEGORY_ID } from './storeData';
-import { fetchProducts, saveUserCart, getUserCart, fetchCategories } from './services/woocommerce';
+import { fetchProducts, saveUserCart, getUserCart, fetchCategories, fetchCustomerByEmail, fetchProductsByIds } from './services/woocommerce';
 import { saveSession, getSession, logoutSession } from './services/auth';
 import { trackPageView, trackViewItem, trackAddToCart } from './utils/analytics';
 import { Product, BikeSelection, TireSelection, CartItem, User } from './types';
@@ -148,7 +148,6 @@ function App() {
         if ((!currentUser.id || currentUser.id === 0) && (currentUser.email || (savedUser as any).user_email)) {
           try {
             const email = currentUser.email || (savedUser as any).user_email;
-            const { fetchCustomerByEmail } = await import('./services/woocommerce');
             const freshData = await fetchCustomerByEmail(email);
             if (freshData && freshData.id > 0) {
               currentUser = { ...currentUser, ...freshData, token: (savedUser as any).token };
@@ -304,7 +303,6 @@ function App() {
         targetCatId = TIRE_CATEGORY_ID;
       } else if (!targetCatId && urlCategory) {
         try {
-          const { fetchCategories } = await import('./services/woocommerce');
           const allCats = await fetchCategories();
 
           const decodedUrlCat = decodeURIComponent(urlCategory).toLowerCase();
