@@ -44,7 +44,7 @@ export const PostCard: React.FC<PostCardProps> = ({ id, author, content, metrics
                     <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center overflow-hidden border border-zinc-700">
                         {author?.avatar ? (
                             <img
-                                src={author.avatar.startsWith('http') ? `/api/proxy?media=${author.avatar.replace('https://backendescapes.com/', '')}` : author.avatar}
+                                src={author.avatar}
                                 alt={author.name}
                                 className="w-full h-full object-cover"
                             />
@@ -73,7 +73,7 @@ export const PostCard: React.FC<PostCardProps> = ({ id, author, content, metrics
             {content?.image && (
                 <div className="w-full aspect-video bg-black overflow-hidden relative">
                     <img
-                        src={content.image.startsWith('http') ? `/api/proxy?media=${content.image.replace('https://backendescapes.com/', '')}` : content.image}
+                        src={content.image}
                         alt="Post content"
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                         loading="lazy"

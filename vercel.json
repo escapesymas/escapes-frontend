@@ -13,6 +13,10 @@
       "destination": "/api/proxy?path=$1"
     },
     {
+      "source": "/favicon.ico",
+      "destination": "/favicon.png"
+    },
+    {
       "source": "/((?!api/|robots\\.txt|sitemap\\.xml|favicon\\.ico).*)",
       "destination": "/index.html"
     }
