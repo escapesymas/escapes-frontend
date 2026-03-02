@@ -51,12 +51,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
         )}
 
         <picture>
-          {!imageError && (
-            <>
-              <source srcSet={avifImage} type="image/avif" />
-              <source srcSet={webpImage} type="image/webp" />
-            </>
-          )}
+
           <img
             src={imageError ? product.image : imgSrc}
             srcSet={!imageError ? srcSet : undefined}
