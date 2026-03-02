@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Truck, ArrowLeft, AlertCircle, RotateCcw, Loader2, Package } from 'lucide-react';
 import { CartItem, User, Order } from '../types';
 import { optimizeImage } from '../utils/imageOptimizer';
-import { fetchPendingOrders, fetchProductsByIds } from '../services/woocommerce';
+import { fetchPendingOrders, fetchProductsByIds, fetchUserRank } from '../services/woocommerce';
 
 interface CartProps {
   items: CartItem[];
@@ -111,12 +111,10 @@ export const Cart: React.FC<CartProps> = ({
 
   React.useEffect(() => {
     if (user && user.id) {
-      import('../services/woocommerce').then(mod => {
-        mod.fetchUserRank(user.id).then(rank => {
-          if (rank && rank.discount > 0) {
-            setUserRank({ discount: rank.discount, title: rank.title });
-          }
-        });
+      fetchUserRank(user.id).then(rank => {
+        if (rank && rank.discount > 0) {
+          setUserRank({ discount: rank.discount, title: rank.title });
+        }
       });
     }
   }, [user]);

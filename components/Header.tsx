@@ -4,6 +4,7 @@ import { ShoppingCart, User, Menu, LogOut, Package, Settings, MessageSquare, X, 
 import { STORE_CONFIG, NAV_LINKS } from '../storeData';
 import { User as UserType, UserRank } from '../types';
 import { RankBadge } from './RankBadge';
+import { fetchUserRank } from '../services/woocommerce';
 
 
 interface HeaderProps {
@@ -35,10 +36,8 @@ export const Header: React.FC<HeaderProps> = ({
 
   React.useEffect(() => {
     if (user && user.id) {
-      import('../services/woocommerce').then(mod => {
-        mod.fetchUserRank(user.id).then(rank => {
-          if (rank) setUserRank(rank);
-        });
+      fetchUserRank(user.id).then(rank => {
+        if (rank) setUserRank(rank);
       });
     }
   }, [user]);
