@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import compression from 'vite-plugin-compression';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
@@ -9,7 +10,19 @@ export default defineConfig(({ mode }) => {
   const localBackendTarget = 'http://localhost:8080';
 
   return {
-    plugins: [react()],
+    plugins: [
+      react(),
+      // Generate .gz files for better serving performance
+      compression({
+        algorithm: 'gzip',
+        ext: '.gz',
+      }),
+      // Also generate .br (Brotli) files for modern browsers
+      compression({
+        algorithm: 'brotliCompress',
+        ext: '.br',
+      })
+    ],
     server: {
       proxy: {
         // Proxy para la API de WooCommerce
@@ -43,8 +56,12 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       emptyOutDir: true,
       sourcemap: false,
-      target: 'es2020', // Modern browsers for smaller output
+      target: 'esnext', // Use latest JS for better minification/smaller bundles
       minify: 'terser', // Use Terser for better minification
+      cssCodeSplit: true, // Split CSS into smaller files linked to chunks
+      modulePreload: {
+        polyfill: false // Modern browsers don't need module preload polyfills
+      },
       terserOptions: {
         compress: {
           drop_console: true, // Remove console.log in production
@@ -58,9 +75,23 @@ export default defineConfig(({ mode }) => {
       },
       rollupOptions: {
         output: {
-          manualChunks: {
-            'vendor-react': ['react', 'react-dom'],
-            'vendor-icons': ['lucide-react']
+          manualChunks: (id) => {
+            // Core React stuff
+            if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/') || id.includes('node_modules/scheduler/')) {
+              return 'vendor-core';
+            }
+            // Icons are big, keep them separate
+            if (id.includes('node_modules/lucide-react')) {
+              return 'vendor-icons';
+            }
+            // Router
+            if (id.includes('node_modules/react-router') || id.includes('@remix-run/router')) {
+              return 'vendor-router';
+            }
+            // Other node_modules
+            if (id.includes('node_modules')) {
+              return 'vendor-libs';
+            }
           }
         }
       }
