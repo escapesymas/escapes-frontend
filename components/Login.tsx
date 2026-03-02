@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { User, Lock, AlertCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import { loginUser } from "../services/auth";
 import { User as UserType } from '../types';
+import { fetchCustomerByEmail } from '../services/woocommerce';
 
 interface LoginProps {
   onLoginSuccess: (user: UserType) => void;
@@ -39,8 +40,6 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess, onBack, onRegister
         };
 
         try {
-          // Import dynamically to avoid circular dependencies if any, or just use the imported function
-          const { fetchCustomerByEmail } = await import('../services/woocommerce');
           const customer = await fetchCustomerByEmail(session.user_email);
 
           if (customer) {

@@ -205,7 +205,6 @@ function App() {
   const fetchProductById = async (id: number) => {
     setLoading(true);
     try {
-      const { fetchProductsByIds } = await import('./services/woocommerce');
       const products = await fetchProductsByIds([id]);
       if (products.length > 0) {
         setSelectedProduct(products[0]);

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ShieldCheck, ArrowLeft, Lock, CheckCircle, Loader2, AlertCircle, XCircle, User, ArrowRight, Mail } from 'lucide-react';
 import { CartItem, User as UserType } from '../types';
-import { createOrder, updateOrderStatus } from '../services/woocommerce';
+import { createOrder, updateOrderStatus, fetchUserRank } from '../services/woocommerce';
 import { createSumUpCheckout } from '../services/sumup';
 import { loginUser, registerUser } from '../services/auth';
 import { trackPurchase } from '../utils/analytics';
@@ -92,13 +92,11 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
 
   useEffect(() => {
     if (props.user && props.user.id) {
-      import('../services/woocommerce').then(mod => {
-        mod.fetchUserRank(props.user!.id).then(rank => {
-          if (rank && rank.discount > 0) {
-            setUserRank({ discount: rank.discount, title: rank.title });
-          }
-          setIsRankLoading(false);
-        });
+      fetchUserRank(props.user!.id).then(rank => {
+        if (rank && rank.discount > 0) {
+          setUserRank({ discount: rank.discount, title: rank.title });
+        }
+        setIsRankLoading(false);
       });
     } else {
       setIsRankLoading(false);
