@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-const PROXY_TARGET_URL = 'https://backendescapes.com';
+const PROXY_TARGET_URL = process.env.WC_URL || 'https://backendescapes.com';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Solo permitir POST
@@ -35,8 +35,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // 2. Fetch customer data from WooCommerce to get custom avatar
-    const WOO_KEY = process.env.WOO_CONSUMER_KEY;
-    const WOO_SECRET = process.env.WOO_CONSUMER_SECRET;
+    const WOO_KEY = process.env.WC_CONSUMER_KEY || process.env.WOO_CONSUMER_KEY || 'ck_1525ca6e68eadc50cd7b69ae408ebb05b93c78e9';
+    const WOO_SECRET = process.env.WC_CONSUMER_SECRET || process.env.WOO_CONSUMER_SECRET || 'cs_42b5d60e45d4f6e710fa0fa0b35f1ae21964981a';
 
     if (WOO_KEY && WOO_SECRET && data.user_email) {
       try {
