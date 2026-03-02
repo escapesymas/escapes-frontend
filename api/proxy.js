@@ -1,4 +1,7 @@
 
+// Bypass SSL certificate issues for backendescapes.com
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
 export default async function handler(req, res) {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -13,12 +16,17 @@ export default async function handler(req, res) {
     try {
         const { path, media, ...queryParams } = req.query;
 
+        // Base URL Configuration
+        // Priority: Vercel WC_URL > Hardcoded fallback
+        const baseUrl = (process.env.WC_URL || 'https://backendescapes.com').replace(/\/$/, "");
+
         // 1. IMAGE PROXY MODE
         if (media) {
-            const imageUrl = `https://backendescapes.com/${media}`;
+            const imageUrl = `${baseUrl}/${media}`;
             const imageResponse = await fetch(imageUrl);
 
             if (!imageResponse.ok) {
+                console.error(`[PROXY MEDIA ERROR] ${imageResponse.status} for ${imageUrl}`);
                 res.status(imageResponse.status).send(`Failed to fetch image: ${imageResponse.statusText}`);
                 return;
             }
@@ -37,11 +45,9 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Missing path or media parameter' });
         }
 
-        // Build target URL
+        // Build target URL 
         const queryString = new URLSearchParams(queryParams).toString();
-        const targetUrl = `https://backendescapes.com/wp-json/${path}${queryString ? '?' + queryString : ''}`;
-
-        console.log(`[PROXY] ${req.method} -> ${targetUrl}`);
+        const targetUrl = `${baseUrl}/wp-json/${path}${queryString ? '?' + queryString : ''}`;
 
         const headers = { ...req.headers };
         // Clean up headers for the backend request
@@ -49,17 +55,28 @@ export default async function handler(req, res) {
         delete headers.cookie;
         delete headers.connection;
         delete headers['content-length'];
+        delete headers['x-vercel-id'];
+        delete headers['x-vercel-proxy-signature'];
+        delete headers['x-forwarded-for'];
 
-        // Authentication for WooCommerce (Hardcoded as fallback, ideally use process.env)
-        const WOO_CONFIG = {
-            consumerKey: process.env.WOO_CONSUMER_KEY || 'ck_76d086034f7194600f769d6711710ee478fcf8db',
-            consumerSecret: process.env.WOO_CONSUMER_SECRET || 'cs_f7112048f074479e394073f159496a8043431f41'
-        };
+        // AUTHENTICATION
+        // Priority: Vercel Environment Variables (WC_ prefixes based on user settings) > Hardcoded Backup
+        const key = process.env.WC_CONSUMER_KEY || process.env.WOO_CONSUMER_KEY || 'ck_1525ca6e68eadc50cd7b69ae408ebb05b93c78e9';
+        const secret = process.env.WC_CONSUMER_SECRET || process.env.WOO_CONSUMER_SECRET || 'cs_42b5d60e45d4f6e710fa0fa0b35f1ae21964981a';
 
-        if (path.startsWith('wc/v3')) {
-            const auth = Buffer.from(`${WOO_CONFIG.consumerKey}:${WOO_CONFIG.consumerSecret}`).toString('base64');
+        const auth = Buffer.from(`${key}:${secret}`).toString('base64');
+
+        // If the client sent an Authorization header (e.g. JWT Bearer), let it through 
+        // unless it's a wc/v3 path which usually needs Basic Auth.
+        // We override only if no Auth is present to allow user-specific JWTs.
+        if (!headers['authorization']) {
             headers['Authorization'] = `Basic ${auth}`;
         }
+
+        headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+        headers['Host'] = new URL(baseUrl).host;
+
+        console.log(`[PROXY] ${req.method} -> ${targetUrl} (Using ${process.env.WC_CONSUMER_KEY ? 'Vercel WC_ Env' : 'Backup/Old'} Keys)`);
 
         const fetchOptions = {
             method: req.method,
@@ -71,13 +88,30 @@ export default async function handler(req, res) {
         }
 
         const response = await fetch(targetUrl, fetchOptions);
-        const data = await response.json().catch(() => null);
 
-        // Forward status and data
-        res.status(response.status).json(data || { status: response.status, statusText: response.statusText });
+        // Copy response headers
+        response.headers.forEach((v, k) => {
+            const lk = k.toLowerCase();
+            if (!['content-encoding', 'content-length', 'transfer-encoding', 'connection'].includes(lk)) {
+                res.setHeader(k, v);
+            }
+        });
+
+        const dataText = await response.text();
+
+        try {
+            const dataJson = JSON.parse(dataText);
+            res.status(response.status).json(dataJson);
+        } catch (e) {
+            // Not JSON (could be a PHP error or HTML page)
+            if (response.status === 500) {
+                console.error(`[PROXY BACKEND ERROR] ${targetUrl} returned non-JSON 500:`, dataText.substring(0, 500));
+            }
+            res.status(response.status).send(dataText);
+        }
 
     } catch (error) {
-        console.error('[PROXY ERROR]:', error);
+        console.error('[PROXY CRASH]:', error);
         res.status(500).json({
             error: 'Internal Proxy Error',
             message: error.message
