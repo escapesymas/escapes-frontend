@@ -345,7 +345,7 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
                                     >
                                         <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform overflow-hidden">
                                             {thread.author?.avatar ? (
-                                                <img src={thread.author.avatar.startsWith('http') ? `/api/proxy?media=${thread.author.avatar.replace('https://backendescapes.com/', '')}` : thread.author.avatar} alt={thread.author?.name} className="w-full h-full object-cover rounded-full" />
+                                                <img src={thread.author.avatar} alt={thread.author?.name} className="w-full h-full object-cover rounded-full" />
                                             ) : (
                                                 <User className="w-5 h-5 text-zinc-400 dark:text-zinc-500" />
                                             )}
@@ -429,7 +429,7 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
                                     <div className="flex items-center gap-3 mb-6">
                                         <div className="w-12 h-12 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden border-2 border-zinc-300 dark:border-zinc-700">
                                             {selectedThread.author?.avatar ? (
-                                                <img src={selectedThread.author.avatar.startsWith('http') ? `/api/proxy?media=${selectedThread.author.avatar.replace('https://backendescapes.com/', '')}` : selectedThread.author.avatar} alt={selectedThread.author?.name} className="w-full h-full object-cover" />
+                                                <img src={selectedThread.author.avatar} alt={selectedThread.author?.name} className="w-full h-full object-cover" />
                                             ) : <User className="w-6 h-6 text-zinc-400 dark:text-zinc-500 m-auto mt-2" />}
                                         </div>
                                         <div>

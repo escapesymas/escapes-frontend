@@ -1,5 +1,22 @@
 import { makeRequest } from './woocommerce';
 import { User } from '../types';
+import { optimizeImage } from '../utils/imageOptimizer';
+
+// Helper to proxy URLs from backendescapes.com
+const proxyUrl = (url: string) => {
+    if (!url || !url.startsWith('https://backendescapes.com/')) return url;
+    return optimizeImage(url);
+};
+
+// Helper to proxy images inside HTML content
+const proxyHtml = (html: string) => {
+    if (!html) return '';
+    // Replace all backend escapes images with proxied versions
+    return html.replace(
+        /src="https:\/\/backendescapes\.com\/([^"]+)"/g,
+        (match, path) => `src="/api/proxy?media=${path}"`
+    );
+};
 
 // Tipos para la API Social
 export interface SocialPostType {
@@ -69,13 +86,13 @@ export const fetchSocialFeed = async (page: number = 1): Promise<SocialPostType[
             author: {
                 id: p.author?.id || 0,
                 name: p.author?.name || 'Anónimo',
-                avatar: p.author?.avatar || '',
+                avatar: proxyUrl(p.author?.avatar || ''),
                 rank: p.author?.rank || null,
                 timeAgo: p.date || p.created_at || ''
             },
             content: {
-                text: p.content || '',
-                media: p.media || []
+                text: proxyHtml(p.content || ''),
+                media: (p.media || []).map(proxyUrl)
             },
             metrics: {
                 likes: p.likes_count || 0,
@@ -196,7 +213,13 @@ export const fetchPaddockThreads = async (categoryId: number, page: number = 1):
 
         // Doc returns { data: [...], has_more: boolean }
         if (data && Array.isArray(data.data)) {
-            return data.data as PaddockThread[];
+            return data.data.map((t: any) => ({
+                ...t,
+                author: {
+                    ...t.author,
+                    avatar: proxyUrl(t.author?.avatar || '')
+                }
+            })) as PaddockThread[];
         }
 
         // Fallback for flat array if implementation differs from doc
@@ -238,7 +261,23 @@ export const createPaddockThread = async (
 export const fetchPaddockThread = async (threadId: number): Promise<{ thread: PaddockThread; replies: any[] } | null> => {
     try {
         const { data } = await makeRequest(`${API_BASE}/thread/${threadId}`);
-        return data as { thread: PaddockThread; replies: any[] };
+        if (!data) return null;
+
+        return {
+            thread: {
+                ...data.thread,
+                content: proxyHtml(data.thread.content),
+                author: {
+                    ...data.thread.author,
+                    avatar: proxyUrl(data.thread.author?.avatar || '')
+                }
+            },
+            replies: (data.replies || []).map((r: any) => ({
+                ...r,
+                content: proxyHtml(r.content),
+                authorAvatar: proxyUrl(r.authorAvatar || '')
+            }))
+        };
     } catch (error) {
         console.error('[PADDOCK] Error fetching thread:', error);
         return null;
@@ -372,7 +411,19 @@ export const getUserProfile = async (
     try {
         const headers: Record<string, string> = token ? { 'Authorization': `Bearer ${token}` } : {};
         const { data } = await makeRequest(`${API_BASE}/user/${userId}/full-profile`, { headers });
-        return data as UserProfileFull;
+        if (!data) return null;
+
+        return {
+            ...data,
+            avatar: proxyUrl(data.avatar || ''),
+            cover: proxyUrl(data.cover || ''),
+            posts: (data.posts || []).map((p: any) => ({
+                ...p,
+                author: { ...p.author, avatar: proxyUrl(p.author?.avatar || '') },
+                content: { ...p.content, text: proxyHtml(p.content?.text || '') },
+                media: (p.media || []).map(proxyUrl)
+            }))
+        } as UserProfileFull;
     } catch (error) {
         console.error('[PROFILE] Error fetching profile:', error);
         return null;

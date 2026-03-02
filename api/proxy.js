@@ -86,7 +86,12 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Missing path parameter" });
     }
 
-    const targetUrl = `https://backendescapes.com/wp-json/${path}${req.url.includes('?') ? '?' + req.url.split('?')[1] : ''}`;
+    // Reconstruct query string without the 'path' parameter
+    const queryParams = new URLSearchParams(req.query);
+    queryParams.delete('path');
+    const queryString = queryParams.toString();
+
+    const targetUrl = `https://backendescapes.com/wp-json/${path}${queryString ? '?' + queryString : ''}`;
     console.log(`[PROXY] Forwarding to: ${targetUrl}`);
 
     // Reconstruct headers
@@ -97,6 +102,9 @@ export default async function handler(req, res) {
     delete headers.cookie; // STRIP COOKIES to fix "Respuesta no JSON" error
     delete headers['x-vercel-id'];
     delete headers['x-vercel-forwarded-for'];
+    delete headers['x-forwarded-host'];
+    delete headers['x-forwarded-proto'];
+    delete headers['x-forwarded-for'];
 
     // Add Auth manually as the client doesn't send it (handled by proxy)
     const WOO_CONSUMER_KEY = process.env.WOO_CONSUMER_KEY || 'ck_d3b44ee68cb5f6e3e222da8dde30ac733f1c859f';
@@ -110,19 +118,36 @@ export default async function handler(req, res) {
         const response = await fetch(targetUrl, {
             method: req.method,
             headers: headers,
-            body: ['GET', 'HEAD'].includes(req.method) ? undefined : JSON.stringify(req.body)
+            body: ['GET', 'HEAD'].includes(req.method) ? undefined : (typeof req.body === 'string' ? req.body : JSON.stringify(req.body))
         });
+
+        // Log non-ok responses
+        if (!response.ok) {
+            console.error(`[PROXY] Backend returned error: ${response.status} ${response.statusText} for ${targetUrl}`);
+            const errorText = await response.text();
+            console.error(`[PROXY] Error body:`, errorText);
+
+            // Forward the error from WP to the client
+            res.status(response.status);
+            try {
+                return res.json(JSON.parse(errorText));
+            } catch (e) {
+                return res.send(errorText);
+            }
+        }
 
         // Copy response headers, but strip encoding/length ones as we are sending a new buffer
         response.headers.forEach((value, key) => {
             const lowerKey = key.toLowerCase();
-            if (!['content-encoding', 'content-length', 'transfer-encoding', 'connection'].includes(lowerKey)) {
+            if (!['content-encoding', 'content-length', 'transfer-encoding', 'connection', 'access-control-allow-origin'].includes(lowerKey)) {
                 res.setHeader(key, value);
             }
         });
 
-        const buffer = await response.arrayBuffer();
+        // Ensure CORS is set correctly
+        res.setHeader('Access-Control-Allow-Origin', '*');
 
+        const buffer = await response.arrayBuffer();
         res.status(response.status);
         res.send(Buffer.from(buffer));
 
