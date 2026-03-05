@@ -18,13 +18,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick }) => {
 
           {/* BRAND */}
           <div className="space-y-4">
-            <div className="mb-4">
+            <div className="mb-4 h-12 flex items-center overflow-hidden">
               <img
                 src="/logo-cabecera.svg"
                 alt={STORE_CONFIG.name}
                 width="180"
                 height="60"
-                className="h-12 w-auto object-contain"
+                className="h-full w-auto object-contain"
+                style={{ aspectRatio: '180/60' }}
               />
             </div>
             <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
