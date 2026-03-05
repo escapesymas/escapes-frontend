@@ -212,7 +212,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
                       }`}
                   >
                     <img
-                      src={optimizeImage(img, { width: 100 })}
+                      src={optimizeImage(img, { width: 150 })}
                       onError={(e) => {
                         // Fallback for thumbnails directly to src
                         e.currentTarget.src = img;

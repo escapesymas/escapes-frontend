@@ -54,6 +54,29 @@ export const optimizeImage = (
     }
 
     if (relativePath) {
+      // Si el ancho coincide con uno de nuestros pre-optimizados (550, 315, 150)
+      // podemos pedir el archivo estático directamente para ahorrar procesamiento.
+      const staticWidths = [550, 315, 150];
+      const isStaticWidth = options.width && staticWidths.includes(options.width);
+      const useWebp = !options.format || options.format === 'webp' || options.format === 'auto';
+
+      if (isStaticWidth && useWebp) {
+        // imagen.jpg -> imagen-550w.webp
+        const lastDotIndex = relativePath.lastIndexOf('.');
+        const baseName = lastDotIndex !== -1 ? relativePath.substring(0, lastDotIndex) : relativePath;
+        const staticPath = `${baseName}-${options.width}w.webp`;
+        return `/api/proxy?media=${encodeURIComponent(staticPath)}`;
+      }
+
+      // Si se pide webp sin redimensionar, intentar usar la versión .webp directa que genera el script
+      if (!options.width && !options.height && useWebp) {
+        const lastDotIndex = relativePath.lastIndexOf('.');
+        if (lastDotIndex !== -1 && !relativePath.endsWith('.webp')) {
+          const webpPath = relativePath.substring(0, lastDotIndex) + '.webp';
+          return `/api/proxy?media=${encodeURIComponent(webpPath)}`;
+        }
+      }
+
       const params = new URLSearchParams();
       params.append('media', relativePath);
       if (options.width) params.append('w', options.width.toString());
