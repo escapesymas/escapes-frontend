@@ -63,13 +63,14 @@ export const Header: React.FC<HeaderProps> = ({
               <Menu className="w-6 h-6" />
             </button>
 
-            <div onClick={onLogoClick} className="cursor-pointer group flex items-center">
+            <div onClick={onLogoClick} className="cursor-pointer group flex items-center h-8 md:h-12 overflow-hidden">
               <img
                 src="/logo-cabecera.svg"
                 alt={STORE_CONFIG.name}
                 width="150"
                 height="48"
-                className="h-8 md:h-12 w-auto object-contain transition-transform group-hover:scale-105 invert dark:invert-0"
+                className="h-full w-auto object-contain transition-transform group-hover:scale-105 invert dark:invert-0"
+                style={{ aspectRatio: '150/48' }}
               />
             </div>
           </div>

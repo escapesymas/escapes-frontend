@@ -146,13 +146,14 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
               {/* Advanced Responsive Image */}
               {!imageError ? (
                 <img
-                  src={optimizeImage(currentImage, { width: 800 })} // Fallback src
+                  src={optimizeImage(currentImage, { width: 600 })} // Better fallback for mobile-first
                   srcSet={`
                       ${optimizeImage(currentImage, { width: 400, format: 'webp' })} 400w,
+                      ${optimizeImage(currentImage, { width: 600, format: 'webp' })} 600w,
                       ${optimizeImage(currentImage, { width: 800, format: 'webp' })} 800w,
                       ${optimizeImage(currentImage, { width: 1200, format: 'webp' })} 1200w
                     `}
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 800px"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 800px"
                   alt={product.title}
                   loading="eager"
                   // @ts-ignore

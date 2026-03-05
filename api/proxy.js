@@ -1,3 +1,4 @@
+import sharp from 'sharp';
 
 // Bypass SSL certificate issues for backendescapes.com
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
@@ -14,13 +15,12 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { path, media, ...queryParams } = req.query;
+        const { path, media, w, h, fmt, q, ...queryParams } = req.query;
 
         // Base URL Configuration
-        // Priority: Vercel WC_URL > Hardcoded fallback
         const baseUrl = (process.env.WC_URL || 'https://backendescapes.com').replace(/\/$/, "");
 
-        // 1. IMAGE PROXY MODE
+        // 1. IMAGE PROXY MODE with Optimization
         if (media) {
             const imageUrl = `${baseUrl}/${media}`;
             const imageResponse = await fetch(imageUrl);
@@ -31,12 +31,42 @@ export default async function handler(req, res) {
                 return;
             }
 
-            const contentType = imageResponse.headers.get('content-type');
-            if (contentType) res.setHeader('Content-Type', contentType);
+            const arrayBuffer = await imageResponse.arrayBuffer();
+            const inputBuffer = Buffer.from(arrayBuffer);
+
+            let pipeline = sharp(inputBuffer);
+            const width = parseInt(w);
+            const height = parseInt(h);
+            const quality = parseInt(q) || 80;
+            const format = fmt || 'webp';
+
+            // Resizing logic
+            if (width || height) {
+                pipeline = pipeline.resize({
+                    width: width || null,
+                    height: height || null,
+                    fit: 'inside',
+                    withoutEnlargement: true
+                });
+            }
+
+            // Format & Quality logic
+            if (format === 'webp') {
+                pipeline = pipeline.webp({ quality });
+                res.setHeader('Content-Type', 'image/webp');
+            } else if (format === 'avif') {
+                pipeline = pipeline.avif({ quality });
+                res.setHeader('Content-Type', 'image/avif');
+            } else {
+                // Fallback to original or specified fmt
+                const originalType = imageResponse.headers.get('content-type');
+                if (originalType) res.setHeader('Content-Type', originalType);
+            }
+
             res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
 
-            const arrayBuffer = await imageResponse.arrayBuffer();
-            res.send(Buffer.from(arrayBuffer));
+            const outputBuffer = await pipeline.toBuffer();
+            res.send(outputBuffer);
             return;
         }
 
