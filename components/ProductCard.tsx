@@ -29,8 +29,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
 
   // Use optimized image initially, but allow fallback
   // Use 300px for base (mobile/desktop cards) and 600px for retina srcSet
-  const displayImage = isDefaultImage ? product.image : optimizeImage(product.image, { width: 300, height: 300, fit: 'cover' });
-  const srcSet = isDefaultImage ? '' : `${optimizeImage(product.image, { width: 300, height: 300, fit: 'cover' })} 1x, ${optimizeImage(product.image, { width: 600, height: 600, fit: 'cover' })} 2x`;
+  const displayImage = isDefaultImage ? product.image : optimizeImage(product.image, { width: 315, height: 315, fit: 'cover' });
+  const srcSet = isDefaultImage ? '' : `${optimizeImage(product.image, { width: 315, height: 315, fit: 'cover' })} 1x, ${optimizeImage(product.image, { width: 630, height: 630, fit: 'cover' })} 2x`;
 
 
   // Reset state when product changes
