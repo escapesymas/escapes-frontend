@@ -5,6 +5,7 @@ import { getUserProfile, manageFriendship, UserProfileFull } from '../../service
 import { PostCard } from './PostCard';
 import { FriendList } from './FriendList';
 import { RankBadge } from '../RankBadge';
+import { optimizeImage } from '../../utils/imageOptimizer';
 import { Link } from 'react-router-dom';
 
 interface UserProfileProps {
@@ -61,7 +62,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ currentUser, targetUse
             {/* Cover Image */}
             <div className="h-48 md:h-64 bg-zinc-900 w-full relative overflow-hidden">
                 {profile.cover ? (
-                    <img src={profile.cover} alt="Cover" className="w-full h-full object-cover opacity-60" />
+                    <img src={optimizeImage(profile.cover, { width: 1200 })} alt="Cover" className="w-full h-full object-cover opacity-60" />
                 ) : (
                     <div className="w-full h-full bg-gradient-to-r from-zinc-900 to-zinc-800 flex items-center justify-center">
                         <Camera className="text-zinc-700 w-12 h-12" />
@@ -77,7 +78,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ currentUser, targetUse
                 <div className="flex flex-col items-center md:items-start md:flex-row gap-6 mb-8">
                     {/* Avatar */}
                     <div className="w-32 h-32 rounded-full border-4 border-black bg-zinc-800 flex items-center justify-center overflow-hidden shadow-2xl relative">
-                        {profile.avatar ? <img src={profile.avatar} className="w-full h-full object-cover" /> : <User className="w-12 h-12 text-zinc-500" />}
+                        {profile.avatar ? <img src={optimizeImage(profile.avatar, { width: 128, height: 128 })} className="w-full h-full object-cover" /> : <User className="w-12 h-12 text-zinc-500" />}
                     </div>
 
                     {/* Info */}
