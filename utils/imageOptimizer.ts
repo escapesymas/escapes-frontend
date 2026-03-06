@@ -45,7 +45,6 @@ export const optimizeImage = (
         const urlObj = new URL(url, 'https://dummy.com');
         relativePath = urlObj.searchParams.get('media') || '';
       } catch (e) {
-        // Fallback for malformed URLs
         const match = url.match(/[?&]media=([^&]+)/);
         relativePath = match ? decodeURIComponent(match[1]) : '';
       }
@@ -54,35 +53,33 @@ export const optimizeImage = (
     }
 
     if (relativePath) {
-      // Si el ancho coincide con uno de nuestros pre-optimizados (550, 315, 150)
-      // podemos pedir el archivo estático directamente para ahorrar procesamiento.
+      // 1. Convertir siempre el path base a .webp si no lo es (ya que borramos originales)
+      const lastDotIndex = relativePath.lastIndexOf('.');
+      let baseName = lastDotIndex !== -1 ? relativePath.substring(0, lastDotIndex) : relativePath;
+
+      // Si el path ya termina en extensiones de imagen que borramos, lo pasamos a webp
+      if (/\.(jpg|jpeg|png)$/i.test(relativePath)) {
+        relativePath = baseName + '.webp';
+      }
+
+      // 2. Si el ancho coincide con uno de nuestros pre-optimizados (550, 315, 150)
       const staticWidths = [550, 315, 150];
       const isStaticWidth = options.width && staticWidths.includes(options.width);
       const useWebp = !options.format || options.format === 'webp' || options.format === 'auto';
 
       if (isStaticWidth && useWebp) {
-        // imagen.jpg -> imagen-550w.webp
-        const lastDotIndex = relativePath.lastIndexOf('.');
-        const baseName = lastDotIndex !== -1 ? relativePath.substring(0, lastDotIndex) : relativePath;
+        // imagen.webp -> imagen-550w.webp
         const staticPath = `${baseName}-${options.width}w.webp`;
         return `/api/proxy?media=${encodeURIComponent(staticPath)}`;
       }
 
-      // Si se pide webp sin redimensionar, intentar usar la versión .webp directa que genera el script
-      if (!options.width && !options.height && useWebp) {
-        const lastDotIndex = relativePath.lastIndexOf('.');
-        if (lastDotIndex !== -1 && !relativePath.endsWith('.webp')) {
-          const webpPath = relativePath.substring(0, lastDotIndex) + '.webp';
-          return `/api/proxy?media=${encodeURIComponent(webpPath)}`;
-        }
-      }
-
+      // 3. Para cualquier otro caso (desktop 800px, 1100px, etc), usar el .webp base
+      // y dejar que el proxy redimensione a partir de ese.
       const params = new URLSearchParams();
-      params.append('media', relativePath);
+      params.append('media', relativePath); // Aquí ya es .webp
       if (options.width) params.append('w', options.width.toString());
       if (options.height) params.append('h', options.height.toString());
       if (options.fit) params.append('fit', options.fit);
-      // Default to webp for optimal compression
       params.append('fmt', options.format && options.format !== 'auto' ? options.format : 'webp');
       return `/api/proxy?${params.toString()}`;
     }
