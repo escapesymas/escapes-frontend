@@ -99,7 +99,9 @@ export default async function handler(req, res) {
         // If the client sent an Authorization header (e.g. JWT Bearer), let it through 
         // unless it's a wc/v3 path which usually needs Basic Auth.
         // We override only if no Auth is present to allow user-specific JWTs.
-        if (!headers['authorization']) {
+        // We override only if no Auth is present to allow user-specific JWTs.
+        // Also skip for escapes/v1 namespace which should be public or handle its own auth
+        if (!headers['authorization'] && !path.startsWith('escapes/v1')) {
             headers['Authorization'] = `Basic ${auth}`;
         }
 
