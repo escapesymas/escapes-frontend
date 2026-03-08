@@ -32,6 +32,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [userRank, setUserRank] = useState<UserRank | null>(null);
 
@@ -55,6 +56,7 @@ export const Header: React.FC<HeaderProps> = ({
     if (searchQuery.trim()) {
       onNavClick('catalog', searchQuery.trim());
       setIsMobileMenuOpen(false);
+      setIsSearchOpen(false);
     }
   };
 
@@ -82,20 +84,6 @@ export const Header: React.FC<HeaderProps> = ({
                 style={{ aspectRatio: '150/48' }}
               />
             </div>
-
-            {/* Desktop Search Bar */}
-            <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-md mx-8 relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Busca por modelo o referencia..."
-                className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-sm py-2 pl-4 pr-10 text-xs font-bold uppercase tracking-wider focus:outline-none focus:border-racing-orange transition-colors"
-              />
-              <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-racing-orange transition-colors">
-                <Search className="w-4 h-4" />
-              </button>
-            </form>
           </div>
 
           <nav className="hidden md:flex items-center gap-6">
@@ -114,6 +102,35 @@ export const Header: React.FC<HeaderProps> = ({
 
 
           <div className="flex items-center gap-3 md:gap-5">
+            {/* Desktop Toggleable Search */}
+            <div className="hidden lg:block relative">
+              <button
+                onClick={() => setIsSearchOpen(!isSearchOpen)}
+                className={`p-2 transition-colors ${isSearchOpen ? 'text-racing-orange' : 'text-zinc-600 dark:text-zinc-400 hover:text-racing-orange dark:hover:text-white'}`}
+                aria-label="Buscar"
+              >
+                <Search className="w-5 h-5" />
+              </button>
+
+              {isSearchOpen && (
+                <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-racing-carbon border border-zinc-200 dark:border-zinc-800 shadow-2xl rounded-sm p-4 animate-fade-in z-50">
+                  <form onSubmit={handleSearch} className="relative">
+                    <input
+                      autoFocus
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Busca por modelo o referencia..."
+                      className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-sm py-2 pl-4 pr-10 text-xs font-bold uppercase tracking-wider focus:outline-none focus:border-racing-orange transition-colors"
+                    />
+                    <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-racing-orange">
+                      <Search className="w-4 h-4" />
+                    </button>
+                  </form>
+                </div>
+              )}
+            </div>
+
             {/* User Profile Button with Dropdown */}
             <div className="relative">
               <button
