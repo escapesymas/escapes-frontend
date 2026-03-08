@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, CheckCircle, Truck, ShieldCheck, Minus, Plus, ShoppingCart, Hash, AlertCircle, Share2, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Truck, ShieldCheck, Minus, Plus, ShoppingCart, Hash, AlertCircle, Share2, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Product } from '../types';
 import { STORE_CONFIG } from '../storeData';
 import { optimizeImage } from '../utils/imageOptimizer';
@@ -125,18 +125,29 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
   return (
     <div className="bg-white dark:bg-zinc-950 min-h-screen animate-fade-in pb-20 pt-4">
       <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center mb-8">
-          <button onClick={onBack} className="flex items-center gap-2 text-zinc-500 hover:text-racing-orange dark:hover:text-white text-xs font-bold uppercase tracking-widest transition-colors">
-            <ArrowLeft className="w-4 h-4" /> Volver al catálogo
-          </button>
+        <div className="flex flex-col gap-4 mb-6">
+          {/* Breadcrumbs */}
+          <nav className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+            <button onClick={() => onProductClick?.({ id: 0 } as any)} className="hover:text-racing-orange transition-colors">Inicio</button>
+            <ChevronRight className="w-3 h-3" />
+            <button onClick={onBack} className="hover:text-racing-orange transition-colors">{product.category || 'Catálogo'}</button>
+            <ChevronRight className="w-3 h-3" />
+            <span className="text-zinc-600 dark:text-zinc-500 truncate max-w-[200px]">{product.title}</span>
+          </nav>
 
-          <button
-            onClick={handleShare}
-            className={`flex items-center gap-2 px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-widest transition-all ${copied ? 'bg-green-600 text-white' : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800'}`}
-          >
-            {copied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
-            {copied ? 'Copiado' : 'Compartir'}
-          </button>
+          <div className="flex justify-between items-center">
+            <button onClick={onBack} className="flex items-center gap-2 text-zinc-500 hover:text-racing-orange dark:hover:text-white text-xs font-bold uppercase tracking-widest transition-colors">
+              <ArrowLeft className="w-4 h-4" /> Volver al catálogo
+            </button>
+
+            <button
+              onClick={handleShare}
+              className={`flex items-center gap-2 px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-widest transition-all ${copied ? 'bg-green-600 text-white' : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800'}`}
+            >
+              {copied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+              {copied ? 'Copiado' : 'Compartir'}
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -267,15 +278,55 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex items-center bg-gray-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-700 rounded-sm">
-                  <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="p-3 text-zinc-500 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"><Minus className="w-4 h-4" /></button>
-                  <span className="w-10 text-center text-zinc-900 dark:text-white font-bold">{quantity}</span>
-                  <button onClick={() => setQuantity(q => q + 1)} className="p-3 text-zinc-500 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"><Plus className="w-4 h-4" /></button>
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-sm">
+                    <button
+                      onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                      className="px-4 py-3 text-zinc-500 hover:text-racing-orange transition-colors"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                    <span className="w-12 text-center font-bold text-zinc-900 dark:text-white">{quantity}</span>
+                    <button
+                      onClick={() => setQuantity(q => q + 1)}
+                      className="px-4 py-3 text-zinc-500 hover:text-racing-orange transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => onAddToCart(quantity)}
+                    className="flex-grow bg-racing-orange hover:bg-black text-white font-black uppercase tracking-widest py-4 rounded-sm transition-all shadow-lg shadow-orange-900/20 active:scale-[0.98] flex items-center justify-center gap-3 group"
+                  >
+                    Añadir al Carrito <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </button>
                 </div>
-                <button onClick={() => onAddToCart?.(quantity)} className="flex-1 bg-racing-orange hover:bg-orange-600 text-white font-black uppercase py-4 px-6 flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-orange-900/40">
-                  <ShoppingCart className="w-5 h-5" /> Añadir al garaje
-                </button>
+
+                {/* Trust & Delivery Info */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                  <div className="flex items-start gap-3 p-3 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800 rounded-sm">
+                    <Truck className="w-5 h-5 text-racing-orange flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-[10px] font-black uppercase italic text-zinc-900 dark:text-white">Envío 24/48h</p>
+                      <p className="text-[10px] text-zinc-500 leading-tight">Entrega rápida en toda la península.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800 rounded-sm">
+                    <ShieldCheck className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-[10px] font-black uppercase italic text-zinc-900 dark:text-white">Garantía Oficial</p>
+                      <p className="text-[10px] text-zinc-500 leading-tight">Producto 100% original garantizado.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-center gap-6 mt-2 opacity-50 grayscale scale-75">
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-3 w-auto" />
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-5 w-auto" />
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" alt="PayPal" className="h-3 w-auto" />
+                </div>
               </div>
             </div>
 
