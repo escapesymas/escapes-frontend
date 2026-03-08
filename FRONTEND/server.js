@@ -371,7 +371,7 @@ app.post('/api/checkout', async (req, res) => {
         currency: currency || 'EUR',
         pay_to_email: merchantEmail,
         description: `Pedido ${orderRef}`,
-        return_url: `${req.protocol}://${req.get('host')}/?payment_success=true&order=${orderRef}`
+        return_url: `https://${req.get('host')}/?payment_success=true&order=${orderRef}`
       })
     });
     const data = await response.json();

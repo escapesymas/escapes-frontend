@@ -212,50 +212,58 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
       setSumupCheckoutId(checkoutData.id);
 
       // Mount Widget with a robust retry mechanism for mobile
-      const mountWidget = (attemptsLeft = 5) => {
-        if (window.SumUpCard && document.getElementById('sumup-card')) {
+      const mountWidget = (attemptsLeft = 10) => {
+        const container = document.getElementById('sumup-card');
+        console.log(`[SUMUP] Attempting to mount. SDK Ready: ${!!window.SumUpCard}, Container Ready: ${!!container}, Attempts left: ${attemptsLeft}`);
+
+        if (window.SumUpCard && container) {
           try {
+            console.log(`[SUMUP] Calling mount() with ID: ${checkoutData.id}`);
             window.SumUpCard.mount({
               id: 'sumup-card',
               checkoutId: checkoutData.id,
               onResponse: function (type: string, body: any) {
-                console.log('SumUp Response:', type, body);
+                console.log('[SUMUP] Response callback:', type, body);
 
                 if (type === 'success') {
                   if (body.status === 'FAILED') {
                     setErrorMessage("El pago ha sido denegado por el banco.");
-                    // Marcar pedido como fallido
-                    if (pendingOrderId) {
-                      updateOrderStatus(pendingOrderId, 'failed');
-                    }
+                    if (pendingOrderId) updateOrderStatus(pendingOrderId, 'failed');
                     return;
                   }
-                  setTimeout(() => {
-                    finalizeOrder('sumup', body.transaction_code || body.id || 'SUMUP_TX');
-                  }, 100);
-
+                  finalizeOrder('sumup', body.transaction_code || body.id || 'SUMUP_TX');
                 } else if (type === 'error') {
+                  console.error('[SUMUP] Widget Error:', body);
                   setErrorMessage("Error en el pago: " + (body.message || "Inténtalo de nuevo"));
-                  // Marcar pedido como fallido
-                  if (pendingOrderId) {
-                    updateOrderStatus(pendingOrderId, 'failed');
-                  }
+                  if (pendingOrderId) updateOrderStatus(pendingOrderId, 'failed');
                 }
               },
               showFooter: false,
               locale: 'es-ES'
             });
-            setIsSumupLoading(false);
+
+            // Check if mount actually worked (SumUp v1/v2 sometimes doesn't throw but doesn't render)
+            setTimeout(() => {
+              if (container.children.length === 0) {
+                console.warn("[SUMUP] Container still empty after mount call. Retrying mount...");
+                if (attemptsLeft > 0) mountWidget(attemptsLeft - 1);
+              } else {
+                console.log("[SUMUP] Mount successful! Iframe detected.");
+                setIsSumupLoading(false);
+              }
+            }, 1500);
+
           } catch (e) {
-            console.error("Error mounting SumUp widget", e);
+            console.error("[SUMUP] Exception during mount()", e);
             setErrorMessage("Error cargando el widget de pago.");
             setIsSumupLoading(false);
           }
         } else {
           if (attemptsLeft > 0) {
-            setTimeout(() => mountWidget(attemptsLeft - 1), 800);
+            setTimeout(() => mountWidget(attemptsLeft - 1), 1000);
           } else {
-            setErrorMessage("La librería de pagos no cargó. Refresca la página.");
+            console.error("[SUMUP] Max retries reached. SDK or Container missing.");
+            setErrorMessage("La pasarela de pagos no pudo inicializarse. Por favor, refresca la página.");
             setIsSumupLoading(false);
           }
         }
