@@ -13,7 +13,6 @@ import { Cart } from './components/Cart';
 import { CategoryBrowser } from './components/CategoryBrowser';
 import { Contact } from './components/Contact';
 import { BrandSlider } from './components/BrandSlider';
-import { PromoBanner } from './components/PromoBanner';
 import { FeaturesBanner } from './components/FeaturesBanner';
 import { ProductSkeleton } from './components/ProductSkeleton';
 import { STORE_CONFIG, FEATURES, BIKE_DATA, CATEGORIES, TIRE_CATEGORY_ID } from './storeData';
@@ -277,7 +276,8 @@ function App() {
   const loadFeaturedProducts = async () => {
     setLoading(true);
     try {
-      const { products: all, totalProducts } = await fetchProducts(undefined, undefined, 1, 10);
+      // Fetch 50 products initially to ensure we find at least 4 with actual images
+      const { products: all, totalProducts } = await fetchProducts(undefined, undefined, 1, 50);
       const curated = all.filter(p => p.image !== STORE_CONFIG.defaultProductImage).slice(0, 4);
       setProducts(curated);
       if (totalProducts > 0) setTotalCatalogProducts(totalProducts);
@@ -785,7 +785,6 @@ function App() {
                   )}
                 </section>
 
-                <PromoBanner onForumClick={() => navigate('/foro')} />
                 <FeaturesBanner />
                 <BrandSlider />
               </>
