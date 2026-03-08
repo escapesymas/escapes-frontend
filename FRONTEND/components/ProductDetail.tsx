@@ -20,6 +20,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(true);
+  const [showFullDescription, setShowFullDescription] = useState(false);
 
   // Image Fallback State
   const [imgSrc, setImgSrc] = useState<string>("");
@@ -234,12 +235,22 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
               </span>
             </div>
 
-            <h1 className="text-4xl font-extrabold text-zinc-900 dark:text-white uppercase italic leading-none mb-4 pr-2">{product.title}</h1>
+            <h1 className="text-2xl sm:text-4xl font-extrabold text-zinc-900 dark:text-white uppercase italic leading-none mb-4 pr-2">{product.title}</h1>
 
-            <div
-              className="prose prose-zinc dark:prose-invert prose-sm text-zinc-600 dark:text-zinc-400 mb-6 leading-relaxed line-clamp-6"
-              dangerouslySetInnerHTML={{ __html: displayDescription }}
-            />
+            <div className="relative">
+              <div
+                className={`prose prose-zinc dark:prose-invert prose-sm text-zinc-600 dark:text-zinc-400 mb-2 leading-relaxed ${!showFullDescription ? 'line-clamp-4' : ''}`}
+                dangerouslySetInnerHTML={{ __html: displayDescription }}
+              />
+              {displayDescription.length > 200 && (
+                <button
+                  onClick={() => setShowFullDescription(!showFullDescription)}
+                  className="text-racing-orange text-xs font-bold uppercase tracking-widest hover:text-orange-600 transition-colors mb-6"
+                >
+                  {showFullDescription ? 'Ver menos -' : 'Ver más +'}
+                </button>
+              )}
+            </div>
 
             <div className="bg-white dark:bg-racing-carbon p-8 rounded-sm border border-zinc-200 dark:border-zinc-800 mb-8 shadow-sm dark:shadow-xl">
               <div className="flex flex-col mb-8">

@@ -18,7 +18,7 @@ export const PAYMENT_CONFIG = {
 export const STORE_CONFIG = {
   name: "Escapes y Más",
   logoUrl: "/logo-cabecera.svg",
-  defaultProductImage: "/api/proxy?media=wp-content/uploads/2026/01/ico-1.png",
+  defaultProductImage: "https://placehold.co/800x800/18181b/f97316?text=ESCAPES+Y+MAS",
   currency: "EUR",
   contactEmail: "info@escapesymas.com",
   heroTitle: "Equipamiento Pro",
