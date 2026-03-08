@@ -397,7 +397,7 @@ export const AIAdvisor: React.FC<AIAdvisorProps> = ({ onProductClick, onAddToCar
         onClick={() => setIsOpen(!isOpen)}
         className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 ${isOpen
           ? 'bg-zinc-800 hover:bg-zinc-700'
-          : 'bg-racing-orange hover:bg-orange-600 animate-pulse'
+          : 'bg-racing-orange hover:bg-orange-600'
           }`}
         aria-label="Abrir asesor de recambios"
       >

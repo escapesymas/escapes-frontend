@@ -187,7 +187,12 @@ export const fetchPaddockCategories = async (): Promise<PaddockCategory[]> => {
         return Object.values(UI_CATEGORY_CONFIG).map((conf, index) => ({
             id: conf.id ?? index,
             title: ['Paddock General', 'Mecánica y Taller', 'Compraventa Motos', 'Rutas y Quedadas'][index],
-            description: 'Categoría predefinida',
+            description: [
+                'Charlas generales, noticias y debates del mundo del motor.',
+                'Dudas técnicas, tutoriales y bricos para tu máquina.',
+                'Mercado de ocasión exclusivo para motos completas.',
+                'Organiza salidas o únete a quedadas cerca de ti.'
+            ][index],
             count: 0,
             icon: conf.icon
         }));
