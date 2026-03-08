@@ -311,7 +311,7 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
         body: JSON.stringify({ order_id: pendingOrderId || 0 })
       });
 
-      const { client_secret, publishable_key } = response.data;
+      const { client_secret, publishable_key, stripe_account } = response.data;
 
       if (!client_secret || !publishable_key) {
         throw new Error("No se pudo obtener el token de pago de Stripe.");
@@ -322,7 +322,7 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
         throw new Error("La librería de Stripe no ha cargado correctamente.");
       }
 
-      const stripe = window.Stripe(publishable_key);
+      const stripe = window.Stripe(publishable_key, stripe_account ? { stripeAccount: stripe_account } : {});
 
       // 3. Confirmar pago con Klarna
       const { error, paymentIntent } = await stripe.confirmKlarnaPayment(client_secret, {
