@@ -43,7 +43,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
     <div className="group bg-white dark:bg-racing-carbon border border-zinc-200 dark:border-zinc-800 hover:border-racing-orange/50 transition-all duration-300 rounded-sm overflow-hidden flex flex-col h-full shadow-sm dark:shadow-none">
       <Link
         to={`/${product.categorySlug ? product.categorySlug : 'recambios'}/${product.id}`}
-        className="block relative aspect-square overflow-hidden bg-gray-100 dark:bg-white"
+        className="block relative aspect-square overflow-hidden bg-zinc-50 dark:bg-zinc-900 flex items-center justify-center"
         onClick={() => onClick?.(product)}
       >
         {!isDefaultImage && (

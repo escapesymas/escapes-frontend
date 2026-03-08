@@ -88,26 +88,25 @@ export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTireSear
     <div className="w-full max-w-4xl mx-auto relative z-20 px-4">
       <div className="bg-white dark:bg-racing-carbon border border-zinc-200 dark:border-zinc-700 p-4 md:p-6 rounded-md shadow-lg dark:shadow-2xl dark:shadow-black/50">
 
-        {/* BUSCADOR DE TEXTO (PRINCIPAL) */}
-        <form onSubmit={handleTextSearchClick} className="flex flex-col md:flex-row gap-4 mb-4">
+        {/* BUSCADOR DE TEXTO (SIMPLIFICADO) */}
+        <form onSubmit={handleTextSearchClick} className="flex flex-col md:flex-row gap-2 mb-4">
           <div className="relative flex-grow">
             <input
               type="text"
               aria-label="Buscar pieza"
-              placeholder="Buscar pieza (Ej: Escape Akrapovic, Pastillas freno...)"
-              className="w-full h-12 bg-gray-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white px-4 pl-12 rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500 font-medium"
+              placeholder="¿Qué pieza buscas hoy?"
+              className="w-full h-10 bg-gray-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white px-4 pl-10 rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500 text-sm"
               value={textQuery}
               onChange={(e) => setTextQuery(e.target.value)}
             />
-            <Search className="absolute left-4 top-3.5 w-5 h-5 text-zinc-400 dark:text-zinc-500" />
+            <Search className="absolute left-3 top-3 w-4 h-4 text-zinc-400" />
           </div>
           <button
             type="submit"
-            aria-label="Buscar"
             disabled={isLoading || !textQuery.trim()}
-            className="h-12 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white font-bold uppercase px-8 rounded-sm transition-colors border border-zinc-300 dark:border-zinc-700 flex items-center justify-center gap-2"
+            className="h-10 bg-zinc-900 dark:bg-zinc-800 text-white font-bold uppercase text-xs px-6 rounded-sm transition-colors hover:bg-black flex items-center justify-center gap-2"
           >
-            {isLoading ? <div className="w-4 h-4 border-2 border-zinc-900/30 dark:border-white/30 border-t-zinc-900 dark:border-t-white rounded-full animate-spin"></div> : <Search className="w-4 h-4" />}
+            {isLoading ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <Search className="w-3 h-3" />}
             Buscar
           </button>
         </form>
