@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ShoppingCart, User, Menu, LogOut, Package, Settings, MessageSquare, X, ChevronRight } from 'lucide-react';
+import { ShoppingCart, User, Menu, LogOut, Package, Settings, MessageSquare, X, ChevronRight, Search } from 'lucide-react';
 import { STORE_CONFIG, NAV_LINKS } from '../storeData';
 import { User as UserType, UserRank } from '../types';
 import { RankBadge } from './RankBadge';
@@ -32,6 +32,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [userRank, setUserRank] = useState<UserRank | null>(null);
 
   React.useEffect(() => {
@@ -49,6 +50,14 @@ export const Header: React.FC<HeaderProps> = ({
     onNavClick(view, category);
   };
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      onNavClick('catalog', searchQuery.trim());
+      setIsMobileMenuOpen(false);
+    }
+  };
+
   return (
     <>
       <header className="sticky top-0 z-50 w-full bg-white/95 dark:bg-racing-carbon/95 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800">
@@ -63,7 +72,7 @@ export const Header: React.FC<HeaderProps> = ({
               <Menu className="w-6 h-6" />
             </button>
 
-            <div onClick={onLogoClick} className="cursor-pointer group flex items-center h-8 md:h-12 overflow-hidden">
+            <div onClick={onLogoClick} className="cursor-pointer group flex items-center h-8 md:h-12 overflow-hidden shrink-0">
               <img
                 src="/logo-cabecera.svg"
                 alt={STORE_CONFIG.name}
@@ -73,6 +82,20 @@ export const Header: React.FC<HeaderProps> = ({
                 style={{ aspectRatio: '150/48' }}
               />
             </div>
+
+            {/* Desktop Search Bar */}
+            <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-md mx-8 relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Busca por modelo o referencia..."
+                className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-sm py-2 pl-4 pr-10 text-xs font-bold uppercase tracking-wider focus:outline-none focus:border-racing-orange transition-colors"
+              />
+              <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-racing-orange transition-colors">
+                <Search className="w-4 h-4" />
+              </button>
+            </form>
           </div>
 
           <nav className="hidden md:flex items-center gap-6">
@@ -157,6 +180,21 @@ export const Header: React.FC<HeaderProps> = ({
               <button onClick={() => setIsMobileMenuOpen(false)} className="text-zinc-500 hover:text-racing-orange dark:text-zinc-400 dark:hover:text-white" aria-label="Cerrar menú">
                 <X className="w-6 h-6" />
               </button>
+            </div>
+
+            <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 lg:hidden">
+              <form onSubmit={handleSearch} className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="BUSCAR..."
+                  className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-sm py-3 pl-4 pr-10 text-xs font-bold uppercase tracking-widest focus:outline-none focus:border-racing-orange transition-colors"
+                />
+                <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-racing-orange transition-colors">
+                  <Search className="w-5 h-5" />
+                </button>
+              </form>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-2">

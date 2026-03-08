@@ -28,6 +28,18 @@ export const CategoryBrowser: React.FC<CategoryBrowserProps> = ({ onSelectCatego
   // Filter categories to show only children of current parent
   const displayedCategories = categories.filter(c => c.parent === currentParentId);
 
+  // Fallback images for key categories (Premium look)
+  const CATEGORY_FALLBACKS: Record<string, string> = {
+    'escapes': 'https://images.unsplash.com/photo-1599819811279-d5ad9cccf838?auto=format&fit=crop&q=80&w=800',
+    'frenos': 'https://images.unsplash.com/photo-1542046272-5c179477042c?auto=format&fit=crop&q=80&w=800',
+    'neumaticos': 'https://images.unsplash.com/photo-1580397581145-cdb6a35b7d3f?auto=format&fit=crop&q=80&w=800',
+    'mantenimiento': 'https://images.unsplash.com/photo-1486006920555-c77dcf18193c?auto=format&fit=crop&q=80&w=800',
+    'equipamiento': 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&q=80&w=800',
+    'electronica': 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=800',
+    'transmision': 'https://images.unsplash.com/photo-1592657434559-99469f3752e2?auto=format&fit=crop&q=80&w=800',
+    'suspensiones': 'https://images.unsplash.com/photo-1444491741275-3747c53c99b4?auto=format&fit=crop&q=80&w=800'
+  };
+
   // Find current parent info for breadcrumb/title
   const currentParentCat = categories.find(c => c.id === currentParentId);
 
@@ -111,8 +123,13 @@ export const CategoryBrowser: React.FC<CategoryBrowserProps> = ({ onSelectCatego
             {displayedCategories.map((cat) => {
               const hasChildren = categories.some(c => c.parent === cat.id);
 
+              // Use fallback if API image is missing or just a generic placeholder
+              const rawImage = cat.image && !cat.image.includes('placeholder')
+                ? cat.image
+                : (CATEGORY_FALLBACKS[cat.slug] || 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&q=80&w=800');
+
               // Optimize category background image
-              const bgImage = optimizeImage(cat.image, { width: 600 });
+              const bgImage = optimizeImage(rawImage, { width: 600 });
 
               return (
                 <div
