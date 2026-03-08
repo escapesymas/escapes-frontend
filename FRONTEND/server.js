@@ -46,12 +46,19 @@ const addProxyHeaders = (req) => {
 
   const auth = Buffer.from(`${WOO_CONSUMER_KEY}:${WOO_CONSUMER_SECRET}`).toString('base64');
 
-  return {
+  const finalHeaders = {
     ...headers,
     'host': 'backendescapes.com',
-    'Authorization': `Basic ${auth}`,
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
   };
+
+  // Solo añadir Basic Auth si no es el namespace escapes/v1 (que manejamos sin auth o con JWT propio)
+  // O si es explícitamente una ruta de WooCommerce (/wc/v3)
+  if (!req.url.includes('/escapes/v1/')) {
+    finalHeaders['Authorization'] = `Basic ${auth}`;
+  }
+
+  return finalHeaders;
 };
 
 /**
