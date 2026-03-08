@@ -1,0 +1,341 @@
+# INSTRUCCIONES PARA LA IA DE FRONTEND
+
+Hola, tu tarea es implementar el frontend (React/Next.js) para las nuevas funcionalidades sociales de "Escapes y Más". El backend (WordPress) ya está listo.
+
+Aquí tienes dos documentos clave:
+1.  **Frontend Prompts:** Guía paso a paso de qué componentes construir.
+2.  **API Reference:** Documentación técnica de los endpoints y respuestas JSON reales.
+
+Por favor, lee ambos y comienza con el **Prompt 1**.
+
+---
+
+# DOCUMENTO 1: FRONTEND PROMPTS
+
+## Prompt 1: Contexto y Configuración Inicial
+
+**Objetivo:** Establecer el contexto del proyecto y definir la estructura general.
+
+```text
+Actúa como un experto desarrollador React/Next.js. Vamos a implementar una nueva sección social en nuestra aplicación de ecommerce de motos, "Escapes y Más".
+
+El backend (WordPress/WooCommerce) ya ha sido actualizado con nuevos endpoints para soportar dos áreas principales:
+1. **Muro Social (Social Feed):** Estilo Facebook, para actualizaciones rápidas, fotos y estado.
+2. **Paddock (Foro Estructurado):** Estilo foro clásico pero moderno, con categorías e hilos de discusión técnica.
+
+**Requisitos Generales de UI:**
+- Estética "Dark Mode" premium, colores neón sutiles (cian/púrpura) acordes a la marca.
+- Uso de componentes reutilizables.
+- Diseño totalmente responsive.
+
+Por favor, confirma que entiendes la diferenciación entre el "Muro Social" y el "Paddock" antes de continuar con la implementación de los componentes.
+```
+
+---
+
+## Prompt 2: Implementación del Servicio de API (Frontend)
+
+**Objetivo:** Crear las funciones de consumo de API.
+
+```text
+Necesito crear un servicio o conjunto de funciones en el frontend para consumir los nuevos endpoints de la API. La base URL es `https://backendescapes.com/wp-json/paddock/v1`.
+
+endpoints disponibles:
+
+**Social Feed:**
+- `GET /feed?page=1` -> Devuelve lista de posts.
+- `POST /feed/create` -> Body: `{ content: "...", media_ids: [...] }`. Requiere Auth.
+
+**Paddock (Foro):**
+- `GET /paddock/categories` -> Lista de categorías.
+- `GET /paddock/threads?category_id=X&page=1` -> Lista de hilos.
+- `POST /paddock/thread/create` -> Body: `{ title: "...", content: "...", category_id: X }`. Requiere Auth.
+
+**Interacciones:**
+- `POST /like` -> Body: `{ target_type: "social_post" | "paddock_thread", target_id: X }`.
+- `POST /reply` -> Body: `{ post_id: X, content: "..." }` (Para comentarios en ambos sistemas).
+
+Por favor, genera el código TypeScript/JavaScript para este servicio `socialApi.js`, manejando cabeceras de autorización (JWT o Cookie) y errores.
+```
+
+---
+
+## Prompt 3: Componente "Muro Social" (Social Feed) - Actualizado
+
+**Objetivo:** Crear la vista principal del muro con acciones avanzadas.
+
+```text
+Ahora vamos a construir el componente `SocialFeed` mejorado.
+
+**Funcionalidades:**
+1.  **Caja de "Crear Publicación":**
+    - Textarea auto-expandible, Fotos y Botón Publicar.
+2.  **Lista de Posts:**
+    - Scroll infinito.
+    - Avatar/Nombre del autor con enlace a su Perfil (`/paddock/user/{id}`).
+3.  **Acciones por Post:**
+    - [Me gusta]: Corazón con contador (optimista).
+    - [Comentar]: Despliega comentarios.
+    - [Compartir]: Nuevo botón. Al hacer click, llama a `POST /share` (platform: 'internal') y muestra toast "+5 XP ¡Compartido!".
+    - [Eliminar]: SI el post es del usuario actual (o admin), muestra icono de papelera. Al confirmar, llama a `DELETE /feed/{id}` y elimina el post de la lista sin recargar.
+
+Usa estilos modernos, tarjetas con bordes redondeados y sombras suaves.
+```
+
+---
+
+## Prompt 6: Sistema de Perfil y Amigos
+
+**Objetivo:** Implementar vista de perfil y gestión de amistades.
+
+```text
+Necesito una vista de Perfil de Usuario (`/paddock/user/[id]`).
+
+**Datos a mostrar (Desde `GET /user/{id}/full-profile`):**
+- **Encabezado:** Foto grande, Nombre, Bio, Rango (Badge) y Estadísticas (Posts, Amigos, Likes).
+- **Botón de Acción Principal:**
+    - Si es mi perfil: "Editar Perfil".
+    - Si es otro usuario:
+        - `friendship_status` == 'none' -> Botón "Agregar Amigo" (`POST /friends/request`).
+        - `friendship_status` == 'pending' -> "Solicitud Enviada".
+        - `friendship_status` == 'accepted' -> "Amigos".
+- **Tabs:** "Actividad" (sus posts), "Amigos" (Grid de avatares).
+
+**Vista de "Mis Amigos":**
+- Lista de mis amigos confirmados.
+- Lista de solicitudes recibidas (si las hay), con botones "Aceptar/Rechazar".
+
+**Buscador de Usuarios:**
+- Input de búsqueda que llame a `GET /users/search?q=...`.
+- Muestra resultados tipo lista con Avatar/Nombre y botón ir al Perfil.
+```
+
+---
+
+## Prompt 4: Componente "Paddock" (Foro)
+
+**Objetivo:** Crear la vista de categorías e hilos.
+
+```text
+Vamos a implementar la sección "Paddock" (Foro).
+
+**Vistas necesarias:**
+1.  **Vista Principal (Categorías):**
+    - Muestra tarjetas con las categorías recibidas de `/paddock/categories`.
+    - Cada tarjeta debe mostrar el nombre, descripción y número de hilos.
+2.  **Vista de Lista de Hilos (dentro de una categoría):**
+    - Botón "Nuevo Hilo" arriba a la derecha.
+    - Lista de hilos con: Título (grande), autor, fecha, y badges de categorías.
+3.  **Vista de Detalle de Hilo (Single Thread):**
+    - Muestra el post inicial completo.
+    - Lista de respuestas (comentarios) debajo, con diseño similar al del Muro Social pero más estructurado.
+
+Genera la estructura de componentes para estas vistas, priorizando la navegabilidad clara.
+```
+
+---
+
+## Prompt 5: Bonus - Gamificación Visual
+
+**Objetivo:** Integrar elementos visuales de gamificación.
+
+```text
+El backend devuelve información de gamificación del usuario (XP, Nivel, Rango).
+
+Quiero integrar esto visualmente:
+1.  En el avatar de cada usuario (en posts y comentarios), añade un borde o badge que indique su nivel/rango (ej: Borde Bronce/Plata/Oro).
+2.  Cuando el usuario hace una acción que da XP (publicar, comentar), muestra una pequeña notificación "Toast" animada: "+15 XP Publicación creada".
+
+Por favor, sugiere cómo implementar este componente de notificación y los estilos de los avatares según el rango.
+```
+
+---
+---
+
+# DOCUMENTO 2: API REFERENCE (Técnico)
+
+Base URL: `/wp-json/paddock/v1`
+
+## Social Feed `paddock_social_post`
+
+### 1. Get Social Feed
+*   **Method:** `GET`
+*   **Endpoint:** `/feed`
+*   **Query Params:** `page` (int, default: 1)
+*   **Auth:** Optional (but likely needed for interactions)
+*   **Response:**
+    ```json
+    {
+        "data": [
+            {
+                "id": 123,
+                "content": "Post content text...",
+                "author": {
+                    "id": 45,
+                    "name": "User Name",
+                    "avatar": "https://.../avatar.jpg",
+                    "rank": { "level": 2, "title": "Aficionado", "xp": 150, "next_xp": 300, "discount": 2 }
+                },
+                "date": "2024-10-25T12:00:00+00:00",
+                "media": ["https://.../image1.jpg"],
+                "likes_count": 5,
+                "shares_count": 2,
+                "is_liked": true,
+                "comments_count": 3,
+                "latest_comments": [
+                    { "id": 10, "author": "Alice", "content": "Cool!", "date": "..." }
+                ]
+            }
+        ],
+        "has_more": true
+    }
+    ```
+
+### 2. Create Social Post
+*   **Method:** `POST`
+*   **Endpoint:** `/feed/create`
+*   **Body:**
+    *   [content](file:///c:/Users/Adrian/Documents/BACKEND/html/wp-content/plugins/paddock-gamification/includes/class-paddock-api.php#343-363) (string): Text content.
+    *   `media_ids` (array<int>, optional): Attachment IDs uploaded previously.
+*   **Auth:** Required.
+*   **Response:** `201 Created` - `{ "success": true, "id": 124 }`
+
+### 3. Delete Social Post
+*   **Method:** `DELETE`
+*   **Endpoint:** `/feed/{id}`
+*   **Auth:** Aquired (Must be author or Admin).
+*   **Response:** `200 OK` - `{ "success": true, "id": 124 }`
+
+---
+
+## Paddock Forum [paddock_thread](file:///c:/Users/Adrian/Documents/BACKEND/html/wp-content/plugins/paddock-gamification/includes/class-paddock-api.php#258-314)
+
+### 4. Get Categories
+*   **Method:** `GET`
+*   **Endpoint:** `/paddock/categories`
+*   **Response:**
+    ```json
+    [
+        { "id": 1, "name": "General", "slug": "general", "count": 10, "description": "..." },
+        { "id": 2, "name": "Rutas", "slug": "rutas", "count": 5, "description": "..." }
+    ]
+    ```
+
+### 5. Get Threads
+*   **Method:** `GET`
+*   **Endpoint:** `/paddock/threads`
+*   **Query Params:**
+    *   `category_id` (int, optional): Filter by category.
+    *   `page` (int, default: 1).
+*   **Response:**
+    ```json
+    {
+        "data": [
+            {
+                "id": 200,
+                "title": "Thread Title",
+                "content": "Preview of content...",
+                "author": { "name": "Bob", "avatar": "..." },
+                "date": "...",
+                "likes_count": 10,
+                "shares_count": 1,
+                "comments_count": 5,
+                "categories": ["General"]
+            }
+        ],
+        "has_more": false
+    }
+    ```
+
+### 6. Create Thread
+*   **Method:** `POST`
+*   **Endpoint:** `/paddock/thread/create`
+*   **Body:**
+    *   `title` (string)
+    *   [content](file:///c:/Users/Adrian/Documents/BACKEND/html/wp-content/plugins/paddock-gamification/includes/class-paddock-api.php#343-363) (string, supports basic HTML)
+    *   `category_id` (int)
+*   **Auth:** Required.
+*   **Response:** `201 Created` - `{ "success": true, "id": 201 }`
+
+---
+
+## Interactions & Gamification
+
+### 7. Toggle Like
+*   **Method:** `POST`
+*   **Endpoint:** `/like`
+*   **Body:**
+    *   `target_type` (string): 'social_post', 'paddock_thread', or 'comment'.
+    *   `target_id` (int)
+*   **Auth:** Required.
+*   **Response:** `{ "liked": true, "likeCount": 6 }`
+
+### 8. Share Content
+*   **Method:** `POST`
+*   **Endpoint:** `/share`
+*   **Body:**
+    *   `post_id` (int)
+    *   `platform` (string, optional): 'facebook', 'twitter', 'whatsapp', 'internal'
+*   **Auth:** Required.
+*   **Response:** `{ "success": true }`
+
+### 9. Post Reply/Comment
+*   **Method:** `POST`
+*   **Endpoint:** `/reply`
+*   **Body:**
+    *   `post_id` (int): ID of the post or thread.
+    *   [content](file:///c:/Users/Adrian/Documents/BACKEND/html/wp-content/plugins/paddock-gamification/includes/class-paddock-api.php#343-363) (string)
+*   **Auth:** Required.
+*   **Response:** `{ "success": true, "id": 50 }`
+
+---
+
+## Profile & Friends
+
+### 10. Get Full Profile
+*   **Method:** `GET`
+*   **Endpoint:** `/user/{id}/full-profile`
+*   **Auth:** Optional (if logged in, checks friendship status).
+*   **Response:**
+    ```json
+    {
+        "id": 45,
+        "name": "Adrian",
+        "avatar": "...",
+        "bio": "Motard...",
+        "stats": { "xp": 500, "level": 3, "total_posts": 10, "total_friends": 5, "total_shares": 2 },
+        "rank": { "title": "Entusiasta", "discount": 4 },
+        "friendship_status": "pending" // 'none', 'pending', 'accepted', 'blocked'
+    }
+    ```
+
+### 11. Search Users
+*   **Method:** `GET`
+*   **Endpoint:** `/users/search`
+*   **Query Params:** `q` (search term, min 3 chars).
+*   **Response:**
+    ```json
+    [
+        { "id": 60, "name": "Maria", "avatar": "...", "rank": { "title": "Novato" } }
+    ]
+    ```
+
+### 12. Friend Request Actions
+*   **Method:** `POST`
+*   **Endpoint:** `/friends/request`
+*   **Body:**
+    *   `target_id` (int): User ID to interact with.
+    *   [action](file:///c:/Users/Adrian/Documents/BACKEND/html/wp-content/plugins/paddock-gamification/includes/class-paddock-api.php#364-410) (string): 'send', 'accept', 'reject', 'remove'.
+*   **Auth:** Required.
+*   **Response:** `{ "success": true, "status": "pending" }`
+
+### 13. Get Friends List
+*   **Method:** `GET`
+*   **Endpoint:** `/friends/list`
+*   **Query Params:** `user_id` (optional, defaults to current).
+*   **Response:**
+    ```json
+    [
+        { "id": 70, "name": "Friend Name", "avatar": "...", "rank": { ... } }
+    ]
+    ```

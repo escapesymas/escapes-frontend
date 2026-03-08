@@ -1,4 +1,0 @@
-MIVV,mivv.svg
-Öhlins,ohlins.svg
-Sprint Filter,sprint_filter.svg
-Termignoni,termignoni.svg

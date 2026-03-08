@@ -6,7 +6,8 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-node_modules*
+node_modules/
+**/node_modules/
 
 # Editor directories and files
 .vscode/*
@@ -19,12 +20,12 @@ node_modules*
 *.sln
 *.sw?
 
-
 # Backups
-escapes-react-backup-*.zip
+**/*.zip
 
 # Prompts
 prompt_seo_wpo.md
 
 # Backend
 BACKEND/
+**/BACKEND/
