@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ShieldCheck, ArrowLeft, Lock, CheckCircle, Loader2, AlertCircle, XCircle, User, ArrowRight, Mail } from 'lucide-react';
 import { CartItem, User as UserType } from '../types';
-import { createOrder, updateOrderStatus, fetchUserRank } from '../services/woocommerce';
+import { createOrder, updateOrderStatus, fetchUserRank, makeRequest } from '../services/woocommerce';
 import { createSumUpCheckout } from '../services/sumup';
 import { loginUser, registerUser } from '../services/auth';
 import { trackPurchase } from '../utils/analytics';
@@ -15,10 +15,11 @@ interface CheckoutProps {
   onLoginSuccess: (user: UserType) => void;
 }
 
-// Declare SumUp global if typescript complains
+// Declare Globals
 declare global {
   interface Window {
     SumUpCard: any;
+    Stripe: any;
   }
 }
 
@@ -46,6 +47,11 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
   // SumUp State
   const [sumupCheckoutId, setSumupCheckoutId] = useState<string | null>(null);
   const [isSumupLoading, setIsSumupLoading] = useState(false);
+
+  // Stripe / Klarna State
+  const [paymentMethod, setPaymentMethod] = useState<'sumup' | 'klarna'>('sumup');
+  const [isStripeLoading, setIsStripeLoading] = useState(false);
+  const stripeRef = useRef<any>(null);
 
   // Pending Order State (para tracking de carritos abandonados)
   const [pendingOrderId, setPendingOrderId] = useState<number | null>(null);
@@ -111,15 +117,19 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
   const shippingCost = subtotal > shippingThreshold ? 0 : 9.95;
   const total = subtotal + shippingCost - discountAmount;
 
-  // Initialize SumUp and create pending order when user is logged in
+  // Initialize Payment Gateways when user is logged in
   useEffect(() => {
-    // WAIT for rank to be loaded to ensure TOTAL is correct before initializing SumUp
-    if (props.user && !sumupCheckoutId && !isRankLoading) {
-      loadSumUpScriptAndInit();
+    if (props.user && !isRankLoading) {
+      if (paymentMethod === 'sumup' && !sumupCheckoutId) {
+        loadSumUpScriptAndInit();
+      } else if (paymentMethod === 'klarna') {
+        loadStripeScript();
+      }
+
       // Crear pedido pendiente para tracking de abandonos
       createPendingOrder();
     }
-  }, [props.user, isRankLoading]);
+  }, [props.user, isRankLoading, paymentMethod]);
 
   // Crear pedido pendiente en WooCommerce
   const createPendingOrder = async () => {
@@ -128,8 +138,8 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
     const currentData = formDataRef.current;
     const orderPayload = {
       status: 'pending',
-      payment_method: 'sumup_gateway',
-      payment_method_title: 'Tarjeta (SumUp) - Pendiente',
+      payment_method: paymentMethod === 'sumup' ? 'sumup_gateway' : 'woocommerce_payments',
+      payment_method_title: paymentMethod === 'sumup' ? 'Tarjeta (SumUp)' : 'Klarna / Pago Flexible',
       set_paid: false,
       customer_id: props.user.id || 0,
       billing: {
@@ -178,6 +188,16 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
   };
 
   // DYNAMIC SCRIPT LOADING
+  const loadStripeScript = () => {
+    if (window.Stripe) return;
+    setIsStripeLoading(true);
+    const script = document.createElement('script');
+    script.src = "https://js.stripe.com/v3/";
+    script.async = true;
+    script.onload = () => setIsStripeLoading(false);
+    document.body.appendChild(script);
+  };
+
   const loadSumUpScriptAndInit = () => {
     if (window.SumUpCard) {
       initializeSumUp();
@@ -275,6 +295,58 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
     } else {
       setIsSumupLoading(false);
       setErrorMessage("Error de conexión: No se pudo iniciar la pasarela de pago segura.");
+    }
+  };
+
+  const handleKlarnaPayment = async () => {
+    if (!pendingOrderId && !props.user) return;
+
+    setIsProcessing(true);
+    setErrorMessage(null);
+
+    try {
+      // 1. Obtener Client Secret a través de nuestra nueva API en escapes-api
+      const response = await makeRequest('/escapes/v1/create-payment-intent', {
+        method: 'POST',
+        body: JSON.stringify({ order_id: pendingOrderId || 0 })
+      });
+
+      const { client_secret, publishable_key } = response.data;
+
+      if (!client_secret || !publishable_key) {
+        throw new Error("No se pudo obtener el token de pago de Stripe.");
+      }
+
+      // 2. Inicializar Stripe si no lo está
+      if (!window.Stripe) {
+        throw new Error("La librería de Stripe no ha cargado correctamente.");
+      }
+
+      const stripe = window.Stripe(publishable_key);
+
+      // 3. Confirmar pago con Klarna
+      const { error, paymentIntent } = await stripe.confirmKlarnaPayment(client_secret, {
+        payment_method: {
+          billing_details: {
+            name: `${formData.firstName} ${formData.lastName}`,
+            email: formData.email,
+          },
+        },
+        return_url: `${window.location.origin}/?payment_success=true&order=${pendingOrderId}`,
+      });
+
+      if (error) {
+        setErrorMessage(error.message || "Error al procesar el pago con Klarna.");
+      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+        finalizeOrder('klarna', paymentIntent.id);
+      } else if (paymentIntent && paymentIntent.status === 'requires_action') {
+        // Stripe redirigirá automáticamente si es necesario
+      }
+    } catch (err: any) {
+      console.error("[KLARNA ERROR]", err);
+      setErrorMessage(err.message || "Error al conectar con la pasarela de Klarna.");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -609,40 +681,93 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
             </form>
           </section>
 
-          {/* 2. Payment Method (ONLY SUMUP) */}
+          {/* 2. Payment Method Selector */}
           <section className="bg-racing-carbon border border-zinc-800 p-6 rounded-sm">
             <h3 className="text-white font-bold uppercase mb-6 tracking-wide border-b border-zinc-800 pb-2 flex items-center gap-2">
               <span className="bg-racing-orange text-white w-6 h-6 flex items-center justify-center rounded-full text-xs">2</span>
-              Pago con Tarjeta
+              Método de Pago
             </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+              <button
+                onClick={() => setPaymentMethod('sumup')}
+                className={`p-4 border rounded-sm transition-all flex flex-col items-center gap-2 ${paymentMethod === 'sumup' ? 'border-racing-orange bg-racing-orange/10' : 'border-zinc-800 bg-zinc-900 hover:border-zinc-600'}`}
+              >
+                <div className="flex items-center gap-2">
+                  <img src="https://sumup.es/static/sumup-logo.svg" className="h-4 opacity-80 invert" alt="SumUp" />
+                  <span className="text-white font-bold text-xs uppercase pt-0.5">Tarjeta</span>
+                </div>
+                <div className="flex gap-1 mt-1">
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/1000px-Visa_Inc._logo.svg.png" className="h-2 opacity-50" />
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/1280px-Mastercard-logo.svg.png" className="h-2 opacity-50" />
+                </div>
+              </button>
+
+              <button
+                onClick={() => setPaymentMethod('klarna')}
+                className={`p-4 border rounded-sm transition-all flex flex-col items-center gap-2 ${paymentMethod === 'klarna' ? 'border-sky-500 bg-sky-500/10' : 'border-zinc-800 bg-zinc-900 hover:border-zinc-600'}`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-[#FFB3C7] font-black text-lg tracking-tighter">Klarna.</span>
+                  <span className="text-white font-bold text-xs uppercase pt-0.5">Pago Flexible</span>
+                </div>
+                <span className="text-[10px] text-zinc-500 font-medium">Fracciona tu pago en 3 meses</span>
+              </button>
+            </div>
 
             {/* PAYMENT CONTENT */}
             <div className="bg-zinc-900 p-6 rounded-sm border border-zinc-800 min-h-[200px] flex flex-col justify-center relative">
 
-              <div className="animate-fade-in w-full max-w-sm mx-auto">
-                {isSumupLoading && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 z-10">
-                    <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
-                    <span className="text-xs text-zinc-400">Cargando pasarela segura...</span>
+              {paymentMethod === 'sumup' ? (
+                <div className="animate-fade-in w-full max-w-sm mx-auto">
+                  {isSumupLoading && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 z-10">
+                      <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
+                      <span className="text-xs text-zinc-400">Cargando pasarela segura...</span>
+                    </div>
+                  )}
+
+                  <div id="sumup-card" className="bg-white rounded-md p-1 min-h-[150px] w-full"></div>
+
+                  <div className="flex items-center gap-2 text-[10px] text-zinc-500 justify-center pt-4">
+                    <Lock className="w-3 h-3" />
+                    Transacción segura vía <span className="text-zinc-300 font-bold italic">SumUp</span>
                   </div>
-                )}
-
-                {/* This div is where SumUp mounts. Important: width full for mobile */}
-                <div id="sumup-card" className="bg-white rounded-md p-1 min-h-[150px] w-full"></div>
-
-                {!formData.email && !isSumupLoading && (
-                  <div className="text-center mt-4 p-2 bg-yellow-900/20 border border-yellow-800 rounded-sm">
-                    <p className="text-xs text-yellow-500">
-                      ⚠️ Rellena los <strong>Datos de Envío</strong> para recibir el recibo.
-                    </p>
+                </div>
+              ) : (
+                <div className="animate-fade-in w-full text-center py-4">
+                  <div className="mb-6">
+                    <span className="text-[#FFB3C7] font-black text-4xl block mb-2">Klarna.</span>
+                    <p className="text-white text-sm font-medium">Paga en 3 plazos de {formatPrice(total / 3)} sin intereses.</p>
+                    <p className="text-zinc-500 text-xs mt-1">Recibirás tu pedido ahora y pagarás después.</p>
                   </div>
-                )}
-              </div>
 
-              <div className="flex items-center gap-2 text-[10px] text-zinc-500 justify-center pt-4">
-                <Lock className="w-3 h-3" />
-                Transacción protegida por <span className="text-zinc-300 font-bold">SumUp</span>
-              </div>
+                  <button
+                    onClick={handleKlarnaPayment}
+                    disabled={isProcessing || isStripeLoading}
+                    className="bg-[#FFB3C7] hover:bg-[#ff94af] text-black font-black uppercase py-4 px-8 rounded-full transition-all flex items-center justify-center gap-3 mx-auto w-full max-w-sm shadow-xl shadow-[#FFB3C7]/10 disabled:opacity-50"
+                  >
+                    {isProcessing ? (
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                    ) : (
+                      <>PAGAR CON KLARNA <ArrowRight className="w-5 h-5" /></>
+                    )}
+                  </button>
+
+                  <div className="mt-6 flex items-center justify-center gap-4 opacity-40 grayscale">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/Klarna_Logo.svg/1000px-Klarna_Logo.svg.png" className="h-4" />
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/d7/Stripe_Logo%2C_revised_2016.svg/1280px-Stripe_Logo%2C_revised_2016.svg.png" className="h-4" />
+                  </div>
+                </div>
+              )}
+
+              {!formData.email && paymentMethod === 'sumup' && !isSumupLoading && (
+                <div className="text-center mt-4 p-2 bg-yellow-900/20 border border-yellow-800 rounded-sm">
+                  <p className="text-xs text-yellow-500">
+                    ⚠️ Rellena los <strong>Datos de Envío</strong> para habilitar el pago.
+                  </p>
+                </div>
+              )}
             </div>
           </section>
         </div>
