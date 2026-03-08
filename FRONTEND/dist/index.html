@@ -48,28 +48,35 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
   <!-- Favicon robusto para máxima compatibilidad -->
-  <link rel="icon" type="image/png" href="https://backendescapes.com/wp-content/uploads/2026/01/icow4.png">
-  <link rel="shortcut icon" type="image/png" href="https://backendescapes.com/wp-content/uploads/2026/01/icow4.png">
-  <link rel="apple-touch-icon" href="https://backendescapes.com/wp-content/uploads/2026/01/icow4.png">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="icon" type="image/svg+xml" href="/logo-cabecera.svg">
+  <link rel="apple-touch-icon" href="/favicon.png">
 
   <!-- Pre-conexión a orígenes críticos -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://images.unsplash.com">
-  <link rel="dns-prefetch" href="https://images.unsplash.com">
-  <link rel="preconnect" href="https://wsrv.nl">
-  <link rel="dns-prefetch" href="https://wsrv.nl">
-  <link rel="preconnect" href="https://backendescapes.com">
-  <link rel="dns-prefetch" href="https://backendescapes.com">
 
   <!-- Pre-carga de la fuente crítica para romper la cadena de dependencia -->
   <link rel="preload" href="https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7W0Q5nw.woff2"
     as="font" type="font/woff2" crossorigin>
 
-  <!-- Pre-carga de la imagen LCP RESPONSIVE (coincide con App.tsx) -->
-  <link rel="preload" as="image"
-    href="https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?q=80&w=1920&auto=format&fit=crop"
-    fetchpriority="high">
+  <!-- Pre-carga de CSS y logo para LCP -->
+  <link rel="preload" href="/logo-cabecera.svg" as="image" type="image/svg+xml">
+
+  <!-- Pre-carga responsive de la imagen LCP solo en página de inicio -->
+  <script>
+    if (window.location.pathname === '/' || window.location.pathname === '') {
+      var w = window.innerWidth;
+      var img = w <= 480 ? '/hero-sm.avif' : w <= 768 ? '/hero-md.avif' : '/hero-lg.avif';
+      var link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.href = img;
+      link.type = 'image/avif';
+      link.fetchPriority = 'high';
+      document.head.appendChild(link);
+    }
+  </script>
 
   <!-- Carga de fuentes optimizada (no bloqueante) -->
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap">
@@ -78,29 +85,32 @@
 
   <!-- Estilos locales compilados por Vite -->
   <!-- Vite inyectará los estilos automáticamente desde index.tsx -->
-  <script type="module" crossorigin src="/assets/index-CgcmliB7.js"></script>
-  <link rel="modulepreload" crossorigin href="/assets/vendor-react-BhyxaAfg.js">
-  <link rel="modulepreload" crossorigin href="/assets/vendor-icons-CFTm2uxc.js">
-  <link rel="stylesheet" crossorigin href="/assets/index-C2rOPDGz.css">
+  <script type="module" crossorigin src="/assets/index-CVlBRwGM.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/vendor-core-CK0BwKv4.js">
+  <link rel="modulepreload" crossorigin href="/assets/vendor-libs-BP0mg6GY.js">
+  <link rel="modulepreload" crossorigin href="/assets/vendor-icons-k38D1WMK.js">
+  <link rel="modulepreload" crossorigin href="/assets/vendor-router-Dhoa1yRo.js">
+  <link rel="stylesheet" crossorigin href="/assets/index-CTq7vxV-.css">
 </head>
 
 <body>
-  <div id="root"></div>
+  <div id="root"></div>
 
-
-  <!-- Google Analytics - Loaded after DOM for better performance -->
+  <!-- Google Analytics - Fully Deferred -->
   <script>
     window.addEventListener('load', function () {
-      var ga = document.createElement('script');
-      ga.src = 'https://www.googletagmanager.com/gtag/js?id=G-380Z8BCKGF';
-      ga.async = true;
-      document.head.appendChild(ga);
-      ga.onload = function () {
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
-        gtag('js', new Date());
-        gtag('config', 'G-380Z8BCKGF');
-      };
+      setTimeout(function () {
+        var ga = document.createElement('script');
+        ga.src = 'https://www.googletagmanager.com/gtag/js?id=G-380Z8BCKGF';
+        ga.async = true;
+        document.head.appendChild(ga);
+        ga.onload = function () {
+          window.dataLayer = window.dataLayer || [];
+          function gtag() { dataLayer.push(arguments); }
+          gtag('js', new Date());
+          gtag('config', 'G-380Z8BCKGF', { 'custom_map': { 'dimension1': 'device_type' } });
+        };
+      }, 3000); // 3 seconds delay to avoid TBT impact
     });
   </script>
 </body>
