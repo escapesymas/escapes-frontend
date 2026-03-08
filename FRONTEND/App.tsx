@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, Suspense, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { ArrowRight, Loader2, WifiOff, Trash2, ChevronLeft, Package, Truck, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Loader2, WifiOff, Trash2, ChevronLeft, Package, Truck, ShieldCheck, CheckCircle, AlertCircle } from 'lucide-react';
 import { Header } from './components/Header';
 import { SEO } from './components/SEO';
 import { Footer } from './components/Footer';
@@ -107,6 +107,7 @@ function App() {
   const [totalCatalogProducts, setTotalCatalogProducts] = useState(0);
   const [perPage, setPerPage] = useState(20);
   const [sortBy, setSortBy] = useState<'date' | 'price' | 'price-asc'>('date');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const catalogRef = useRef<HTMLDivElement>(null);
 
   // Parse filters from URL
@@ -424,6 +425,15 @@ function App() {
       }
       return [...prev, { ...product, quantity }];
     });
+
+    // Show Toast
+    setToast({
+      message: `Añadido: ${product.title} (${quantity})`,
+      type: 'success'
+    });
+
+    // Auto-hide toast
+    setTimeout(() => setToast(null), 3000);
   };
 
   // Sync Cart with Server
@@ -531,9 +541,22 @@ function App() {
     );
 
     if (products.length === 0) return (
-      <div className="text-center py-20 bg-zinc-900/30 rounded-sm border border-zinc-800 p-8">
-        <p className="text-zinc-400 mb-4 font-bold">No se encontraron piezas compatibles.</p>
-        <button onClick={handleClearFilters} className="text-racing-orange hover:text-white font-bold uppercase text-xs">Limpiar filtros</button>
+      <div className="text-center py-24 bg-white dark:bg-zinc-900/10 rounded-sm border border-zinc-200 dark:border-zinc-800 p-12 max-w-2xl mx-auto shadow-sm">
+        <div className="bg-zinc-100 dark:bg-zinc-900 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+          <Package className="w-10 h-10 text-zinc-300 dark:text-zinc-700" />
+        </div>
+        <h3 className="text-2xl font-black uppercase italic text-zinc-900 dark:text-white mb-4">No hemos encontrado piezas exactas</h3>
+        <p className="text-zinc-500 dark:text-zinc-400 mb-8 leading-relaxed">
+          Nuestra base de datos es enorme, pero a veces el motor de búsqueda necesita un poco de ayuda. Prueba a buscar por marca o modelo general, o contacta con nuestros expertos.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <button onClick={handleClearFilters} className="bg-zinc-900 dark:bg-zinc-800 text-white px-8 py-3 rounded-sm font-bold uppercase text-xs tracking-widest hover:bg-black transition-colors">
+            Ver todo el catálogo
+          </button>
+          <button onClick={() => navigate('/contacto')} className="border border-racing-orange text-racing-orange px-8 py-3 rounded-sm font-bold uppercase text-xs tracking-widest hover:bg-racing-orange hover:text-white transition-all">
+            Contactar Experto
+          </button>
+        </div>
       </div>
     );
 
@@ -694,8 +717,8 @@ function App() {
               <ProductDetail
                 product={selectedProduct}
                 onBack={() => navigate(-1)}
-                onAddToCart={(qty) => { addToCart(selectedProduct, qty); navigate('/carrito'); }}
-                onProductClick={(product) => { setSelectedProduct(product); navigate(`/producto/${product.id}`); }}
+                onAddToCart={(qty) => addToCart(selectedProduct, qty)}
+                onProductClick={(product) => { setSelectedProduct(product); navigate(`/${product.categorySlug || 'recambios'}/${product.id}`); }}
               />
             )}
 
@@ -892,6 +915,23 @@ function App() {
           </Suspense>
         </main>
         <Footer onNavClick={handleNavClick} />
+
+        {/* Global Toast Notification */}
+        {toast && (
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-fade-in-up">
+            <div className={`px-6 py-4 rounded-sm shadow-2xl flex items-center gap-3 border ${toast.type === 'success' ? 'bg-racing-orange text-white border-orange-400' :
+              toast.type === 'error' ? 'bg-red-600 text-white border-red-400' :
+                'bg-zinc-900 text-white border-zinc-700'
+              }`}>
+              {toast.type === 'success' && <CheckCircle className="w-5 h-5" />}
+              {toast.type === 'error' && <AlertCircle className="w-5 h-5" />}
+              <span className="text-sm font-bold uppercase tracking-wider">{toast.message}</span>
+              <button onClick={() => setToast(null)} className="ml-2 hover:opacity-70 transition-opacity">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
 
         <Suspense fallback={null}>
           <AIAdvisor onProductClick={(p) => { setSelectedProduct(p); navigate(`/producto/${p.id}`); }} onAddToCart={(p) => addToCart(p)} user={user} onLoginRequest={() => navigate('/login')} />
