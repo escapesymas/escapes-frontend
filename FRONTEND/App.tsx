@@ -287,15 +287,28 @@ function App() {
   const loadFeaturedProducts = async () => {
     setLoading(true);
     try {
-      // Fetch specific categories of products to ensure variety on home page
-      const searchTerms = ['casco', 'maleta', 'chaqueta', 'escape'];
+      // Use extremely specific, unambiguous keywords to force correct category matches 
+      // since the API searches both title and description.
+      // E.g. "Escape Completo", "Maleta Top Case", "Casco Integral", "Chaqueta Moto"
+      const searchTerms = [
+        'casco integral',
+        'baul',          // More specific than "maleta" which matches "maleta de herramientas"
+        'chaqueta',
+        'silencioso'     // More specific than "escape" which matches parts
+      ];
       const promises = searchTerms.map(term => fetchProducts(term, undefined, 1, 10));
       const results = await Promise.all(promises);
 
       const curated: Product[] = [];
-      results.forEach(res => {
-        // Find first item with a valid image
-        const validProduct = res.products.find(p => p.image !== STORE_CONFIG.defaultProductImage);
+      results.forEach((res, index) => {
+        // Fallbacks if the specific terms yield no valid images
+        let validProduct = res.products.find(p => p.image !== STORE_CONFIG.defaultProductImage && p.title.toLowerCase().includes(searchTerms[index].split(' ')[0]));
+
+        // If strict title match fails, just take any valid product from this query
+        if (!validProduct) {
+          validProduct = res.products.find(p => p.image !== STORE_CONFIG.defaultProductImage);
+        }
+
         if (validProduct && !curated.some(c => c.id === validProduct.id)) {
           curated.push(validProduct);
         }
