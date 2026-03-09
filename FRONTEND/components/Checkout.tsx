@@ -285,7 +285,11 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
   const initializeSumUp = async () => {
     if (!props.user) return;
     setIsSumupLoading(true);
-    setErrorMessage(null);
+    // Don't clear error message if returning from a cancelled/failed Klarna payment
+    const params = new URLSearchParams(window.location.search);
+    const klarnaReturn = params.get('klarna_status');
+    const redirectFailed = params.get('redirect_status') === 'failed';
+    if (!isKlarnaCancel && !klarnaReturn && !redirectFailed) setErrorMessage(null);
 
     const tempRef = `ORD-${Date.now()}`;
     const checkoutData = await createSumUpCheckout(total, tempRef);
