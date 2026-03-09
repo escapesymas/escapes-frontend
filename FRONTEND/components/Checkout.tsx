@@ -120,14 +120,19 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
   // Initialize Payment Gateways when user is logged in
   useEffect(() => {
     if (props.user && !isRankLoading) {
-      if (paymentMethod === 'sumup' && !sumupCheckoutId) {
-        loadSumUpScriptAndInit();
+      if (paymentMethod === 'sumup') {
+        if (!sumupCheckoutId) {
+          loadSumUpScriptAndInit();
+        } else {
+          // Si ya tenemos el ID, nos aseguramos de montar el widget (crucial tras cambiar de pestaña)
+          setTimeout(() => mountSumUpWidget(sumupCheckoutId), 100);
+        }
       } else if (paymentMethod === 'klarna') {
         loadStripeScript();
       }
 
       // Crear pedido pendiente para tracking de abandonos
-      createPendingOrder();
+      if (!pendingOrderId) createPendingOrder();
     }
   }, [props.user, isRankLoading, paymentMethod]);
 
@@ -216,82 +221,62 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
     document.body.appendChild(script);
   };
 
+  // Refactor: Mueve la lógica de montado fuera para que sea reutilizable
+  const mountSumUpWidget = (checkoutId: string, attemptsLeft = 10) => {
+    const container = document.getElementById('sumup-card');
+
+    if (window.SumUpCard && container) {
+      try {
+        // Limpiamos el contenedor para evitar duplicados o estados corruptos
+        container.innerHTML = '';
+
+        window.SumUpCard.mount({
+          id: 'sumup-card',
+          checkoutId: checkoutId,
+          onResponse: function (type: string, body: any) {
+            console.log('[SUMUP] Response callback:', type, body);
+            if (type === 'success') {
+              if (body.status === 'FAILED') {
+                setErrorMessage("El pago ha sido denegado por el banco.");
+                if (pendingOrderId) updateOrderStatus(pendingOrderId, 'failed');
+                return;
+              }
+              finalizeOrder('sumup', body.transaction_code || body.id || 'SUMUP_TX');
+            } else if (type === 'error') {
+              console.error('[SUMUP] Widget Error:', body);
+              setErrorMessage("Error en el pago: " + (body.message || "Inténtalo de nuevo"));
+              if (pendingOrderId) updateOrderStatus(pendingOrderId, 'failed');
+            }
+          },
+          showFooter: false,
+          locale: 'es-ES'
+        });
+
+        setIsSumupLoading(false);
+      } catch (e) {
+        console.error("[SUMUP] Exception during mount()", e);
+        if (attemptsLeft > 0) setTimeout(() => mountSumUpWidget(checkoutId, attemptsLeft - 1), 500);
+      }
+    } else {
+      if (attemptsLeft > 0) {
+        setTimeout(() => mountSumUpWidget(checkoutId, attemptsLeft - 1), 500);
+      } else {
+        setIsSumupLoading(false);
+      }
+    }
+  };
+
   const initializeSumUp = async () => {
     if (!props.user) return;
-
     setIsSumupLoading(true);
     setErrorMessage(null);
 
-    // Create a temporary reference ID
     const tempRef = `ORD-${Date.now()}`;
-
-    // Call our service to create checkout
     const checkoutData = await createSumUpCheckout(total, tempRef);
 
     if (checkoutData && checkoutData.id) {
       setSumupCheckoutId(checkoutData.id);
-
-      // Mount Widget with a robust retry mechanism for mobile
-      const mountWidget = (attemptsLeft = 10) => {
-        const container = document.getElementById('sumup-card');
-        console.log(`[SUMUP] Attempting to mount. SDK Ready: ${!!window.SumUpCard}, Container Ready: ${!!container}, Attempts left: ${attemptsLeft}`);
-
-        if (window.SumUpCard && container) {
-          try {
-            console.log(`[SUMUP] Calling mount() with ID: ${checkoutData.id}`);
-            window.SumUpCard.mount({
-              id: 'sumup-card',
-              checkoutId: checkoutData.id,
-              onResponse: function (type: string, body: any) {
-                console.log('[SUMUP] Response callback:', type, body);
-
-                if (type === 'success') {
-                  if (body.status === 'FAILED') {
-                    setErrorMessage("El pago ha sido denegado por el banco.");
-                    if (pendingOrderId) updateOrderStatus(pendingOrderId, 'failed');
-                    return;
-                  }
-                  finalizeOrder('sumup', body.transaction_code || body.id || 'SUMUP_TX');
-                } else if (type === 'error') {
-                  console.error('[SUMUP] Widget Error:', body);
-                  setErrorMessage("Error en el pago: " + (body.message || "Inténtalo de nuevo"));
-                  if (pendingOrderId) updateOrderStatus(pendingOrderId, 'failed');
-                }
-              },
-              showFooter: false,
-              locale: 'es-ES'
-            });
-
-            // Check if mount actually worked (SumUp v1/v2 sometimes doesn't throw but doesn't render)
-            setTimeout(() => {
-              if (container.children.length === 0) {
-                console.warn("[SUMUP] Container still empty after mount call. Retrying mount...");
-                if (attemptsLeft > 0) mountWidget(attemptsLeft - 1);
-              } else {
-                console.log("[SUMUP] Mount successful! Iframe detected.");
-                setIsSumupLoading(false);
-              }
-            }, 1500);
-
-          } catch (e) {
-            console.error("[SUMUP] Exception during mount()", e);
-            setErrorMessage("Error cargando el widget de pago.");
-            setIsSumupLoading(false);
-          }
-        } else {
-          if (attemptsLeft > 0) {
-            setTimeout(() => mountWidget(attemptsLeft - 1), 1000);
-          } else {
-            console.error("[SUMUP] Max retries reached. SDK or Container missing.");
-            setErrorMessage("La pasarela de pagos no pudo inicializarse. Por favor, refresca la página.");
-            setIsSumupLoading(false);
-          }
-        }
-      };
-
-      // Start mounting process
-      mountWidget();
-
+      mountSumUpWidget(checkoutData.id);
     } else {
       setIsSumupLoading(false);
       setErrorMessage("Error de conexión: No se pudo iniciar la pasarela de pago segura.");
@@ -691,27 +676,48 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
               <button
                 onClick={() => setPaymentMethod('sumup')}
-                className={`p-4 border rounded-sm transition-all flex flex-col items-center gap-2 ${paymentMethod === 'sumup' ? 'border-racing-orange bg-racing-orange/10' : 'border-zinc-800 bg-zinc-900 hover:border-zinc-600'}`}
+                className={`group relative p-6 border rounded-sm transition-all duration-300 flex flex-col items-center gap-3 overflow-hidden ${paymentMethod === 'sumup'
+                    ? 'border-racing-orange bg-racing-orange/5 shadow-[0_0_20px_rgba(255,102,0,0.1)]'
+                    : 'border-zinc-800 bg-zinc-900/50 hover:border-zinc-700 hover:bg-zinc-900 grayscale opacity-60'
+                  }`}
               >
-                <div className="flex items-center gap-2">
-                  <img src="https://sumup.es/static/sumup-logo.svg" className="h-4 opacity-80 invert" alt="SumUp" />
-                  <span className="text-white font-bold text-xs uppercase pt-0.5">Tarjeta</span>
+                {paymentMethod === 'sumup' && (
+                  <div className="absolute top-0 right-0 p-1.5 bg-racing-orange text-white rounded-bl-sm">
+                    <CheckCircle className="w-3.5 h-3.5" />
+                  </div>
+                )}
+                <div className="flex items-center gap-3">
+                  <div className="bg-white p-1 rounded-sm">
+                    <img src="https://sumup.es/static/sumup-logo.svg" className="h-4" alt="SumUp" />
+                  </div>
+                  <span className="text-white font-extrabold text-sm uppercase tracking-tighter">Tarjeta de Crédito</span>
                 </div>
-                <div className="flex gap-1 mt-1">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/1000px-Visa_Inc._logo.svg.png" className="h-2 opacity-50" />
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/1280px-Mastercard-logo.svg.png" className="h-2 opacity-50" />
+                <div className="flex gap-2 items-center">
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/1000px-Visa_Inc._logo.svg.png" className="h-2.5 object-contain" />
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/1280px-Mastercard-logo.svg.png" className="h-3 object-contain" />
+                  <span className="text-[10px] text-zinc-500 font-medium">y más...</span>
                 </div>
               </button>
 
               <button
                 onClick={() => setPaymentMethod('klarna')}
-                className={`p-4 border rounded-sm transition-all flex flex-col items-center gap-2 ${paymentMethod === 'klarna' ? 'border-sky-500 bg-sky-500/10' : 'border-zinc-800 bg-zinc-900 hover:border-zinc-600'}`}
+                className={`group relative p-6 border rounded-sm transition-all duration-300 flex flex-col items-center gap-3 overflow-hidden ${paymentMethod === 'klarna'
+                    ? 'border-[#FFB3C7] bg-[#FFB3C7]/5 shadow-[0_0_20px_rgba(255,179,199,0.1)]'
+                    : 'border-zinc-800 bg-zinc-900/50 hover:border-zinc-700 hover:bg-zinc-900 grayscale opacity-60'
+                  }`}
               >
-                <div className="flex items-center gap-2">
-                  <span className="text-[#FFB3C7] font-black text-lg tracking-tighter">Klarna.</span>
-                  <span className="text-white font-bold text-xs uppercase pt-0.5">Pago Flexible</span>
+                {paymentMethod === 'klarna' && (
+                  <div className="absolute top-0 right-0 p-1.5 bg-[#FFB3C7] text-black rounded-bl-sm">
+                    <CheckCircle className="w-3.5 h-3.5" />
+                  </div>
+                )}
+                <div className="flex items-center gap-3">
+                  <span className="text-[#FFB3C7] font-black text-2xl tracking-tighter leading-none">Klarna.</span>
+                  <span className="text-white font-extrabold text-sm uppercase tracking-tighter">Pago Flexible</span>
                 </div>
-                <span className="text-[10px] text-zinc-500 font-medium">Fracciona tu pago en 3 meses</span>
+                <div className="bg-zinc-800/50 px-3 py-0.5 rounded-full">
+                  <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">3 Plazos Sin Intereses</span>
+                </div>
               </button>
             </div>
 
