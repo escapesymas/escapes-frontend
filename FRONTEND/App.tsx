@@ -302,22 +302,29 @@ function App() {
       const curated: Product[] = [];
       results.forEach((res, index) => {
         // Fallbacks if the specific terms yield no valid images
-        let validProduct = res.products.find(p => p.image !== STORE_CONFIG.defaultProductImage && p.inStock && p.title.toLowerCase().includes(searchTerms[index].split(' ')[0]));
+        let validProducts = res.products.filter(p => p.image !== STORE_CONFIG.defaultProductImage && p.inStock && p.title.toLowerCase().includes(searchTerms[index].split(' ')[0]));
 
         // If strict title match fails, just take any valid in-stock product from this query
-        if (!validProduct) {
-          validProduct = res.products.find(p => p.image !== STORE_CONFIG.defaultProductImage && p.inStock);
+        if (validProducts.length === 0) {
+          validProducts = res.products.filter(p => p.image !== STORE_CONFIG.defaultProductImage && p.inStock);
         }
 
-        if (validProduct && !curated.some(c => c.id === validProduct.id)) {
-          curated.push(validProduct);
+        if (validProducts.length > 0) {
+          // Select randomly to provide variety
+          const randomIndex = Math.floor(Math.random() * validProducts.length);
+          const selectedProduct = validProducts[randomIndex];
+
+          if (!curated.some(c => c.id === selectedProduct.id)) {
+            curated.push(selectedProduct);
+          }
         }
       });
 
       // If we couldn't find 4 distinct items matching terms, fill with recent valid in-stock products
       if (curated.length < 4) {
         const { products: all } = await fetchProducts(undefined, undefined, 1, 20);
-        const remaining = all.filter(p => !curated.some(c => c.id === p.id) && p.image !== STORE_CONFIG.defaultProductImage && p.inStock);
+        let remaining = all.filter(p => !curated.some(c => c.id === p.id) && p.image !== STORE_CONFIG.defaultProductImage && p.inStock);
+        remaining = remaining.sort(() => 0.5 - Math.random());
         curated.push(...remaining.slice(0, 4 - curated.length));
       }
 
