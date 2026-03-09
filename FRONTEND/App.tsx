@@ -287,10 +287,31 @@ function App() {
   const loadFeaturedProducts = async () => {
     setLoading(true);
     try {
-      // Fetch 50 products initially to ensure we find at least 4 with actual images
-      const { products: all, totalProducts } = await fetchProducts(undefined, undefined, 1, 50);
-      const curated = all.filter(p => p.image !== STORE_CONFIG.defaultProductImage).slice(0, 4);
-      setProducts(curated);
+      // Fetch specific categories of products to ensure variety on home page
+      const searchTerms = ['casco', 'maleta', 'chaqueta', 'escape'];
+      const promises = searchTerms.map(term => fetchProducts(term, undefined, 1, 10));
+      const results = await Promise.all(promises);
+
+      const curated: Product[] = [];
+      results.forEach(res => {
+        // Find first item with a valid image
+        const validProduct = res.products.find(p => p.image !== STORE_CONFIG.defaultProductImage);
+        if (validProduct && !curated.some(c => c.id === validProduct.id)) {
+          curated.push(validProduct);
+        }
+      });
+
+      // If we couldn't find 4 distinct items matching terms, fill with recent valid products
+      if (curated.length < 4) {
+        const { products: all } = await fetchProducts(undefined, undefined, 1, 20);
+        const remaining = all.filter(p => !curated.some(c => c.id === p.id) && p.image !== STORE_CONFIG.defaultProductImage);
+        curated.push(...remaining.slice(0, 4 - curated.length));
+      }
+
+      setProducts(curated.slice(0, 4));
+
+      // Update total catalog count
+      const { totalProducts } = await fetchProducts(undefined, undefined, 1, 1);
       if (totalProducts > 0) setTotalCatalogProducts(totalProducts);
     } catch (e: any) {
       setError("Error de conexión con el catálogo.");
