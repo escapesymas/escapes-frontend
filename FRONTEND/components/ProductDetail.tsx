@@ -362,7 +362,14 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
                 <ProductCard
                   key={relProduct.id}
                   product={relProduct}
-                  onClick={() => onProductClick?.(relProduct)}
+                  onClick={() => {
+                    if (onProductClick) {
+                      onProductClick(relProduct);
+                    } else {
+                      const slugSuffix = relProduct.slug ? `-${relProduct.slug}` : '';
+                      window.location.href = `/${relProduct.categorySlug || 'recambios'}/${relProduct.id}${slugSuffix}`;
+                    }
+                  }}
                 />
               ))}
             </div>

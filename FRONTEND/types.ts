@@ -1,6 +1,7 @@
 export interface Product {
   id: number;
   title: string;
+  slug?: string; // Added: official product slug for SEO URLs
   price: number;
   regularPrice: number; // Added: Original price before discount
   sku: string; // Added: Product reference
@@ -60,6 +61,7 @@ export interface User {
 export interface WooProduct {
   id: number;
   name: string;
+  slug: string; // Added for SEO URLs
   price: string;
   regular_price: string;
   sku: string; // Added
