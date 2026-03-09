@@ -14,6 +14,7 @@ import { CategoryBrowser } from './components/CategoryBrowser';
 import { Contact } from './components/Contact';
 import { BrandSlider } from './components/BrandSlider';
 import { FeaturesBanner } from './components/FeaturesBanner';
+import { KlarnaBanner } from './components/KlarnaBanner';
 import { ProductSkeleton } from './components/ProductSkeleton';
 import { STORE_CONFIG, FEATURES, BIKE_DATA, CATEGORIES, TIRE_CATEGORY_ID } from './storeData';
 import { fetchProducts, saveUserCart, getUserCart, fetchCategories, fetchCustomerByEmail, fetchProductsByIds } from './services/woocommerce';
@@ -791,6 +792,9 @@ function App() {
                     </div>
                   </div>
                 </section>
+
+                {/* Klarna Promo Banner */}
+                <KlarnaBanner onClick={() => navigate('/recambios')} />
 
                 {/* Featured Products Section */}
                 <section className="py-12 bg-white dark:bg-zinc-950 container mx-auto px-4">
