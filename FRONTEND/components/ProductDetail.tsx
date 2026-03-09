@@ -330,6 +330,41 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
               </div>
             </div>
 
+            {/* NEW: Compatibility Table Block */}
+            <div className="mb-6">
+              <div className="p-6 border border-zinc-200 dark:border-zinc-800 rounded-sm bg-zinc-50 dark:bg-zinc-900/10">
+                <div className="flex items-center gap-3 mb-4">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <h3 className="text-sm font-black uppercase italic tracking-widest text-zinc-900 dark:text-white">Tabla de Compatibilidad</h3>
+                </div>
+
+                <div className="space-y-3">
+                  {/* Attempt to extract compatibility from title if attributes missing */}
+                  {(() => {
+                    const titleCompatibility = product.title.match(/(Honda|Yamaha|KTM|BMW|Suzuki|Kawasaki|Ducati|Aprilia|Triumph|Kymco)\s+([A-Z0-9\-\s\/]+?)(?=\s|\||\(|$)/i);
+                    const bikeText = titleCompatibility ? `${titleCompatibility[1]} ${titleCompatibility[2]}`.trim() : null;
+
+                    return (
+                      <>
+                        <div className="flex items-center justify-between text-xs py-2 border-b border-zinc-100 dark:border-zinc-800/50">
+                          <span className="text-zinc-500 font-bold uppercase tracking-tighter">Aplicación Principal</span>
+                          <span className="text-zinc-900 dark:text-white font-black italic uppercase">
+                            {bikeText || 'Multimarca / Universal'}
+                          </span>
+                        </div>
+
+                        <div className="bg-zinc-100/50 dark:bg-zinc-800/20 p-3 rounded-sm mt-3">
+                          <p className="text-[10px] text-zinc-500 leading-relaxed italic">
+                            * Verificado según catálogo de fabricante. Si tienes dudas sobre el año exacto o versión, contáctanos antes de comprar.
+                          </p>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+
             <div className="mb-6">
               <div className="p-4 border border-zinc-200 dark:border-zinc-800 rounded-sm bg-gray-50 dark:bg-zinc-900/30 flex items-center gap-4">
                 <div className="bg-racing-orange/10 p-2 rounded-sm">

@@ -316,7 +316,7 @@ function App() {
       const searchTerms = ['casco integral', 'baul', 'chaqueta', 'silencioso'];
       try {
         console.log('[APP] Refreshing featured products pool...');
-        // Use 'fast' mode to avoid heavy server-side searches
+        // Use 'fast' mode to avoid heavy server-side searches (crucial for 94k items)
         const promises = searchTerms.map(term => fetchProducts(term, undefined, 1, 10, 'date', 'desc', true));
         const results = await Promise.all(promises);
 
@@ -343,7 +343,7 @@ function App() {
       setLoading(false);
     }
 
-    // Silently update total catalog count in background using fast mode
+    // Silently update total catalog count in background using ultra-fast mode
     fetchProducts(undefined, undefined, 1, 1, 'date', 'desc', true).then(r => {
       if (r.totalProducts > 0) setTotalCatalogProducts(r.totalProducts);
     }).catch(() => { });
