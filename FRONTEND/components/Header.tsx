@@ -193,7 +193,9 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="relative w-4/5 max-w-sm bg-white dark:bg-zinc-950 h-full border-r border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col animate-fade-in-right">
 
             <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-gray-50 dark:bg-racing-carbon">
-              <span className="text-lg font-black uppercase italic text-zinc-900 dark:text-white">Menú</span>
+              <span className="text-lg font-black uppercase italic text-zinc-900 dark:text-white">
+                {user ? `¡Hola, ${user.firstName}!` : 'Menú'}
+              </span>
               <button onClick={() => setIsMobileMenuOpen(false)} className="text-zinc-500 hover:text-racing-orange dark:text-zinc-400 dark:hover:text-white" aria-label="Cerrar menú">
                 <X className="w-6 h-6" />
               </button>
