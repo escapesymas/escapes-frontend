@@ -713,7 +713,7 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
                   <span className="text-white font-extrabold text-sm uppercase tracking-tighter">Tarjeta de Crédito</span>
                 </div>
                 <div className="flex gap-2 items-center">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/1000px-Visa_Inc._logo.svg.png" className="h-2.5 object-contain" />
+                  <img src="/Visa_Inc._logo_(2021–present).svg" className="h-2.5 object-contain" alt="Visa" />
                   <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/1280px-Mastercard-logo.svg.png" className="h-3 object-contain" />
                   <span className="text-[10px] text-zinc-500 font-medium">y más...</span>
                 </div>
@@ -781,8 +781,8 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
                   </button>
 
                   <div className="mt-6 flex items-center justify-center gap-4 opacity-40 grayscale">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/Klarna_Logo.svg/1000px-Klarna_Logo.svg.png" className="h-4" />
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/d7/Stripe_Logo%2C_revised_2016.svg/1280px-Stripe_Logo%2C_revised_2016.svg.png" className="h-4" />
+                    <img src="/Klarna_Payment_Badge.svg" className="h-6" alt="Klarna" />
+                    <img src="/Stripe_Logo,_revised_2016.svg" className="h-4" alt="Stripe" />
                   </div>
                 </div>
               )}
