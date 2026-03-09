@@ -1,4 +1,3 @@
 Arai,Arai_Helmet_company_logo.svg
 Quadlock,quadlock.svg
-Sprint Filter,sprint_filter.svg
 Ixil,ixil.svg
