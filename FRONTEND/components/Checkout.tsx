@@ -677,8 +677,8 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
               <button
                 onClick={() => setPaymentMethod('sumup')}
                 className={`group relative p-6 border rounded-sm transition-all duration-300 flex flex-col items-center gap-3 overflow-hidden ${paymentMethod === 'sumup'
-                    ? 'border-racing-orange bg-racing-orange/5 shadow-[0_0_20px_rgba(255,102,0,0.1)]'
-                    : 'border-zinc-800 bg-zinc-900/50 hover:border-zinc-700 hover:bg-zinc-900 grayscale opacity-60'
+                  ? 'border-racing-orange bg-racing-orange/5 shadow-[0_0_20px_rgba(255,102,0,0.1)]'
+                  : 'border-zinc-800 bg-zinc-900/50 hover:border-zinc-700 hover:bg-zinc-900 grayscale opacity-60'
                   }`}
               >
                 {paymentMethod === 'sumup' && (
@@ -687,8 +687,8 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
                   </div>
                 )}
                 <div className="flex items-center gap-3">
-                  <div className="bg-white p-1 rounded-sm">
-                    <img src="https://sumup.es/static/sumup-logo.svg" className="h-4" alt="SumUp" />
+                  <div className="bg-white p-1 rounded-sm flex items-center justify-center">
+                    <img src="/card-icon.png" className="h-5 w-auto" alt="Tarjeta" />
                   </div>
                   <span className="text-white font-extrabold text-sm uppercase tracking-tighter">Tarjeta de Crédito</span>
                 </div>
@@ -702,8 +702,8 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
               <button
                 onClick={() => setPaymentMethod('klarna')}
                 className={`group relative p-6 border rounded-sm transition-all duration-300 flex flex-col items-center gap-3 overflow-hidden ${paymentMethod === 'klarna'
-                    ? 'border-[#FFB3C7] bg-[#FFB3C7]/5 shadow-[0_0_20px_rgba(255,179,199,0.1)]'
-                    : 'border-zinc-800 bg-zinc-900/50 hover:border-zinc-700 hover:bg-zinc-900 grayscale opacity-60'
+                  ? 'border-[#FFB3C7] bg-[#FFB3C7]/5 shadow-[0_0_20px_rgba(255,179,199,0.1)]'
+                  : 'border-zinc-800 bg-zinc-900/50 hover:border-zinc-700 hover:bg-zinc-900 grayscale opacity-60'
                   }`}
               >
                 {paymentMethod === 'klarna' && (
