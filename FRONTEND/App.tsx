@@ -302,11 +302,11 @@ function App() {
       const curated: Product[] = [];
       results.forEach((res, index) => {
         // Fallbacks if the specific terms yield no valid images
-        let validProduct = res.products.find(p => p.image !== STORE_CONFIG.defaultProductImage && p.title.toLowerCase().includes(searchTerms[index].split(' ')[0]));
+        let validProduct = res.products.find(p => p.image !== STORE_CONFIG.defaultProductImage && p.inStock && p.title.toLowerCase().includes(searchTerms[index].split(' ')[0]));
 
-        // If strict title match fails, just take any valid product from this query
+        // If strict title match fails, just take any valid in-stock product from this query
         if (!validProduct) {
-          validProduct = res.products.find(p => p.image !== STORE_CONFIG.defaultProductImage);
+          validProduct = res.products.find(p => p.image !== STORE_CONFIG.defaultProductImage && p.inStock);
         }
 
         if (validProduct && !curated.some(c => c.id === validProduct.id)) {
@@ -314,10 +314,10 @@ function App() {
         }
       });
 
-      // If we couldn't find 4 distinct items matching terms, fill with recent valid products
+      // If we couldn't find 4 distinct items matching terms, fill with recent valid in-stock products
       if (curated.length < 4) {
         const { products: all } = await fetchProducts(undefined, undefined, 1, 20);
-        const remaining = all.filter(p => !curated.some(c => c.id === p.id) && p.image !== STORE_CONFIG.defaultProductImage);
+        const remaining = all.filter(p => !curated.some(c => c.id === p.id) && p.image !== STORE_CONFIG.defaultProductImage && p.inStock);
         curated.push(...remaining.slice(0, 4 - curated.length));
       }
 
