@@ -26,7 +26,15 @@ export const CategoryBrowser: React.FC<CategoryBrowserProps> = ({ onSelectCatego
   }, []);
 
   // Filter categories to show only children of current parent
-  const displayedCategories = categories.filter(c => c.parent === currentParentId);
+  // We only show a category if it has products OR if it has subcategories
+  const displayedCategories = categories.filter(cat => {
+    if (cat.parent !== currentParentId) return false;
+
+    const hasProducts = cat.count > 0;
+    const hasChildren = categories.some(c => c.parent === cat.id);
+
+    return hasProducts || hasChildren;
+  });
 
   // Fallback images for key categories (Premium look)
   const CATEGORY_FALLBACKS: Record<string, string> = {
