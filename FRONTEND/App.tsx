@@ -247,11 +247,12 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run once on mount
 
-  // 1. Refetch when FILTERS change (Reset to Page 1)
+  // --- CONSOLIDATED CATALOG FETCH EFFECT ---
+  // This handles both filter changes and pagination to prevent double-fetching
   useEffect(() => {
     if (currentView === 'catalog') {
+      // 1. Sync filter labels for UI
       if (motoParam) {
-        // Decode in case it's URL encoded
         const cleanParam = decodeURIComponent(motoParam);
         const separator = cleanParam.includes('|') ? '|' : '-';
         const [brand, model, year] = cleanParam.split(separator);
@@ -259,7 +260,6 @@ function App() {
       } else if (tireParam) {
         setCurrentFilter(`Neumáticos: ${tireParam}`);
       } else if (urlCategory) {
-        // Decode URL to display proper text
         const decoded = decodeURIComponent(urlCategory);
         setCurrentFilter(decoded.charAt(0).toUpperCase() + decoded.slice(1));
       } else if (query) {
@@ -268,22 +268,22 @@ function App() {
         setCurrentFilter(null);
       }
 
-      // ONLY reset to page 1 if the filters actually changed (handled by dependency array)
-      setCurrentPage(1);
-      handleProductFetch(1);
-    }
-  }, [currentView, urlCategory, query, motoParam, brandParam, tireParam, perPage, sortBy]); // Added tireParam
-
-  // 2. Refetch when PAGE changes (Do not reset page)
-  useEffect(() => {
-    if (currentView === 'catalog') {
-      // Avoid fetching if page is 1 (handled by filter effect above) 
-      // UNLESS we are strictly paging. 
-      // Actually, simplest is to just fetch. Use a ref to prevent double-fetch if needed, or rely on request de-duping/state.
-      // But we removed currentPage from the above effect, so this isolates the page change.
+      // 2. Trigger fetch
+      console.log(`[APP] Catalog View Update: Page ${currentPage}, Filters: ${motoParam || urlCategory || 'none'}`);
       handleProductFetch(currentPage);
     }
-  }, [currentPage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentView, urlCategory, query, motoParam, brandParam, tireParam, perPage, sortBy, currentPage]);
+
+  // Handle filter-induced page reset separately (if needed)
+  useEffect(() => {
+    if (currentView === 'catalog' && currentPage !== 1) {
+      // When top-level filters change but we are not on page 1, reset to page 1
+      // This will trigger the consolidated effect above via the currentPage dependency
+      setCurrentPage(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlCategory, query, motoParam, brandParam, tireParam, perPage, sortBy]);
 
   // Load Product Detail - handled by URL sync effect above
 
