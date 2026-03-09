@@ -4,3 +4,4 @@ MIVV,mivv.svg
 Quadlock,quadlock.svg
 Sprint Filter,sprint_filter.svg
 Termignoni,termignoni.svg
+Ixil,ixil.svg
