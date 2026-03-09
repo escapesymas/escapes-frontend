@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ShieldCheck, ArrowLeft, Lock, CheckCircle, Loader2, AlertCircle, XCircle, User, ArrowRight, Mail } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { ShieldCheck, ArrowLeft, Lock, CheckCircle, Loader2, AlertCircle, XCircle, User, ArrowRight, Mail, HelpCircle, MessageSquare } from 'lucide-react';
 import { CartItem, User as UserType } from '../types';
 import { createOrder, updateOrderStatus, fetchUserRank, makeRequest } from '../services/woocommerce';
 import { createSumUpCheckout } from '../services/sumup';
@@ -26,9 +27,12 @@ declare global {
 export const Checkout: React.FC<CheckoutProps> = (props) => {
   const [step, setStep] = useState<'form' | 'success'>('form');
   const [orderId, setOrderId] = useState<number | null>(null);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isKlarnaCancel, setIsKlarnaCancel] = useState(false);
 
   // Auth Gate State
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -47,10 +51,22 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
   // SumUp State
   const [sumupCheckoutId, setSumupCheckoutId] = useState<string | null>(null);
   const [isSumupLoading, setIsSumupLoading] = useState(false);
-
-  // Stripe / Klarna State
-  const [paymentMethod, setPaymentMethod] = useState<'sumup' | 'klarna'>('sumup');
   const [isStripeLoading, setIsStripeLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'sumup' | 'klarna'>('sumup');
+
+  // Check for Klarna return status (handles return from portal)
+  useEffect(() => {
+    const status = searchParams.get('klarna_status');
+    const redirectStatus = searchParams.get('redirect_status');
+
+    if (status === 'error' || status === 'cancel' || redirectStatus === 'failed') {
+      setIsKlarnaCancel(true);
+      setErrorMessage("El pago con Klarna no se ha podido completar. ¿Necesitas ayuda para finalizar tu pedido?");
+    } else if (redirectStatus === 'succeeded') {
+      const pi = searchParams.get('payment_intent');
+      if (pi) finalizeOrder('klarna', pi);
+    }
+  }, [searchParams]);
   const stripeRef = useRef<any>(null);
 
   // Pending Order State (para tracking de carritos abandonados)
@@ -317,7 +333,7 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
             email: formData.email,
           },
         },
-        return_url: `${window.location.origin}/?payment_success=true&order=${pendingOrderId}`,
+        return_url: `${window.location.origin}/checkout?klarna_status=return&order=${pendingOrderId}`,
       });
 
       if (error) {
@@ -826,9 +842,32 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
             </div>
 
             {errorMessage && (
-              <div className="mb-4 p-3 bg-red-900/20 border border-red-800 text-red-200 text-xs rounded-sm flex items-start gap-2">
-                <XCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                {errorMessage}
+              <div className={`mb-6 p-4 rounded-sm flex flex-col gap-3 ${isKlarnaCancel ? 'bg-zinc-800 border border-zinc-700 shadow-xl' : 'bg-red-900/20 border border-red-800 text-red-200'}`}>
+                <div className="flex items-start gap-3">
+                  {isKlarnaCancel ? <HelpCircle className="w-5 h-5 text-racing-orange flex-shrink-0 mt-0.5" /> : <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />}
+                  <p className={`text-sm font-medium ${isKlarnaCancel ? 'text-white' : 'text-red-200'}`}>{errorMessage}</p>
+                </div>
+
+                {isKlarnaCancel && (
+                  <div className="flex flex-col sm:flex-row gap-4 pt-3 border-t border-zinc-700/50 mt-1">
+                    <button
+                      onClick={() => navigate('/contacto')}
+                      className="flex items-center justify-center gap-2 bg-racing-orange text-white px-5 py-2.5 rounded-sm text-xs font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      Contactar con un experto
+                    </button>
+                    <button
+                      onClick={() => {
+                        setErrorMessage(null);
+                        setIsKlarnaCancel(false);
+                      }}
+                      className="flex items-center justify-center gap-2 text-zinc-500 text-[10px] font-black uppercase tracking-widest hover:text-white transition-all"
+                    >
+                      Cerrar e intentar de nuevo
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
