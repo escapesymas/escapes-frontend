@@ -291,28 +291,36 @@ function App() {
     const CACHE_KEY = 'home_featured_pool';
     const CACHE_TTL = 1000 * 60 * 60; // 1 hour
 
-    let pool: { category: string, products: Product[] }[] | null = null;
+    let cachedPool: { category: string, products: Product[] }[] | null = null;
+    let isExpired = true;
 
     try {
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (Date.now() - parsed.timestamp < CACHE_TTL) {
-          pool = parsed.pool;
-        }
+        cachedPool = parsed.pool;
+        isExpired = Date.now() - parsed.timestamp > CACHE_TTL;
       }
     } catch (e) { console.error('Cache read error', e); }
 
-    const searchTerms = ['casco integral', 'baul', 'chaqueta', 'silencioso'];
+    // STALE-WHILE-REVALIDATE: If we have cached data, show it immediately
+    if (cachedPool) {
+      console.log('[APP] SWR: Showing stale featured products');
+      renderFeaturedFromPool(cachedPool);
+    }
 
-    // Fetch if not cached
-    if (!pool) {
-      setLoading(true);
+    // If no cache or expired, refresh in background (or foreground if no cache at all)
+    if (!cachedPool || isExpired) {
+      if (!cachedPool) setLoading(true);
+
+      const searchTerms = ['casco integral', 'baul', 'chaqueta', 'silencioso'];
       try {
-        const promises = searchTerms.map(term => fetchProducts(term, undefined, 1, 10));
+        console.log('[APP] Refreshing featured products pool...');
+        // Use 'fast' mode to avoid heavy server-side searches
+        const promises = searchTerms.map(term => fetchProducts(term, undefined, 1, 10, 'date', 'desc', true));
         const results = await Promise.all(promises);
 
-        pool = results.map((res, index) => {
+        const newPool = results.map((res, index) => {
           let validProducts = res.products.filter(p => p.image !== STORE_CONFIG.defaultProductImage && p.inStock && p.title.toLowerCase().includes(searchTerms[index].split(' ')[0]));
           if (validProducts.length === 0) {
             validProducts = res.products.filter(p => p.image !== STORE_CONFIG.defaultProductImage && p.inStock);
@@ -320,45 +328,49 @@ function App() {
           return { category: searchTerms[index], products: validProducts };
         });
 
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), pool }));
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), pool: newPool }));
+
+        // Only re-render if we didn't have cache OR if it was expired
+        renderFeaturedFromPool(newPool);
       } catch (e: any) {
-        setError("Error de conexión con el catálogo.");
-        setLoading(false);
-        return;
-      }
-    }
-
-    // Pick 1 random product from each category in the pool
-    const curated: Product[] = [];
-    if (pool) {
-      pool.forEach(catPool => {
-        if (catPool.products.length > 0) {
-          const validOptions = catPool.products.filter(p => !curated.some(c => c.id === p.id));
-          if (validOptions.length > 0) {
-            const randomIndex = Math.floor(Math.random() * validOptions.length);
-            curated.push(validOptions[randomIndex]);
-          }
+        if (!cachedPool) {
+          setError("Error de conexión con el catálogo.");
         }
-      });
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      setLoading(false);
     }
 
-    // Fill missing spots if any
-    if (curated.length < 4) {
-      try {
-        const { products: all } = await fetchProducts(undefined, undefined, 1, 20);
-        let remaining = all.filter(p => !curated.some(c => c.id === p.id) && p.image !== STORE_CONFIG.defaultProductImage && p.inStock);
-        remaining = remaining.sort(() => 0.5 - Math.random());
-        curated.push(...remaining.slice(0, 4 - curated.length));
-      } catch (e) { }
-    }
-
-    setProducts(curated.slice(0, 4));
-    setLoading(false);
-
-    // Silently update total catalog count in background
-    fetchProducts(undefined, undefined, 1, 1).then(r => {
+    // Silently update total catalog count in background using fast mode
+    fetchProducts(undefined, undefined, 1, 1, 'date', 'desc', true).then(r => {
       if (r.totalProducts > 0) setTotalCatalogProducts(r.totalProducts);
     }).catch(() => { });
+  };
+
+  const renderFeaturedFromPool = (pool: { category: string, products: Product[] }[]) => {
+    const curated: Product[] = [];
+    pool.forEach(catPool => {
+      if (catPool.products.length > 0) {
+        const validOptions = catPool.products.filter(p => !curated.some(c => c.id === p.id));
+        if (validOptions.length > 0) {
+          const randomIndex = Math.floor(Math.random() * validOptions.length);
+          curated.push(validOptions[randomIndex]);
+        }
+      }
+    });
+
+    // Fill missing spots if any (fallback to latest products)
+    if (curated.length < 4) {
+      fetchProducts(undefined, undefined, 1, 10, 'date', 'desc', true).then(res => {
+        const remaining = res.products.filter(p => !curated.some(c => c.id === p.id) && p.image !== STORE_CONFIG.defaultProductImage && p.inStock);
+        const finalSet = [...curated, ...remaining.slice(0, 4 - curated.length)];
+        setProducts(finalSet.slice(0, 4));
+      }).catch(() => setProducts(curated.slice(0, 4)));
+    } else {
+      setProducts(curated.slice(0, 4));
+    }
   };
 
   const handleProductFetch = async (pageToLoad: number = 1) => {

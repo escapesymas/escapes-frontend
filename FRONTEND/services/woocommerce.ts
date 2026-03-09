@@ -160,7 +160,8 @@ export const fetchProducts = async (
   page: number = 1,
   perPage: number = 20,
   orderBy: string = 'date',
-  order: string = 'desc'
+  order: string = 'desc',
+  fast: boolean = false
 ): Promise<{ products: Product[], totalPages: number, totalProducts: number }> => {
   if (!isConfigValid()) throw new Error("Configuración inválida");
 
@@ -204,7 +205,7 @@ export const fetchProducts = async (
     }
 
     // --- CACHE CHECK ---
-    const cacheKey = `${searchQuery}_${categoryId || 0}_${page}_${perPage}_${orderBy}_${order}`;
+    const cacheKey = `${searchQuery}_${categoryId || 0}_${page}_${perPage}_${orderBy}_${order}_${fast}`;
     const cached = searchCache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp < SEARCH_CACHE_TTL)) {
       console.log(`[WC] Search cache hit for: ${searchQuery}`);
@@ -241,10 +242,10 @@ export const fetchProducts = async (
       }
     });
 
-    // 3. Fallback: only if we have very few results, try the heavy description search
-    if (allProducts.length < perPage / 2) {
+    // 3. Fallback: only if we have very few results AND NOT IN FAST MODE, try the heavy description search
+    if (!fast && allProducts.length < perPage / 2) {
       try {
-        const extraPath = `/wc/v3/products?per_page=100&status=publish${categoryId ? `&category=${categoryId}` : ''}`;
+        const extraPath = `/wc/v3/products?per_page=40&status=publish${categoryId ? `&category=${categoryId}` : ''}`;
         const { data: extraResults } = await makeRequest(extraPath);
 
         const searchLower = searchQuery.toLowerCase();
