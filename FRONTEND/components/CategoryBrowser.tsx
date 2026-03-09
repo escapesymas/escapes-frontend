@@ -36,17 +36,7 @@ export const CategoryBrowser: React.FC<CategoryBrowserProps> = ({ onSelectCatego
     return hasProducts || hasChildren;
   });
 
-  // Fallback images for key categories (Premium look)
-  const CATEGORY_FALLBACKS: Record<string, string> = {
-    'escapes': 'https://images.unsplash.com/photo-1599819811279-d5ad9cccf838?auto=format&fit=crop&q=80&w=800',
-    'frenos': 'https://images.unsplash.com/photo-1542046272-5c179477042c?auto=format&fit=crop&q=80&w=800',
-    'neumaticos': 'https://images.unsplash.com/photo-1580397581145-cdb6a35b7d3f?auto=format&fit=crop&q=80&w=800',
-    'mantenimiento': 'https://images.unsplash.com/photo-1486006920555-c77dcf18193c?auto=format&fit=crop&q=80&w=800',
-    'equipamiento': 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&q=80&w=800',
-    'electronica': 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=800',
-    'transmision': 'https://images.unsplash.com/photo-1592657434559-99469f3752e2?auto=format&fit=crop&q=80&w=800',
-    'suspensiones': 'https://images.unsplash.com/photo-1444491741275-3747c53c99b4?auto=format&fit=crop&q=80&w=800'
-  };
+
 
   // Find current parent info for breadcrumb/title
   const currentParentCat = categories.find(c => c.id === currentParentId);
@@ -131,47 +121,30 @@ export const CategoryBrowser: React.FC<CategoryBrowserProps> = ({ onSelectCatego
             {displayedCategories.map((cat) => {
               const hasChildren = categories.some(c => c.parent === cat.id);
 
-              // Use fallback if API image is missing or just a generic placeholder
-              const rawImage = cat.image && !cat.image.includes('placeholder')
-                ? cat.image
-                : (CATEGORY_FALLBACKS[cat.slug] || 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&q=80&w=800');
 
-              // Optimize category background image
-              const bgImage = optimizeImage(rawImage, { width: 600 });
 
               return (
                 <div
                   key={cat.id}
                   onClick={() => handleCategoryClick(cat)}
-                  className="group bg-zinc-900 border border-zinc-800 hover:border-racing-orange rounded-sm overflow-hidden transition-all duration-300 flex flex-col h-full cursor-pointer"
+                  className="group bg-zinc-900 border border-zinc-800 hover:border-racing-orange rounded-sm transition-all duration-300 flex flex-col h-full cursor-pointer p-8 relative overflow-hidden"
                 >
-                  {/* Image Area */}
-                  <div
-                    className="h-48 bg-cover bg-center relative overflow-hidden"
-                    style={{ backgroundImage: `url(${bgImage})` }}
-                  >
-                    <div className="absolute inset-0 bg-black/60 group-hover:bg-black/40 transition-colors duration-300"></div>
-                    <div className="absolute bottom-0 left-0 p-6 w-full">
-                      <h3 className="text-2xl font-bold text-white uppercase italic mb-1 group-hover:translate-x-2 transition-transform duration-300">
-                        {cat.name}
-                      </h3>
-                      <div className="flex justify-between items-end">
-                        <span className="text-xs font-bold bg-racing-orange text-white px-2 py-0.5 rounded-sm">
-                          {cat.count} Productos
-                        </span>
-                        {hasChildren && <Layers className="w-4 h-4 text-zinc-400" />}
-                      </div>
-                    </div>
-                  </div>
+                  <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] pointer-events-none"></div>
 
-                  {/* Content Area */}
-                  <div className="p-6 flex-grow flex flex-col bg-zinc-950">
-                    <p className="text-zinc-500 text-sm mb-4 flex-grow line-clamp-2">
-                      {cat.description || `Explora nuestra selección de ${cat.name}.`}
-                    </p>
+                  <div className="relative z-10">
+                    <h3 className="text-2xl font-bold text-white uppercase italic mb-4 group-hover:translate-x-2 transition-transform duration-300">
+                      {cat.name}
+                    </h3>
+
+                    <div className="flex justify-between items-center mb-6">
+                      <span className="text-xs font-bold bg-racing-orange text-white px-3 py-1 rounded-sm">
+                        {cat.count} Productos
+                      </span>
+                      {hasChildren && <Layers className="w-5 h-5 text-zinc-500 group-hover:text-racing-orange transition-colors" />}
+                    </div>
 
                     <div
-                      className="w-full mt-auto py-3 border border-zinc-800 group-hover:bg-zinc-900 text-zinc-300 group-hover:text-racing-orange font-bold uppercase text-sm rounded-sm transition-colors flex items-center justify-center gap-2"
+                      className="w-full py-3 border border-zinc-800 group-hover:bg-zinc-800 text-zinc-300 group-hover:text-racing-orange font-bold uppercase text-xs rounded-sm transition-all flex items-center justify-center gap-2"
                     >
                       {hasChildren ? 'Ver Subcategorías' : 'Ver Productos'} <ArrowRight className="w-4 h-4" />
                     </div>
