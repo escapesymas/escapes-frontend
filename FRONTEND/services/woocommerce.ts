@@ -141,6 +141,8 @@ export const fetchProductsByIds = async (ids: number[]): Promise<Product[]> => {
       sku: p.sku || '',
       attributes: p.attributes || [],
       images: p.images || [],
+      averageRating: parseFloat(p.average_rating || "0"),
+      ratingCount: p.rating_count || 0,
     }));
   } catch (error) {
     console.error('[WC] Failed to fetch products by IDs:', error);
@@ -181,7 +183,9 @@ export const fetchProducts = async (
       permalink: p.permalink,
       attributes: p.attributes.map(attr => ({ name: attr.name, options: attr.options })),
       description: p.description,
-      shortDescription: p.short_description
+      shortDescription: p.short_description,
+      averageRating: parseFloat(p.average_rating || "0"),
+      ratingCount: p.rating_count || 0,
     };
   };
 

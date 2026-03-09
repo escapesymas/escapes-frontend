@@ -16,6 +16,8 @@ export interface Product {
   description?: string;
   shortDescription?: string;
   brand?: string; // Added for Schema.org
+  averageRating?: number; // Added for SEO stars
+  ratingCount?: number; // Added for SEO stars
 }
 
 export interface CartItem extends Product {
@@ -72,6 +74,8 @@ export interface WooProduct {
   permalink: string;
   description: string;
   short_description: string;
+  average_rating: string;
+  rating_count: number;
 }
 
 export interface WooCategory {

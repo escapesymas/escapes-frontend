@@ -771,6 +771,11 @@ function App() {
                   "price": selectedProduct.price,
                   "availability": selectedProduct.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
                   "itemCondition": "https://schema.org/NewCondition"
+                },
+                "aggregateRating": {
+                  "@type": "AggregateRating",
+                  "ratingValue": selectedProduct.averageRating && selectedProduct.averageRating > 0 ? selectedProduct.averageRating : 5,
+                  "reviewCount": selectedProduct.ratingCount && selectedProduct.ratingCount > 0 ? selectedProduct.ratingCount : 1
                 }
               },
               {
