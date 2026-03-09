@@ -61,10 +61,27 @@ const addProxyHeaders = (req) => {
   return finalHeaders;
 };
 
+// --- CACHE DEL SERVIDOR (Shared Memory) ---
+const apiCache = new Map();
+const CACHE_TTL = 15 * 60 * 1000; // 15 minutos de vida para búsquedas
+const CATEGORY_CACHE_TTL = 60 * 60 * 1000; // 1 hora para categorías
+
 /**
- * Manejador genérico de respuestas del Proxy
+ * Manejador genérico de respuestas del Proxy con Cache
  */
 const handleProxyResponse = async (targetUrl, req, res) => {
+  const isCacheable = req.method === 'GET' && (targetUrl.includes('/wc/v3/') || targetUrl.includes('/wp/v2/'));
+
+  if (isCacheable) {
+    const cached = apiCache.get(targetUrl);
+    if (cached && (Date.now() - cached.timestamp < cached.ttl)) {
+      console.log(`[SERVER CACHE] HIT: ${targetUrl}`);
+      res.setHeader('X-Cache', 'HIT');
+      res.setHeader('Content-Type', cached.contentType);
+      return res.send(cached.buffer);
+    }
+  }
+
   try {
     const headers = addProxyHeaders(req);
     console.log(`[PROXY] --> ${req.method} ${targetUrl}`);
@@ -75,14 +92,23 @@ const handleProxyResponse = async (targetUrl, req, res) => {
       body: ['GET', 'HEAD'].includes(req.method) ? undefined : JSON.stringify(req.body)
     });
 
-    console.log(`[PROXY] <-- ${response.status} ${response.statusText} | Content-Type: ${response.headers.get('content-type')}`);
+    const contentType = response.headers.get('content-type');
+    const buffer = await response.arrayBuffer();
+    const nodeBuffer = Buffer.from(buffer);
 
-    if (!response.ok) {
-      // Clone the response to read body without consuming it for the pipe
-      const clone = response.clone();
-      const text = await clone.text();
-      console.log(`[PROXY] Body Snippet: ${text.substring(0, 500)}`);
+    // Guardar en cache si es exitoso
+    if (isCacheable && response.ok) {
+      const ttl = targetUrl.includes('categories') ? CATEGORY_CACHE_TTL : CACHE_TTL;
+      apiCache.set(targetUrl, {
+        buffer: nodeBuffer,
+        contentType,
+        timestamp: Date.now(),
+        ttl
+      });
+      console.log(`[SERVER CACHE] STORED: ${targetUrl} (TTL: ${ttl / 1000}s)`);
     }
+
+    console.log(`[PROXY] <-- ${response.status} ${response.statusText}`);
 
     response.headers.forEach((value, key) => {
       const lowerKey = key.toLowerCase();
@@ -92,8 +118,7 @@ const handleProxyResponse = async (targetUrl, req, res) => {
     });
 
     res.status(response.status);
-    const buffer = await response.arrayBuffer();
-    res.send(Buffer.from(buffer));
+    res.send(nodeBuffer);
   } catch (err) {
     console.error(`[PROXY ERROR] a ${targetUrl}:`, err.message);
     res.status(502).json({ error: "Bad Gateway", details: "No se pudo conectar con el backend de WordPress." });
