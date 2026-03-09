@@ -57,7 +57,9 @@ export function BrandSlider() {
                             className="flex-shrink-0 mx-6 md:mx-12 select-none"
                         >
                             <img
-                                src={optimizeImage(`/brands/${brand.logo}`, { width: 150, format: 'webp' })}
+                                src={brand.logo.endsWith('.svg')
+                                    ? `/brands/${brand.logo}`
+                                    : optimizeImage(`/brands/${brand.logo}`, { width: 150, format: 'webp' })}
                                 alt={brand.name}
                                 width={140}
                                 height={60}
