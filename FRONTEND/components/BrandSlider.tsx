@@ -60,12 +60,12 @@ export function BrandSlider() {
                                 src={brand.logo.endsWith('.svg')
                                     ? `/brands/${brand.logo}`
                                     : optimizeImage(`/brands/${brand.logo}`, { width: 150, format: 'webp' })}
-                                alt={brand.name}
+                                alt={`Logo oficial de ${brand.name} - Distribuidor autorizado en Escapes y Más`}
                                 width={140}
                                 height={60}
                                 className="h-10 md:h-14 w-auto max-w-[120px] md:max-w-[150px] object-contain transition-transform hover:scale-110"
                                 loading="lazy"
-                                title={brand.name}
+                                title={`Ver recambios de ${brand.name}`}
                             />
                         </div>
                     ))}

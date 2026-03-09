@@ -689,9 +689,23 @@ function App() {
       case 'catalog':
         const knownCat = CATEGORIES.find(c => c.id === urlCategory);
         const catName = knownCat ? knownCat.name : (urlCategory ? urlCategory.charAt(0).toUpperCase() + urlCategory.slice(1) : 'Catálogo');
-        const metaDesc = query
+
+        let seoTitle = query ? `Búsqueda: ${query}` : `${catName} para Moto`;
+        let seoDesc = query
           ? `Resultados de búsqueda para "${query}" en Escapes y Más.`
           : knownCat?.description || `Compra ${catName.toLowerCase()} online. Gran variedad de marcas y modelos para tu moto.`;
+
+        // --- Mejoras de SEO para Filtros ---
+        if (motoParam) {
+          const cleanParam = decodeURIComponent(motoParam);
+          const parts = cleanParam.includes('|') ? cleanParam.split('|') : cleanParam.split('-');
+          const [brand, model, year] = parts;
+          seoTitle = `${catName} para ${brand} ${model}${year ? ` (${year})` : ''}`;
+          seoDesc = `Selección exclusiva de ${catName.toLowerCase()} compatibles con tu ${brand} ${model}. Máximo rendimiento y ajuste perfecto garantizado.`;
+        } else if (brandParam) {
+          seoTitle = `${catName} de la marca ${brandParam}`;
+          seoDesc = `Catálogo completo de ${catName.toLowerCase()} ${brandParam}. Compra productos originales con garantía oficial del fabricante.`;
+        }
 
         const jsonLd: any[] = [
           {
@@ -714,19 +728,19 @@ function App() {
           }
         ];
 
-        if (!query) {
+        if (!query && !motoParam && !brandParam) {
           jsonLd.push({
             "@context": "https://schema.org",
             "@type": "CollectionPage",
-            "name": `${catName} para Moto`,
-            "description": metaDesc,
+            "name": seoTitle,
+            "description": seoDesc,
             "url": `https://escapesymas.com/${urlCategory || 'recambios'}`
           });
         }
 
         return {
-          title: query ? `Búsqueda: ${query}` : `${catName} para Moto`,
-          description: metaDesc,
+          title: seoTitle,
+          description: seoDesc,
           canonical: (!urlCategory || urlCategory === 'recambios') ? '/recambios' : `/${urlCategory}`,
           jsonLd
         };
