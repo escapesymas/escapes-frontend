@@ -168,6 +168,7 @@ export const fetchProducts = async (
     return {
       id: p.id,
       title: p.name,
+      slug: p.slug,
       price: parseFloat(p.price || p.regular_price || "0"),
       regularPrice: parseFloat(p.regular_price || p.price || "0"),
       sku: p.sku || `REF-${p.id}`,

@@ -65,12 +65,15 @@ const parsePathToView = (path: string): { view: ViewState; category?: string; pr
   // Check for generic Product URL pattern: /category/123 or /category/123-slug
   const parts = cleanPath.split('/').filter(Boolean);
 
-  if (parts.length >= 1) {
-    // If second part exists and starts with a number, assume it's a product
-    if (parts.length >= 2 && /^\d+/.test(parts[1])) {
-      return { view: 'product', category: parts[0], productId: parts[1] };
+  if (parts.length >= 2) {
+    // Extract the ID from the second part (e.g. "123-akra-racing" -> "123")
+    const idMatch = parts[1].match(/^(\d+)/);
+    if (idMatch) {
+      return { view: 'product', category: parts[0], productId: idMatch[1] };
     }
+  }
 
+  if (parts.length >= 1) {
     // Otherwise, treat first part as category (e.g. /coronas, /escapes)
     // We implicitly trust that any single path segment might be a valid category
     // This allows WooCommerce categories like 'coronas' to work without hardcoding
@@ -643,7 +646,8 @@ function App() {
                 if (!p?.id) return;
                 setSelectedProduct(p);
                 trackViewItem(p);
-                navigate(`/${p.categorySlug || 'recambios'}/${p.id}`);
+                const slugSuffix = p.slug ? `-${p.slug}` : '';
+                navigate(`/${p.categorySlug || 'recambios'}/${p.id}${slugSuffix}`);
               }}
               onAddToCart={() => product && addToCart(product, 1)}
             />
@@ -680,7 +684,7 @@ function App() {
           return {
             title: selectedProduct.title,
             description: cleanDesc,
-            canonical: `/${selectedProduct.categorySlug || 'recambios'}/${selectedProduct.id}`,
+            canonical: `/${selectedProduct.categorySlug || 'recambios'}/${selectedProduct.id}${selectedProduct.slug ? `-${selectedProduct.slug}` : ''}`,
             image: selectedProduct.image,
             jsonLd: [
               {
@@ -696,7 +700,7 @@ function App() {
                 },
                 "offers": {
                   "@type": "Offer",
-                  "url": `https://escapesymas.com/${selectedProduct.categorySlug || 'recambios'}/${selectedProduct.id}`,
+                  "url": `https://escapesymas.com/${selectedProduct.categorySlug || 'recambios'}/${selectedProduct.id}${selectedProduct.slug ? `-${selectedProduct.slug}` : ''}`,
                   "priceCurrency": "EUR",
                   "price": selectedProduct.price,
                   "availability": selectedProduct.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
@@ -723,7 +727,7 @@ function App() {
                     "@type": "ListItem",
                     "position": 3,
                     "name": selectedProduct.title,
-                    "item": `https://escapesymas.com/${selectedProduct.categorySlug || 'recambios'}/${selectedProduct.id}`
+                    "item": `https://escapesymas.com/${selectedProduct.categorySlug || 'recambios'}/${selectedProduct.id}${selectedProduct.slug ? `-${selectedProduct.slug}` : ''}`
                   }
                 ]
               }
@@ -789,7 +793,11 @@ function App() {
                 product={selectedProduct}
                 onBack={() => navigate(-1)}
                 onAddToCart={(qty) => addToCart(selectedProduct, qty)}
-                onProductClick={(product) => { setSelectedProduct(product); navigate(`/${product.categorySlug || 'recambios'}/${product.id}`); }}
+                onProductClick={(product) => {
+                  setSelectedProduct(product);
+                  const slugSuffix = product.slug ? `-${product.slug}` : '';
+                  navigate(`/${product.categorySlug || 'recambios'}/${product.id}${slugSuffix}`);
+                }}
               />
             )}
 
