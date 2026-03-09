@@ -49,4 +49,28 @@
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
+  <url>
+    <loc>https://www.escapesymas.com/suspensiones</loc>
+    <lastmod>2024-03-09</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.escapesymas.com/electronica</loc>
+    <lastmod>2024-03-09</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.escapesymas.com/mantenimiento</loc>
+    <lastmod>2024-03-09</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.escapesymas.com/neumaticos</loc>
+    <lastmod>2024-03-09</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
 </urlset>
