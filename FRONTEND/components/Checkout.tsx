@@ -546,7 +546,11 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
     return (
       <div className="container mx-auto px-4 py-8 animate-fade-in">
         <div className="mb-8 flex items-center gap-4">
-          <button onClick={props.onBack} className="text-zinc-500 hover:text-white transition-colors">
+          <button
+            onClick={props.onBack}
+            className="text-zinc-400 hover:text-white transition-colors"
+            aria-label="Volver al carrito"
+          >
             <ArrowLeft className="w-6 h-6" />
           </button>
           <h1 className="text-2xl md:text-3xl font-extrabold text-white uppercase italic flex items-center gap-3">
@@ -582,12 +586,12 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
             {authMode === 'login' ? (
               <form onSubmit={handleInlineLogin} className="space-y-4">
                 <div>
-                  <label className="text-xs font-bold text-zinc-500 uppercase mb-1 block">Usuario / Email</label>
-                  <input required type="text" value={loginUserVal} onChange={e => setLoginUserVal(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                  <label htmlFor="login-username" className="text-xs font-bold text-zinc-400 uppercase mb-1 block">Usuario / Email</label>
+                  <input id="login-username" required type="text" value={loginUserVal} onChange={e => setLoginUserVal(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-zinc-500 uppercase mb-1 block">Contraseña</label>
-                  <input required type="password" value={loginPass} onChange={e => setLoginPass(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                  <label htmlFor="login-password" className="text-xs font-bold text-zinc-400 uppercase mb-1 block">Contraseña</label>
+                  <input id="login-password" required type="password" value={loginPass} onChange={e => setLoginPass(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
                 </div>
                 <button disabled={authLoading} type="submit" className="w-full bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase py-3 rounded-sm transition-colors flex items-center justify-center gap-2">
                   {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Entrar y Continuar'}
@@ -596,12 +600,12 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
             ) : (
               <form onSubmit={handleInlineRegister} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <input required placeholder="Nombre" value={regData.firstName} onChange={e => setRegData({ ...regData, firstName: e.target.value })} className="bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
-                  <input required placeholder="Apellidos" value={regData.lastName} onChange={e => setRegData({ ...regData, lastName: e.target.value })} className="bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                  <input aria-label="Nombre" required placeholder="Nombre" value={regData.firstName} onChange={e => setRegData({ ...regData, firstName: e.target.value })} className="bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                  <input aria-label="Apellidos" required placeholder="Apellidos" value={regData.lastName} onChange={e => setRegData({ ...regData, lastName: e.target.value })} className="bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
                 </div>
-                <input required placeholder="Email" type="email" value={regData.email} onChange={e => setRegData({ ...regData, email: e.target.value })} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
-                <input required placeholder="Usuario (Nick)" value={regData.username} onChange={e => setRegData({ ...regData, username: e.target.value })} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
-                <input required placeholder="Contraseña (mín 6 carac.)" type="password" value={regData.password} onChange={e => setRegData({ ...regData, password: e.target.value })} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                <input aria-label="Email" required placeholder="Email" type="email" value={regData.email} onChange={e => setRegData({ ...regData, email: e.target.value })} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                <input aria-label="Usuario (Nick)" required placeholder="Usuario (Nick)" value={regData.username} onChange={e => setRegData({ ...regData, username: e.target.value })} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
+                <input aria-label="Contraseña" required placeholder="Contraseña (mín 6 carac.)" type="password" value={regData.password} onChange={e => setRegData({ ...regData, password: e.target.value })} className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white rounded-sm focus:border-racing-orange focus:outline-none" />
 
                 <button disabled={authLoading} type="submit" className="w-full bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase py-3 rounded-sm transition-colors flex items-center justify-center gap-2">
                   {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Crear Cuenta y Continuar'}
@@ -612,7 +616,7 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
 
           {/* ORDER PREVIEW */}
           <div>
-            <h3 className="text-white font-bold uppercase mb-4">Resumen de tu pedido</h3>
+            <h2 className="text-white font-bold uppercase mb-4 text-xl">Resumen de tu pedido</h2>
             <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-sm">
               <div className="space-y-4 mb-6">
                 {props.cart.map(item => (
@@ -632,7 +636,7 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
                 <span className="text-xl font-bold text-white">{formatPrice(total)}</span>
               </div>
             </div>
-            <div className="mt-6 flex gap-4 text-zinc-500 text-xs">
+            <div className="mt-6 flex gap-4 text-zinc-400 text-xs font-medium">
               <div className="flex items-center gap-1"><ShieldCheck className="w-4 h-4" /> Pago Seguro</div>
               <div className="flex items-center gap-1"><Lock className="w-4 h-4" /> Datos Encriptados</div>
             </div>
@@ -646,7 +650,11 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
   return (
     <div className="container mx-auto px-4 py-8 animate-fade-in">
       <div className="mb-8 flex items-center gap-4">
-        <button onClick={props.onBack} className="text-zinc-500 hover:text-white transition-colors">
+        <button
+          onClick={props.onBack}
+          className="text-zinc-400 hover:text-white transition-colors"
+          aria-label="Volver al carrito"
+        >
           <ArrowLeft className="w-6 h-6" />
         </button>
         <h1 className="text-2xl md:text-3xl font-extrabold text-white uppercase italic flex items-center gap-3">
@@ -674,15 +682,15 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
             )}
 
             <form id="shipping-form" className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input required name="firstName" placeholder="Nombre" autoComplete="given-name" value={formData.firstName} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white text-base rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500" />
-              <input required name="lastName" placeholder="Apellidos" autoComplete="family-name" value={formData.lastName} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white text-base rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500" />
-              <input required name="email" type="email" placeholder="Email (Obligatorio)" autoComplete="email" value={formData.email} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white text-base rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500 md:col-span-2" />
-              <input required name="address" placeholder="Dirección completa" autoComplete="street-address" value={formData.address} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white text-base rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500 md:col-span-2" />
+              <input required name="firstName" aria-label="Nombre" placeholder="Nombre" autoComplete="given-name" value={formData.firstName} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white text-base rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500" />
+              <input required name="lastName" aria-label="Apellidos" placeholder="Apellidos" autoComplete="family-name" value={formData.lastName} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white text-base rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500" />
+              <input required name="email" type="email" aria-label="Email" placeholder="Email (Obligatorio)" autoComplete="email" value={formData.email} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white text-base rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500 md:col-span-2" />
+              <input required name="address" aria-label="Dirección completa" placeholder="Dirección completa" autoComplete="street-address" value={formData.address} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white text-base rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500 md:col-span-2" />
               <div className="grid grid-cols-2 gap-4">
-                <input required name="city" placeholder="Ciudad" autoComplete="address-level2" value={formData.city} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white text-base rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500" />
-                <input required name="zip" placeholder="Código Postal" autoComplete="postal-code" inputMode="numeric" pattern="[0-9]*" value={formData.zip} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white text-base rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500" />
+                <input required name="city" aria-label="Ciudad" placeholder="Ciudad" autoComplete="address-level2" value={formData.city} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white text-base rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500" />
+                <input required name="zip" aria-label="Código Postal" placeholder="Código Postal" autoComplete="postal-code" inputMode="numeric" pattern="[0-9]*" value={formData.zip} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white text-base rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500" />
               </div>
-              <input required name="phone" placeholder="Teléfono" autoComplete="tel" inputMode="numeric" pattern="[0-9]*" value={formData.phone} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white text-base rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500 md:col-span-2" />
+              <input required name="phone" aria-label="Teléfono" placeholder="Teléfono" autoComplete="tel" inputMode="numeric" pattern="[0-9]*" value={formData.phone} onChange={handleInputChange} className="bg-zinc-900 border border-zinc-700 p-3 text-white text-base rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500 md:col-span-2" />
             </form>
           </section>
 
@@ -696,6 +704,8 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
               <button
                 onClick={() => setPaymentMethod('sumup')}
+                aria-label="Pagar con Tarjeta de Crédito"
+                aria-pressed={paymentMethod === 'sumup'}
                 className={`group relative p-6 border rounded-sm transition-all duration-300 flex flex-col items-center gap-3 overflow-hidden ${paymentMethod === 'sumup'
                   ? 'border-racing-orange bg-racing-orange/5 shadow-[0_0_20px_rgba(255,102,0,0.1)]'
                   : 'border-zinc-800 bg-zinc-900/50 hover:border-zinc-700 hover:bg-zinc-900 grayscale opacity-60'
@@ -721,6 +731,8 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
 
               <button
                 onClick={() => setPaymentMethod('klarna')}
+                aria-label="Pagar con Klarna (Pago Flexible)"
+                aria-pressed={paymentMethod === 'klarna'}
                 className={`group relative p-6 border rounded-sm transition-all duration-300 flex flex-col items-center gap-3 overflow-hidden ${paymentMethod === 'klarna'
                   ? 'border-[#FFB3C7] bg-[#FFB3C7]/5 shadow-[0_0_20px_rgba(255,179,199,0.1)]'
                   : 'border-zinc-800 bg-zinc-900/50 hover:border-zinc-700 hover:bg-zinc-900 grayscale opacity-60'
@@ -801,7 +813,7 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
         {/* RIGHT COLUMN: SUMMARY */}
         <div className="lg:col-span-1">
           <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-sm sticky top-24">
-            <h3 className="text-white font-bold uppercase mb-4 tracking-wide text-sm">Resumen del Pedido</h3>
+            <h2 className="text-white font-bold uppercase mb-4 tracking-wide text-sm">Resumen del Pedido</h2>
 
             <div className="space-y-3 mb-6 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
               {props.cart.map(item => (
