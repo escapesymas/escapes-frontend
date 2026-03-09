@@ -285,59 +285,77 @@ function App() {
   // Load Product Detail - handled by URL sync effect above
 
   const loadFeaturedProducts = async () => {
-    setLoading(true);
+    const CACHE_KEY = 'home_featured_pool';
+    const CACHE_TTL = 1000 * 60 * 60; // 1 hour
+
+    let pool: { category: string, products: Product[] }[] | null = null;
+
     try {
-      // Use extremely specific, unambiguous keywords to force correct category matches 
-      // since the API searches both title and description.
-      // E.g. "Escape Completo", "Maleta Top Case", "Casco Integral", "Chaqueta Moto"
-      const searchTerms = [
-        'casco integral',
-        'baul',          // More specific than "maleta" which matches "maleta de herramientas"
-        'chaqueta',
-        'silencioso'     // More specific than "escape" which matches parts
-      ];
-      const promises = searchTerms.map(term => fetchProducts(term, undefined, 1, 10));
-      const results = await Promise.all(promises);
-
-      const curated: Product[] = [];
-      results.forEach((res, index) => {
-        // Fallbacks if the specific terms yield no valid images
-        let validProducts = res.products.filter(p => p.image !== STORE_CONFIG.defaultProductImage && p.inStock && p.title.toLowerCase().includes(searchTerms[index].split(' ')[0]));
-
-        // If strict title match fails, just take any valid in-stock product from this query
-        if (validProducts.length === 0) {
-          validProducts = res.products.filter(p => p.image !== STORE_CONFIG.defaultProductImage && p.inStock);
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Date.now() - parsed.timestamp < CACHE_TTL) {
+          pool = parsed.pool;
         }
+      }
+    } catch (e) { console.error('Cache read error', e); }
 
-        if (validProducts.length > 0) {
-          // Select randomly to provide variety
-          const randomIndex = Math.floor(Math.random() * validProducts.length);
-          const selectedProduct = validProducts[randomIndex];
+    const searchTerms = ['casco integral', 'baul', 'chaqueta', 'silencioso'];
 
-          if (!curated.some(c => c.id === selectedProduct.id)) {
-            curated.push(selectedProduct);
+    // Fetch if not cached
+    if (!pool) {
+      setLoading(true);
+      try {
+        const promises = searchTerms.map(term => fetchProducts(term, undefined, 1, 10));
+        const results = await Promise.all(promises);
+
+        pool = results.map((res, index) => {
+          let validProducts = res.products.filter(p => p.image !== STORE_CONFIG.defaultProductImage && p.inStock && p.title.toLowerCase().includes(searchTerms[index].split(' ')[0]));
+          if (validProducts.length === 0) {
+            validProducts = res.products.filter(p => p.image !== STORE_CONFIG.defaultProductImage && p.inStock);
+          }
+          return { category: searchTerms[index], products: validProducts };
+        });
+
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), pool }));
+      } catch (e: any) {
+        setError("Error de conexión con el catálogo.");
+        setLoading(false);
+        return;
+      }
+    }
+
+    // Pick 1 random product from each category in the pool
+    const curated: Product[] = [];
+    if (pool) {
+      pool.forEach(catPool => {
+        if (catPool.products.length > 0) {
+          const validOptions = catPool.products.filter(p => !curated.some(c => c.id === p.id));
+          if (validOptions.length > 0) {
+            const randomIndex = Math.floor(Math.random() * validOptions.length);
+            curated.push(validOptions[randomIndex]);
           }
         }
       });
+    }
 
-      // If we couldn't find 4 distinct items matching terms, fill with recent valid in-stock products
-      if (curated.length < 4) {
+    // Fill missing spots if any
+    if (curated.length < 4) {
+      try {
         const { products: all } = await fetchProducts(undefined, undefined, 1, 20);
         let remaining = all.filter(p => !curated.some(c => c.id === p.id) && p.image !== STORE_CONFIG.defaultProductImage && p.inStock);
         remaining = remaining.sort(() => 0.5 - Math.random());
         curated.push(...remaining.slice(0, 4 - curated.length));
-      }
-
-      setProducts(curated.slice(0, 4));
-
-      // Update total catalog count
-      const { totalProducts } = await fetchProducts(undefined, undefined, 1, 1);
-      if (totalProducts > 0) setTotalCatalogProducts(totalProducts);
-    } catch (e: any) {
-      setError("Error de conexión con el catálogo.");
-    } finally {
-      setLoading(false);
+      } catch (e) { }
     }
+
+    setProducts(curated.slice(0, 4));
+    setLoading(false);
+
+    // Silently update total catalog count in background
+    fetchProducts(undefined, undefined, 1, 1).then(r => {
+      if (r.totalProducts > 0) setTotalCatalogProducts(r.totalProducts);
+    }).catch(() => { });
   };
 
   const handleProductFetch = async (pageToLoad: number = 1) => {
