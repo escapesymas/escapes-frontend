@@ -654,6 +654,25 @@ function App() {
           ))}
         </div>
         {currentView === 'catalog' && renderPagination()}
+
+        {currentView === 'catalog' && urlCategory && !query && (
+          <section className="mt-16 pt-16 border-t border-zinc-200 dark:border-zinc-800">
+            <div className="container mx-auto px-4 max-w-4xl">
+              <h2 className="text-2xl font-bold text-zinc-900 dark:text-white mb-6 uppercase italic">
+                {CATEGORIES.find(c => c.id === urlCategory)?.name || urlCategory}
+              </h2>
+              <div className="prose prose-zinc dark:prose-invert max-w-none text-zinc-600 dark:text-zinc-400">
+                <p>
+                  {CATEGORIES.find(c => c.id === urlCategory)?.description}
+                </p>
+                <p className="mt-4">
+                  En <strong>Escapes y Más</strong> seleccionamos cuidadosamente cada componente para asegurar el máximo rendimiento de tu motocicleta.
+                  Trabajamos con las mejores marcas del mercado como Akrapovič, Mivv, Brembo y Öhlins para ofrecerte piezas originales con garantía oficial.
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
       </>
     );
   };
@@ -668,15 +687,48 @@ function App() {
           canonical: '/'
         };
       case 'catalog':
-        const catName = urlCategory ? urlCategory.charAt(0).toUpperCase() + urlCategory.slice(1) : 'Catálogo';
+        const knownCat = CATEGORIES.find(c => c.id === urlCategory);
+        const catName = knownCat ? knownCat.name : (urlCategory ? urlCategory.charAt(0).toUpperCase() + urlCategory.slice(1) : 'Catálogo');
         const metaDesc = query
           ? `Resultados de búsqueda para "${query}" en Escapes y Más.`
-          : `Compra ${catName.toLowerCase()} online. Gran variedad de marcas y modelos para tu moto.`;
+          : knownCat?.description || `Compra ${catName.toLowerCase()} online. Gran variedad de marcas y modelos para tu moto.`;
+
+        const jsonLd: any[] = [
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Inicio",
+                "item": "https://escapesymas.com/"
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": catName,
+                "item": `https://escapesymas.com/${urlCategory || 'recambios'}`
+              }
+            ]
+          }
+        ];
+
+        if (!query) {
+          jsonLd.push({
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            "name": `${catName} para Moto`,
+            "description": metaDesc,
+            "url": `https://escapesymas.com/${urlCategory || 'recambios'}`
+          });
+        }
+
         return {
-          title: query ? `Buscar: ${query}` : `${catName} para Moto`,
+          title: query ? `Búsqueda: ${query}` : `${catName} para Moto`,
           description: metaDesc,
-          // Explicitly set /recambios for root catalog to disambiguate from home
-          canonical: (!urlCategory || urlCategory === 'recambios') ? '/recambios' : `/${urlCategory}`
+          canonical: (!urlCategory || urlCategory === 'recambios') ? '/recambios' : `/${urlCategory}`,
+          jsonLd
         };
       case 'product':
         if (selectedProduct) {
