@@ -150,6 +150,10 @@ export const fetchProductsByIds = async (ids: number[]): Promise<Product[]> => {
   }
 };
 
+// In-memory cache for search results to avoid redundant slow queries
+const searchCache = new Map<string, { products: Product[], totalPages: number, totalProducts: number, timestamp: number }>();
+const SEARCH_CACHE_TTL = 1000 * 60 * 10; // 10 minutes
+
 export const fetchProducts = async (
   searchQuery?: string,
   categoryId?: number,
@@ -199,51 +203,53 @@ export const fetchProducts = async (
       return { products: (data as WooProduct[]).map(mapProduct), totalPages, totalProducts };
     }
 
-    // ENHANCED SEARCH: Search by title, SKU, and filter by description
+    // --- CACHE CHECK ---
+    const cacheKey = `${searchQuery}_${categoryId || 0}_${page}_${perPage}_${orderBy}_${order}`;
+    const cached = searchCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp < SEARCH_CACHE_TTL)) {
+      console.log(`[WC] Search cache hit for: ${searchQuery}`);
+      return { products: cached.products, totalPages: cached.totalPages, totalProducts: cached.totalProducts };
+    }
+
+    // ENHANCED SEARCH: Search by title AND SKU in parallel
     const allProducts: Product[] = [];
     const seenIds = new Set<number>();
+    let apiTotalPages = 1;
+    let apiTotalProducts = 0;
 
-    // 1. Search by title (default WooCommerce search)
     const titlePath = `/wc/v3/products?per_page=${perPage}&page=${page}&status=publish&orderby=${orderBy}&order=${order}&search=${encodeURIComponent(searchQuery)}${categoryId ? `&category=${categoryId}` : ''}`;
+    const skuPath = `/wc/v3/products?per_page=${perPage}&status=publish&sku=${encodeURIComponent(searchQuery)}${categoryId ? `&category=${categoryId}` : ''}`;
 
-    try {
-      const { data: titleResults, totalPages } = await makeRequest(titlePath);
-      for (const p of (titleResults as WooProduct[])) {
-        if (!seenIds.has(p.id)) {
-          seenIds.add(p.id);
-          allProducts.push(mapProduct(p));
-        }
+    // Execute multiple search strategies in parallel to reduce wait time
+    const results = await Promise.allSettled([
+      makeRequest(titlePath),
+      makeRequest(skuPath)
+    ]);
+
+    results.forEach(res => {
+      if (res.status === 'fulfilled') {
+        const { data, totalPages, totalProducts } = res.value;
+        if (totalPages > apiTotalPages) apiTotalPages = totalPages;
+        if (totalProducts > apiTotalProducts) apiTotalProducts = totalProducts;
+
+        (data as WooProduct[]).forEach(p => {
+          if (!seenIds.has(p.id)) {
+            seenIds.add(p.id);
+            allProducts.push(mapProduct(p));
+          }
+        });
       }
+    });
 
-      // If we found enough results, return early
-      if (allProducts.length >= perPage) {
-        return { products: allProducts.slice(0, perPage), totalPages, totalProducts: allProducts.length };
-      }
-    } catch { }
-
-    // 2. Search by SKU
-    try {
-      const skuPath = `/wc/v3/products?per_page=${perPage}&status=publish&sku=${encodeURIComponent(searchQuery)}${categoryId ? `&category=${categoryId}` : ''}`;
-      const { data: skuResults } = await makeRequest(skuPath);
-      for (const p of (skuResults as WooProduct[])) {
-        if (!seenIds.has(p.id)) {
-          seenIds.add(p.id);
-          allProducts.push(mapProduct(p));
-        }
-      }
-    } catch { }
-
-    // 3. If still not enough results, fetch more and filter by description
-    if (allProducts.length < perPage) {
+    // 3. Fallback: only if we have very few results, try the heavy description search
+    if (allProducts.length < perPage / 2) {
       try {
-        // Fetch a larger set to filter locally
         const extraPath = `/wc/v3/products?per_page=100&status=publish${categoryId ? `&category=${categoryId}` : ''}`;
         const { data: extraResults } = await makeRequest(extraPath);
 
         const searchLower = searchQuery.toLowerCase();
-        for (const p of (extraResults as WooProduct[])) {
+        (extraResults as WooProduct[]).forEach(p => {
           if (!seenIds.has(p.id)) {
-            // Check if search matches description or short_description
             const matchesDesc = (p.description || '').toLowerCase().includes(searchLower);
             const matchesShortDesc = (p.short_description || '').toLowerCase().includes(searchLower);
 
@@ -252,18 +258,20 @@ export const fetchProducts = async (
               allProducts.push(mapProduct(p));
             }
           }
-        }
+        });
       } catch { }
     }
 
-    // Calculate approximate total pages based on results
-    const estimatedTotal = Math.max(1, Math.ceil(allProducts.length / perPage));
-
-    return {
+    const result = {
       products: allProducts.slice(0, perPage),
-      totalPages: estimatedTotal,
-      totalProducts: allProducts.length
+      totalPages: Math.max(apiTotalPages, Math.ceil(allProducts.length / perPage)),
+      totalProducts: Math.max(apiTotalProducts, allProducts.length)
     };
+
+    // Save to cache
+    searchCache.set(cacheKey, { ...result, timestamp: Date.now() });
+
+    return result;
   } catch (error) {
     throw error;
   }
