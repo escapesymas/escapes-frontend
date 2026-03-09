@@ -100,7 +100,12 @@ function App() {
   const [currentFilter, setCurrentFilter] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('escapesymas_cart');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -157,8 +162,11 @@ function App() {
         }
         setUser(currentUser);
 
-        // Recover Cart
-        if (currentUser.id && currentUser.id > 0) {
+        // Recover Cart ONLY if local cart is empty to avoid overwriting recent changes
+        const localCart = localStorage.getItem('escapesymas_cart');
+        const hasLocalItems = localCart && JSON.parse(localCart).length > 0;
+
+        if (currentUser.id && currentUser.id > 0 && !hasLocalItems) {
           try {
             const savedCart = await getUserCart(currentUser.id);
             if (savedCart.length > 0) {
@@ -436,8 +444,10 @@ function App() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // Sync Cart with Server
+  // Sync Cart with LocalStorage and Server
   useEffect(() => {
+    localStorage.setItem('escapesymas_cart', JSON.stringify(cart));
+
     if (user && user.id && user.id > 0 && cart.length > 0) {
       const cartData = cart.map(item => ({ product_id: item.id, quantity: item.quantity }));
       saveUserCart(user.id, cartData);
