@@ -68,10 +68,33 @@ export const makeRequest = async (path: string, options: RequestInit = {}) => {
 export const fetchCategories = async (): Promise<Category[]> => {
   if (!isConfigValid()) throw new Error("Configuración incompleta");
 
+  // Implementation of 24h caching to avoid redundant paginated fetches
+  const CACHE_KEY = 'escapes_categories_cache';
+  const CACHE_TIME = 24 * 60 * 60 * 1000; // 24 hours
+
   try {
-    const { data } = await makeRequest('/wc/v3/products/categories?per_page=100&hide_empty=true');
-    const wooCats = data as WooCategory[];
-    return wooCats.map(c => ({
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp < CACHE_TIME) {
+        return data as Category[];
+      }
+    }
+  } catch (e) { console.error("Cache read error", e); }
+
+  try {
+    let allWooCats: WooCategory[] = [];
+    let page = 1;
+    let totalPages = 1;
+
+    do {
+      const { data, totalPages: pages } = await makeRequest(`/wc/v3/products/categories?per_page=100&page=${page}`);
+      allWooCats = [...allWooCats, ...(data as WooCategory[])];
+      totalPages = pages;
+      page++;
+    } while (page <= totalPages);
+
+    const categories = allWooCats.map(c => ({
       id: c.id,
       name: c.name,
       slug: c.slug,
@@ -80,6 +103,15 @@ export const fetchCategories = async (): Promise<Category[]> => {
       image: c.image ? c.image.src : '',
       count: c.count
     }));
+
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({
+        data: categories,
+        timestamp: Date.now()
+      }));
+    } catch (e) { console.error("Cache write error", e); }
+
+    return categories;
   } catch (error) {
     throw error;
   }
