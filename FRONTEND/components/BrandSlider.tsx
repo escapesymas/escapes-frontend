@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { optimizeImage } from '../utils/imageOptimizer';
 
 interface Brand {
@@ -9,6 +10,7 @@ interface Brand {
 export function BrandSlider() {
     const [brands, setBrands] = useState<Brand[]>([]);
     const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
 
     useEffect(() => {
         fetch('/brands.txt')
@@ -33,9 +35,13 @@ export function BrandSlider() {
 
     if (loading || brands.length === 0) return null;
 
-    // Duplicamos las marcas varias veces para asegurar un scroll infinito fluido en todas las resoluciones
-    // Especialmente importante para móviles y pantallas 4k
+    // Duplicamos las marcas varias veces para asegurar un scroll infinito fluido
     const displayBrands = [...brands, ...brands, ...brands, ...brands, ...brands, ...brands];
+
+    const handleBrandClick = (brandName: string) => {
+        navigate(`/recambios?brand=${encodeURIComponent(brandName)}`);
+        // Scroll to top or results ref if needed (optional since navigate does it usually)
+    };
 
     return (
         <section className="py-8 md:py-12 bg-white dark:bg-zinc-950 border-y border-zinc-200 dark:border-zinc-900 overflow-hidden relative group">
@@ -46,7 +52,7 @@ export function BrandSlider() {
             </div>
 
             <div className="relative w-full flex overflow-hidden mask-linear-fade">
-                {/* Degradados laterales para suavizar la entrada/salida */}
+                {/* Degradados laterales */}
                 <div className="absolute inset-y-0 left-0 w-8 md:w-24 z-10 bg-gradient-to-r from-white dark:from-zinc-950 to-transparent pointer-events-none" />
                 <div className="absolute inset-y-0 right-0 w-8 md:w-24 z-10 bg-gradient-to-l from-white dark:from-zinc-950 to-transparent pointer-events-none" />
 
@@ -54,18 +60,19 @@ export function BrandSlider() {
                     {displayBrands.map((brand, index) => (
                         <div
                             key={`${brand.name}-${index}`}
-                            className="flex-shrink-0 mx-6 md:mx-12 select-none"
+                            className="flex-shrink-0 mx-6 md:mx-12 select-none cursor-pointer group/logo"
+                            onClick={() => handleBrandClick(brand.name)}
+                            title={`Ver todos los productos de ${brand.name}`}
                         >
                             <img
                                 src={brand.logo.endsWith('.svg')
                                     ? `/brands/${brand.logo}`
                                     : optimizeImage(`/brands/${brand.logo}`, { width: 150, format: 'webp' })}
-                                alt={`Logo oficial de ${brand.name} - Distribuidor autorizado en Escapes y Más`}
+                                alt={`${brand.name} logo`}
                                 width={140}
                                 height={60}
-                                className="h-10 md:h-14 w-auto max-w-[120px] md:max-w-[150px] object-contain transition-transform hover:scale-110"
+                                className="h-10 md:h-14 w-auto max-w-[120px] md:max-w-[150px] object-contain transition-all group-hover/logo:scale-110 group-hover/logo:brightness-110"
                                 loading="lazy"
-                                title={`Ver recambios de ${brand.name}`}
                             />
                         </div>
                     ))}
