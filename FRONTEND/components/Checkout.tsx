@@ -137,7 +137,7 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
   };
 
   const currentTier = getTier(subtotal);
-  const discountAmount = (subtotal * currentTier.discount) / 100;
+  const discountAmount = 0; // Deshabilitado temporalmente
   const shippingCost = currentTier.shipping;
   const total = subtotal + shippingCost - discountAmount;
 
@@ -838,10 +838,10 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
                 <span className="text-white font-medium">{formatPrice(subtotal)}</span>
               </div>
 
-              {userRank && (
-                <div className="flex justify-between text-racing-orange text-sm">
-                  <span>Descuento {userRank.title} (-{userRank.discount}%)</span>
-                  <span className="font-bold">-{formatPrice(discountAmount)}</span>
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-racing-orange text-sm font-bold uppercase">
+                  <span>Descuento {currentTier.label}</span>
+                  <span>-{formatPrice(discountAmount)}</span>
                 </div>
               )}
 
