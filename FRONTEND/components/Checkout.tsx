@@ -130,6 +130,7 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
   const subtotal = props.cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
 
   const getTier = (amount: number) => {
+    if (amount >= MARKETING_TIERS.PLATINO.min) return MARKETING_TIERS.PLATINO;
     if (amount >= MARKETING_TIERS.ORO.min) return MARKETING_TIERS.ORO;
     if (amount >= MARKETING_TIERS.PLATA.min) return MARKETING_TIERS.PLATA;
     return MARKETING_TIERS.BRONCE;
