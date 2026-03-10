@@ -109,22 +109,8 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
     formDataRef.current = formData;
   }, [formData]);
 
-  // Rank Discount State
-  const [userRank, setUserRank] = useState<{ discount: number, title: string } | null>(null);
-  const [isRankLoading, setIsRankLoading] = useState(true);
-
-  useEffect(() => {
-    if (props.user && props.user.id) {
-      fetchUserRank(props.user!.id).then(rank => {
-        if (rank && rank.discount > 0) {
-          setUserRank({ discount: rank.discount, title: rank.title });
-        }
-        setIsRankLoading(false);
-      });
-    } else {
-      setIsRankLoading(false);
-    }
-  }, [props.user]);
+  // Marketing Tiers state (now fully based on MARKETING_TIERS in storeData)
+  const [isRankLoading, setIsRankLoading] = useState(false);
 
   // Calculations
   const subtotal = props.cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
@@ -137,7 +123,7 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
   };
 
   const currentTier = getTier(subtotal);
-  const discountAmount = 0; // Deshabilitado temporalmente
+  const discountAmount = (subtotal * currentTier.discount) / 100;
   const shippingCost = currentTier.shipping;
   const total = subtotal + shippingCost - discountAmount;
 
