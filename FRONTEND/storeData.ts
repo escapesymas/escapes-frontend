@@ -134,3 +134,30 @@ export const MODEL_YEARS = BIKE_DATABASE.reduce((acc, bike) => {
   acc[bike.model] = bike.years;
   return acc;
 }, {} as Record<string, string[]>);
+
+/**
+ * ESTRATEGIA DE MARKETING Y NIVELES DE CLIENTE
+ */
+export const MARKETING_TIERS = {
+  BRONCE: {
+    min: 0,
+    max: 149,
+    discount: 0, // Sin descuento en este rango
+    shipping: 15, // Cliente paga parte
+    label: "Bronce"
+  },
+  PLATA: {
+    min: 150,
+    max: 299,
+    discount: 10, // 10%
+    shipping: 0, // GRATIS
+    label: "Plata"
+  },
+  ORO: {
+    min: 300,
+    max: Infinity,
+    discount: 15, // 15%
+    shipping: 0, // GRATIS
+    label: "Oro"
+  }
+};
