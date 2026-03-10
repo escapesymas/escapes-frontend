@@ -7,6 +7,7 @@ import { createOrder, updateOrderStatus, fetchUserRank, makeRequest } from '../s
 import { createSumUpCheckout } from '../services/sumup';
 import { loginUser, registerUser } from '../services/auth';
 import { trackPurchase } from '../utils/analytics';
+import { MARKETING_TIERS } from '../storeData';
 
 interface CheckoutProps {
   cart: CartItem[];
@@ -127,10 +128,16 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
 
   // Calculations
   const subtotal = props.cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const discountAmount = userRank ? (subtotal * userRank.discount) / 100 : 0;
 
-  const shippingThreshold = 150;
-  const shippingCost = subtotal > shippingThreshold ? 0 : 9.95;
+  const getTier = (amount: number) => {
+    if (amount >= MARKETING_TIERS.ORO.min) return MARKETING_TIERS.ORO;
+    if (amount >= MARKETING_TIERS.PLATA.min) return MARKETING_TIERS.PLATA;
+    return MARKETING_TIERS.BRONCE;
+  };
+
+  const currentTier = getTier(subtotal);
+  const discountAmount = (subtotal * currentTier.discount) / 100;
+  const shippingCost = currentTier.shipping;
   const total = subtotal + shippingCost - discountAmount;
 
   // Initialize Payment Gateways when user is logged in
@@ -185,9 +192,9 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
         product_id: item.id,
         quantity: item.quantity
       })),
-      fee_lines: userRank && userRank.discount > 0 ? [
+      fee_lines: discountAmount > 0 ? [
         {
-          name: `Descuento Paddock (${userRank.title})`,
+          name: `Descuento ${currentTier.label}`,
           total: `-${discountAmount.toFixed(2)}`
         }
       ] : [],
@@ -486,9 +493,9 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
         product_id: item.id,
         quantity: item.quantity
       })),
-      fee_lines: userRank && userRank.discount > 0 ? [
+      fee_lines: discountAmount > 0 ? [
         {
-          name: `Descuento Paddock (${userRank.title})`,
+          name: `Descuento ${currentTier.label}`,
           total: `-${discountAmount.toFixed(2)}`
         }
       ] : []

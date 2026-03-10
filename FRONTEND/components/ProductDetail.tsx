@@ -48,25 +48,33 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
       try {
         let searchQuery: string | undefined;
         let currentDim: string | undefined;
+        let upsellItems: Product[] = [];
 
-        // TIRE RECOMMENDATION LOGIC
-        // If it's in the tire category (296), try to match dimensions
+        // 1. TIRE RECOMMENDATION LOGIC
         if (product.categoryId === 296) {
-          // Extract dimensions from title (e.g. 120/70-17 or 120/70ZR17)
           const dimMatch = product.title.match(/(\d{2,3}[\/\-\s]\d{2,3}[\/\-\s]?R?\d{2})/i);
           if (dimMatch) {
-            currentDim = dimMatch[0].toLowerCase().replace(/[\/\-\s]/g, ''); // canonical: 1207017
-            searchQuery = dimMatch[0].replace(/[/\-]/g, ' '); // broad search: 120 70 17
-            console.log(`[RELATED] Tire detected, searching for dimension: ${searchQuery}`);
+            currentDim = dimMatch[0].toLowerCase().replace(/[\/\-\s]/g, '');
+            searchQuery = dimMatch[0].replace(/[/\-]/g, ' ');
           }
         }
 
-        // Fetch a larger pool to filter strictly locally
+        // 2. EXHAUST UPSELLING LOGIC (Marketing Strategy)
+        const isExhaust = product.title.toLowerCase().includes('escape') ||
+          product.title.toLowerCase().includes('silencioso') ||
+          product.category?.toLowerCase().includes('escape');
+
+        if (isExhaust) {
+          // Fetch high-margin items to help user reach next tier
+          const { products: maintenance } = await fetchProducts("aceite filtro bujia motul hiflo", undefined, 1, 4);
+          upsellItems = maintenance;
+        }
+
+        // 3. STANDARD RELATED FETCH
         const { products } = await fetchProducts(searchQuery, product.categoryId, 1, 20);
 
         let filtered = products.filter(p => p.id !== product.id);
 
-        // If we are looking for a specific tire dimension
         if (currentDim) {
           filtered = filtered.filter(p => {
             const pMatch = p.title.match(/(\d{2,3}[\/\-\s]\d{2,3}[\/\-\s]?R?\d{2})/i);
@@ -76,8 +84,10 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
           });
         }
 
-        // Final sort and slice
-        const finalResults = filtered
+        // Combine standard and upsell items
+        // We put upsell items first if it's an exhaust
+        const finalResults = [...upsellItems, ...filtered]
+          .filter((p, index, self) => self.findIndex(t => t.id === p.id) === index) // Unique
           .sort((a, b) => {
             if (a.inStock === b.inStock) return 0;
             return a.inStock ? -1 : 1;

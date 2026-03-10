@@ -4,6 +4,8 @@ import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Truck, ArrowLeft, AlertCi
 import { CartItem, User, Order } from '../types';
 import { optimizeImage } from '../utils/imageOptimizer';
 import { fetchPendingOrders, fetchProductsByIds, fetchUserRank } from '../services/woocommerce';
+import { MARKETING_TIERS } from '../storeData';
+import { CartProgressBar } from './CartProgressBar';
 
 interface CartProps {
   items: CartItem[];
@@ -97,22 +99,18 @@ export const Cart: React.FC<CartProps> = ({
     }
   };
 
-  const [userRank, setUserRank] = useState<{ discount: number, title: string } | null>(null);
-
-  React.useEffect(() => {
-    if (user && user.id) {
-      fetchUserRank(user.id).then(rank => {
-        if (rank && rank.discount > 0) {
-          setUserRank({ discount: rank.discount, title: rank.title });
-        }
-      });
-    }
-  }, [user]);
-
   const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const discountAmount = userRank ? (subtotal * userRank.discount) / 100 : 0;
-  const shippingThreshold = 150;
-  const shippingCost = subtotal > shippingThreshold ? 0 : 9.95;
+
+  // Marketing Tier Logic
+  const getTier = (amount: number) => {
+    if (amount >= MARKETING_TIERS.ORO.min) return MARKETING_TIERS.ORO;
+    if (amount >= MARKETING_TIERS.PLATA.min) return MARKETING_TIERS.PLATA;
+    return MARKETING_TIERS.BRONCE;
+  };
+
+  const currentTier = getTier(subtotal);
+  const discountAmount = (subtotal * currentTier.discount) / 100;
+  const shippingCost = currentTier.shipping;
   const total = subtotal + shippingCost - discountAmount;
   const itemsCount = items.reduce((acc, item) => acc + item.quantity, 0);
 
@@ -180,7 +178,7 @@ export const Cart: React.FC<CartProps> = ({
               {pendingOrders.map(order => (
                 <div
                   key={order.id}
-                  className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4 rounded-sm flex justify-between items-center hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors shadow-sm dark:shadow-none"
+                  className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4 rounded-sm flex justify-between items-center hover:border-zinc-300 dark:hover:bg-zinc-700 transition-colors shadow-sm dark:shadow-none"
                 >
                   <div>
                     <div className="flex items-center gap-2 mb-1">
@@ -209,7 +207,7 @@ export const Cart: React.FC<CartProps> = ({
 
   return (
     <div className="container mx-auto px-4 py-8 animate-fade-in">
-      <div className="flex flex-col md:flex-row justify-between items-end gap-4 mb-8">
+      <div className="flex flex-col md:flex-row justify-between items-end gap-4 mb-4">
         <div>
           <h1 className="text-3xl font-extrabold text-zinc-900 dark:text-white uppercase italic flex items-center gap-3">
             Carrito de Compra <span className="text-zinc-500 dark:text-zinc-600 text-lg not-italic font-normal">({itemsCount} productos)</span>
@@ -219,6 +217,8 @@ export const Cart: React.FC<CartProps> = ({
           <ArrowLeft className="w-4 h-4" /> Seguir comprando
         </button>
       </div>
+
+      <CartProgressBar subtotal={subtotal} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Cart Items List */}
@@ -307,16 +307,18 @@ export const Cart: React.FC<CartProps> = ({
                 <span className="text-zinc-900 dark:text-white">{formatPrice(subtotal)}</span>
               </div>
 
-              {userRank && (
+              {discountAmount > 0 && (
                 <div className="flex justify-between text-racing-orange text-sm font-bold uppercase">
-                  <span>Descuento {userRank.title}</span>
+                  <span>Descuento {currentTier.label}</span>
                   <span>-{formatPrice(discountAmount)}</span>
                 </div>
               )}
 
               <div className="flex justify-between text-zinc-600 dark:text-zinc-400 text-sm font-bold uppercase tracking-wider">
                 <span>Envío</span>
-                <span className="text-zinc-900 dark:text-white">{formatPrice(shippingCost)}</span>
+                <span className={shippingCost === 0 ? "text-green-500 font-black italic" : "text-zinc-900 dark:text-white"}>
+                  {shippingCost === 0 ? "GRATIS" : formatPrice(shippingCost)}
+                </span>
               </div>
             </div>
 
