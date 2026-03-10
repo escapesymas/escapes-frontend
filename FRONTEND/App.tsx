@@ -130,21 +130,31 @@ function App() {
   const brandParam = searchParams.get('brand'); // New Brand Filter
   const tireParam = searchParams.get('tire'); // New Tire Filter
 
-  const [brands, setBrands] = useState<{ name: string; logo: string }[]>([]);
+  const [brands, setBrands] = useState<{ name: string; logo?: string }[]>([]);
 
-  // Load Brands for Filter
+  // Load Brands for Filter - Now using the comprehensive list from all_brands.json
   useEffect(() => {
-    fetch('/brands.txt')
-      .then(res => res.text())
-      .then(text => {
-        const lines = text.split('\n').filter(line => line.trim() !== '');
-        const parsed = lines.map(line => {
-          const [name, logo] = line.split(',');
-          return { name: name?.trim(), logo: logo?.trim() };
-        }).filter(b => b.name);
-        setBrands(parsed);
+    fetch('/all_brands.json')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setBrands(data.map(name => ({ name })));
+        }
       })
-      .catch(e => console.error("Error loading brands", e));
+      .catch(e => {
+        console.error("Error loading full brand list, falling back to basic list", e);
+        // Fallback to brands.txt if all_brands.json fails
+        fetch('/brands.txt')
+          .then(res => res.text())
+          .then(text => {
+            const lines = text.split('\n').filter(line => line.trim() !== '');
+            const parsed = lines.map(line => {
+              const [name, logo] = line.split(',');
+              return { name: name?.trim(), logo: logo?.trim() };
+            }).filter(b => b.name);
+            setBrands(parsed);
+          });
+      });
   }, []);
 
 
