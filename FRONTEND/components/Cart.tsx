@@ -103,6 +103,7 @@ export const Cart: React.FC<CartProps> = ({
 
   // Marketing Tier Logic
   const getTier = (amount: number) => {
+    if (amount >= MARKETING_TIERS.PLATINO.min) return MARKETING_TIERS.PLATINO;
     if (amount >= MARKETING_TIERS.ORO.min) return MARKETING_TIERS.ORO;
     if (amount >= MARKETING_TIERS.PLATA.min) return MARKETING_TIERS.PLATA;
     return MARKETING_TIERS.BRONCE;
