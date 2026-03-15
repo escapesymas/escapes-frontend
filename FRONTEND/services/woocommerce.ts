@@ -810,3 +810,51 @@ export const fetchCompatibleCategories = async (brand: string, model: string, ye
     return [];
   }
 };
+
+/**
+ * Obtiene productos compatibles usando el motor optimizado
+ */
+export const fetchCompatibleProducts = async (
+  brand: string, 
+  model: string, 
+  year?: string,
+  categoryId?: number,
+  page: number = 1,
+  perPage: number = 20
+): Promise<{ products: Product[], totalPages: number, totalProducts: number }> => {
+  try {
+    let path = `/escapes/v1/compatible-products?brand=${encodeURIComponent(brand)}&model=${encodeURIComponent(model)}&page=${page}&per_page=${perPage}`;
+    if (year && year !== 'General' && year !== '') path += `&year=${encodeURIComponent(year)}`;
+    if (categoryId) path += `&category=${categoryId}`;
+
+    const { data } = await makeRequest(path);
+    
+    // El motor de búsqueda flexible a veces no devuelve headers de conteo exactos, 
+    // así que estimamos o usamos la longitud de la data
+    const products = (data as any[]).map(p => ({
+      id: p.id,
+      title: p.name,
+      slug: p.slug,
+      price: parseFloat(p.price || "0"),
+      regularPrice: parseFloat(p.regular_price || p.price || "0"),
+      sku: p.sku || `REF-${p.id}`,
+      image: p.images?.[0]?.src || '',
+      images: (p.images || []).map((img: any) => ({ src: img.src, alt: p.name })),
+      inStock: p.stock_status === 'instock',
+      category: p.categories?.[0]?.name || 'General',
+      categorySlug: p.categories?.[0]?.slug || 'recambios',
+      categoryId: p.categories?.[0]?.id || 0,
+      description: p.description,
+      shortDescription: p.short_description
+    }));
+
+    return { 
+      products, 
+      totalPages: products.length < perPage ? page : page + 1, 
+      totalProducts: products.length 
+    };
+  } catch (error) {
+    console.error('[COMPATIBILITY] Error fetching products:', error);
+    return { products: [], totalPages: 1, totalProducts: 0 };
+  }
+};

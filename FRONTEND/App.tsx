@@ -19,7 +19,7 @@ import { KlarnaBanner } from './components/KlarnaBanner';
 import { SearchImprovementsBanner } from './components/SearchImprovementsBanner';
 import { ProductSkeleton } from './components/ProductSkeleton';
 import { STORE_CONFIG, FEATURES, BIKE_DATA, CATEGORIES, TIRE_CATEGORY_ID } from './storeData';
-import { fetchProducts, saveUserCart, getUserCart, fetchCategories, fetchCustomerByEmail, fetchProductsByIds, fetchCompatibleCategories } from './services/woocommerce';
+import { fetchProducts, saveUserCart, getUserCart, fetchCategories, fetchCustomerByEmail, fetchProductsByIds, fetchCompatibleCategories, fetchCompatibleProducts } from './services/woocommerce';
 import { saveSession, getSession, logoutSession } from './services/auth';
 import { trackPageView, trackViewItem, trackAddToCart } from './utils/analytics';
 import { Product, BikeSelection, TireSelection, CartItem, User } from './types';
@@ -430,6 +430,28 @@ function App() {
 
       let targetCatId = categoryIdParam ? parseInt(categoryIdParam) : undefined;
 
+      // 1. CASO ESPECIAL: Búsqueda por Moto con motor optimizado
+      if (motoParam && !query) {
+        const decoded = decodeURIComponent(motoParam);
+        const [brand, model, year] = decoded.includes('|') ? decoded.split('|') : decoded.split('-');
+        
+        const { products: matches, totalPages: pages, totalProducts } = await fetchCompatibleProducts(
+          brand, 
+          model, 
+          year, 
+          targetCatId, 
+          pageToLoad, 
+          perPage
+        );
+        
+        setProducts(matches);
+        setTotalPages(pages);
+        if (totalProducts > 0) setTotalCatalogProducts(totalProducts);
+        setCurrentPage(pageToLoad);
+        return; // Terminamos aquí
+      }
+
+      // 2. CASO GENERAL: Búsqueda de WooCommerce estándar
       // Restrict to Tires category if searching by tire dimension
       if (tireParam) {
         targetCatId = TIRE_CATEGORY_ID;
