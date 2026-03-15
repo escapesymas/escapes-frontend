@@ -267,14 +267,20 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
           </div>
 
           <div className="flex flex-col">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center mb-2">
               <span className="text-racing-orange font-bold uppercase tracking-widest text-xs">{product.category}</span>
-              <span className="text-zinc-600 font-mono text-[10px] uppercase flex items-center gap-1 bg-zinc-100 dark:bg-zinc-900 px-2 py-0.5 rounded-sm border border-zinc-200 dark:border-zinc-800">
-                <Hash className="w-2.5 h-2.5" /> REF: {product.sku}
-              </span>
             </div>
 
-            <h1 className="text-2xl sm:text-4xl font-extrabold text-zinc-900 dark:text-white uppercase italic leading-none mb-4 pr-2">{product.title}</h1>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-zinc-900 dark:text-white uppercase italic leading-none pr-2">{product.title}</h1>
+              
+              <div className="flex-shrink-0">
+                <div className="bg-zinc-900 dark:bg-zinc-800 border-2 border-racing-orange/30 px-4 py-2 rounded-sm shadow-lg shadow-racing-orange/5 flex flex-col items-end">
+                  <span className="text-[10px] font-black uppercase tracking-tighter text-racing-orange leading-none mb-1">Referencia Art.</span>
+                  <span className="text-xl font-black text-white font-mono tracking-wider">{product.sku}</span>
+                </div>
+              </div>
+            </div>
 
             <div className="relative">
               <div
