@@ -115,11 +115,20 @@ export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTireSear
                 type="text"
                 aria-label="Buscar pieza"
                 placeholder="¿Qué pieza buscas hoy?"
-                className="w-full h-12 bg-gray-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white px-4 pl-12 rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500 text-base"
+                className="w-full h-12 bg-gray-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white px-4 pl-12 pr-10 rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500 text-base"
                 value={textQuery}
                 onChange={(e) => setTextQuery(e.target.value)}
               />
               <Search className="absolute left-4 top-4 w-5 h-5 text-zinc-400" />
+              {textQuery && (
+                <button
+                  type="button"
+                  onClick={() => setTextQuery('')}
+                  className="absolute right-3 top-3.5 p-1 text-zinc-500 hover:text-white transition-colors"
+                >
+                  <Plus className="w-5 h-5 rotate-45" />
+                </button>
+              )}
             </div>
             <button
               type="submit"

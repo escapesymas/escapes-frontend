@@ -311,9 +311,9 @@ function App() {
         setCurrentFilter(null);
       }
 
-      // 2. Trigger fetch
-      if (motoParam || urlCategory || query) {
-        console.log(`[APP] Catalog View Update: Page ${currentPage}, Filters: ${motoParam || urlCategory || 'none'}`);
+    // 2. Trigger fetch
+      if (motoParam || urlCategory || query || categoryIdParam) {
+        console.log(`[APP] Catalog View Update: Page ${currentPage}, Filters: ${motoParam || urlCategory || categoryIdParam || 'none'}`);
         handleProductFetch(currentPage);
       } else {
         setProducts([]);
@@ -321,7 +321,7 @@ function App() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentView, urlCategory, query, motoParam, brandParam, tireParam, perPage, sortBy, currentPage]);
+  }, [currentView, urlCategory, query, motoParam, categoryIdParam, brandParam, tireParam, perPage, sortBy, currentPage]);
 
   // Handle filter-induced page reset separately (if needed)
   useEffect(() => {
@@ -331,7 +331,7 @@ function App() {
       setCurrentPage(1);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlCategory, query, motoParam, brandParam, tireParam, perPage, sortBy]);
+  }, [urlCategory, query, motoParam, categoryIdParam, brandParam, tireParam, perPage, sortBy]);
 
   // Load Product Detail - handled by URL sync effect above
 
