@@ -18,6 +18,7 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
+*.sql
 
 # Backups
 **/*.zip
@@ -27,4 +28,3 @@ prompt_seo_wpo.md
 
 # Backend
 BACKEND/
-**/BACKEND/

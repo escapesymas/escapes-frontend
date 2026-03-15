@@ -1,4 +1,3 @@
-MIVV,mivv.svg
-Öhlins,ohlins.svg
-Sprint Filter,sprint_filter.svg
-Termignoni,termignoni.svg
+Arai,Arai_Helmet_company_logo.svg
+Quadlock,quadlock.svg
+Ixil,ixil.svg
