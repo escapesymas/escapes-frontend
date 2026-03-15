@@ -21,13 +21,13 @@ export const SEO: React.FC<SEOProps> = ({
     const siteName = 'Escapes y Más';
     const fullTitle = title.includes(siteName) ? title : `${title} | ${siteName}`;
     const baseUrl = 'https://www.escapesymas.com';
-    const fullCanonical = canonical ? `${baseUrl}${canonical}` : undefined;
+    const fullCanonical = `${baseUrl}${canonical || ''}`;
 
     return (
         <Helmet>
             <title>{fullTitle}</title>
             {description && <meta name="description" content={description} />}
-            {fullCanonical && <link rel="canonical" href={fullCanonical} />}
+            <link rel="canonical" href={fullCanonical} />
 
             {/* Open Graph */}
             <meta property="og:title" content={fullTitle} />
