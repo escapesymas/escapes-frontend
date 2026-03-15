@@ -228,7 +228,7 @@ function App() {
       setSelectedVehicleName(vName);
       
       // Fetch compatible categories if the vehicle changed or list is empty
-      if (moto !== lastMotoRef.current && !compLoading && !urlCategory && !query) {
+      if (moto !== lastMotoRef.current && !compLoading && !categoryIdParam && !urlCategory && !query) {
         lastMotoRef.current = moto;
         setCompLoading(true);
         fetchCompatibleCategories(brand, model, year)
@@ -1058,8 +1058,8 @@ function App() {
                 </section>
                 
                 <section className="py-12 bg-white dark:bg-zinc-950 min-h-screen container mx-auto px-4 border-t border-zinc-200 dark:border-zinc-900">
-                  {/* Si hay moto seleccionada pero NO hay categoría aún, mostramos categorías compatibles */}
-                  {motoParam && !urlCategory && !query ? (
+                  {/* Si hay moto seleccionada pero NO hay categoría ni búsqueda aún, mostramos categorías compatibles */}
+                  {motoParam && !categoryIdParam && !urlCategory && !query ? (
                     <CompatibleCategories 
                       categories={compatibleCats}
                       onSelectCategory={(id) => {

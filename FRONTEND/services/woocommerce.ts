@@ -787,20 +787,24 @@ export const fetchLeaderboard = async (limit: number = 10): Promise<any[]> => {
 export const fetchCompatibleCategories = async (brand: string, model: string, year?: string): Promise<Category[]> => {
   try {
     let path = `/escapes/v1/compatible-categories?brand=${encodeURIComponent(brand)}&model=${encodeURIComponent(model)}`;
-    if (year && year !== 'General') {
+    if (year && year !== 'General' && year !== '') {
       path += `&year=${encodeURIComponent(year)}`;
     }
 
     const { data } = await makeRequest(path);
-    return (data as any[]).map(c => ({
+    
+    const mapCat = (c: any): Category => ({
       id: parseInt(c.id),
       name: c.name,
       slug: c.slug,
-      parent: 0, // No devolvemos jerarquía aquí por simplicidad
+      parent: parseInt(c.parent || 0),
       description: '',
       image: '',
-      count: parseInt(c.count)
-    }));
+      count: parseInt(c.count || 0),
+      children: Array.isArray(c.children) ? c.children.map(mapCat) : []
+    });
+
+    return (data as any[]).map(mapCat);
   } catch (error) {
     console.error('[COMPATIBILITY] Error fetching compatible categories:', error);
     return [];
