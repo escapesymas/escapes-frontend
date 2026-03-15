@@ -41,4 +41,3 @@ async function runTests() {
 }
 
 runTests();
-.
