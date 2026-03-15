@@ -233,7 +233,7 @@ export const fetchProducts = async (
     let apiTotalProducts = 0;
 
     const titlePath = `/wc/v3/products?per_page=${perPage}&page=${page}&status=publish&orderby=${orderBy}&order=${order}&search=${encodeURIComponent(searchQuery)}${categoryId ? `&category=${categoryId}` : ''}`;
-    const skuPath = `/wc/v3/products?per_page=${perPage}&status=publish&sku=${encodeURIComponent(searchQuery)}${categoryId ? `&category=${categoryId}` : ''}`;
+    const skuPath = `/wc/v3/products?per_page=${perPage}&page=${page}&status=publish&sku=${encodeURIComponent(searchQuery)}${categoryId ? `&category=${categoryId}` : ''}`;
 
     // Execute multiple search strategies in parallel to reduce wait time
     const results = await Promise.allSettled([
