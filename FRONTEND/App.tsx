@@ -312,8 +312,13 @@ function App() {
       }
 
       // 2. Trigger fetch
-      console.log(`[APP] Catalog View Update: Page ${currentPage}, Filters: ${motoParam || urlCategory || 'none'}`);
-      handleProductFetch(currentPage);
+      if (motoParam || urlCategory || query) {
+        console.log(`[APP] Catalog View Update: Page ${currentPage}, Filters: ${motoParam || urlCategory || 'none'}`);
+        handleProductFetch(currentPage);
+      } else {
+        setProducts([]);
+        setTotalPages(1);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentView, urlCategory, query, motoParam, brandParam, tireParam, perPage, sortBy, currentPage]);
@@ -1056,10 +1061,11 @@ function App() {
                   {motoParam && !urlCategory && !query ? (
                     <CompatibleCategories 
                       categories={compatibleCats}
-                      onSelectCategory={(id, name) => {
+                      onSelectCategory={(id) => {
                         const newParams = new URLSearchParams(searchParams);
-                        navigate(`/recambios?${newParams.toString()}&cat=${id}`);
-                        // Nota: el sync de URL se encargará de setear urlCategory
+                        newParams.set('cat', id.toString());
+                        setSearchParams(newParams);
+                        navigate(`/recambios?${newParams.toString()}`);
                       }}
                       isLoading={compLoading}
                       vehicleName={selectedVehicleName || 'tu moto'}
