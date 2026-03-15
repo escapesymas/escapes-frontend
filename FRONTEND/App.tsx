@@ -1050,6 +1050,7 @@ function App() {
                       onSearch={handleBikeSearch}
                       onTireSearch={handleTireSearch}
                       onTextSearch={handleTextSearch}
+                      onReset={handleClearFilters}
                       isLoading={loading || compLoading}
                       bikeData={BIKE_DATA}
                     />

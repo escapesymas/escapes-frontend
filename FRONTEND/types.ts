@@ -96,6 +96,7 @@ export interface Category {
   description: string;
   image: string;
   count: number;
+  children?: Category[];
 }
 
 // Order History Types

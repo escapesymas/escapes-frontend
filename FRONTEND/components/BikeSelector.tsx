@@ -8,11 +8,12 @@ interface BikeSelectorProps {
   onSearch?: (selection: BikeSelection) => void;
   onTireSearch?: (selection: TireSelection) => void;
   onTextSearch?: (query: string) => void;
+  onReset?: () => void;
   isLoading?: boolean;
   bikeData: BikeDataStructure;
 }
 
-export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTireSearch, onTextSearch, isLoading = false, bikeData }) => {
+export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTireSearch, onTextSearch, onReset, isLoading = false, bikeData }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [textQuery, setTextQuery] = useState('');
 
@@ -20,14 +21,24 @@ export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTireSear
   const [searchParams] = useSearchParams();
   const motoParam = searchParams.get('moto');
 
+  const emptySelection: BikeSelection = { brand: '', model: '', year: '' };
+
   const [selection, setSelection] = useState<BikeSelection>(() => {
     if (motoParam) {
       const decoded = decodeURIComponent(motoParam);
       const [brand, model, year] = decoded.includes('|') ? decoded.split('|') : decoded.split('-');
       return { brand: brand || '', model: model || '', year: year || '' };
     }
-    return { brand: '', model: '', year: '' };
+    return emptySelection;
   });
+
+  const handleResetClick = () => {
+    setSelection(emptySelection);
+    setTireInput('');
+    setTireSelection({ width: '', profile: '', rim: '' });
+    setTextQuery('');
+    if (onReset) onReset();
+  };
 
   const [searchMode, setSearchMode] = useState<'moto' | 'tire'>('moto');
   const [tireInput, setTireInput] = useState('');
@@ -136,12 +147,20 @@ export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTireSear
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setIsOpen(true)}
-                className="text-xs font-black uppercase tracking-widest text-racing-orange border border-racing-orange/20 px-4 py-2 rounded-sm hover:bg-racing-orange hover:text-white transition-all"
-              >
-                Cambiar Moto
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleResetClick}
+                  className="text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-red-500 transition-all mr-2"
+                >
+                  Resetear
+                </button>
+                <button
+                  onClick={() => setIsOpen(true)}
+                  className="text-xs font-black uppercase tracking-widest text-racing-orange border border-racing-orange/20 px-4 py-2 rounded-sm hover:bg-racing-orange hover:text-white transition-all"
+                >
+                  Cambiar Moto
+                </button>
+              </div>
             </div>
           ) : (
             <button
@@ -161,20 +180,29 @@ export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTireSear
         {isOpen && (
           <div className="mt-6 animate-fade-in">
             {/* TABS DE MODO */}
-            <div className="flex gap-2 mb-6 bg-zinc-100 dark:bg-zinc-900/50 p-1 rounded-sm w-fit border border-zinc-200 dark:border-zinc-800">
-              <button
-                onClick={() => setSearchMode('moto')}
-                className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest rounded-sm transition-all flex items-center gap-2 ${searchMode === 'moto' ? 'bg-racing-orange text-white' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex gap-2 bg-zinc-100 dark:bg-zinc-900/50 p-1 rounded-sm border border-zinc-200 dark:border-zinc-800">
+                <button
+                  onClick={() => setSearchMode('moto')}
+                  className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest rounded-sm transition-all flex items-center gap-2 ${searchMode === 'moto' ? 'bg-racing-orange text-white' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}
+                >
+                  <Bike className="w-3 h-3" />
+                  Por Modelo
+                </button>
+                <button
+                  onClick={() => setSearchMode('tire')}
+                  className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest rounded-sm transition-all flex items-center gap-2 ${searchMode === 'tire' ? 'bg-racing-orange text-white' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}
+                >
+                  <Disc className="w-3 h-3" />
+                  Por Medida
+                </button>
+              </div>
+              
+              <button 
+                onClick={handleResetClick}
+                className="text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-red-500 transition-all"
               >
-                <Bike className="w-3 h-3" />
-                Por Modelo
-              </button>
-              <button
-                onClick={() => setSearchMode('tire')}
-                className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest rounded-sm transition-all flex items-center gap-2 ${searchMode === 'tire' ? 'bg-racing-orange text-white' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}
-              >
-                <Disc className="w-3 h-3" />
-                Por Medida
+                Limpiar Filtros
               </button>
             </div>
 
