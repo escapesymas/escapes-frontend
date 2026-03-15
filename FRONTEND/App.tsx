@@ -120,6 +120,7 @@ function App() {
   const [sortBy, setSortBy] = useState<'date' | 'price' | 'price-asc'>('date');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const catalogRef = useRef<HTMLDivElement>(null);
+  const lastMotoRef = useRef<string | null>(null);
 
   // --- NEW: COMPATIBILITY ENGINE ---
   const [compatibleCats, setCompatibleCats] = useState<Category[]>([]);
@@ -227,18 +228,21 @@ function App() {
       setSelectedVehicleName(vName);
       
       // Fetch compatible categories if the vehicle changed or list is empty
-      const shouldFetch = compatibleCats.length === 0 || !location.search.includes(encodeURIComponent(brand));
-      
-      if (shouldFetch && !compLoading && !urlCategory && !query) {
+      if (moto !== lastMotoRef.current && !compLoading && !urlCategory && !query) {
+        lastMotoRef.current = moto;
         setCompLoading(true);
         fetchCompatibleCategories(brand, model, year)
           .then(setCompatibleCats)
-          .catch(err => console.error(err))
+          .catch(err => {
+             console.error(err);
+             setCompatibleCats([]);
+          })
           .finally(() => setCompLoading(false));
       }
     } else {
       setSelectedVehicleName(null);
       setCompatibleCats([]);
+      lastMotoRef.current = null;
     }
 
     // If we have a product ID from URL, try to fetch it
@@ -251,7 +255,7 @@ function App() {
         fetchProductById(productId);
       }
     }
-  }, [location.pathname]);
+  }, [location.pathname, location.search]);
 
   // Fetch product by ID helper
   const fetchProductById = async (id: number) => {
