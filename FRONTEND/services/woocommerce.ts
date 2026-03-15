@@ -780,3 +780,29 @@ export const fetchLeaderboard = async (limit: number = 10): Promise<any[]> => {
     return [];
   }
 };
+
+/**
+ * Obtiene categorías que contienen productos compatibles con una moto específica
+ */
+export const fetchCompatibleCategories = async (brand: string, model: string, year?: string): Promise<Category[]> => {
+  try {
+    let path = `/escapes/v1/compatible-categories?brand=${encodeURIComponent(brand)}&model=${encodeURIComponent(model)}`;
+    if (year && year !== 'General') {
+      path += `&year=${encodeURIComponent(year)}`;
+    }
+
+    const { data } = await makeRequest(path);
+    return (data as any[]).map(c => ({
+      id: parseInt(c.id),
+      name: c.name,
+      slug: c.slug,
+      parent: 0, // No devolvemos jerarquía aquí por simplicidad
+      description: '',
+      image: '',
+      count: parseInt(c.count)
+    }));
+  } catch (error) {
+    console.error('[COMPATIBILITY] Error fetching compatible categories:', error);
+    return [];
+  }
+};

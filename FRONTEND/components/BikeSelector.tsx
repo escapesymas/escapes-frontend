@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Search, ChevronDown, ChevronUp, Bike, SlidersHorizontal, Disc, Settings2 } from 'lucide-react';
 import { BikeSelection, BikeDataStructure, TireSelection } from '../types';
 import { MODEL_YEARS, TIRE_WIDTHS, TIRE_PROFILES, TIRE_RIMS } from '../storeData';
@@ -15,10 +16,17 @@ export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTireSear
   const [isOpen, setIsOpen] = useState(false);
   const [textQuery, setTextQuery] = useState('');
 
-  const [selection, setSelection] = useState<BikeSelection>({
-    brand: '',
-    model: '',
-    year: ''
+  // Sincronizar estado interno con la URL si es posible
+  const [searchParams] = useSearchParams();
+  const motoParam = searchParams.get('moto');
+
+  const [selection, setSelection] = useState<BikeSelection>(() => {
+    if (motoParam) {
+      const decoded = decodeURIComponent(motoParam);
+      const [brand, model, year] = decoded.includes('|') ? decoded.split('|') : decoded.split('-');
+      return { brand: brand || '', model: model || '', year: year || '' };
+    }
+    return { brand: '', model: '', year: '' };
   });
 
   const [searchMode, setSearchMode] = useState<'moto' | 'tire'>('moto');
@@ -86,43 +94,67 @@ export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTireSear
 
   return (
     <div className="w-full max-w-4xl mx-auto relative z-20 px-4">
-      <div className="bg-white dark:bg-racing-carbon border border-zinc-200 dark:border-zinc-700 p-4 md:p-6 rounded-md shadow-lg dark:shadow-2xl dark:shadow-black/50">
+      <div className={`bg-white dark:bg-racing-carbon border border-zinc-200 dark:border-zinc-700 p-4 md:p-6 rounded-md shadow-lg transition-all duration-300 ${!motoParam && !isOpen ? 'scale-105' : 'scale-100'}`}>
 
         {/* BUSCADOR DE TEXTO (SIMPLIFICADO) */}
-        <form onSubmit={handleTextSearchClick} className="flex flex-col md:flex-row gap-2 mb-4">
-          <div className="relative flex-grow">
-            <input
-              type="text"
-              aria-label="Buscar pieza"
-              placeholder="¿Qué pieza buscas hoy?"
-              className="w-full h-10 bg-gray-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white px-4 pl-10 rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500 text-sm"
-              value={textQuery}
-              onChange={(e) => setTextQuery(e.target.value)}
-            />
-            <Search className="absolute left-3 top-3 w-4 h-4 text-zinc-400" />
-          </div>
-          <button
-            type="submit"
-            disabled={isLoading || !textQuery.trim()}
-            className="h-10 bg-zinc-900 dark:bg-zinc-800 text-white font-bold uppercase text-xs px-6 rounded-sm transition-colors hover:bg-black flex items-center justify-center gap-2"
-          >
-            {isLoading ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <Search className="w-3 h-3" />}
-            Buscar
-          </button>
-        </form>
+        {!motoParam && (
+          <form onSubmit={handleTextSearchClick} className="flex flex-col md:flex-row gap-2 mb-4 animate-fade-in">
+            <div className="relative flex-grow">
+              <input
+                type="text"
+                aria-label="Buscar pieza"
+                placeholder="¿Qué pieza buscas hoy?"
+                className="w-full h-12 bg-gray-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white px-4 pl-12 rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500 text-base"
+                value={textQuery}
+                onChange={(e) => setTextQuery(e.target.value)}
+              />
+              <Search className="absolute left-4 top-4 w-5 h-5 text-zinc-400" />
+            </div>
+            <button
+              type="submit"
+              disabled={isLoading || !textQuery.trim()}
+              className="h-12 bg-racing-orange text-white font-black uppercase text-sm px-8 rounded-sm transition-colors hover:bg-orange-700 flex items-center justify-center gap-2"
+            >
+              {isLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <Search className="w-4 h-4" />}
+              BUSCAR
+            </button>
+          </form>
+        )}
 
         {/* TOGGLE FILTRO MOTO */}
-        <div className="border-t border-zinc-200 dark:border-zinc-800 pt-3">
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            aria-expanded={isOpen}
-            aria-label={isOpen ? "Ocultar filtro por moto" : "Mostrar filtro por moto"}
-            className="flex items-center gap-2 text-racing-orange hover:text-zinc-900 dark:hover:text-white transition-colors text-xs font-bold uppercase tracking-widest w-full"
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-            {isOpen ? 'Ocultar filtro por moto' : 'Filtrar compatibilidad por moto'}
-            {isOpen ? <ChevronUp className="w-4 h-4 ml-auto" /> : <ChevronDown className="w-4 h-4 ml-auto" />}
-          </button>
+        <div className={`${!motoParam ? 'border-t border-zinc-200 dark:border-zinc-800 pt-3' : ''}`}>
+          {motoParam && !isOpen ? (
+            <div className="flex items-center justify-between animate-fade-in">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-racing-orange/10 flex items-center justify-center">
+                  <Bike className="w-5 h-5 text-racing-orange" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-zinc-500 uppercase font-black tracking-tighter leading-none mb-1">Vehículo Seleccionado</p>
+                  <p className="text-lg font-bold text-zinc-900 dark:text-white italic uppercase tracking-tight">
+                    {selection.brand} {selection.model} {selection.year}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsOpen(true)}
+                className="text-xs font-black uppercase tracking-widest text-racing-orange border border-racing-orange/20 px-4 py-2 rounded-sm hover:bg-racing-orange hover:text-white transition-all"
+              >
+                Cambiar Moto
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              aria-expanded={isOpen}
+              aria-label={isOpen ? "Ocultar filtro por moto" : "Mostrar filtro por moto"}
+              className="flex items-center gap-2 text-racing-orange hover:text-zinc-900 dark:hover:text-white transition-colors text-xs font-bold uppercase tracking-widest w-full"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              {isOpen ? 'Cerrar Selector' : 'Filtrar por mi Vehículo'}
+              {isOpen ? <ChevronUp className="w-4 h-4 ml-auto" /> : <ChevronDown className="w-4 h-4 ml-auto" />}
+            </button>
+          )}
         </div>
 
         {/* SELECTORES DE MOTO (DESPLEGABLE) */}
