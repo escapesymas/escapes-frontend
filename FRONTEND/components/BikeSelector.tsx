@@ -243,15 +243,15 @@ export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTireSear
                 <button
                   onClick={handleBikeSearchClick}
                   aria-label="Aplicar filtro de moto"
-                  disabled={isLoading || !selection.brand}
-                  className={`h-12 bg-racing-orange hover:bg-orange-700 text-white font-bold uppercase tracking-wide rounded-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${isLoading || !selection.brand ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={!selection.brand || !selection.model}
+                  className={`h-12 bg-racing-orange hover:bg-orange-700 text-white font-bold uppercase tracking-wide rounded-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${!selection.brand || !selection.model ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   {isLoading ? (
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                   ) : (
                     <Bike className="w-5 h-5" />
                   )}
-                  <span>Buscar Piezas</span>
+                  <span>{isLoading ? 'Buscando...' : 'Buscar Piezas'}</span>
                 </button>
               </div>
             ) : (
