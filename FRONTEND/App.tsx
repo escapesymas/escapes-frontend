@@ -223,12 +223,18 @@ function App() {
     if (moto) {
       const decoded = decodeURIComponent(moto);
       const [brand, model, year] = decoded.includes('|') ? decoded.split('|') : decoded.split('-');
-      setSelectedVehicleName(`${brand} ${model} ${year !== 'General' ? year : ''}`.trim());
+      const vName = `${brand} ${model} ${year !== 'General' ? year : ''}`.trim();
+      setSelectedVehicleName(vName);
       
-      // Load compatible categories if they are empty
-      if (compatibleCats.length === 0 && !compLoading) {
+      // Fetch compatible categories if the vehicle changed or list is empty
+      const shouldFetch = compatibleCats.length === 0 || !location.search.includes(encodeURIComponent(brand));
+      
+      if (shouldFetch && !compLoading && !urlCategory && !query) {
         setCompLoading(true);
-        fetchCompatibleCategories(brand, model, year).then(setCompatibleCats).finally(() => setCompLoading(false));
+        fetchCompatibleCategories(brand, model, year)
+          .then(setCompatibleCats)
+          .catch(err => console.error(err))
+          .finally(() => setCompLoading(false));
       }
     } else {
       setSelectedVehicleName(null);
@@ -498,24 +504,12 @@ function App() {
     navigate(`/recambios?q=${q}`);
   };
 
-  const handleBikeSearch = async (selection: BikeSelection) => {
+  const handleBikeSearch = (selection: BikeSelection) => {
     const param = `${selection.brand}|${selection.model}|${selection.year}`;
     const vehicleName = `${selection.brand} ${selection.model} ${selection.year !== 'General' ? selection.year : ''}`.trim();
     
     setSelectedVehicleName(vehicleName);
     setSearchParams({ moto: param });
-    
-    // Al seleccionar moto, primero buscamos qué categorías tienen piezas
-    setCompLoading(true);
-    try {
-      const cats = await fetchCompatibleCategories(selection.brand, selection.model, selection.year);
-      setCompatibleCats(cats);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setCompLoading(false);
-    }
-
     navigate(`/recambios?moto=${encodeURIComponent(param)}`);
   };
 
