@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, CheckCircle, Truck, ShieldCheck, Minus, Plus, Sh
 import { Product } from '../types';
 import { STORE_CONFIG } from '../storeData';
 import { optimizeImage } from '../utils/imageOptimizer';
-import { fetchProducts } from '../services/woocommerce';
+import { fetchProducts, fetchProductCompatibility } from '../services/woocommerce';
 import { ProductCard } from './ProductCard';
 
 interface ProductDetailProps {
@@ -21,6 +21,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(true);
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const [compatibilityBikes, setCompatibilityBikes] = useState<{ brand: string, model: string, year?: string }[]>([]);
+  const [loadingComp, setLoadingComp] = useState(false);
 
   // Image Fallback State
   const [imgSrc, setImgSrc] = useState<string>("");
@@ -105,6 +107,22 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
       loadRelated();
     }
   }, [product.id, product.categoryId]);
+
+  // Fetch compatibility table
+  useEffect(() => {
+    const loadComp = async () => {
+      setLoadingComp(true);
+      try {
+        const bikes = await fetchProductCompatibility(product.id);
+        setCompatibilityBikes(bikes);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingComp(false);
+      }
+    };
+    loadComp();
+  }, [product.id]);
 
   const formatPrice = (amount: number) => {
     return new Intl.NumberFormat('es-ES', {
@@ -345,32 +363,55 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
               <div className="p-6 border border-zinc-200 dark:border-zinc-800 rounded-sm bg-zinc-50 dark:bg-zinc-900/10">
                 <div className="flex items-center gap-3 mb-4">
                   <CheckCircle className="w-5 h-5 text-green-600" />
-                  <h3 className="text-sm font-black uppercase italic tracking-widest text-zinc-900 dark:text-white">Tabla de Compatibilidad</h3>
+                  <h3 className="text-sm font-black uppercase italic tracking-widest text-zinc-900 dark:text-white">Lista de Aplicaciones</h3>
                 </div>
 
                 <div className="space-y-3">
-                  {/* Attempt to extract compatibility from title if attributes missing */}
-                  {(() => {
-                    const titleCompatibility = product.title.match(/(Honda|Yamaha|KTM|BMW|Suzuki|Kawasaki|Ducati|Aprilia|Triumph|Kymco)\s+([A-Z0-9\-\s\/]+?)(?=\s|\||\(|$)/i);
-                    const bikeText = titleCompatibility ? `${titleCompatibility[1]} ${titleCompatibility[2]}`.trim() : null;
-
-                    return (
-                      <>
-                        <div className="flex items-center justify-between text-xs py-2 border-b border-zinc-100 dark:border-zinc-800/50">
-                          <span className="text-zinc-500 font-bold uppercase tracking-tighter">Aplicación Principal</span>
-                          <span className="text-zinc-900 dark:text-white font-black italic uppercase">
-                            {bikeText || 'Multimarca / Universal'}
-                          </span>
-                        </div>
-
-                        <div className="bg-zinc-100/50 dark:bg-zinc-800/20 p-3 rounded-sm mt-3">
-                          <p className="text-[10px] text-zinc-500 leading-relaxed italic">
-                            * Verificado según catálogo de fabricante. Si tienes dudas sobre el año exacto o versión, contáctanos antes de comprar.
-                          </p>
-                        </div>
-                      </>
-                    );
-                  })()}
+                  {loadingComp ? (
+                    <div className="py-4 animate-pulse space-y-2">
+                       <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-full"></div>
+                       <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-3/4"></div>
+                    </div>
+                  ) : compatibilityBikes.length > 0 ? (
+                    <div className="max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                      <table className="w-full text-left">
+                        <thead>
+                          <tr className="text-[10px] uppercase text-zinc-500 font-black border-b border-zinc-200 dark:border-zinc-800">
+                            <th className="pb-2">Marca</th>
+                            <th className="pb-2">Modelo</th>
+                            <th className="pb-2">Año</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
+                          {compatibilityBikes.map((bike, idx) => (
+                            <tr key={idx} className="text-xs">
+                              <td className="py-2 font-bold text-zinc-700 dark:text-zinc-300">{bike.brand}</td>
+                              <td className="py-2 text-zinc-600 dark:text-zinc-400 italic">{bike.model}</td>
+                              <td className="py-2 text-zinc-500">{bike.year || 'Todos'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between text-xs py-2 border-b border-zinc-100 dark:border-zinc-800/50">
+                        <span className="text-zinc-500 font-bold uppercase tracking-tighter">Aplicación Principal</span>
+                        <span className="text-zinc-900 dark:text-white font-black italic uppercase">
+                          {(() => {
+                            const titleComp = product.title.match(/(Honda|Yamaha|KTM|BMW|Suzuki|Kawasaki|Ducati|Aprilia|Triumph|Kymco)\s+([A-Z0-9\-\s\/]+?)(?=\s|\||\(|$)/i);
+                            return titleComp ? `${titleComp[1]} ${titleComp[2]}`.trim() : 'Multimarca / Universal';
+                          })()}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                  
+                  <div className="bg-zinc-100/50 dark:bg-zinc-800/20 p-3 rounded-sm mt-3">
+                    <p className="text-[10px] text-zinc-500 leading-relaxed italic">
+                      * Verificado según catálogo de fabricante. Si tienes dudas sobre el año exacto o versión, contáctanos antes de comprar.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
