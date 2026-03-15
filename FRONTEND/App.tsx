@@ -484,6 +484,7 @@ function App() {
       // 3. COMBINE SEARCH TERMS FOR SERVER-SIDE FILTERING
       // This forces the server to search across Title, SKU and Description
       const searchTerms: string[] = [];
+      let motoData: { brand: string, model: string, year?: string } | undefined = undefined;
 
       if (query) searchTerms.push(query);
 
@@ -491,6 +492,7 @@ function App() {
         const cleanParam = decodeURIComponent(motoParam);
         const separator = cleanParam.includes('|') ? '|' : '-';
         const [brand, model, year] = cleanParam.split(separator);
+        motoData = { brand, model, year };
         // Inject vehicle info into search - BROAD SEARCH (No Year) to find compatible consumables
         searchTerms.push(`${brand} ${model}`);
       }
@@ -514,7 +516,9 @@ function App() {
         pageToLoad,
         perPage,
         orderBy,
-        order
+        order,
+        false,
+        motoData
       );
 
       // No client-side filtering needed anymore as we are using the enhanced server search

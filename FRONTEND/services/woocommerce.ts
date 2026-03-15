@@ -161,7 +161,8 @@ export const fetchProducts = async (
   perPage: number = 20,
   orderBy: string = 'date',
   order: string = 'desc',
-  fast: boolean = false
+  fast: boolean = false,
+  moto?: { brand: string, model: string, year?: string }
 ): Promise<{ products: Product[], totalPages: number, totalProducts: number }> => {
   if (!isConfigValid()) throw new Error("Configuración inválida");
 
@@ -195,6 +196,19 @@ export const fetchProducts = async (
   };
 
   try {
+    // --- NUEVA LÓGICA DE COMPATIBILIDAD ---
+    // Si tenemos una moto seleccionada, usamos nuestro motor de búsqueda optimizado
+    if (moto && moto.brand && moto.model) {
+      let compPath = `/escapes/v1/compatible-products?brand=${encodeURIComponent(moto.brand)}&model=${encodeURIComponent(moto.model)}&per_page=${perPage}&page=${page}`;
+      if (moto.year && moto.year !== 'General') compPath += `&year=${encodeURIComponent(moto.year)}`;
+      if (categoryId) compPath += `&category_id=${categoryId}`;
+
+      const { data: compData } = await makeRequest(compPath);
+      const { products, total, total_pages } = compData as { products: Product[], total: number, total_pages: number };
+
+      return { products, totalPages: total_pages, totalProducts: total };
+    }
+
     // If no search query, just fetch normally
     if (!searchQuery) {
       let path = `/wc/v3/products?per_page=${perPage}&page=${page}&status=publish&orderby=${orderBy}&order=${order}`;
@@ -807,6 +821,19 @@ export const fetchCompatibleCategories = async (brand: string, model: string, ye
     return (data as any[]).map(mapCat);
   } catch (error) {
     console.error('[COMPATIBILITY] Error fetching compatible categories:', error);
+    return [];
+  }
+};
+
+/**
+ * Obtiene la lista de motos compatibles para un producto específico
+ */
+export const fetchProductCompatibility = async (productId: number): Promise<{ brand: string, model: string, year?: string }[]> => {
+  try {
+    const { data } = await makeRequest(`/escapes/v1/product-compatibility?product_id=${productId}`);
+    return (data as any).bikes;
+  } catch (error) {
+    console.error('[COMPATIBILITY] Error fetching product compatibility:', error);
     return [];
   }
 };
