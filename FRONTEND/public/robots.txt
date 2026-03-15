@@ -2,14 +2,18 @@
 # Escapes y Más - Performance Parts
 
 User-agent: *
-Allow: /
 Disallow: /api/
 Disallow: /wp-json/
 Disallow: /account
 Disallow: /cart
 Disallow: /checkout
 Disallow: /*.json$
-Disallow: /*?*
+Allow: /*?q=
+Allow: /*?cat=
+Allow: /*?moto=
+Allow: /*?brand=
+Allow: /*?tire=
+# Permitir parámetros de productos y categorías (WooCommerce standard)
 Allow: /*?*product*
 Allow: /*?*category*
 

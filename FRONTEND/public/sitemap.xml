@@ -69,8 +69,33 @@
   </url>
   <url>
     <loc>https://www.escapesymas.com/neumaticos</loc>
-    <lastmod>2024-03-09</lastmod>
+    <lastmod>2024-03-12</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
+  </url>
+  <!-- Main Brands -->
+  <url>
+    <loc>https://www.escapesymas.com/recambios?brand=Akrapovic</loc>
+    <lastmod>2024-03-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.escapesymas.com/recambios?brand=Mivv</loc>
+    <lastmod>2024-03-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.escapesymas.com/recambios?brand=Arrow</loc>
+    <lastmod>2024-03-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.escapesymas.com/recambios?brand=Brembo</loc>
+    <lastmod>2024-03-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
   </url>
 </urlset>
