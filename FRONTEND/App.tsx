@@ -554,9 +554,20 @@ function App() {
     navigate(`/recambios?tire=${encodeURIComponent(param)}`);
   };
 
-  const handleNavClick = (target: ViewState, cat?: string) => {
+  const handleNavClick = (target: ViewState, catOrQuery?: string) => {
     if (target === 'home') navigate('/');
-    else if (target === 'catalog') navigate(cat ? `/${cat.toLowerCase()}` : '/recambios');
+    else if (target === 'catalog') {
+      if (catOrQuery) {
+        const isKnownCat = KNOWN_CATEGORIES.includes(catOrQuery.toLowerCase());
+        if (isKnownCat) {
+          navigate(`/${catOrQuery.toLowerCase()}`);
+        } else {
+          navigate(`/recambios?q=${encodeURIComponent(catOrQuery)}`);
+        }
+      } else {
+        navigate('/recambios');
+      }
+    }
     else if (target === 'cart') navigate('/carrito');
     else if (target === 'orders') navigate('/mis-pedidos');
     else if (target === 'account') navigate('/mi-cuenta');
