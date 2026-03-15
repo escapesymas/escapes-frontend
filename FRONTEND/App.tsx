@@ -7,6 +7,7 @@ import { SEO } from './components/SEO';
 import { Footer } from './components/Footer';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { BikeSelector } from './components/BikeSelector';
+import { CompatibleCategories } from './components/CompatibleCategories';
 import { ProductCard } from './components/ProductCard';
 import { ProductDetail } from './components/ProductDetail';
 import { Cart } from './components/Cart';
@@ -18,7 +19,7 @@ import { KlarnaBanner } from './components/KlarnaBanner';
 import { SearchImprovementsBanner } from './components/SearchImprovementsBanner';
 import { ProductSkeleton } from './components/ProductSkeleton';
 import { STORE_CONFIG, FEATURES, BIKE_DATA, CATEGORIES, TIRE_CATEGORY_ID } from './storeData';
-import { fetchProducts, saveUserCart, getUserCart, fetchCategories, fetchCustomerByEmail, fetchProductsByIds } from './services/woocommerce';
+import { fetchProducts, saveUserCart, getUserCart, fetchCategories, fetchCustomerByEmail, fetchProductsByIds, fetchCompatibleCategories } from './services/woocommerce';
 import { saveSession, getSession, logoutSession } from './services/auth';
 import { trackPageView, trackViewItem, trackAddToCart } from './utils/analytics';
 import { Product, BikeSelection, TireSelection, CartItem, User } from './types';
@@ -120,6 +121,11 @@ function App() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const catalogRef = useRef<HTMLDivElement>(null);
 
+  // --- NEW: COMPATIBILITY ENGINE ---
+  const [compatibleCats, setCompatibleCats] = useState<Category[]>([]);
+  const [compLoading, setCompLoading] = useState(false);
+  const [selectedVehicleName, setSelectedVehicleName] = useState<string | null>(null);
+
   // Parse filters from URL
 
 
@@ -211,6 +217,23 @@ function App() {
     setCurrentView(parsed.view);
     setUrlCategory(parsed.category);
     setUrlProductId(parsed.productId);
+
+    // Sync selected vehicle if moto param exists
+    const moto = searchParams.get('moto');
+    if (moto) {
+      const decoded = decodeURIComponent(moto);
+      const [brand, model, year] = decoded.includes('|') ? decoded.split('|') : decoded.split('-');
+      setSelectedVehicleName(`${brand} ${model} ${year !== 'General' ? year : ''}`.trim());
+      
+      // Load compatible categories if they are empty
+      if (compatibleCats.length === 0 && !compLoading) {
+        setCompLoading(true);
+        fetchCompatibleCategories(brand, model, year).then(setCompatibleCats).finally(() => setCompLoading(false));
+      }
+    } else {
+      setSelectedVehicleName(null);
+      setCompatibleCats([]);
+    }
 
     // If we have a product ID from URL, try to fetch it
     if (parsed.view === 'product' && parsed.productId) {
@@ -475,9 +498,24 @@ function App() {
     navigate(`/recambios?q=${q}`);
   };
 
-  const handleBikeSearch = (selection: BikeSelection) => {
+  const handleBikeSearch = async (selection: BikeSelection) => {
     const param = `${selection.brand}|${selection.model}|${selection.year}`;
+    const vehicleName = `${selection.brand} ${selection.model} ${selection.year !== 'General' ? selection.year : ''}`.trim();
+    
+    setSelectedVehicleName(vehicleName);
     setSearchParams({ moto: param });
+    
+    // Al seleccionar moto, primero buscamos qué categorías tienen piezas
+    setCompLoading(true);
+    try {
+      const cats = await fetchCompatibleCategories(selection.brand, selection.model, selection.year);
+      setCompatibleCats(cats);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setCompLoading(false);
+    }
+
     navigate(`/recambios?moto=${encodeURIComponent(param)}`);
   };
 
@@ -993,100 +1031,139 @@ function App() {
 
             {currentView === 'catalog' && (
               <div ref={catalogRef}>
-                <section className="pt-32 pb-12 bg-white dark:bg-zinc-950">
-                  <BikeSelector
-                    onSearch={handleBikeSearch}
-                    onTireSearch={handleTireSearch}
-                    onTextSearch={handleTextSearch}
-                    isLoading={loading}
-                    bikeData={BIKE_DATA}
-                  />
+                <section className={`pt-32 pb-12 transition-all duration-500 ${!motoParam && !query && !urlCategory ? 'bg-zinc-900 min-h-[60vh] flex items-center' : 'bg-white dark:bg-zinc-950'}`}>
+                  <div className="w-full">
+                    {!motoParam && !query && !urlCategory && (
+                      <div className="text-center mb-12 animate-fade-in px-4">
+                        <h1 className="text-4xl md:text-6xl font-black text-white uppercase italic mb-4">
+                          Encuentra piezas <span className="text-racing-orange">Compatibles</span>
+                        </h1>
+                        <p className="text-zinc-400 max-w-xl mx-auto uppercase tracking-widest text-sm font-bold">
+                          Selecciona tu vehículo para filtrar solo lo que le sirve a tu moto
+                        </p>
+                      </div>
+                    )}
+                    <BikeSelector
+                      onSearch={handleBikeSearch}
+                      onTireSearch={handleTireSearch}
+                      onTextSearch={handleTextSearch}
+                      isLoading={loading || compLoading}
+                      bikeData={BIKE_DATA}
+                    />
+                  </div>
                 </section>
+                
                 <section className="py-12 bg-white dark:bg-zinc-950 min-h-screen container mx-auto px-4 border-t border-zinc-200 dark:border-zinc-900">
-                  <div className="flex flex-col gap-6 mb-10">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                      <div className="flex items-center gap-4">
-                        <h2 className="text-2xl font-bold text-zinc-900 dark:text-white uppercase italic">{currentFilter || "Catálogo"}</h2>
-                        {(currentFilter || brandParam || motoParam) && (
-                          <button onClick={handleClearFilters} className="text-zinc-500 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2">
-                            <Trash2 className="w-4 h-4" /> Limpiar
-                          </button>
-                        )}
-                      </div>
+                  {/* Si hay moto seleccionada pero NO hay categoría aún, mostramos categorías compatibles */}
+                  {motoParam && !urlCategory && !query ? (
+                    <CompatibleCategories 
+                      categories={compatibleCats}
+                      onSelectCategory={(id, name) => {
+                        const newParams = new URLSearchParams(searchParams);
+                        navigate(`/recambios?${newParams.toString()}&cat=${id}`);
+                        // Nota: el sync de URL se encargará de setear urlCategory
+                      }}
+                      isLoading={compLoading}
+                      vehicleName={selectedVehicleName || 'tu moto'}
+                    />
+                  ) : (
+                    <>
+                      <div className="flex flex-col gap-6 mb-10">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                          <div className="flex items-center gap-4">
+                            <h2 className="text-2xl font-bold text-zinc-900 dark:text-white uppercase italic">
+                              {urlCategory ? (CATEGORIES.find(c => c.id === urlCategory || c.name.toLowerCase() === urlCategory.toLowerCase())?.name || urlCategory) : (currentFilter || "Catálogo")}
+                            </h2>
+                            {(currentFilter || brandParam || motoParam) && (
+                              <button onClick={handleClearFilters} className="text-zinc-500 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2">
+                                <Trash2 className="w-4 h-4" /> Limpiar
+                              </button>
+                            )}
+                          </div>
 
-                      <div className="flex flex-wrap items-center gap-4">
-                        {/* Brand Filter */}
-                        <select
-                          value={brandParam || ''}
-                          onChange={(e) => {
-                            const newParams = new URLSearchParams(searchParams);
-                            if (e.target.value) newParams.set('brand', e.target.value);
-                            else newParams.delete('brand');
-                            setSearchParams(newParams);
-                            navigate(`/recambios?${newParams.toString()}`);
-                          }}
-                          className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer max-w-[150px]"
-                        >
-                          <option value="">Todas las Marcas</option>
-                          {brands.map(b => (
-                            <option key={b.name} value={b.name}>{b.name}</option>
-                          ))}
-                        </select>
+                          <div className="flex flex-wrap items-center gap-4">
+                            {/* Brand Filter */}
+                            <select
+                              value={brandParam || ''}
+                              onChange={(e) => {
+                                const newParams = new URLSearchParams(searchParams);
+                                if (e.target.value) newParams.set('brand', e.target.value);
+                                else newParams.delete('brand');
+                                setSearchParams(newParams);
+                                navigate(`/recambios?${newParams.toString()}`);
+                              }}
+                              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer max-w-[150px]"
+                            >
+                              <option value="">Todas las Marcas</option>
+                              {brands.map(b => (
+                                <option key={b.name} value={b.name}>{b.name}</option>
+                              ))}
+                            </select>
 
-                        {/* Category Filter */}
-                        <select
-                          value={urlCategory || ''}
-                          onChange={(e) => {
-                            if (e.target.value) handleNavClick('catalog', e.target.value);
-                            else handleNavClick('catalog');
-                          }}
-                          className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer max-w-[150px]"
-                        >
-                          <option value="">Todas las Categorías</option>
-                          {CATEGORIES.map(c => (
-                            <option key={c.id} value={c.name}>{c.name}</option>
-                          ))}
-                        </select>
+                            {/* Category Filter */}
+                            <select
+                              value={urlCategory || ''}
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                   const newParams = new URLSearchParams(searchParams);
+                                   const match = CATEGORIES.find(c => c.name === e.target.value);
+                                   if (match) newParams.set('cat', match.id.toString());
+                                   navigate(`/recambios?${newParams.toString()}`);
+                                } else {
+                                   const newParams = new URLSearchParams(searchParams);
+                                   newParams.delete('cat');
+                                   navigate(`/recambios?${newParams.toString()}`);
+                                }
+                              }}
+                              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer max-w-[150px]"
+                            >
+                              <option value="">Todas las Categorías</option>
+                              {CATEGORIES.map(c => (
+                                <option key={c.id} value={c.name}>{c.name}</option>
+                              ))}
+                            </select>
 
-                        <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-800 hidden md:block" />
+                            <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-800 hidden md:block" />
 
-                        <div className="flex items-center gap-2">
-                          <label htmlFor="perPage" className="text-zinc-500 text-xs uppercase hidden md:inline">Mostrar:</label>
-                          <select
-                            id="perPage"
-                            value={perPage}
-                            onChange={(e) => { setPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer"
-                          >
-                            <option value={10}>10</option>
-                            <option value={20}>20</option>
-                            <option value={50}>50</option>
-                          </select>
+                            <div className="flex items-center gap-2">
+                              <label htmlFor="perPage" className="text-zinc-500 text-xs uppercase hidden md:inline">Mostrar:</label>
+                              <select
+                                id="perPage"
+                                value={perPage}
+                                onChange={(e) => { setPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                                className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer"
+                              >
+                                <option value={10}>10</option>
+                                <option value={20}>20</option>
+                                <option value={50}>50</option>
+                              </select>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <label htmlFor="sortBy" className="text-zinc-500 text-xs uppercase hidden md:inline">Ordenar:</label>
+                              <select
+                                id="sortBy"
+                                value={sortBy}
+                                onChange={(e) => { setSortBy(e.target.value as 'date' | 'price' | 'price-asc'); setCurrentPage(1); }}
+                                className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer"
+                              >
+                                <option value="date">Relevancia</option>
+                                <option value="price">Precio: Mayor a menor</option>
+                                <option value="price-asc">Precio: Menor a mayor</option>
+                              </select>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <label htmlFor="sortBy" className="text-zinc-500 text-xs uppercase hidden md:inline">Ordenar:</label>
-                          <select
-                            id="sortBy"
-                            value={sortBy}
-                            onChange={(e) => { setSortBy(e.target.value as 'date' | 'price' | 'price-asc'); setCurrentPage(1); }}
-                            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer"
-                          >
-                            <option value="date">Relevancia</option>
-                            <option value="price">Precio: Mayor a menor</option>
-                            <option value="price-asc">Precio: Menor a mayor</option>
-                          </select>
-                        </div>
                       </div>
-                    </div>
-                  </div>
 
-                  <div className="min-h-[500px]">
-                    {loading ? (
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                        {[...Array(8)].map((_, i) => <ProductSkeleton key={i} />)}
+                      <div className="min-h-[500px]">
+                        {loading ? (
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                            {[...Array(8)].map((_, i) => <ProductSkeleton key={i} />)}
+                          </div>
+                        ) : renderProductGrid()}
                       </div>
-                    ) : renderProductGrid()}
-                  </div>
+                    </>
+                  )}
                 </section>
               </div>
             )}
