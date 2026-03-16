@@ -91,6 +91,20 @@ export async function loginUser(username: string, password: string): Promise<Ses
   return res.data;
 }
 
+export async function socialLoginUser(provider: string, token: string): Promise<Session> {
+  const res = await safeFetch<Session>("/api/auth/social-login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ provider, token }),
+  });
+
+  if (!res.ok || !res.data) {
+    throw new Error(res.error || `Login social con ${provider} fallido`);
+  }
+
+  return res.data;
+}
+
 // =====================
 // Session
 // =====================

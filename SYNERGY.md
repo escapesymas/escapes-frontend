@@ -61,6 +61,20 @@ El endpoint de la API REST debe devolver el siguiente JSON estricto al Frontend 
 }
 ```
 
+### 5. Autenticación Social (Google, Apple, Facebook)
+**Instrucción para Uri (Backend):**
+Necesitamos implementar un sistema de autenticación social para que los usuarios puedan registrarse e iniciar sesión usando **Google, Apple y Facebook**. El frontend recogerá el Token (JWT u OAuth code) del proveedor y se lo enviará al backend.
+
+Debes crear el endpoint: `POST /wp-json/escapes/v1/social-login`
+
+**Comportamiento esperado del Endpoint:**
+1. Recibe un payload JSON: `{ "provider": "google|apple|facebook", "token": "TOKEN_DEL_PROVEEDOR" }`.
+2. El backend valida el token con el proveedor respectivo (Google, Apple o Facebook).
+3. Si el token es válido, extrae el email y datos básicos del usuario.
+4. **Si el usuario no existe en WordPress/WooCommerce**, lo crea automáticamente.
+5. **Si el usuario ya existe**, simplemente lo loguea.
+6. **Respuesta crucial:** El endpoint debe devolver **exactamente la misma estructura de respuesta** que devuelve actualmente el plugin de JWT Authentication for WP REST API (`/wp-json/jwt-auth/v1/token`), incluyendo el `token` (el de WordPress), `user_email`, y `user_display_name`.
+
 ---
 
 ## 📝 Instrucciones para Antigravity
