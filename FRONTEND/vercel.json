@@ -12,6 +12,14 @@
   ],
   "rewrites": [
     {
+      "source": "/api/auth/:action",
+      "destination": "/api/auth?action=:action"
+    },
+    {
+      "source": "/api/forum/:action",
+      "destination": "/api/forum?action=:action"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },
