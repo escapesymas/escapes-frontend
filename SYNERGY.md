@@ -6,7 +6,7 @@ Este documento define las reglas de colaboración entre **Uri** (Asistente del V
 
 ## 🏗️ Reparto de Roles
 
-*   **Uri (En el Servidor):** Gestiona el VPS, MariaDB, Redis y el plugin de optimización del catálogo (`escapes-catalog-optimizer`). Es el encargado de que los datos lleguen rápido a la API.
+*   **Uri (En el Servidor):** Gestiona el VPS, MariaDB, Redis y el plugin de optimización del catálogo (`escapes-catalog-optimizer`). Es el encargado de que los datos lleguen rápido a la API. **¡IMPORTANTE! Uri tiene PROHIBIDO terminantemente hacer o proponer cambios en el Frontend. Antigravity es el ÚNICO encargado del Frontend.**
 *   **Antigravity (Local):** Gestiona el diseño, la lógica de React y la experiencia de usuario. Su "punto de verdad" es el código que vive en este repositorio.
 
 ---
