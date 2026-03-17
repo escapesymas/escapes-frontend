@@ -92,7 +92,7 @@ export async function loginUser(username: string, password: string): Promise<Ses
 }
 
 export async function socialLoginUser(provider: string, token: string): Promise<Session> {
-  const res = await safeFetch<Session>("/api/auth/social-login", {
+  const res = await safeFetch<Session>("/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ provider, token }),

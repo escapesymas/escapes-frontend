@@ -205,27 +205,42 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 app.post('/api/auth/login', async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, provider, token } = req.body;
 
-  if (!username || !password) {
-    return res.status(400).json({ error: "Faltan campos requeridos: username, password" });
+  const isSocialLogin = !!(provider && token);
+  const isStandardLogin = !!(username && password);
+
+  if (!isSocialLogin && !isStandardLogin) {
+    return res.status(400).json({ error: "Faltan campos requeridos para iniciar sesión." });
   }
 
   try {
-    const wp = await fetch(`${PROXY_TARGET_URL}/wp-json/jwt-auth/v1/token`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": "EscapesApp/1.0"
-      },
-      body: JSON.stringify({ username, password }),
-    });
+    let wpResponse;
+    if (isSocialLogin) {
+      wpResponse = await fetch(`${PROXY_TARGET_URL}/wp-json/escapes/v1/social-login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": "EscapesApp/1.0"
+        },
+        body: JSON.stringify({ provider, token }),
+      });
+    } else {
+      wpResponse = await fetch(`${PROXY_TARGET_URL}/wp-json/jwt-auth/v1/token`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": "EscapesApp/1.0"
+        },
+        body: JSON.stringify({ username, password }),
+      });
+    }
 
-    const data = await wp.json();
+    const data = await wpResponse.json();
 
-    if (!wp.ok) {
+    if (!wpResponse.ok) {
       const errorMessage = data.message || data.error || "Login fallido";
-      return res.status(wp.status).json({ error: errorMessage });
+      return res.status(wpResponse.status).json({ error: errorMessage });
     }
 
     res.status(200).json(data);
@@ -235,36 +250,6 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-app.post('/api/auth/social-login', async (req, res) => {
-  const { provider, token } = req.body;
-
-  if (!provider || !token) {
-    return res.status(400).json({ error: "Faltan campos requeridos: provider, token" });
-  }
-
-  try {
-    const wp = await fetch(`${PROXY_TARGET_URL}/wp-json/escapes/v1/social-login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": "EscapesApp/1.0"
-      },
-      body: JSON.stringify({ provider, token }),
-    });
-
-    const data = await wp.json();
-
-    if (!wp.ok) {
-      const errorMessage = data.message || data.error || "Login social fallido";
-      return res.status(wp.status).json({ error: errorMessage });
-    }
-
-    res.status(200).json(data);
-  } catch (err) {
-    console.error(`[AUTH SOCIAL LOGIN ERROR] ${provider}:`, err.message);
-    res.status(500).json({ error: `Error interno al iniciar sesión con ${provider}` });
-  }
-});
 
 app.post('/api/contact', async (req, res) => {
   const { name, email, subject, message } = req.body;
