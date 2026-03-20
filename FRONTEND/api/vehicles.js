@@ -1,21 +1,33 @@
 import path from 'path';
 import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
+import fs from 'fs';
 
 export default async function handler(req, res) {
     const { action, brand, model, year } = req.query;
     
-    // Better path resolution for Vercel
+    // Better path resolution for Vercel. Bundled files are in the lambda's CWD or subfolders.
     const dbPath = path.join(process.cwd(), 'api', 'moto_catalog.db');
 
     let db;
     try {
-        // Debug: Check if file exists
-        const fs = await import('fs');
+        // 1. Initial checks for debugging (will show in 500 error response)
         if (!fs.existsSync(dbPath)) {
-            throw new Error(`Database file not found at ${dbPath}. Check if api/moto_catalog.db is in the deployment.`);
+            // Check if it's in the same directory as this file (sometimes /api/ is the root for lambda)
+            const fallbackPath = path.join(__dirname, 'moto_catalog.db');
+            if (fs.existsSync(fallbackPath)) {
+                console.log('Using fallback path:', fallbackPath);
+            } else {
+                return res.status(500).json({ 
+                    error: "Database file missing", 
+                    cwd: process.cwd(), 
+                    dirname: __dirname,
+                    attempted_paths: [dbPath, fallbackPath]
+                });
+            }
         }
 
+        // 2. Open DB
         db = await open({
             filename: dbPath,
             driver: sqlite3.Database,
@@ -38,7 +50,6 @@ export default async function handler(req, res) {
         }
 
         if (action === 'compatible-skus') {
-            // 1. Get VehicleCode(s) for the selection
             let vQuery = 'SELECT code FROM vehicles WHERE brand = ? AND model = ?';
             const params = [brand, model];
             if (year && year !== 'General') {
@@ -46,10 +57,8 @@ export default async function handler(req, res) {
                 params.push(year);
             }
             const codes = await db.all(vQuery, params);
-            
             if (codes.length === 0) return res.status(200).json([]);
 
-            // 2. Get SKUs from compatibility table
             const placeholders = codes.map(() => '?').join(',');
             const skus = await db.all(`SELECT DISTINCT sku FROM compatibility WHERE vehicle_code IN (${placeholders})`, codes.map(c => c.code));
             
@@ -59,9 +68,15 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Invalid action' });
 
     } catch (error) {
-        console.error('[VEHICLES API]:', error);
-        return res.status(500).json({ error: error.message, path: dbPath });
+        console.error('[VEHICLES API ERROR]:', error);
+        return res.status(500).json({ 
+            error: error.message, 
+            stack: error.stack,
+            dbPath 
+        });
     } finally {
-        if (db) await db.close();
+        if (db) {
+            try { await db.close(); } catch (e) {}
+        }
     }
 }
