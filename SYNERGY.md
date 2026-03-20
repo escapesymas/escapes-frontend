@@ -35,31 +35,34 @@ El backend está optimizado con **Redis** en la RAM del servidor.
 - **Filtro No Intrusivo:** El catálogo debe empezar "limpio". No se muestran productos hasta que el cliente defina qué busca.
 - **Jerarquía:** Mostrar siempre categorías padre (Chasis, Motor...) con sus hijos debajo cuando hay una moto seleccionada.
 
-### 4. Tabla de Compatibilidad Híbrida (Local DB + Gemini)
+### 4. Tabla de Compatibilidad Híbrida (Master List + Legacy Support)
 **Antigravity (Frontend) ha implemetado:**
 - La interfaz visual "Lista de Aplicaciones" dentro de `ProductDetail.tsx`.
 - Componente dinámico (Bihr Style) que se alimenta asíncronamente a través de `fetchProductCompatibility()`.
 
-**Instrucción para Uri (Backend):**
-Necesitamos perfeccionar el endpoint `GET /wp-json/escapes/v1/product-compatibility` que recibe un `product_id`. Debes asegurar el modelo híbrido (Prioridad Local -> Respaldo Gemini -> Caché Local) pero **ESTRUCTURANDO LOS DATOS DE FORMA RELACIONAL** (sin agrupar años en rangos como "2021-2023").
+**Cambio Importante (2026-03-20):**
+Uri ha integrado una **Tabla Maestra de Vehículos** (`wp_vehicles_master`) con 64.350 registros oficiales. Esta tabla es ahora la fuente de verdad primaria.
 
-Crea/adapta estas tablas en el VPS:
-1. `wp_comp_brands` (id, name)
-2. `wp_comp_models` (id, brand_id, name)
-3. `wp_comp_years` (id, year) -> **Debe almacenar AÑOS ESPECÍFICOS (ej: 2020, 2021), NUNCA RANGOS.**
-4. `wp_comp_vehicles` (id, model_id, year_id) -> Identificador único de cada moto completa.
-5. `wp_product_compatibility` (id, product_id, vehicle_id, source) -> Tabla nexo donde `source` indica origen ('local' o 'gemini').
+**Instrucción para Antigravity:**
+El endpoint `GET /wp-json/escapes/v1/product-compatibility` ha sido actualizado. Ahora devuelve datos más ricos cuando el vehículo está mapeado en la lista maestra.
 
-El endpoint de la API REST debe devolver el siguiente JSON estricto al Frontend (Antigravity):
+**Estructura de Respuesta Actualizada:**
 ```json
 {
   "bikes": [
-    { "brand": "Yamaha", "model": "MT-07", "year": "2021" },
-    { "brand": "Yamaha", "model": "MT-07", "year": "2022" },
-    { "brand": "Yamaha", "model": "Tracer 700", "year": "2020" }
-  ]
+    { 
+      "brand": "KAWASAKI", 
+      "model": "NINJA 250 R", 
+      "year": "2009",
+      "version": "NINJA 250 R SPECIAL EDITION (EX250K)",
+      "category": "SUPERSPORT",
+      "displacement": 250
+    }
+  ],
+  "source": "master_list | local_legacy | fallback_text"
 }
 ```
+*Nota: Los campos `version`, `category` y `displacement` solo vienen si `source` es `master_list`. Antigravity debe manejar la presencia opcional de estos campos en la UI (ej: mostrar la versión exacta si está disponible).*
 
 ### 5. Autenticación Social (Google, Apple, Facebook)
 **Instrucción para Uri (Backend):**
