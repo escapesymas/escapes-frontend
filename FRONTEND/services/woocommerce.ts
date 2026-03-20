@@ -199,14 +199,7 @@ export const fetchProducts = async (
     // --- NUEVA LÓGICA DE COMPATIBILIDAD ---
     // Si tenemos una moto seleccionada, usamos nuestro motor de búsqueda optimizado
     if (moto && moto.brand && moto.model) {
-      let compPath = `/escapes/v1/compatible-products?brand=${encodeURIComponent(moto.brand)}&model=${encodeURIComponent(moto.model)}&per_page=${perPage}&page=${page}`;
-      if (moto.year && moto.year !== 'General') compPath += `&year=${encodeURIComponent(moto.year)}`;
-      if (categoryId) compPath += `&category_id=${categoryId}`;
-
-      const { data: compData } = await makeRequest(compPath);
-      const { products, total, total_pages } = compData as { products: Product[], total: number, total_pages: number };
-
-      return { products, totalPages: total_pages, totalProducts: total };
+      return fetchCompatibleProducts(moto.brand, moto.model, moto.year, categoryId, page, perPage);
     }
 
     // If no search query, just fetch normally
