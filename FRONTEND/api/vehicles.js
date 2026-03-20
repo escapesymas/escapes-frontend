@@ -1,68 +1,73 @@
-import path from 'path';
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
 import fs from 'fs';
+import path from 'path';
+
+// Load JSON once in the module scope (Vercel reuses lambdas)
+const JSON_PATH = path.join(process.cwd(), 'api', 'moto_catalog.json');
+
+let catalog = null;
+
+function getCatalog() {
+    if (!catalog) {
+        if (!fs.existsSync(JSON_PATH)) {
+            throw new Error(`Catalog missing at ${JSON_PATH}`);
+        }
+        catalog = JSON.parse(fs.readFileSync(JSON_PATH, 'utf-8'));
+    }
+    return catalog;
+}
 
 export default async function handler(req, res) {
     const { action, brand, model, year } = req.query;
-    
-    // Better path resolution for Vercel. Bundled files are in the lambda's CWD or subfolders.
-    const dbPath = path.join(process.cwd(), 'api', 'moto_catalog.db');
 
-    let db;
     try {
-        // 1. Initial checks for debugging (will show in 500 error response)
-        if (!fs.existsSync(dbPath)) {
-            // Check if it's in the same directory as this file (sometimes /api/ is the root for lambda)
-            const fallbackPath = path.join(__dirname, 'moto_catalog.db');
-            if (fs.existsSync(fallbackPath)) {
-                console.log('Using fallback path:', fallbackPath);
-            } else {
-                return res.status(500).json({ 
-                    error: "Database file missing", 
-                    cwd: process.cwd(), 
-                    dirname: __dirname,
-                    attempted_paths: [dbPath, fallbackPath]
-                });
-            }
-        }
-
-        // 2. Open DB
-        db = await open({
-            filename: dbPath,
-            driver: sqlite3.Database,
-            mode: sqlite3.OPEN_READONLY
-        });
+        const { hierarchy, compatibility } = getCatalog();
 
         if (action === 'brands') {
-            const brands = await db.all('SELECT DISTINCT brand FROM vehicles ORDER BY brand');
-            return res.status(200).json(brands.map(b => b.brand));
+            const brands = Object.keys(hierarchy).sort();
+            return res.status(200).json(brands);
         }
 
         if (action === 'models') {
-            const models = await db.all('SELECT DISTINCT model FROM vehicles WHERE brand = ? ORDER BY model', [brand]);
-            return res.status(200).json(models.map(m => m.model));
+            const models = Object.keys(hierarchy[brand] || {}).sort();
+            return res.status(200).json(models);
         }
 
         if (action === 'years') {
-            const years = await db.all('SELECT DISTINCT year FROM vehicles WHERE brand = ? AND model = ? ORDER BY year DESC', [brand, model]);
-            return res.status(200).json(years.map(y => y.year));
+            const years = Object.keys(hierarchy[brand]?.[model] || {}).sort((a, b) => b - a);
+            return res.status(200).json(years);
         }
 
         if (action === 'compatible-skus') {
-            let vQuery = 'SELECT code FROM vehicles WHERE brand = ? AND model = ?';
-            const params = [brand, model];
-            if (year && year !== 'General') {
-                vQuery += ' AND year = ?';
-                params.push(year);
-            }
-            const codes = await db.all(vQuery, params);
-            if (codes.length === 0) return res.status(200).json([]);
-
-            const placeholders = codes.map(() => '?').join(',');
-            const skus = await db.all(`SELECT DISTINCT sku FROM compatibility WHERE vehicle_code IN (${placeholders})`, codes.map(c => c.code));
+            // Find all codes for selected brand/model/year
+            let codes = [];
+            if (!hierarchy[brand]) return res.status(200).json([]);
             
-            return res.status(200).json(skus.map(s => s.sku));
+            if (model) {
+                if (year && year !== 'General') {
+                    codes = hierarchy[brand][model][year] || [];
+                } else {
+                    // All years for this model
+                    Object.values(hierarchy[brand][model]).forEach(cList => {
+                        codes.push(...cList);
+                    });
+                }
+            } else {
+                // All models for this brand
+                Object.values(hierarchy[brand]).forEach(modelsObj => {
+                    Object.values(modelsObj).forEach(cList => {
+                        codes.push(...cList);
+                    });
+                });
+            }
+
+            // Map codes to SKUs
+            const skusSet = new Set();
+            codes.forEach(code => {
+                const vehicleSkus = compatibility[code] || [];
+                vehicleSkus.forEach(sku => skusSet.add(sku));
+            });
+
+            return res.status(200).json(Array.from(skusSet));
         }
 
         return res.status(400).json({ error: 'Invalid action' });
@@ -70,13 +75,8 @@ export default async function handler(req, res) {
     } catch (error) {
         console.error('[VEHICLES API ERROR]:', error);
         return res.status(500).json({ 
-            error: error.message, 
-            stack: error.stack,
-            dbPath 
+            error: error.message,
+            path: JSON_PATH
         });
-    } finally {
-        if (db) {
-            try { await db.close(); } catch (e) {}
-        }
     }
 }

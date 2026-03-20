@@ -34,7 +34,7 @@
   ],
   "functions": {
     "api/vehicles.js": {
-      "includeFiles": "api/moto_catalog.db"
+      "includeFiles": "api/moto_catalog.json"
     }
   }
 }
