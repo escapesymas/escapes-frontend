@@ -110,30 +110,7 @@ export const TIRE_PROFILES = ["30", "35", "40", "45", "50", "55", "60", "65", "7
 export const TIRE_RIMS = ['12', '13', '14', '15', '16', '17', '18', '19', '21'];
 export const TIRE_CATEGORY_ID = 296;
 
-/**
- * MAPA DE AÑOS POR MODELO
- */
-/**
- * MAPA DE AÑOS POR MODELO Y DATOS DE SELECTOR
- * Generado dinámicamente desde utils/bikeDatabase.ts
- */
-import { BIKE_DATABASE, getAllBrands, getModelsByBrand, getYearsByModel } from './utils/bikeDatabase';
-
-// Transformar base de datos plana a estructura encadenada para selectores
-export const BIKE_DATA = {
-  brands: getAllBrands(),
-  models: getAllBrands().reduce((acc, brand) => {
-    acc[brand] = getModelsByBrand(brand);
-    return acc;
-  }, {} as Record<string, string[]>),
-  years: Array.from(new Set(BIKE_DATABASE.flatMap(b => b.years))).sort().reverse() // Todos los años posibles
-};
-
-// Mapa rápido para buscar años dado un modelo
-export const MODEL_YEARS = BIKE_DATABASE.reduce((acc, bike) => {
-  acc[bike.model] = bike.years;
-  return acc;
-}, {} as Record<string, string[]>);
+// Obsolete static bike data removed. Use services/woocommerce.ts functions instead.
 
 /**
  * ESTRATEGIA DE MARKETING Y NIVELES DE CLIENTE

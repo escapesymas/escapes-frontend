@@ -872,7 +872,10 @@ export const fetchCompatibleProducts = async (
       categorySlug: p.categories?.[0]?.slug || 'recambios',
       categoryId: p.categories?.[0]?.id || 0,
       description: p.description,
-      shortDescription: p.short_description
+      shortDescription: p.short_description,
+      attributes: p.attributes || [],
+      averageRating: parseFloat(p.average_rating || "0"),
+      ratingCount: p.rating_count || 0
     }));
 
     return { 
@@ -884,4 +887,41 @@ export const fetchCompatibleProducts = async (
     console.error('[COMPATIBILITY] Error fetching products:', error);
     return { products: [], totalPages: 1, totalProducts: 0 };
   }
+};
+
+/**
+ * VEHICLE DISCOVERY API (MASTER LIST)
+ * Endpoints habilitados por Uri para el Selector de Moto
+ */
+
+export const fetchMasterBrands = async (): Promise<string[]> => {
+    try {
+        const { data } = await makeRequest('/escapes/v1/master-brands');
+        return data as string[];
+    } catch (error) {
+        console.error('[MASTER-LIST] Error fetching brands:', error);
+        return [];
+    }
+};
+
+export const fetchMasterModels = async (brand: string): Promise<string[]> => {
+    if (!brand) return [];
+    try {
+        const { data } = await makeRequest(`/escapes/v1/master-models?brand=${encodeURIComponent(brand)}`);
+        return data as string[];
+    } catch (error) {
+        console.error('[MASTER-LIST] Error fetching models:', error);
+        return [];
+    }
+};
+
+export const fetchMasterYears = async (brand: string, model: string): Promise<string[]> => {
+    if (!brand || !model) return [];
+    try {
+        const { data } = await makeRequest(`/escapes/v1/master-years?brand=${encodeURIComponent(brand)}&model=${encodeURIComponent(model)}`);
+        return data as string[];
+    } catch (error) {
+        console.error('[MASTER-LIST] Error fetching years:', error);
+        return [];
+    }
 };
