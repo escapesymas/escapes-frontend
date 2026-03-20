@@ -78,6 +78,14 @@ Debes crear el endpoint: `POST /wp-json/escapes/v1/social-login`
 5. **Si el usuario ya existe**, simplemente lo loguea.
 6. **Respuesta crucial:** El endpoint debe devolver **exactamente la misma estructura de respuesta** que devuelve actualmente el plugin de JWT Authentication for WP REST API (`/wp-json/jwt-auth/v1/token`), incluyendo el `token` (el de WordPress), `user_email`, y `user_display_name`.
 
+### 6. Selector de Moto (BikeSelector.tsx)
+Uri ha habilitado endpoints específicos para consultar la **Tabla Maestra de Vehículos** (64k registros) y alimentar los dropdowns del selector.
+
+**Endpoints disponibles:**
+*   `GET /wp-json/escapes/v1/master-brands`: Devuelve un array simple con todas las marcas.
+*   `GET /wp-json/escapes/v1/master-models?brand=NOM_MARCA`: Devuelve un array simple con los modelos de esa marca.
+*   `GET /wp-json/escapes/v1/master-years?brand=NOM_MARCA&model=NOM_MODELO`: Devuelve un array simple con los años disponibles para ese modelo.
+
 ---
 
 ## 📝 Instrucciones para Antigravity
