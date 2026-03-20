@@ -31,5 +31,10 @@
       "source": "/((?!api/|robots\\.txt|sitemap\\.xml|favicon\\.ico).*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "functions": {
+    "api/vehicles.js": {
+      "includeFiles": "api/moto_catalog.db"
+    }
+  }
 }
