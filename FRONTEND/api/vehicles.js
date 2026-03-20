@@ -5,11 +5,17 @@ import { open } from 'sqlite';
 export default async function handler(req, res) {
     const { action, brand, model, year } = req.query;
     
-    // SQLite DB path (bundled with Vercel deployment)
-    const dbPath = path.resolve('./api/moto_catalog.db');
+    // Better path resolution for Vercel
+    const dbPath = path.join(process.cwd(), 'api', 'moto_catalog.db');
 
     let db;
     try {
+        // Debug: Check if file exists
+        const fs = await import('fs');
+        if (!fs.existsSync(dbPath)) {
+            throw new Error(`Database file not found at ${dbPath}. Check if api/moto_catalog.db is in the deployment.`);
+        }
+
         db = await open({
             filename: dbPath,
             driver: sqlite3.Database,
