@@ -1,17 +1,30 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// ESM equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load JSON once in the module scope (Vercel reuses lambdas)
 const JSON_PATH = path.join(process.cwd(), 'api', 'moto_catalog.json');
+const ALT_JSON_PATH = path.join(__dirname, 'moto_catalog.json');
 
 let catalog = null;
 
 function getCatalog() {
     if (!catalog) {
-        if (!fs.existsSync(JSON_PATH)) {
-            throw new Error(`Catalog missing at ${JSON_PATH}`);
+        let actualPath = JSON_PATH;
+        if (!fs.existsSync(actualPath)) {
+            actualPath = ALT_JSON_PATH;
         }
-        catalog = JSON.parse(fs.readFileSync(JSON_PATH, 'utf-8'));
+        
+        if (!fs.existsSync(actualPath)) {
+            throw new Error(`Catalog missing. Searched in: ${JSON_PATH} and ${ALT_JSON_PATH}`);
+        }
+        
+        const content = fs.readFileSync(actualPath, 'utf-8');
+        catalog = JSON.parse(content);
     }
     return catalog;
 }
