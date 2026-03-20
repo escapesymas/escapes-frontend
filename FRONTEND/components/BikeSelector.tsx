@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, ChevronDown, ChevronUp, Bike, SlidersHorizontal, Disc, Settings2 } from 'lucide-react';
-import { BikeSelection, BikeDataStructure, TireSelection } from '../types';
-import { MODEL_YEARS, TIRE_WIDTHS, TIRE_PROFILES, TIRE_RIMS } from '../storeData';
+import { Search, ChevronDown, ChevronUp, Bike, SlidersHorizontal, Disc, Settings2, Plus, Loader2 } from 'lucide-react';
+import { BikeSelection, TireSelection } from '../types';
+import { TIRE_WIDTHS, TIRE_PROFILES, TIRE_RIMS } from '../storeData';
+import { fetchMasterBrands, fetchMasterModels, fetchMasterYears } from '../services/woocommerce';
 
 interface BikeSelectorProps {
   onSearch?: (selection: BikeSelection) => void;
@@ -10,12 +11,20 @@ interface BikeSelectorProps {
   onTextSearch?: (query: string) => void;
   onReset?: () => void;
   isLoading?: boolean;
-  bikeData: BikeDataStructure;
 }
 
-export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTireSearch, onTextSearch, onReset, isLoading = false, bikeData }) => {
+export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTireSearch, onTextSearch, onReset, isLoading: isExternalLoading = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [textQuery, setTextQuery] = useState('');
+
+  // Estados para datos dinámicos
+  const [brands, setBrands] = useState<string[]>([]);
+  const [models, setModels] = useState<string[]>([]);
+  const [years, setYears] = useState<string[]>([]);
+  
+  const [loadingBrands, setLoadingBrands] = useState(false);
+  const [loadingModels, setLoadingModels] = useState(false);
+  const [loadingYears, setLoadingYears] = useState(false);
 
   // Sincronizar estado interno con la URL si es posible
   const [searchParams] = useSearchParams();
@@ -31,6 +40,64 @@ export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTireSear
     }
     return emptySelection;
   });
+
+  // 1. Cargar marcas al montar o al abrir
+  useEffect(() => {
+    const loadBrands = async () => {
+      setLoadingBrands(true);
+      try {
+        const data = await fetchMasterBrands();
+        setBrands(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingBrands(false);
+      }
+    };
+    if (isOpen && brands.length === 0) {
+      loadBrands();
+    }
+  }, [isOpen, brands.length]);
+
+  // 2. Cargar modelos cuando cambia la marca
+  useEffect(() => {
+    const loadModels = async () => {
+      if (!selection.brand) {
+        setModels([]);
+        return;
+      }
+      setLoadingModels(true);
+      try {
+        const data = await fetchMasterModels(selection.brand);
+        setModels(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingModels(false);
+      }
+    };
+    loadModels();
+  }, [selection.brand]);
+
+  // 3. Cargar años cuando cambia el modelo
+  useEffect(() => {
+    const loadYears = async () => {
+      if (!selection.model || !selection.brand) {
+        setYears([]);
+        return;
+      }
+      setLoadingYears(true);
+      try {
+        const data = await fetchMasterYears(selection.brand, selection.model);
+        setYears(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingYears(false);
+      }
+    };
+    loadYears();
+  }, [selection.model, selection.brand]);
 
   const handleResetClick = () => {
     setSelection(emptySelection);
@@ -50,10 +117,8 @@ export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTireSear
 
   const handleChange = (field: keyof BikeSelection, value: string) => {
     if (field === 'brand') {
-      // Al cambiar marca, resetear modelo y año
-      setSelection(prev => ({ ...prev, brand: value, model: '', year: '' }));
+      setSelection({ brand: value, model: '', year: '' });
     } else if (field === 'model') {
-      // Al cambiar modelo, resetear año
       setSelection(prev => ({ ...prev, model: value, year: '' }));
     } else {
       setSelection(prev => ({ ...prev, [field]: value }));
@@ -63,23 +128,22 @@ export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTireSear
   const handleBikeSearchClick = () => {
     if (onSearch && selection.brand) {
       onSearch(selection);
+      setIsOpen(false);
     }
   };
 
   const handleTireSearchClick = () => {
     if (onTireSearch && tireSelection.width && tireSelection.profile && tireSelection.rim) {
       onTireSearch(tireSelection);
+      setIsOpen(false);
     }
   };
 
   // Smart Tire Input Parsing
   const handleTireInputChange = (val: string) => {
     setTireInput(val);
-
-    // Regex to detect: 120/70-17, 1207017, 120 70 17, 120/70ZR17, etc
     const regex = /(\d{2,3})[/\s-]?(\d{2,3})[/\s-]?[rR]?[zZ]?(\d{2})/;
     const match = val.match(regex);
-
     if (match) {
       setTireSelection({
         width: match[1],
@@ -96,12 +160,7 @@ export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTireSear
     }
   };
 
-  const currentModels = selection.brand ? bikeData.models[selection.brand] || [] : [];
-
-  // Calcular años disponibles para el modelo seleccionado
-  const availableYears = selection.model
-    ? (MODEL_YEARS[selection.model] || bikeData.years) // Si no hay mapping específico, usa genéricos
-    : [];
+  const isGlobalLoading = isExternalLoading || loadingBrands || loadingModels || loadingYears;
 
   return (
     <div className="w-full max-w-4xl mx-auto relative z-20 px-4">
@@ -113,7 +172,7 @@ export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTireSear
             <div className="relative flex-grow">
               <input
                 type="text"
-                aria-label="Buscar pieza"
+                aria-label="¿Qué pieza buscas hoy?"
                 placeholder="¿Qué pieza buscas hoy?"
                 className="w-full h-12 bg-gray-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white px-4 pl-12 pr-10 rounded-sm focus:border-racing-orange focus:outline-none placeholder-zinc-500 text-base"
                 value={textQuery}
@@ -132,10 +191,10 @@ export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTireSear
             </div>
             <button
               type="submit"
-              disabled={isLoading || !textQuery.trim()}
+              disabled={isGlobalLoading || !textQuery.trim()}
               className="h-12 bg-racing-orange text-white font-black uppercase text-sm px-8 rounded-sm transition-colors hover:bg-orange-700 flex items-center justify-center gap-2"
             >
-              {isLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <Search className="w-4 h-4" />}
+              {isGlobalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
               BUSCAR
             </button>
           </form>
@@ -174,8 +233,6 @@ export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTireSear
           ) : (
             <button
               onClick={() => setIsOpen(!isOpen)}
-              aria-expanded={isOpen}
-              aria-label={isOpen ? "Ocultar filtro por moto" : "Mostrar filtro por moto"}
               className="flex items-center gap-2 text-racing-orange hover:text-zinc-900 dark:hover:text-white transition-colors text-xs font-bold uppercase tracking-widest w-full"
             >
               <SlidersHorizontal className="w-4 h-4" />
@@ -221,74 +278,74 @@ export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTireSear
                 <div className="relative">
                   <select
                     aria-label="Seleccionar Marca"
-                    className="w-full h-12 bg-gray-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-300 px-4 rounded-sm appearance-none focus:border-racing-orange focus:ring-1 focus:ring-racing-orange outline-none font-medium"
+                    className="w-full h-12 bg-gray-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-300 px-4 rounded-sm appearance-none focus:border-racing-orange outline-none font-medium text-sm"
                     value={selection.brand}
                     onChange={(e) => handleChange('brand', e.target.value)}
+                    disabled={loadingBrands}
                   >
-                    <option value="">Marca</option>
-                    {bikeData.brands.map(brand => (
+                    <option value="">{loadingBrands ? 'Cargando marcas...' : 'Marca'}</option>
+                    {brands.map(brand => (
                       <option key={brand} value={brand}>{brand}</option>
                     ))}
                   </select>
-                  <ChevronDown className="absolute right-3 top-3.5 w-5 h-5 text-zinc-500 pointer-events-none" />
+                  {loadingBrands ? (
+                    <Loader2 className="absolute right-8 top-3.5 w-4 h-4 text-racing-orange animate-spin" />
+                  ) : (
+                    <ChevronDown className="absolute right-3 top-3.5 w-5 h-5 text-zinc-500 pointer-events-none" />
+                  )}
                 </div>
 
                 {/* Model */}
                 <div className="relative">
                   <select
                     aria-label="Seleccionar Modelo"
-                    className="w-full h-12 bg-gray-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-300 px-4 rounded-sm appearance-none focus:border-racing-orange focus:ring-1 focus:ring-racing-orange outline-none font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={!selection.brand}
+                    className="w-full h-12 bg-gray-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-300 px-4 rounded-sm appearance-none focus:border-racing-orange outline-none font-medium text-sm disabled:opacity-50"
+                    disabled={!selection.brand || loadingModels}
                     value={selection.model}
                     onChange={(e) => handleChange('model', e.target.value)}
                   >
-                    <option value="">Modelo</option>
-                    {currentModels.length > 0 ? (
-                      currentModels.map((model: string) => (
-                        <option key={model} value={model}>{model}</option>
-                      ))
-                    ) : (
-                      <option value="" disabled>Selecciona Marca</option>
-                    )}
+                    <option value="">{loadingModels ? 'Cargando modelos...' : 'Modelo'}</option>
+                    {models.map(model => (
+                      <option key={model} value={model}>{model}</option>
+                    ))}
                   </select>
-                  <ChevronDown className="absolute right-3 top-3.5 w-5 h-5 text-zinc-500 pointer-events-none" />
+                  {loadingModels ? (
+                    <Loader2 className="absolute right-8 top-3.5 w-4 h-4 text-racing-orange animate-spin" />
+                  ) : (
+                    <ChevronDown className="absolute right-3 top-3.5 w-5 h-5 text-zinc-500 pointer-events-none" />
+                  )}
                 </div>
 
                 {/* Year */}
                 <div className="relative">
                   <select
                     aria-label="Seleccionar Año"
-                    className="w-full h-12 bg-gray-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-300 px-4 rounded-sm appearance-none focus:border-racing-orange focus:ring-1 focus:ring-racing-orange outline-none font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={!selection.model}
+                    className="w-full h-12 bg-gray-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-300 px-4 rounded-sm appearance-none focus:border-racing-orange outline-none font-medium text-sm disabled:opacity-50"
+                    disabled={!selection.model || loadingYears}
                     value={selection.year}
                     onChange={(e) => handleChange('year', e.target.value)}
                   >
-                    <option value="">Año</option>
-                    {availableYears.length > 0 ? (
-                      availableYears.map(year => (
-                        <option key={year} value={year}>{year}</option>
-                      ))
-                    ) : (
-                      <option value="" disabled>Selecciona Modelo</option>
-                    )}
-                    {availableYears.length > 0 && <option value="General">Todos los años</option>}
+                    <option value="">{loadingYears ? 'Cargando años...' : 'Año'}</option>
+                    {years.map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                    {years.length > 0 && <option value="General">Todos los años</option>}
                   </select>
-                  <ChevronDown className="absolute right-3 top-3.5 w-5 h-5 text-zinc-500 pointer-events-none" />
+                  {loadingYears ? (
+                    <Loader2 className="absolute right-8 top-3.5 w-4 h-4 text-racing-orange animate-spin" />
+                  ) : (
+                    <ChevronDown className="absolute right-3 top-3.5 w-5 h-5 text-zinc-500 pointer-events-none" />
+                  )}
                 </div>
 
                 {/* Action Button */}
                 <button
                   onClick={handleBikeSearchClick}
-                  aria-label="Aplicar filtro de moto"
-                  disabled={!selection.brand || !selection.model}
-                  className={`h-12 bg-racing-orange hover:bg-orange-700 text-white font-bold uppercase tracking-wide rounded-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${!selection.brand || !selection.model ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={!selection.brand || !selection.model || isGlobalLoading}
+                  className={`h-12 bg-racing-orange hover:bg-orange-700 text-white font-bold uppercase tracking-wide rounded-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${!selection.brand || !selection.model || isGlobalLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  {isLoading ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  ) : (
-                    <Bike className="w-5 h-5" />
-                  )}
-                  <span>{isLoading ? 'Buscando...' : 'Buscar Piezas'}</span>
+                  {isGlobalLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Bike className="w-5 h-5" />}
+                  <span>{isGlobalLoading ? 'Cargando...' : 'Buscar Piezas'}</span>
                 </button>
               </div>
             ) : (
@@ -368,10 +425,10 @@ export const BikeSelector: React.FC<BikeSelectorProps> = ({ onSearch, onTireSear
 
                   <button
                     onClick={handleTireSearchClick}
-                    disabled={isLoading || !tireSelection.width || !tireSelection.profile || !tireSelection.rim}
-                    className={`h-12 bg-zinc-900 hover:bg-black text-white font-bold uppercase tracking-widest px-10 rounded-sm flex items-center justify-center gap-2 border border-zinc-700 transition-all active:scale-[0.98] ${isLoading || !tireSelection.width || !tireSelection.profile || !tireSelection.rim ? 'opacity-30 cursor-not-allowed' : ''}`}
+                    disabled={isGlobalLoading || !tireSelection.width || !tireSelection.profile || !tireSelection.rim}
+                    className={`h-12 bg-zinc-900 hover:bg-black text-white font-bold uppercase tracking-widest px-10 rounded-sm flex items-center justify-center gap-2 border border-zinc-700 transition-all active:scale-[0.98] ${isGlobalLoading || !tireSelection.width || !tireSelection.profile || !tireSelection.rim ? 'opacity-30 cursor-not-allowed' : ''}`}
                   >
-                    {isLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <Disc className="w-5 h-5" />}
+                    {isGlobalLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Disc className="w-5 h-5" />}
                     <span>Buscar Neumáticos</span>
                   </button>
                 </div>

@@ -18,11 +18,11 @@ import { FeaturesBanner } from './components/FeaturesBanner';
 import { KlarnaBanner } from './components/KlarnaBanner';
 import { SearchImprovementsBanner } from './components/SearchImprovementsBanner';
 import { ProductSkeleton } from './components/ProductSkeleton';
-import { STORE_CONFIG, FEATURES, BIKE_DATA, CATEGORIES, TIRE_CATEGORY_ID } from './storeData';
+import { STORE_CONFIG, FEATURES, CATEGORIES, TIRE_CATEGORY_ID } from './storeData';
 import { fetchProducts, saveUserCart, getUserCart, fetchCategories, fetchCustomerByEmail, fetchProductsByIds, fetchCompatibleCategories, fetchCompatibleProducts } from './services/woocommerce';
 import { saveSession, getSession, logoutSession } from './services/auth';
 import { trackPageView, trackViewItem, trackAddToCart } from './utils/analytics';
-import { Product, BikeSelection, TireSelection, CartItem, User } from './types';
+import { Product, BikeSelection, TireSelection, CartItem, User, Category } from './types';
 import { optimizeImage } from './utils/imageOptimizer';
 
 const Checkout = React.lazy(() => import('./components/Checkout').then(m => ({ default: m.Checkout })));
@@ -1089,7 +1089,6 @@ function App() {
                       onTextSearch={handleTextSearch}
                       onReset={handleClearFilters}
                       isLoading={loading || compLoading}
-                      bikeData={BIKE_DATA}
                     />
                   </div>
                 </section>
