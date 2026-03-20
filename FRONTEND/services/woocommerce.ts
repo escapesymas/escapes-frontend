@@ -850,14 +850,21 @@ export const fetchCompatibleProducts = async (
   perPage: number = 20
 ): Promise<{ products: Product[], totalPages: number, totalProducts: number }> => {
   try {
-    let path = `/escapes/v1/compatible-products?brand=${encodeURIComponent(brand)}&model=${encodeURIComponent(model)}&page=${page}&per_page=${perPage}`;
-    if (year && year !== 'General' && year !== '') path += `&year=${encodeURIComponent(year)}`;
-    if (categoryId) path += `&category=${categoryId}`;
-
-    const { data } = await makeRequest(path);
+    // 1. Get compatible SKUs from our high-performance SQLite DB on Vercel
+    const skuPath = `/api/vehicles?action=compatible-skus&brand=${encodeURIComponent(brand)}&model=${encodeURIComponent(model)}&page=${page}&per_page=${perPage}`;
+    const yearParam = (year && year !== 'General' && year !== '') ? `&year=${encodeURIComponent(year)}` : '';
     
-    // El motor de búsqueda flexible a veces no devuelve headers de conteo exactos, 
-    // así que estimamos o usamos la longitud de la data
+    const skuRes = await fetch(skuPath + yearParam);
+    const skus: string[] = await skuRes.json();
+    
+    if (skus.length === 0) return { products: [], totalPages: 1, totalProducts: 0 };
+
+    // 2. Fetch the actual products from WordPress using our new fast SKU lookup
+    let wpPath = `/escapes/v1/products-by-skus?skus=${skus.slice(0, perPage).join(',')}`;
+    if (categoryId) wpPath += `&category_id=${categoryId}`;
+
+    const { data } = await makeRequest(wpPath);
+    
     const products = (data as any[]).map(p => ({
       id: p.id,
       title: p.name,
@@ -896,7 +903,8 @@ export const fetchCompatibleProducts = async (
 
 export const fetchMasterBrands = async (): Promise<string[]> => {
     try {
-        const { data } = await makeRequest('/escapes/v1/master-brands');
+        const res = await fetch('/api/vehicles?action=brands');
+        const data = await res.json();
         return data as string[];
     } catch (error) {
         console.error('[MASTER-LIST] Error fetching brands:', error);
@@ -907,7 +915,8 @@ export const fetchMasterBrands = async (): Promise<string[]> => {
 export const fetchMasterModels = async (brand: string): Promise<string[]> => {
     if (!brand) return [];
     try {
-        const { data } = await makeRequest(`/escapes/v1/master-models?brand=${encodeURIComponent(brand)}`);
+        const res = await fetch(`/api/vehicles?action=models&brand=${encodeURIComponent(brand)}`);
+        const data = await res.json();
         return data as string[];
     } catch (error) {
         console.error('[MASTER-LIST] Error fetching models:', error);
@@ -918,7 +927,8 @@ export const fetchMasterModels = async (brand: string): Promise<string[]> => {
 export const fetchMasterYears = async (brand: string, model: string): Promise<string[]> => {
     if (!brand || !model) return [];
     try {
-        const { data } = await makeRequest(`/escapes/v1/master-years?brand=${encodeURIComponent(brand)}&model=${encodeURIComponent(model)}`);
+        const res = await fetch(`/api/vehicles?action=years&brand=${encodeURIComponent(brand)}&model=${encodeURIComponent(model)}`);
+        const data = await res.json();
         return data as string[];
     } catch (error) {
         console.error('[MASTER-LIST] Error fetching years:', error);
