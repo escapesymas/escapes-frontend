@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     const { action, brand, model, year } = req.query;
     
     // SQLite DB path (bundled with Vercel deployment)
-    const dbPath = path.resolve('./api/vehicles.db');
+    const dbPath = path.resolve('./api/moto_catalog.db');
 
     let db;
     try {
