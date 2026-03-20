@@ -62,7 +62,7 @@ export async function registerUser(data: {
   email: string;
   password: string;
 }): Promise<RegisterResult> {
-  const res = await safeFetch<RegisterResult>("/api/auth/register", {
+  const res = await safeFetch<RegisterResult>("/api/auth?action=register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -78,7 +78,7 @@ export async function registerUser(data: {
 }
 
 export async function loginUser(username: string, password: string): Promise<Session> {
-  const res = await safeFetch<Session>("/api/auth/login", {
+  const res = await safeFetch<Session>("/api/auth?action=login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
@@ -92,7 +92,7 @@ export async function loginUser(username: string, password: string): Promise<Ses
 }
 
 export async function socialLoginUser(provider: string, token: string): Promise<Session> {
-  const res = await safeFetch<Session>("/api/auth/login", {
+  const res = await safeFetch<Session>("/api/auth?action=login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ provider, token }),

@@ -646,7 +646,7 @@ export const uploadCustomerPhoto = async (userId: number, file: File, token?: st
     formData.append('avatar', file);
 
     // Usar nuestro endpoint local en server.js (o Vercel function)
-    const response = await fetch(`/api/upload/avatar`, {
+    const response = await fetch(`/api/upload-avatar`, {
       method: 'POST',
       // NO establecer Content-Type header manualmente con FormData, fetch lo hace automático con boundary
       body: formData,
