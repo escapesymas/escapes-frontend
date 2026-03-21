@@ -15,6 +15,79 @@ import { RichTextEditor } from '../RichTextEditor'; // Assuming this is reusable
 import { SEO } from '../SEO';
 import { RankBadge } from '../RankBadge';
 
+const CategoryFolder: React.FC<{ 
+    category: PaddockCategory; 
+    onSelect: (c: PaddockCategory) => void;
+    depth?: number;
+}> = ({ category, onSelect, depth = 0 }) => {
+    const isTop = depth === 0;
+    
+    if (isTop) {
+        return (
+            <div className="bg-white dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm hover:border-racing-orange/30 transition-all flex flex-col h-full">
+                <div 
+                    className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center group cursor-pointer bg-gradient-to-br from-white to-gray-50 dark:from-zinc-900 dark:to-black/40" 
+                    onClick={() => onSelect(category)}
+                >
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-zinc-400 group-hover:text-racing-orange transition-colors">
+                            <MessageSquare className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-black uppercase italic text-zinc-900 dark:text-white group-hover:text-racing-orange transition-colors tracking-tight">
+                                {category.title}
+                            </h3>
+                            <p className="text-zinc-500 text-xs mt-1 font-medium">{category.description}</p>
+                        </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-zinc-300 group-hover:text-racing-orange transition-all transform group-hover:translate-x-1" />
+                </div>
+                
+                {category.children && category.children.length > 0 && (
+                    <div className="p-2 space-y-1 bg-gray-50/30 dark:bg-black/10 flex-grow">
+                        {category.children.map(child => (
+                            <CategoryFolder key={child.id} category={child} onSelect={onSelect} depth={depth + 1} />
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    return (
+        <div className="mb-1">
+            <button 
+                onClick={() => onSelect(category)}
+                className="w-full flex items-center justify-between p-3 hover:bg-white dark:hover:bg-zinc-800 rounded-lg transition-all text-left group border border-transparent hover:border-zinc-200 dark:hover:border-zinc-700 shadow-sm hover:shadow-md"
+            >
+                <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-zinc-300 dark:bg-zinc-700 rounded-full group-hover:bg-racing-orange transition-colors"></div>
+                    <div>
+                        <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300 group-hover:text-racing-orange transition-colors uppercase italic tracking-wide">
+                            {category.title}
+                        </span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] text-zinc-400 font-medium">{category.description}</span>
+                            <span className="text-[9px] bg-zinc-100 dark:bg-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded uppercase font-bold tracking-tighter">
+                                {category.count} hilos
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <PlusCircle className="w-4 h-4 text-zinc-300 group-hover:text-racing-orange group-hover:rotate-90 transition-all opacity-0 group-hover:opacity-100" />
+            </button>
+            
+            {category.children && category.children.length > 0 && (
+                <div className="ml-5 pl-4 border-l border-zinc-200 dark:border-zinc-800 mt-1 mb-2 space-y-1">
+                    {category.children.map(subChild => (
+                        <CategoryFolder key={subChild.id} category={subChild} onSelect={onSelect} depth={depth + 1} />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
 interface PaddockProps {
     user: UserType | null;
     onBack: () => void;
@@ -55,6 +128,17 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
         loadCategories();
     }, []);
 
+    const findCategoryById = (cats: PaddockCategory[], id: number): PaddockCategory | undefined => {
+        for (const cat of cats) {
+            if (cat.id === id) return cat;
+            if (cat.children) {
+                const found = findCategoryById(cat.children, id);
+                if (found) return found;
+            }
+        }
+        return undefined;
+    };
+
     const handleRefreshSync = async () => {
         if (view === 'threads' && categoryId) {
             setLoading(true);
@@ -62,7 +146,7 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
             // Ensure category is selected
             if (!selectedCategory || selectedCategory.id !== catId) {
                 const cats = categories.length ? categories : await fetchPaddockCategories();
-                const found = cats.find(c => c.id === catId);
+                const found = findCategoryById(cats, catId);
                 if (found) setSelectedCategory(found);
             }
             const data = await fetchPaddockThreads(catId);
@@ -102,30 +186,33 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
     };
 
     const handleCreateThread = async () => {
-        if (!user || !user.token) return onLoginRequest();
-        if (!newThreadTitle.trim() || !newThreadContent.trim()) {
-            setErrorMsg("Por favor completa todos los campos.");
+        if (!user || !user.token) {
+            onLoginRequest();
             return;
         }
+        if (!selectedCategory || !newThreadTitle || !newThreadContent) return;
 
         setIsSubmitting(true);
-        const result = await createPaddockThread(user.token, parseInt(categoryId!), newThreadTitle, newThreadContent);
+        const result = await createPaddockThread(user.token, selectedCategory.id, newThreadTitle, newThreadContent);
         setIsSubmitting(false);
 
         if (result.success) {
             setNewThreadTitle('');
             setNewThreadContent('');
-            setSuccessMsg("¡Tema creado con éxito!");
+            setSuccessMsg("¡Hilo publicado con éxito!");
+            navigateTo('thread_detail', { cat: String(selectedCategory.id), thread: String(result.id) });
             setTimeout(() => setSuccessMsg(null), 3000);
-            navigateTo('threads', { cat: categoryId! });
         } else {
-            setErrorMsg(result.error || "Error al crear el tema.");
+            setErrorMsg(result.error || "Error al publicar");
         }
     };
 
     const handleReply = async () => {
-        if (!user || !user.token) return onLoginRequest();
-        if (!selectedThread || !replyContent.trim()) return;
+        if (!user || !user.token) {
+            onLoginRequest();
+            return;
+        }
+        if (!selectedThread || !replyContent) return;
 
         setIsSubmitting(true);
         const result = await sendReply(user.token, selectedThread.id, replyContent);
@@ -133,19 +220,32 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
 
         if (result.success) {
             setReplyContent('');
-            // Refresh replies
             const updated = await fetchPaddockThread(selectedThread.id);
             if (updated) setReplies(updated.replies);
-            setSuccessMsg("Respuesta publicada +5 XP");
+            setSuccessMsg("Respuesta enviada");
             setTimeout(() => setSuccessMsg(null), 3000);
         } else {
-            setErrorMsg(result.error || "Error al responder.");
+            setErrorMsg(result.error || "Error al responder");
+        }
+    };
+
+    const handleLike = async (type: 'social_post' | 'paddock_thread', id: number) => {
+        if (!user || !user.token) {
+            onLoginRequest();
+            return;
+        }
+        const res = await toggleLike(user.token, type, id);
+        if (res.success && type === 'paddock_thread' && selectedThread) {
+            setSelectedThread({
+                ...selectedThread,
+                metrics: { ...selectedThread.metrics, likes: res.liked ? selectedThread.metrics.likes + 1 : selectedThread.metrics.likes - 1 }
+            });
         }
     };
 
     const handleDeleteThread = async () => {
         if (!user || !user.token || !selectedThread) return;
-        if (!window.confirm("¿Estás seguro de eliminar este tema?")) return;
+        if (!window.confirm("¿Seguro que quieres eliminar este hilo?")) return;
 
         const result = await deletePaddockThread(user.token, selectedThread.id);
         if (result.success) {
@@ -226,7 +326,7 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
                                 <h1 className="text-4xl md:text-5xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter mb-2 flex items-center gap-4">
                                     THE <span className="text-transparent bg-clip-text bg-gradient-to-r from-racing-orange to-red-600">PADDOCK</span>
                                     <button
-                                        onClick={() => handleRefreshSync()}
+                                        onClick={() => loadCategories()}
                                         className="p-2 text-zinc-500 hover:text-racing-orange transition-colors"
                                         title="Sincronizar"
                                     >
@@ -240,30 +340,26 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
                         </div>
 
                         {loading ? (
-                            <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 text-racing-orange animate-spin" /></div>
+                            <div className="flex justify-center py-20">
+                                <Loader2 className="w-10 h-10 text-racing-orange animate-spin" />
+                            </div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 {categories.map(cat => (
-                                    <div
-                                        key={cat.id}
-                                        onClick={() => {
-                                            // Detect 'Routes' category dynamically (by title or if it was mapped with compass icon)
-                                            const isRoutes = cat.title.toLowerCase().includes('rita') || cat.title.toLowerCase().includes('ruta') || cat.title.toLowerCase().includes('quedada');
-
+                                    <CategoryFolder 
+                                        key={cat.id} 
+                                        category={cat} 
+                                        onSelect={(c) => {
+                                            const titleLower = c.title.toLowerCase();
+                                            const isRoutes = titleLower.includes('rita') || titleLower.includes('ruta') || titleLower.includes('quedada');
                                             if (isRoutes) {
                                                 navigateTo('provinces');
                                             } else {
-                                                setSelectedCategory(cat);
-                                                navigateTo('threads', { cat: String(cat.id) });
+                                                setSelectedCategory(c);
+                                                navigateTo('threads', { cat: String(c.id) });
                                             }
                                         }}
-                                        className="group bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 hover:border-racing-orange/50 p-6 rounded-xl cursor-pointer transition-all duration-300 hover:bg-gray-50 dark:hover:bg-zinc-900 relative overflow-hidden shadow-sm dark:shadow-none"
-                                    >
-                                        <div className="relative z-10">
-                                            <h3 className="text-xl font-bold text-zinc-900 dark:text-white uppercase italic mb-2 group-hover:text-racing-orange transition-colors">{cat.title}</h3>
-                                            <p className="text-zinc-600 dark:text-zinc-500 text-sm mb-4 min-h-[40px]">{cat.description}</p>
-                                        </div>
-                                    </div>
+                                    />
                                 ))}
                             </div>
                         )}
@@ -279,7 +375,15 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
                                 <button
                                     key={province}
                                     onClick={() => {
-                                        const routeCat = categories.find(c => c.title.toLowerCase().includes('ruta') || c.title.toLowerCase().includes('quedada'));
+                                        const flatCats = (cats: PaddockCategory[]): PaddockCategory[] => {
+                                            let res: PaddockCategory[] = [];
+                                            cats.forEach(c => {
+                                                res.push(c);
+                                                if (c.children) res = res.concat(flatCats(c.children));
+                                            });
+                                            return res;
+                                        };
+                                        const routeCat = flatCats(categories).find(c => c.title.toLowerCase().includes('ruta') || c.title.toLowerCase().includes('quedada'));
                                         if (routeCat) {
                                             setSelectedCategory(routeCat);
                                             navigateTo('threads', { cat: String(routeCat.id), province: province });

@@ -46,6 +46,8 @@ export interface PaddockCategory {
     description: string;
     icon?: string;
     count: number;
+    parent?: number;
+    children?: PaddockCategory[];
 }
 
 export interface PaddockThread {
@@ -154,58 +156,50 @@ export const SPAIN_PROVINCES = [
     "Valladolid", "Vizcaya", "Zamora", "Zaragoza"
 ].sort();
 
-/**
- * Paddock: Obtener categorías
- * @returns Lista de categorías (reales del backend con metadatos UI inyectados)
- */
+const buildPaddockTree = (flatList: any[], parentId: number = 0): PaddockCategory[] => {
+    const tree: PaddockCategory[] = [];
+    
+    flatList.forEach(cat => {
+        if ((cat.parent || 0) === parentId) {
+            const children = buildPaddockTree(flatList, cat.id);
+            
+            // UI Config mapping
+            const titleLower = cat.name.toLowerCase();
+            let config = UI_CATEGORY_CONFIG['general'];
+            if (titleLower.includes('mecanica') || titleLower.includes('taller')) config = UI_CATEGORY_CONFIG['mecanica'];
+            else if (titleLower.includes('venta') || titleLower.includes('motos')) config = UI_CATEGORY_CONFIG['compraventa'];
+            else if (titleLower.includes('ruta') || titleLower.includes('quedada')) config = UI_CATEGORY_CONFIG['rutas'];
+
+            tree.push({
+                id: cat.id,
+                title: cat.name,
+                description: cat.description || 'Espacio de discusión',
+                count: cat.count || 0,
+                icon: config!.icon,
+                parent: cat.parent,
+                children: children.length > 0 ? children : undefined
+            });
+        }
+    });
+
+    return tree;
+};
+
 export const fetchPaddockCategories = async (): Promise<PaddockCategory[]> => {
     try {
         const { data } = await makeRequest(`${API_BASE}/categories`);
 
         if (Array.isArray(data) && data.length > 0) {
-            return data.map((cat: any) => {
-                // Detectar tipo de categoría por título para asignar icono/descripción
-                const titleLower = cat.name.toLowerCase();
-                let config = UI_CATEGORY_CONFIG['general']; // Default
-
-                if (titleLower.includes('mecanica') || titleLower.includes('taller')) config = UI_CATEGORY_CONFIG['mecanica'];
-                else if (titleLower.includes('venta') || titleLower.includes('motos')) config = UI_CATEGORY_CONFIG['compraventa'];
-                else if (titleLower.includes('ruta') || titleLower.includes('quedada')) config = UI_CATEGORY_CONFIG['rutas'];
-
-                return {
-                    id: cat.id, // IMPORTANTE: Usar ID real del backend
-                    title: cat.name,
-                    description: cat.description || config!.description || 'Espacio de discusión',
-                    count: cat.count || 0,
-                    icon: config!.icon
-                };
-            });
+            // Build hierarchy from flat list
+            return buildPaddockTree(data, 0);
         }
 
-        // Si no hay categorías en el backend, devolvemos las estáticas (Solo para desarrollo/visualización)
-        console.warn("[PADDOCK] No categories found, using static fallback.");
-        return Object.values(UI_CATEGORY_CONFIG).map((conf, index) => ({
-            id: conf.id ?? index,
-            title: ['Paddock General', 'Mecánica y Taller', 'Compraventa Motos', 'Rutas y Quedadas'][index],
-            description: [
-                'Charlas generales, noticias y debates del mundo del motor.',
-                'Dudas técnicas, tutoriales y bricos para tu máquina.',
-                'Mercado de ocasión exclusivo para motos completas.',
-                'Organiza salidas o únete a quedadas cerca de ti.'
-            ][index],
-            count: 0,
-            icon: conf.icon
-        }));
+        // Fallback or empty
+        return [];
 
     } catch (error) {
-        console.error('[PADDOCK] API failed, using static fallback', error);
-        // Fallback estático en caso de error
-        return [
-            { id: 0, title: 'Paddock General', description: 'Charlas generales', icon: 'message-square', count: 0 },
-            { id: 102, title: 'Mecánica y Taller', description: 'Dudas técnicas', icon: 'wrench', count: 0 },
-            { id: 103, title: 'Compraventa Motos', description: 'Solo motos completas', icon: 'bike', count: 0 },
-            { id: 104, title: 'Rutas y Quedadas', description: 'Organiza tus salidas', icon: 'compass', count: 0 }
-        ];
+        console.error('[PADDOCK] API failed', error);
+        return [];
     }
 };
 
