@@ -32,7 +32,8 @@ export const AdminDashboard: React.FC<{ user: UserType | null; onBack: () => voi
     const loadStats = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`/api/admin?action=dashboard-stats&userId=${user?.id}`);
+            const userId = user?.id || (user as any)?.user_id || (user as any)?.wpId;
+            const res = await fetch(`/api/admin?action=dashboard-stats&userId=${userId}`);
             if (!res.ok) throw new Error("Error al cargar estadísticas");
             const data = await res.json();
             setStats(data);
