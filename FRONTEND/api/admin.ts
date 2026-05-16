@@ -19,7 +19,7 @@ export default async function handler(req: any, res: any) {
 
     if (req.method === 'OPTIONS') return res.status(200).end();
 
-    // Verificación Robusta: ID o Email de Admin
+    // Verificación de Admin
     let isAdmin = false;
     if (email?.toLowerCase() === 'info@escapesymas.com') {
         isAdmin = true;
@@ -28,9 +28,7 @@ export default async function handler(req: any, res: any) {
         if (adminUser.rows[0]?.role === 'admin') isAdmin = true;
     }
 
-    if (!isAdmin) {
-        return res.status(401).json({ error: 'Sesión no autorizada' });
-    }
+    if (!isAdmin) return res.status(401).json({ error: 'Sesión no autorizada' });
 
     try {
         switch (action) {
@@ -39,7 +37,6 @@ export default async function handler(req: any, res: any) {
                 const postRes = await db.execute(sql`SELECT count(*) as count FROM forum_posts`);
                 const orderRes = await db.execute(sql`SELECT count(*) as count FROM orders`);
                 const salesRes = await db.execute(sql`SELECT COALESCE(SUM(total), 0) as total FROM orders`);
-
                 return res.status(200).json({
                     users: Number(userRes.rows[0]?.count || 0),
                     posts: Number(postRes.rows[0]?.count || 0),
@@ -55,27 +52,33 @@ export default async function handler(req: any, res: any) {
                 if (req.method !== 'POST') return res.status(405).end();
                 const { name, sku, price, stock, brand, imageUrl } = req.body;
                 
-                // Conversión a céntimos (integer) como pide el esquema
-                const priceInCents = Math.round(parseFloat(price) * 100);
+                // VALIDACIÓN Y LIMPIEZA EXTREMA
+                const safeName = (name || "Sin nombre").substring(0, 255);
+                const safeSku = (sku || `SKU-${Date.now()}`).substring(0, 100);
+                const rawPrice = parseFloat(price);
+                const priceInCents = isNaN(rawPrice) ? 0 : Math.round(rawPrice * 100);
                 const safeStock = parseInt(stock) || 0;
+                const safeImage = imageUrl || '';
 
-                // Consulta corregida con nombres de columnas reales (images, status)
+                console.log("DEBUG CREATE PRODUCT:", { safeName, safeSku, priceInCents, safeStock });
+
                 await db.execute(sql`
                     INSERT INTO products (name, sku, price, stock, images, status)
-                    VALUES (${name}, ${sku}, ${priceInCents}, ${safeStock}, ${imageUrl || ''}, 'published')
+                    VALUES (${safeName}, ${safeSku}, ${priceInCents}, ${safeStock}, ${safeImage}, 'published')
                 `);
                 
                 return res.status(200).json({ success: true });
 
             default:
-                return res.status(200).json({ status: "ok", message: "API Admin Ready" });
+                return res.status(200).json({ status: "ok" });
         }
     } catch (error: any) {
         console.error("ADMIN API ERROR:", error);
         return res.status(500).json({ 
             error: "Error de base de datos",
             message: error.message,
-            detail: error.detail // Esto nos dirá si es un SKU duplicado
+            detail: error.detail,
+            hint: "Verifica que el SKU no esté duplicado"
         });
     }
 }
