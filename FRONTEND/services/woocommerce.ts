@@ -175,7 +175,6 @@ export const fetchProducts = async (
   fast: boolean = false,
   moto?: { brand: string, model: string, year?: string }
 ): Promise<{ products: Product[], totalPages: number, totalProducts: number }> => {
-  if (!isConfigValid()) throw new Error("Configuración inválida");
 
   const BROKEN_IMG_URL = "https://backendescapes.com/wp-content/uploads/2026/01/Sprint20Filter20P1420Filtro20de20Aire20Yamaha20T-150202015-.jpg";
 
@@ -206,9 +205,42 @@ export const fetchProducts = async (
     };
   };
 
+  // ===================================================================
+  // FUENTE PRINCIPAL: PostgreSQL Nativo (Catálogo Maestro)
+  // ===================================================================
   try {
-    // --- NUEVA LÓGICA DE COMPATIBILIDAD ---
-    // Si tenemos una moto seleccionada, usamos nuestro motor de búsqueda optimizado
+    let catalogUrl = `/api/catalog?action=products&page=${page}&per_page=${perPage}`;
+    if (searchQuery) catalogUrl += `&search=${encodeURIComponent(searchQuery)}`;
+
+    // Compatibilidad con motos (nativo)
+    if (moto && moto.brand && moto.model) {
+      catalogUrl = `/api/catalog?action=compatible&brand=${encodeURIComponent(moto.brand)}&model=${encodeURIComponent(moto.model)}&page=${page}&per_page=${perPage}`;
+      if (moto.year) catalogUrl += `&year=${encodeURIComponent(moto.year)}`;
+    }
+
+    const nativeRes = await fetch(catalogUrl);
+    if (nativeRes.ok) {
+      const nativeProducts = await nativeRes.json();
+      const totalProducts = parseInt(nativeRes.headers.get('X-WP-Total') || '0');
+      const totalPages = parseInt(nativeRes.headers.get('X-WP-TotalPages') || '1');
+
+      // Si PostgreSQL tiene productos, los usamos directamente
+      if (Array.isArray(nativeProducts) && nativeProducts.length > 0) {
+        console.log(`[CATALOG] ✅ ${nativeProducts.length} productos desde PostgreSQL`);
+        return { products: nativeProducts, totalPages, totalProducts };
+      }
+    }
+  } catch (pgError) {
+    console.warn('[CATALOG] PostgreSQL no disponible, usando WooCommerce como fallback:', pgError);
+  }
+
+  // ===================================================================
+  // FALLBACK: WooCommerce (Solo si PostgreSQL no tiene datos)
+  // ===================================================================
+  if (!isConfigValid()) throw new Error("Configuración inválida");
+
+  try {
+    // --- COMPATIBILIDAD CON MOTOS (FALLBACK WP) ---
     if (moto && moto.brand && moto.model) {
       return fetchCompatibleProducts(moto.brand, moto.model, moto.year, categoryId, page, perPage);
     }
