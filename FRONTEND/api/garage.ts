@@ -61,6 +61,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Método no permitido" });
   } catch (err: any) {
     console.error("[GARAGE API ERROR]:", err.message);
-    return res.status(500).json({ error: "Error interno del servidor", detail: err.message });
+    return res.status(500).json({ 
+      error: "Error en la gestión del garaje (PostgreSQL)", 
+      message: err.message,
+      stack: err.stack?.split('\n')[0],
+      hint: "Verifica la conexión con el VPS y la variable DATABASE_URL"
+    });
   }
 }
