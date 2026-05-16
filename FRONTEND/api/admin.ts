@@ -50,21 +50,24 @@ export default async function handler(req: any, res: any) {
 
             case 'create-product':
                 if (req.method !== 'POST') return res.status(405).end();
-                const { name, sku, price, stock, brand, imageUrl } = req.body;
+                const body = req.body;
                 
-                // VALIDACIÓN Y LIMPIEZA EXTREMA
-                const safeName = (name || "Sin nombre").substring(0, 255);
-                const safeSku = (sku || `SKU-${Date.now()}`).substring(0, 100);
-                const rawPrice = parseFloat(price);
+                // Validación y conversión
+                const safeName = (body.name || "Sin nombre").substring(0, 255);
+                const safeSku = (body.sku || `SKU-${Date.now()}`).substring(0, 100);
+                const rawPrice = parseFloat(body.price);
                 const priceInCents = isNaN(rawPrice) ? 0 : Math.round(rawPrice * 100);
-                const safeStock = parseInt(stock) || 0;
-                const safeImage = imageUrl || '';
-
-                console.log("DEBUG CREATE PRODUCT:", { safeName, safeSku, priceInCents, safeStock });
+                const rawSalePrice = parseFloat(body.salePrice);
+                const salePriceCents = isNaN(rawSalePrice) ? null : Math.round(rawSalePrice * 100);
+                const safeStock = parseInt(body.stock) || 0;
+                const safeDesc = body.description || null;
+                const safeImages = body.images && body.images.length > 0 ? JSON.stringify(body.images) : null;
+                const safeCompat = body.compatibility && body.compatibility.length > 0 ? JSON.stringify(body.compatibility) : null;
+                const safeStatus = body.status || 'published';
 
                 await db.execute(sql`
-                    INSERT INTO products (name, sku, price, stock, images, status)
-                    VALUES (${safeName}, ${safeSku}, ${priceInCents}, ${safeStock}, ${safeImage}, 'published')
+                    INSERT INTO products (name, sku, price, sale_price, stock, description, images, compatibility, status)
+                    VALUES (${safeName}, ${safeSku}, ${priceInCents}, ${salePriceCents}, ${safeStock}, ${safeDesc}, ${safeImages}, ${safeCompat}, ${safeStatus})
                 `);
                 
                 return res.status(200).json({ success: true });
