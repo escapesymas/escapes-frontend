@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { db, schema } from "../lib/db";
+import { db, schema } from "../lib/db.js";
 import { eq } from "drizzle-orm";
 
 // PARCHE DE EMERGENCIA: Ignorar errores de SSL caducado en el backend
