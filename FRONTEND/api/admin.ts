@@ -47,6 +47,25 @@ export default async function handler(req: any, res: any) {
                     sales: Number(salesRes.rows[0]?.total || 0)
                 });
 
+            case 'products-list':
+                const products = await db.execute(sql`SELECT * FROM products ORDER BY created_at DESC`);
+                return res.status(200).json(products.rows);
+
+            case 'create-product':
+                if (req.method !== 'POST') return res.status(405).end();
+                const { name, sku, price, stock, category, brand, imageUrl } = req.body;
+                
+                // Valores por defecto para evitar errores de NULL
+                const safeCategory = category || 'General';
+                const safeBrand = brand || 'Escapes y Más';
+                const safeImage = imageUrl || '';
+
+                await db.execute(sql`
+                    INSERT INTO products (name, sku, price, stock, category, brand, image_url)
+                    VALUES (${name}, ${sku}, ${parseFloat(price)}, ${parseInt(stock)}, ${safeCategory}, ${safeBrand}, ${safeImage})
+                `);
+                return res.status(200).json({ success: true });
+
             default:
                 return res.status(200).json({ status: "ok", message: "API Admin Ready" });
         }
