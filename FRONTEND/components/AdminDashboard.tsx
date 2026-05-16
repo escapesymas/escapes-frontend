@@ -88,22 +88,82 @@ export const AdminDashboard: React.FC<{ user: UserType | null; onBack: () => voi
                 )}
 
                 {activeTab === 'products' && (
-                    <>
-                        <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-20 text-center relative overflow-hidden">
-                            <Icons.Package size={48} className="mx-auto mb-4 text-zinc-700" />
-                            <p className="font-bold uppercase italic text-zinc-500">Módulo de productos listo para poblar.</p>
-                            <button onClick={() => setShowNewForm(true)} className="mt-6 bg-[#ff4d00] text-white px-8 py-3 rounded-full font-black uppercase italic text-xs tracking-widest shadow-xl shadow-orange-900/30 hover:scale-105 transition-transform">Nuevo Producto</button>
-                        </div>
+                    <InventoryList user={user} onOpenForm={() => setShowNewForm(true)} />
+                )}
 
-                        {showNewForm && (
-                            <NewProductForm 
-                                onClose={() => setShowNewForm(false)} 
-                                onSubmit={handleCreateProduct} 
-                            />
-                        )}
-                    </>
+                {showNewForm && (
+                    <NewProductForm 
+                        onClose={() => setShowNewForm(false)} 
+                        onSubmit={handleCreateProduct} 
+                    />
                 )}
             </main>
+        </div>
+    );
+};
+
+const InventoryList = ({ user, onOpenForm }: any) => {
+    const [products, setProducts] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const loadProducts = async () => {
+        setLoading(true);
+        try {
+            const stored = localStorage.getItem('escapes_user');
+            const u = user || (stored ? JSON.parse(stored) : null);
+            const userId = u.id || u.wpId || u.user_id;
+            const res = await fetch(`/api/admin?action=products-list&userId=${userId}&email=${u.email}`);
+            if (res.ok) setProducts(await res.json());
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
+    };
+
+    useEffect(() => { loadProducts(); }, []);
+
+    return (
+        <div className="space-y-6">
+            <div className="flex justify-between items-center mb-6">
+                <button onClick={onOpenForm} className="bg-[#ff4d00] text-white px-6 py-3 rounded-xl font-black uppercase italic text-xs tracking-widest shadow-lg shadow-orange-900/30 hover:scale-105 transition-transform flex items-center gap-2">
+                    <Icons.Package size={16} /> Nuevo Producto
+                </button>
+                <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest bg-zinc-900 px-4 py-2 rounded-lg border border-zinc-800">
+                    Total: <span className="text-white">{products.length}</span> items
+                </div>
+            </div>
+
+            <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="bg-black/50 text-[10px] uppercase font-black tracking-widest text-zinc-500 border-b border-zinc-800">
+                            <th className="px-6 py-4 italic">Producto</th>
+                            <th className="px-6 py-4">SKU</th>
+                            <th className="px-6 py-4">Precio</th>
+                            <th className="px-6 py-4">Stock</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-800/50">
+                        {loading ? (
+                            <tr><td colSpan={4} className="py-10 text-center text-zinc-600 italic font-bold">Cargando Almacén VPS...</td></tr>
+                        ) : products.length === 0 ? (
+                            <tr><td colSpan={4} className="py-10 text-center text-zinc-600 italic font-bold">Inventario vacío. Pulsa "Nuevo Producto".</td></tr>
+                        ) : products.map(p => (
+                            <tr key={p.id} className="hover:bg-white/[0.02] transition-colors group">
+                                <td className="px-6 py-4">
+                                    <p className="font-black italic uppercase text-sm group-hover:text-[#ff4d00] transition-colors">{p.name}</p>
+                                    <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-tighter">{p.brand || 'Escapes y Más'}</p>
+                                </td>
+                                <td className="px-6 py-4 text-xs font-mono text-zinc-500">{p.sku}</td>
+                                <td className="px-6 py-4 font-black italic text-white text-sm">{p.price}€</td>
+                                <td className="px-6 py-4">
+                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase italic ${p.stock > 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                                        {p.stock > 0 ? `${p.stock} Uds` : 'Agotado'}
+                                    </span>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 };
