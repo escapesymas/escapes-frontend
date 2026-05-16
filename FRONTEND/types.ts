@@ -25,6 +25,7 @@ export interface CartItem extends Product {
 }
 
 export interface BikeSelection {
+  id?: number; // DB ID
   brand: string;
   model: string;
   year: string;

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Bike, Plus, Trash2, Loader2 } from 'lucide-react';
 import { BikeSelection, User } from '../types';
-import { fetchMasterBrands, fetchMasterModels, fetchMasterYears, updateCustomer } from '../services/woocommerce';
+import { fetchMasterBrands, fetchMasterModels, fetchMasterYears } from '../services/woocommerce';
+import { fetchGarage, addBikeToGarage, removeBikeFromGarage } from '../services/garage';
 
 interface MyGarageProps {
   user: User;
@@ -22,16 +23,23 @@ export const MyGarage: React.FC<MyGarageProps> = ({ user, onUpdateUser }) => {
   const [newBike, setNewBike] = useState<BikeSelection>({ brand: '', model: '', year: '' });
 
   useEffect(() => {
-    const loadBrands = async () => {
+    const loadData = async () => {
       setLoadingBrands(true);
       try {
-        const data = await fetchMasterBrands();
-        setBrands(data);
-      } catch (err) {}
+        const [brandsData, garageData] = await Promise.all([
+          fetchMasterBrands(),
+          fetchGarage(user.email)
+        ]);
+        setBrands(brandsData);
+        setGarage(garageData);
+        onUpdateUser({ ...user, garage: garageData });
+      } catch (err) {
+        console.error("Error cargando garaje:", err);
+      }
       setLoadingBrands(false);
     };
-    loadBrands();
-  }, []);
+    loadData();
+  }, [user.email]);
 
   useEffect(() => {
     const loadModels = async () => {
@@ -75,29 +83,32 @@ export const MyGarage: React.FC<MyGarageProps> = ({ user, onUpdateUser }) => {
     }
 
     setSaving(true);
-    const updatedGarage = [...garage, newBike];
-    const success = await updateCustomer(user.id, { garage: updatedGarage });
+    const success = await addBikeToGarage(user.email, newBike);
     
     if (success) {
+      const updatedGarage = await fetchGarage(user.email);
       setGarage(updatedGarage);
       onUpdateUser({ ...user, garage: updatedGarage });
       setNewBike({ brand: '', model: '', year: '' });
     } else {
-      alert('Error al guardar la moto en el garaje');
+      alert('Error al guardar la moto en la base de datos');
     }
     setSaving(false);
   };
 
   const handleRemoveBike = async (index: number) => {
+    const bikeToRemove = garage[index];
+    if (!bikeToRemove.id) return;
+
     setSaving(true);
-    const updatedGarage = garage.filter((_, i) => i !== index);
-    const success = await updateCustomer(user.id, { garage: updatedGarage });
+    const success = await removeBikeFromGarage(user.email, bikeToRemove.id);
     
     if (success) {
+      const updatedGarage = await fetchGarage(user.email);
       setGarage(updatedGarage);
       onUpdateUser({ ...user, garage: updatedGarage });
     } else {
-      alert('Error al eliminar la moto del garaje');
+      alert('Error al eliminar la moto de la base de datos');
     }
     setSaving(false);
   };
