@@ -28,11 +28,11 @@ export default async function handler(req: any, res: any) {
     try {
         switch (action) {
             case 'dashboard-stats':
-                const [userCount] = await db.select({ value: count() }).from(users);
-                const [postCount] = await db.select({ value: count() }).from(forumPosts);
-                const [orderCount] = await db.select({ value: count() }).from(orders);
+                // Usamos SQL puro para mayor compatibilidad
+                const [userCount] = await db.select({ value: sql<number>`count(*)` }).from(users);
+                const [postCount] = await db.select({ value: sql<number>`count(*)` }).from(forumPosts);
+                const [orderCount] = await db.select({ value: sql<number>`count(*)` }).from(orders);
                 
-                // Usamos COALESCE para evitar que SUM devuelva null en tablas vacías
                 const [totalSales] = await db.select({ 
                     value: sql<number>`COALESCE(SUM(${orders.total}), 0)` 
                 }).from(orders);

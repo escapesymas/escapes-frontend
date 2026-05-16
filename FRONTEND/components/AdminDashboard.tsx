@@ -20,19 +20,29 @@ export const AdminDashboard: React.FC<{ user: UserType | null; onBack: () => voi
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const isAdmin = user?.role === 'admin' || user?.email === 'info@escapesymas.com';
-        if (!user || !isAdmin) {
+        let currentUser = user;
+        
+        // Si no tenemos usuario por prop, intentamos buscarlo en el storage local
+        if (!currentUser) {
+            const stored = localStorage.getItem('escapes_user');
+            if (stored) currentUser = JSON.parse(stored);
+        }
+
+        const isAdmin = currentUser?.role === 'admin' || currentUser?.email === 'info@escapesymas.com';
+        
+        if (!currentUser || !isAdmin) {
             setError("No tienes permisos para acceder a esta zona.");
             setLoading(false);
             return;
         }
-        loadStats();
+
+        loadStats(currentUser);
     }, [user]);
 
-    const loadStats = async () => {
+    const loadStats = async (u: any) => {
         setLoading(true);
         try {
-            const userId = user?.id || (user as any)?.user_id || (user as any)?.wpId;
+            const userId = u?.id || u?.user_id || u?.wpId;
             const res = await fetch(`/api/admin?action=dashboard-stats&userId=${userId}`);
             if (!res.ok) throw new Error("Error al cargar estadísticas");
             const data = await res.json();
