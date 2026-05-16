@@ -89,26 +89,27 @@ async function handleLogin(req: VercelRequest, res: VercelResponse) {
       const email = ObjectData.user_email;
       const username = ObjectData.user_nicename || ObjectData.user_display_name || email.split('@')[0];
       
-      // Buscar usuario en nuestra DB
-      const existingUser = await db.query.users.findFirst({
-        where: eq(schema.users.email, email)
-      });
+      const userRole = (email === 'info@escapesymas.com') ? 'admin' : 'customer';
 
-      if (!existingUser) {
-        // Crear usuario si no existe
-        await db.insert(schema.users).values({
+      await db.insert(schema.users).values({
+          wpId: ObjectData.user_id,
+          username: ObjectData.user_nicename,
           email: email,
-          username: username,
           firstName: ObjectData.user_display_name,
           avatarUrl: ObjectData.avatarUrl || null,
-        });
-        console.log(`[DB] Nuevo usuario creado en Postgres: ${email}`);
-      } else {
-        // Actualizar si es necesario
-        await db.update(schema.users)
-          .set({ updatedAt: new Date() })
-          .where(eq(schema.users.email, email));
-      }
+          role: userRole
+      })
+      .onConflictDoUpdate({
+          target: schema.users.email,
+          set: {
+              username: ObjectData.user_nicename,
+              firstName: ObjectData.user_display_name,
+              avatarUrl: ObjectData.avatarUrl || null,
+              role: userRole,
+              updatedAt: new Date()
+          }
+      });
+      console.log(`[DB] Usuario sincronizado en Postgres: ${email}`);
     }
   } catch (dbErr: any) {
     console.error("[DB ERROR] Sincronización de usuario fallida:", dbErr.message);
