@@ -1,4 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { db, schema } from "../lib/db";
+import { eq } from "drizzle-orm";
 
 // PARCHE DE EMERGENCIA: Ignorar errores de SSL caducado en el backend
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
@@ -75,6 +77,39 @@ async function handleLogin(req: VercelRequest, res: VercelResponse) {
         }
       }
     } catch (e) { console.warn('[AUTH] Avatar fetch failed', e); }
+  }
+
+  // --- SINCRONIZACIÓN CON POSTGRESQL (FASE 1) ---
+  try {
+    if (ObjectData.user_email) {
+      const email = ObjectData.user_email;
+      const username = ObjectData.user_nicename || ObjectData.user_display_name || email.split('@')[0];
+      
+      // Buscar usuario en nuestra DB
+      const existingUser = await db.query.users.findFirst({
+        where: eq(schema.users.email, email)
+      });
+
+      if (!existingUser) {
+        // Crear usuario si no existe
+        await db.insert(schema.users).values({
+          email: email,
+          username: username,
+          firstName: ObjectData.user_display_name,
+          avatarUrl: ObjectData.avatarUrl || null,
+        });
+        console.log(`[DB] Nuevo usuario creado en Postgres: ${email}`);
+      } else {
+        // Actualizar si es necesario
+        await db.update(schema.users)
+          .set({ updatedAt: new Date() })
+          .where(eq(schema.users.email, email));
+      }
+    }
+  } catch (dbErr: any) {
+    console.error("[DB ERROR] Sincronización de usuario fallida:", dbErr.message);
+    // No bloqueamos el login si la DB falla, para mantener resiliencia
+    ObjectData.db_sync = "failed";
   }
 
   return res.status(200).json(ObjectData);
