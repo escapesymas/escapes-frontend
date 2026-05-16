@@ -29,10 +29,28 @@ export const garage = pgTable('garage', {
 // Tablas para el Foro (Paddock) - Fase 5
 export const forumPosts = pgTable('forum_posts', {
   id: serial('id').primaryKey(),
-  userId: integer('user_id').references(() => users.id).notNull(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   title: text('title').notNull(),
   content: text('content').notNull(),
-  category: varchar('category', { length: 50 }),
-  likes: integer('likes').default(0),
+  category: varchar('category', { length: 50 }).default('general'),
+  likes: integer('likes').default(0), // Mantenemos el nombre original para evitar preguntas de rename
+  viewCount: integer('view_count').default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const forumReplies = pgTable('forum_replies', {
+  id: serial('id').primaryKey(),
+  postId: integer('post_id').references(() => forumPosts.id, { onDelete: 'cascade' }).notNull(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  content: text('content').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const forumLikes = pgTable('forum_likes', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  contentType: varchar('content_type', { length: 20 }).notNull(), // 'post' o 'reply'
+  contentId: integer('content_id').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
 });
