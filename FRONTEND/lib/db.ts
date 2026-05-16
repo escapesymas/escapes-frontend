@@ -11,9 +11,7 @@ if (!connectionString) {
 // Configuración de la conexión a PostgreSQL (VPS)
 const pool = new pg.Pool({
   connectionString: connectionString,
-  ssl: {
-    rejectUnauthorized: false // Permite conectar aunque el VPS no tenga un certificado SSL firmado por una CA
-  }
+  ssl: false // Probamos a desactivar SSL por si el servidor no lo soporta/requiere
 });
 
 pool.on('error', (err) => {
