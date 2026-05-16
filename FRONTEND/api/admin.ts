@@ -28,20 +28,17 @@ export default async function handler(req: any, res: any) {
     try {
         switch (action) {
             case 'dashboard-stats':
-                // Usamos SQL puro para mayor compatibilidad
-                const [userCount] = await db.select({ value: sql<number>`count(*)` }).from(users);
-                const [postCount] = await db.select({ value: sql<number>`count(*)` }).from(forumPosts);
-                const [orderCount] = await db.select({ value: sql<number>`count(*)` }).from(orders);
-                
-                const [totalSales] = await db.select({ 
-                    value: sql<number>`COALESCE(SUM(${orders.total}), 0)` 
-                }).from(orders);
+                // Consultas ultra-simples para evitar errores de driver
+                const userRes = await db.execute(sql`SELECT count(*) as count FROM users`);
+                const postRes = await db.execute(sql`SELECT count(*) as count FROM forum_posts`);
+                const orderRes = await db.execute(sql`SELECT count(*) as count FROM orders`);
+                const salesRes = await db.execute(sql`SELECT COALESCE(SUM(total), 0) as total FROM orders`);
 
                 return res.status(200).json({
-                    users: userCount?.value || 0,
-                    posts: postCount?.value || 0,
-                    orders: orderCount?.value || 0,
-                    sales: totalSales?.value || 0
+                    users: Number(userRes.rows[0]?.count || 0),
+                    posts: Number(postRes.rows[0]?.count || 0),
+                    orders: Number(orderRes.rows[0]?.count || 0),
+                    sales: Number(salesRes.rows[0]?.total || 0)
                 });
 
             case 'products-list':
@@ -54,26 +51,15 @@ export default async function handler(req: any, res: any) {
                 await db.update(products).set({ stock: newStock }).where(eq(products.id, productId));
                 return res.status(200).json({ success: true });
 
-            case 'moderation-feed':
-                // Obtener últimos posts y respuestas para moderar
-                const latestPosts = await db.select({
-                    id: forumPosts.id,
-                    title: forumPosts.title,
-                    author: users.username,
-                    createdAt: forumPosts.createdAt
-                })
-                .from(forumPosts)
-                .leftJoin(users, eq(forumPosts.userId, users.id))
-                .orderBy(desc(forumPosts.createdAt))
-                .limit(10);
-
-                return res.status(200).json(latestPosts);
-
             default:
-                return res.status(400).json({ error: 'Acción de administración no reconocida' });
+                return res.status(400).json({ error: 'Acción no reconocida' });
         }
     } catch (error: any) {
-        console.error('[ADMIN API ERROR]:', error);
-        return res.status(500).json({ error: error.message });
+        console.error('[ADMIN API CRASH]:', error);
+        return res.status(500).json({ 
+            error: "Error interno en la API de Administración",
+            message: error.message,
+            stack: error.stack 
+        });
     }
 }
