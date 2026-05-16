@@ -209,12 +209,12 @@ export const fetchProducts = async (
   // FUENTE PRINCIPAL: PostgreSQL Nativo (Catálogo Maestro)
   // ===================================================================
   try {
-    let catalogUrl = `/api/catalog?action=products&page=${page}&per_page=${perPage}`;
+    let catalogUrl = `/api/admin?action=catalog-products&page=${page}&per_page=${perPage}`;
     if (searchQuery) catalogUrl += `&search=${encodeURIComponent(searchQuery)}`;
 
     // Compatibilidad con motos (nativo)
     if (moto && moto.brand && moto.model) {
-      catalogUrl = `/api/catalog?action=compatible&brand=${encodeURIComponent(moto.brand)}&model=${encodeURIComponent(moto.model)}&page=${page}&per_page=${perPage}`;
+      catalogUrl = `/api/admin?action=catalog-compatible&brand=${encodeURIComponent(moto.brand)}&model=${encodeURIComponent(moto.model)}&page=${page}&per_page=${perPage}`;
       if (moto.year) catalogUrl += `&year=${encodeURIComponent(moto.year)}`;
     }
 

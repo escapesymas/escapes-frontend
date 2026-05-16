@@ -11,6 +11,7 @@ export const users = pgTable('users', {
   avatarUrl: text('avatar_url'),
   rankLevel: integer('rank_level').default(1),
   rankXp: integer('rank_xp').default(0),
+  role: varchar('role', { length: 20 }).default('customer'), // customer, admin, moderator
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -53,4 +54,44 @@ export const forumLikes = pgTable('forum_likes', {
   contentType: varchar('content_type', { length: 20 }).notNull(), // 'post' o 'reply'
   contentId: integer('content_id').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
+});
+
+// --- SISTEMA E-COMMERCE MAESTRO (ADMIN) ---
+
+// Tabla de Productos (Nativa para sustituir a WP)
+export const products = pgTable('products', {
+  id: serial('id').primaryKey(),
+  providerId: varchar('provider_id', { length: 100 }), // ID del CSV/API del proveedor
+  sku: varchar('sku', { length: 100 }).unique(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  price: integer('price').notNull(), // En céntimos para evitar decimales
+  salePrice: integer('sale_price'),
+  stock: integer('stock').default(0),
+  images: text('images'), // JSON array de URLs
+  compatibility: text('compatibility'), // JSON con marcas/modelos/años
+  categoryId: integer('category_id'),
+  status: varchar('status', { length: 20 }).default('draft'), // draft, published, out_of_stock
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Tabla de Pedidos
+export const orders = pgTable('orders', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id),
+  total: integer('total').notNull(),
+  status: varchar('status', { length: 50 }).default('pending'), // pending, paid, shipped, cancelled
+  paymentId: varchar('payment_id', { length: 255 }),
+  shippingData: text('shipping_data'), // JSON con dirección, tlf, etc.
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// Líneas de Pedido
+export const orderItems = pgTable('order_items', {
+  id: serial('id').primaryKey(),
+  orderId: integer('order_id').references(() => orders.id, { onDelete: 'cascade' }),
+  productId: integer('product_id').references(() => products.id),
+  quantity: integer('quantity').notNull(),
+  price: integer('price').notNull(),
 });
