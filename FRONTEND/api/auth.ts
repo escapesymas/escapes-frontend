@@ -91,7 +91,7 @@ async function handleLogin(req: VercelRequest, res: VercelResponse) {
       
       const userRole = (email === 'info@escapesymas.com') ? 'admin' : 'customer';
 
-      await db.insert(schema.users).values({
+      const [dbUser] = await db.insert(schema.users).values({
           wpId: ObjectData.user_id,
           username: ObjectData.user_nicename,
           email: email,
@@ -108,12 +108,19 @@ async function handleLogin(req: VercelRequest, res: VercelResponse) {
               role: userRole,
               updatedAt: new Date()
           }
-      });
+      })
+      .returning();
+
       console.log(`[DB] Usuario sincronizado en Postgres: ${email}`);
+
+      // 3. Devolver datos combinados
+      ObjectData.role = dbUser?.role || 'customer';
+      ObjectData.id = dbUser?.id || ObjectData.user_id; 
+      
+      console.log(`[DB] Login exitoso con rol: ${ObjectData.role}`);
     }
   } catch (dbErr: any) {
     console.error("[DB ERROR] Sincronización de usuario fallida:", dbErr.message);
-    // No bloqueamos el login si la DB falla, para mantener resiliencia
     ObjectData.db_sync = "failed";
   }
 
