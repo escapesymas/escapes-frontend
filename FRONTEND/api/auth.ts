@@ -21,7 +21,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   } catch (err: any) {
     console.error("[AUTH ERROR]:", err.message);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error: "Internal Server Error", detail: err.message });
   }
 }
 
@@ -39,9 +39,20 @@ async function handleLogin(req: VercelRequest, res: VercelResponse) {
     body: JSON.stringify(isSocialLogin ? { provider, token } : { username, password }),
   });
 
-  const ObjectData = await wpResponse.json();
+  let ObjectData;
+  try {
+    const text = await wpResponse.text();
+    try {
+      ObjectData = JSON.parse(text);
+    } catch (e: any) {
+      return res.status(500).json({ error: "Respuesta no JSON de WP", detail: text.substring(0, 500) });
+    }
+  } catch(e: any) {
+    return res.status(500).json({ error: "Error al leer respuesta de WP", detail: e.message });
+  }
+
   if (!wpResponse.ok) {
-    return res.status(wpResponse.status).json({ error: ObjectData.message || "Login failed" });
+    return res.status(wpResponse.status).json({ error: ObjectData.message || ObjectData.code || "Login failed" });
   }
 
   // Fetch avatar (keep existing logic from login.ts)
@@ -77,8 +88,19 @@ async function handleRegister(req: VercelRequest, res: VercelResponse) {
     body: JSON.stringify({ email, username, password, first_name: username, billing: { email } }),
   });
 
-  const wcData = await wcRes.json();
-  if (!wcRes.ok) return res.status(wcRes.status).json({ error: wcData.message || "Registration failed" });
+  let wcData;
+  try {
+    const text = await wcRes.text();
+    try {
+      wcData = JSON.parse(text);
+    } catch(e) {
+      return res.status(500).json({ error: "WooCommerce no devolvió JSON", detail: text.substring(0, 500) });
+    }
+  } catch(e: any) {
+    return res.status(500).json({ error: "Error leyendo WooCommerce", detail: e.message });
+  }
+
+  if (!wcRes.ok) return res.status(wcRes.status).json({ error: wcData.message || wcData.code || "Registration failed" });
 
   // Auto-login after registration
   const loginRes = await fetch(`${PROXY_TARGET_URL}/wp-json/jwt-auth/v1/token`, {
