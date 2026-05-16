@@ -51,6 +51,7 @@ export interface User {
   lastName: string;
   token?: string; // JWT Token
   avatarUrl?: string;
+  garage?: BikeSelection[];
   billing?: {
     address_1: string;
     city: string;

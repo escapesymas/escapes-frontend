@@ -363,17 +363,26 @@ export const fetchCustomerByEmail = async (email: string): Promise<User | null> 
 
     if (customers && customers.length > 0) {
       const customer = customers[0];
-      // Check for saved avatar in metadata
       let avatarUrl = customer.avatar_url;
+      let garage = undefined;
+      
       if (customer.meta_data) {
         const customAvatar = customer.meta_data.find((m: any) => m.key === '_custom_avatar');
         if (customAvatar) {
           avatarUrl = customAvatar.value;
         }
+        
+        const garageMeta = customer.meta_data.find((m: any) => m.key === '_user_garage');
+        if (garageMeta && garageMeta.value) {
+          try {
+            garage = JSON.parse(garageMeta.value);
+          } catch(e) {}
+        }
       }
 
       const user = formatUserResponse(customer);
       user.avatarUrl = avatarUrl;
+      if (garage) user.garage = garage;
       return user;
     }
     return null;
@@ -405,6 +414,15 @@ export const updateCustomer = async (userId: number, data: Partial<User>): Promi
       if (data.billing.city) payload.billing.city = data.billing.city;
       if (data.billing.postcode) payload.billing.postcode = data.billing.postcode;
       if (data.billing.phone) payload.billing.phone = data.billing.phone;
+    }
+    
+    if (data.garage !== undefined) {
+      payload.meta_data = [
+        {
+          key: '_user_garage',
+          value: JSON.stringify(data.garage)
+        }
+      ];
     }
 
     await makeRequest(`/wc/v3/customers/${userId}`, {

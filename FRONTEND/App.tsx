@@ -1,6 +1,6 @@
 import React, { useEffect, useState, Suspense, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { Loader2, Trash2, Package, Truck, ShieldCheck, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader2, Trash2, Package, Truck, ShieldCheck, CheckCircle, AlertCircle, Bike } from 'lucide-react';
 import { Header } from './components/Header';
 import { SEO } from './components/SEO';
 import { Footer } from './components/Footer';
@@ -233,6 +233,39 @@ function App() {
     <ErrorBoundary>
       <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-black w-full overflow-x-hidden">
         <SEO {...seoData} />
+        
+        {/* Contextual Garage Banner */}
+        {user?.garage && user.garage.length > 0 && (
+          <div className="bg-zinc-950 border-b border-racing-orange/50 py-1.5 px-4 flex justify-between items-center z-[60] relative animate-fade-in shadow-lg">
+            <div className="container mx-auto flex items-center justify-between text-[10px] md:text-xs">
+              <div className="flex items-center gap-2 text-zinc-300 uppercase font-bold tracking-widest overflow-hidden">
+                <Bike className="w-3.5 h-3.5 text-racing-orange shrink-0" />
+                <span className="hidden sm:inline">Mi Garaje:</span>
+                <select 
+                  className="bg-transparent text-white border-none outline-none font-black italic cursor-pointer truncate max-w-[200px] md:max-w-xs focus:ring-0 appearance-none"
+                  value={motoParam || ""}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      navigate(`/recambios?moto=${e.target.value}`);
+                    } else {
+                      navigate(`/recambios`);
+                    }
+                  }}
+                >
+                  <option value="" className="bg-zinc-900 text-zinc-400">Ver catálogo completo</option>
+                  {user.garage.map((bike, idx) => {
+                    const val = encodeURIComponent(`${bike.brand}|${bike.model}|${bike.year}`);
+                    return <option key={idx} value={val} className="bg-zinc-900 text-white">{bike.brand} {bike.model} {bike.year}</option>
+                  })}
+                </select>
+              </div>
+              <button onClick={() => navigate('/mi-cuenta')} className="text-racing-orange hover:text-white shrink-0 font-bold uppercase tracking-widest transition-colors">
+                Gestionar
+              </button>
+            </div>
+          </div>
+        )}
+
         <Header
           cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)}
           user={user}

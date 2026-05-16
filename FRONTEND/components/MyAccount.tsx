@@ -4,6 +4,7 @@ import { User, UserRank } from '../types';
 import { updateCustomer, fetchAvatars, updateCustomerAvatar, uploadCustomerPhoto, AvatarOption, fetchUserRank } from '../services/woocommerce';
 
 import { RankBadge } from './RankBadge';
+import { MyGarage } from './MyGarage';
 
 interface MyAccountProps {
   user: User;
@@ -417,6 +418,10 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
 
         {/* Form */}
         <div className="lg:col-span-2">
+          
+          {/* Mi Garaje */}
+          <MyGarage user={user} onUpdateUser={onUpdateUser} />
+
           <form onSubmit={handleSubmit} className="bg-racing-carbon border border-zinc-800 p-6 rounded-sm space-y-8">
 
             {/* Personal Info */}
