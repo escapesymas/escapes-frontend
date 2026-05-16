@@ -5,7 +5,7 @@ import {
     ChevronRight, ArrowUpRight, ShieldCheck, RefreshCw, Database,
     Shield, LogOut
 } from 'lucide-react';
-import { User as UserType } from './types';
+import { User as UserType } from '../types';
 
 interface AdminStats {
     users: number;
