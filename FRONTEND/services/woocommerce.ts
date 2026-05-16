@@ -4,8 +4,9 @@ import { Product, WooProduct, OrderPayload, Order, User, WooCategory, Category, 
 import { optimizeImage } from '../utils/imageOptimizer';
 
 export const isConfigValid = () => {
-  // baseUrl can be empty string for relative URLs, only check it's defined
-  return WOO_CONFIG.baseUrl !== undefined && WOO_CONFIG.consumerKey;
+  // baseUrl can be empty string for relative URLs, solo comprobamos que baseUrl esté definido
+  // Las credenciales de Auth las inyecta server.js (proxy)
+  return WOO_CONFIG.baseUrl !== undefined;
 };
 
 const getAuthHeaders = () => {
@@ -153,6 +154,16 @@ export const fetchProductsByIds = async (ids: number[]): Promise<Product[]> => {
 // In-memory cache for search results to avoid redundant slow queries
 const searchCache = new Map<string, { products: Product[], totalPages: number, totalProducts: number, timestamp: number }>();
 const SEARCH_CACHE_TTL = 1000 * 60 * 10; // 10 minutes
+
+// Limpieza de caché frontend
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of searchCache.entries()) {
+    if (now - value.timestamp > SEARCH_CACHE_TTL) {
+      searchCache.delete(key);
+    }
+  }
+}, 5 * 60 * 1000);
 
 export const fetchProducts = async (
   searchQuery?: string,
@@ -638,8 +649,8 @@ export const uploadCustomerPhoto = async (userId: number, file: File, token?: st
     formData.append('userId', userId.toString()); // Metadatos PRIMERO
     formData.append('avatar', file);
 
-    // Usar nuestro endpoint local en server.js (o Vercel function)
-    const response = await fetch(`/api/upload-avatar`, {
+    // Usar nuestro endpoint local en server.js
+    const response = await fetch(`/api/upload/avatar`, {
       method: 'POST',
       // NO establecer Content-Type header manualmente con FormData, fetch lo hace automático con boundary
       body: formData,

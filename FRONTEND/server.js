@@ -21,8 +21,6 @@ const PROXY_TARGET_URL = 'https://backendescapes.com';
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
-app.use(express.urlencoded({ limit: '100mb', extended: true }));
-
 // DEBUG: Log all incoming requests
 app.use((req, res, next) => {
   console.log(`[SERVER] Incoming: ${req.method} ${req.url}`);
@@ -65,6 +63,19 @@ const addProxyHeaders = (req) => {
 const apiCache = new Map();
 const CACHE_TTL = 15 * 60 * 1000; // 15 minutos de vida para búsquedas
 const CATEGORY_CACHE_TTL = 60 * 60 * 1000; // 1 hora para categorías
+
+// Limpieza de caché (Cache Eviction) para evitar fuga de memoria
+setInterval(() => {
+  const now = Date.now();
+  let deleted = 0;
+  for (const [key, value] of apiCache.entries()) {
+    if (now - value.timestamp > value.ttl) {
+      apiCache.delete(key);
+      deleted++;
+    }
+  }
+  if (deleted > 0) console.log(`[SERVER CACHE] 🧹 Eviction run: Removed ${deleted} expired entries.`);
+}, 5 * 60 * 1000); // Ejecutar cada 5 minutos
 
 /**
  * Manejador genérico de respuestas del Proxy con Cache
@@ -268,8 +279,8 @@ app.post('/api/contact', async (req, res) => {
       port: 465,
       secure: true,
       auth: {
-        user: "web@backendescapes.com",
-        pass: "Pedrito2011P!"
+        user: process.env.SMTP_USER || "web@backendescapes.com",
+        pass: process.env.SMTP_PASSWORD || "Pedrito2011P!"
       },
       tls: {
         rejectUnauthorized: false
@@ -448,8 +459,8 @@ app.post('/api/warranty', async (req, res) => {
       port: 465,
       secure: true,
       auth: {
-        user: 'web@backendescapes.com',
-        pass: 'Pedrito2011P!'
+        user: process.env.SMTP_USER || 'web@backendescapes.com',
+        pass: process.env.SMTP_PASSWORD || 'Pedrito2011P!'
       },
       tls: {
         rejectUnauthorized: false
