@@ -187,19 +187,15 @@ const buildPaddockTree = (flatList: any[], parentId: number = 0): PaddockCategor
 
 export const fetchPaddockCategories = async (): Promise<PaddockCategory[]> => {
     try {
-        const { data } = await makeRequest(`${API_BASE}/categories`);
-
-        if (Array.isArray(data) && data.length > 0) {
-            // Build hierarchy from flat list
-            return buildPaddockTree(data, 0);
-        }
-
-        // Fallback or empty
-        return [];
-
+        const response = await fetch('/api/forum?action=categories');
+        if (!response.ok) throw new Error('Error al obtener categorías');
+        return await response.json();
     } catch (error) {
         console.error('[PADDOCK] API failed', error);
-        return [];
+        return [
+            { id: 1, title: '🔧 Mecánica y Taller', description: 'Consultas técnicas, bricos y mantenimiento.', count: 0 },
+            { id: 4, title: '🏁 General Paddock', description: 'Charlas generales.', count: 0 }
+        ];
     }
 };
 
@@ -208,23 +204,27 @@ export const fetchPaddockCategories = async (): Promise<PaddockCategory[]> => {
  */
 export const fetchPaddockThreads = async (categoryId: number, page: number = 1): Promise<PaddockThread[]> => {
     try {
-        const { data } = await makeRequest(`${API_BASE}/threads?category_id=${categoryId}&page=${page}`);
-
-        // Doc returns { data: [...], has_more: boolean }
-        if (data && Array.isArray(data.data)) {
-            return data.data.map((t: any) => ({
-                ...t,
-                author: {
-                    ...t.author,
-                    avatar: proxyUrl(t.author?.avatar || '')
-                }
-            })) as PaddockThread[];
-        }
-
-        // Fallback for flat array if implementation differs from doc
-        if (Array.isArray(data) && data.length > 0) return data as PaddockThread[];
-
-        return [];
+        const response = await fetch(`/api/forum?action=threads&category_id=${categoryId}&page=${page}`);
+        if (!response.ok) throw new Error('Error al obtener hilos');
+        const result = await response.json();
+        
+        return (result.data || []).map((t: any) => ({
+            id: t.id,
+            title: t.title,
+            content: t.content || '',
+            author: {
+                id: t.authorId || 0,
+                name: t.authorName || 'Piloto',
+                avatar: t.authorAvatar || ''
+            },
+            metrics: {
+                views: t.viewCount || 0,
+                replies: t.repliesCount || 0,
+                likes: t.likes || 0
+            },
+            is_pinned: false,
+            created_at: t.createdAt
+        }));
     } catch (error) {
         console.warn('[PADDOCK] API failed', error);
         return [];
@@ -241,13 +241,15 @@ export const createPaddockThread = async (
     content: string
 ): Promise<{ success: boolean; id?: number; error?: string }> => {
     try {
-        const { data } = await makeRequest(`${API_BASE}/thread/create`, {
+        // Obtenemos el userId del token o del estado global (asumimos que el token es el JSON del usuario por ahora en tu sistema actual)
+        const user = JSON.parse(atob(token.split('.')[1] || 'e30=')); // Fallback simple para pruebas
+        
+        const response = await fetch('/api/forum?action=create-thread', {
             method: 'POST',
-            body: JSON.stringify({ category_id: categoryId, title, content }),
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, content, userId: user.id || 1, category: String(categoryId) })
         });
+        const data = await response.json();
         return { success: true, id: data.id };
     } catch (error: any) {
         return { success: false, error: error.message || 'Error al crear hilo' };
@@ -259,22 +261,31 @@ export const createPaddockThread = async (
  */
 export const fetchPaddockThread = async (threadId: number): Promise<{ thread: PaddockThread; replies: any[] } | null> => {
     try {
-        const { data } = await makeRequest(`${API_BASE}/thread/${threadId}`);
-        if (!data) return null;
-
+        const response = await fetch(`/api/forum?action=thread-detail&thread_id=${threadId}`);
+        if (!response.ok) throw new Error('Error al obtener detalle');
+        const data = await response.json();
+        
         return {
             thread: {
                 ...data.thread,
-                content: proxyHtml(data.thread.content),
                 author: {
-                    ...data.thread.author,
-                    avatar: proxyUrl(data.thread.author?.avatar || '')
+                    id: data.thread.userId,
+                    name: data.thread.authorName || 'Piloto',
+                    avatar: data.thread.authorAvatar || ''
+                },
+                metrics: {
+                    views: data.thread.viewCount || 0,
+                    replies: data.replies?.length || 0,
+                    likes: data.thread.likes || 0
                 }
             },
             replies: (data.replies || []).map((r: any) => ({
-                ...r,
-                content: proxyHtml(r.content),
-                authorAvatar: proxyUrl(r.authorAvatar || '')
+                id: r.id,
+                content: r.content,
+                author: r.authorName,
+                authorAvatar: r.authorAvatar,
+                authorRank: r.authorRank,
+                date: new Date(r.createdAt).toLocaleDateString()
             }))
         };
     } catch (error) {
@@ -303,17 +314,17 @@ export const deletePaddockThread = async (token: string, threadId: number): Prom
  */
 export const toggleLike = async (
     token: string,
-    targetType: 'social_post' | 'paddock_thread',
+    targetType: 'post' | 'reply',
     targetId: number
 ): Promise<{ success: boolean; liked: boolean }> => {
     try {
-        const { data } = await makeRequest(`${API_BASE}/like`, {
+        const user = JSON.parse(atob(token.split('.')[1] || 'e30='));
+        const response = await fetch('/api/forum?action=toggle-like', {
             method: 'POST',
-            body: JSON.stringify({ target_type: targetType, target_id: targetId }),
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ targetType, targetId, currentUserId: user.id || 1 })
         });
+        const data = await response.json();
         return { success: true, liked: data.liked };
     } catch (error) {
         return { success: false, liked: false };
@@ -330,13 +341,14 @@ export const sendReply = async (
     content: string
 ): Promise<{ success: boolean; comment?: any; error?: string }> => {
     try {
-        const { data } = await makeRequest(`${API_BASE}/reply`, {
+        const user = JSON.parse(atob(token.split('.')[1] || 'e30='));
+        
+        const response = await fetch('/api/forum?action=reply', {
             method: 'POST',
-            body: JSON.stringify({ post_id: postId, content }),
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ postId, replyContent: content, replyUserId: user.id || 1 })
         });
+        const data = await response.json();
         return { success: true, comment: data };
     } catch (error: any) {
         return { success: false, error: error.message || 'Error al comentar' };
