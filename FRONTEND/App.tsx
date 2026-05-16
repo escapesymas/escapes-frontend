@@ -1,7 +1,6 @@
-
-import React, { useEffect, useState, Suspense, useRef, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, Suspense, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { ArrowRight, Loader2, WifiOff, Trash2, ChevronLeft, Package, Truck, ShieldCheck, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader2, Trash2, Package, Truck, ShieldCheck, CheckCircle, AlertCircle } from 'lucide-react';
 import { Header } from './components/Header';
 import { SEO } from './components/SEO';
 import { Footer } from './components/Footer';
@@ -18,12 +17,18 @@ import { FeaturesBanner } from './components/FeaturesBanner';
 import { KlarnaBanner } from './components/KlarnaBanner';
 import { SearchImprovementsBanner } from './components/SearchImprovementsBanner';
 import { ProductSkeleton } from './components/ProductSkeleton';
-import { STORE_CONFIG, FEATURES, CATEGORIES, TIRE_CATEGORY_ID } from './storeData';
-import { fetchProducts, saveUserCart, getUserCart, fetchCategories, fetchCustomerByEmail, fetchProductsByIds, fetchCompatibleCategories, fetchCompatibleProducts } from './services/woocommerce';
-import { saveSession, getSession, logoutSession } from './services/auth';
-import { trackPageView, trackViewItem, trackAddToCart } from './utils/analytics';
-import { Product, BikeSelection, TireSelection, CartItem, User, Category } from './types';
-import { optimizeImage } from './utils/imageOptimizer';
+import { ProductGrid } from './components/ProductGrid';
+import { STORE_CONFIG, CATEGORIES } from './storeData';
+import { fetchProductsByIds, fetchCompatibleCategories } from './services/woocommerce';
+import { saveSession, logoutSession } from './services/auth';
+import { trackPageView, trackViewItem } from './utils/analytics';
+import { Product, BikeSelection, TireSelection, Category } from './types';
+
+// Hooks personalizados extraídos
+import { useAuth } from './hooks/useAuth';
+import { useCart } from './hooks/useCart';
+import { useCatalog } from './hooks/useCatalog';
+import { useSEO } from './hooks/useSEO';
 
 const Checkout = React.lazy(() => import('./components/Checkout').then(m => ({ default: m.Checkout })));
 const Login = React.lazy(() => import('./components/Login').then(m => ({ default: m.Login })));
@@ -38,13 +43,10 @@ const UserProfile = React.lazy(() => import('./components/social/UserProfile').t
 
 type ViewState = 'home' | 'catalog' | 'product' | 'cart' | 'checkout' | 'login' | 'register' | 'orders' | 'account' | 'categories' | 'forum' | 'contact' | 'warranty' | 'social' | 'user_profile';
 
-// Known category slugs for URL matching
 const KNOWN_CATEGORIES = ['escapes', 'frenos', 'accesorios', 'protecciones', 'recambios', 'lubricantes', 'electrónica', 'suspensiones'];
 
-// Helper to parse URL path to view state
 const parsePathToView = (path: string): { view: ViewState; category?: string; productId?: string; userId?: string } => {
-  const cleanPath = path.toLowerCase().replace(/\/$/, ''); // Remove trailing slash
-
+  const cleanPath = path.toLowerCase().replace(/\/$/, '');
   if (cleanPath === '' || cleanPath === '/') return { view: 'home' };
   if (cleanPath === '/recambios') return { view: 'catalog' };
   if (cleanPath === '/carrito') return { view: 'cart' };
@@ -59,29 +61,20 @@ const parsePathToView = (path: string): { view: ViewState; category?: string; pr
     const parts = cleanPath.split('/paddock/user/');
     if (parts.length > 1 && parts[1]) return { view: 'user_profile', userId: parts[1].split('/')[0] };
   }
-  if (cleanPath.startsWith('/foro') || cleanPath.startsWith('/paddock')) return { view: 'forum' }; // Map Paddock to Forum component
+  if (cleanPath.startsWith('/foro') || cleanPath.startsWith('/paddock')) return { view: 'forum' };
   if (cleanPath === '/social') return { view: 'social' };
   if (cleanPath === '/categorias') return { view: 'categories' };
 
-  // Check for generic Product URL pattern: /category/123 or /category/123-slug
   const parts = cleanPath.split('/').filter(Boolean);
-
   if (parts.length >= 2) {
-    // Extract the ID from the second part (e.g. "123-akra-racing" -> "123")
     const idMatch = parts[1].match(/^(\d+)/);
     if (idMatch) {
       return { view: 'product', category: parts[0], productId: idMatch[1] };
     }
   }
-
   if (parts.length >= 1) {
-    // Otherwise, treat first part as category (e.g. /coronas, /escapes)
-    // We implicitly trust that any single path segment might be a valid category
-    // This allows WooCommerce categories like 'coronas' to work without hardcoding
     return { view: 'catalog', category: parts[0] };
   }
-
-  // Fallback
   return { view: 'home' };
 };
 
@@ -90,72 +83,50 @@ function App() {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Initialize state from URL on first render
   const initialParsed = parsePathToView(location.pathname);
-
-  // STATE: currentView is the source of truth
   const [currentView, setCurrentView] = useState<ViewState>(initialParsed.view);
   const [urlCategory, setUrlCategory] = useState<string | undefined>(initialParsed.category);
   const [urlProductId, setUrlProductId] = useState<string | undefined>(initialParsed.productId);
 
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(false); // Start as false, set to true when fetching
-  const [error, setError] = useState<string | null>(null);
-  const [errorDetail, setErrorDetail] = useState<string | null>(null);
-
-  const [currentFilter, setCurrentFilter] = useState<string | null>(null);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [cart, setCart] = useState<CartItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('escapesymas_cart');
-      return saved ? JSON.parse(saved) : [];
-    } catch { return []; }
-  });
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCatalogProducts, setTotalCatalogProducts] = useState(0);
-  const [perPage, setPerPage] = useState(20);
-  const [sortBy, setSortBy] = useState<'date' | 'price' | 'price-asc'>('date');
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
-  const catalogRef = useRef<HTMLDivElement>(null);
-  const lastMotoRef = useRef<string | null>(null);
-
-  // --- NEW: COMPATIBILITY ENGINE ---
-  const [compatibleCats, setCompatibleCats] = useState<Category[]>([]);
-  const [compLoading, setCompLoading] = useState(false);
-  const [selectedVehicleName, setSelectedVehicleName] = useState<string | null>(null);
-
-  // Parse filters from URL
-
-
-  // Parse filters from URL
   const query = searchParams.get('q') || undefined;
   const categoryIdParam = searchParams.get('cat');
   const motoParam = searchParams.get('moto');
-  const brandParam = searchParams.get('brand'); // New Brand Filter
-  const tireParam = searchParams.get('tire'); // New Tire Filter
+  const brandParam = searchParams.get('brand');
+  const tireParam = searchParams.get('tire');
 
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  // Instanciar custom hooks refactorizados
+  const { user, setUser } = useAuth();
+  const { cart, setCart, addToCart } = useCart(user, setToast);
+  const { 
+    products, loading, setLoading, error, errorDetail,
+    currentFilter, setCurrentFilter, currentPage, setCurrentPage,
+    totalPages, totalCatalogProducts, perPage, setPerPage, sortBy, setSortBy,
+    handleProductFetch 
+  } = useCatalog({ currentView, urlCategory, query, motoParam, categoryIdParam, brandParam, tireParam });
+  const seoData = useSEO({ currentView, urlCategory, selectedProduct, query, motoParam, brandParam });
+
+  const catalogRef = useRef<HTMLDivElement>(null);
+  const lastMotoRef = useRef<string | null>(null);
+  const [compatibleCats, setCompatibleCats] = useState<Category[]>([]);
+  const [compLoading, setCompLoading] = useState(false);
+  const [selectedVehicleName, setSelectedVehicleName] = useState<string | null>(null);
   const [brands, setBrands] = useState<{ name: string; logo?: string }[]>([]);
 
-  // Load Brands for Filter - Now using the comprehensive list from all_brands.json
+  // Load Brands
   useEffect(() => {
     fetch('/all_brands.json')
       .then(res => res.json())
       .then(data => {
-        if (Array.isArray(data)) {
-          setBrands(data.map(name => ({ name })));
-        }
+        if (Array.isArray(data)) setBrands(data.map(name => ({ name })));
       })
       .catch(e => {
-        console.error("Error loading full brand list, falling back to basic list", e);
-        // Fallback to brands.txt if all_brands.json fails
         fetch('/brands.txt')
           .then(res => res.text())
           .then(text => {
-            const lines = text.split('\n').filter(line => line.trim() !== '');
-            const parsed = lines.map(line => {
+            const parsed = text.split('\n').filter(line => line.trim() !== '').map(line => {
               const [name, logo] = line.split(',');
               return { name: name?.trim(), logo: logo?.trim() };
             }).filter(b => b.name);
@@ -164,62 +135,19 @@ function App() {
       });
   }, []);
 
-
-  // Initialize Session
-  useEffect(() => {
-    const initialize = async () => {
-      const savedUser = getSession();
-      if (savedUser) {
-        let currentUser = savedUser as unknown as User;
-        // AUTO-REPAIR Logic
-        if ((!currentUser.id || currentUser.id === 0) && (currentUser.email || (savedUser as any).user_email)) {
-          try {
-            const email = currentUser.email || (savedUser as any).user_email;
-            const freshData = await fetchCustomerByEmail(email);
-            if (freshData && freshData.id > 0) {
-              currentUser = { ...currentUser, ...freshData, token: (savedUser as any).token };
-              saveSession(currentUser);
-            }
-          } catch (e) { console.error(e); }
-        }
-        setUser(currentUser);
-
-        // Recover Cart ONLY if local cart is empty to avoid overwriting recent changes
-        const localCart = localStorage.getItem('escapesymas_cart');
-        const hasLocalItems = localCart && JSON.parse(localCart).length > 0;
-
-        if (currentUser.id && currentUser.id > 0 && !hasLocalItems) {
-          try {
-            const savedCart = await getUserCart(currentUser.id);
-            if (savedCart.length > 0) {
-              const { products: allProducts } = await fetchProducts(undefined, undefined, 1, 100);
-              const restoredCart = savedCart.map(item => {
-                const product = allProducts.find(p => p.id === item.product_id);
-                return product ? { ...product, quantity: item.quantity } : null;
-              }).filter(Boolean) as CartItem[];
-              if (restoredCart.length > 0) setCart(restoredCart);
-            }
-          } catch (e) { console.error(e); }
-        }
-      }
-    };
-    initialize();
-  }, []);
-
   // Analytics & Scroll Top on navigation
   useEffect(() => {
     window.scrollTo(0, 0);
     trackPageView(window.location.pathname + window.location.search);
   }, [location.pathname, location.search]);
 
-  // URL -> State Sync (runs on location change)
+  // URL -> State Sync
   useEffect(() => {
     const parsed = parsePathToView(location.pathname);
     setCurrentView(parsed.view);
     setUrlCategory(parsed.category);
     setUrlProductId(parsed.productId);
 
-    // Sync selected vehicle if moto param exists
     const moto = searchParams.get('moto');
     if (moto) {
       const decoded = decodeURIComponent(moto);
@@ -227,7 +155,6 @@ function App() {
       const vName = `${brand} ${model} ${year !== 'General' ? year : ''}`.trim();
       setSelectedVehicleName(vName);
       
-      // Fetch compatible categories if the vehicle changed or list is empty
       if (moto !== lastMotoRef.current && !compLoading && !categoryIdParam && !urlCategory && !query) {
         lastMotoRef.current = moto;
         setCompLoading(true);
@@ -245,294 +172,16 @@ function App() {
       lastMotoRef.current = null;
     }
 
-    // If we have a product ID from URL, try to fetch it
     if (parsed.view === 'product' && parsed.productId) {
       const productId = parseInt(parsed.productId);
-
-      // Fetch if no product is selected OR if the selected product ID doesn't match URL
       if (!isNaN(productId) && (!selectedProduct || selectedProduct.id !== productId)) {
-        console.log(`[APP] URL changed to product ${productId}, fetching...`);
-        fetchProductById(productId);
+        setLoading(true);
+        fetchProductsByIds([productId]).then(ps => {
+          if (ps.length > 0) setSelectedProduct(ps[0]);
+        }).finally(() => setLoading(false));
       }
     }
   }, [location.pathname, location.search]);
-
-  // Fetch product by ID helper
-  const fetchProductById = async (id: number) => {
-    setLoading(true);
-    try {
-      const products = await fetchProductsByIds([id]);
-      if (products.length > 0) {
-        setSelectedProduct(products[0]);
-      }
-    } catch (e) {
-      console.error('Error fetching product by ID', e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Load Home Featured
-  useEffect(() => {
-    if (currentView === 'home') {
-      loadFeaturedProducts();
-    }
-  }, [currentView]);
-
-  // Initial data load on mount
-  useEffect(() => {
-    const initView = parsePathToView(location.pathname).view;
-    if (initView === 'home') {
-      loadFeaturedProducts();
-    } else if (initView === 'catalog') {
-      handleProductFetch(1);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run once on mount
-
-  // --- CONSOLIDATED CATALOG FETCH EFFECT ---
-  // This handles both filter changes and pagination to prevent double-fetching
-  useEffect(() => {
-    if (currentView === 'catalog') {
-      // 1. Sync filter labels for UI
-      if (motoParam) {
-        const cleanParam = decodeURIComponent(motoParam);
-        const separator = cleanParam.includes('|') ? '|' : '-';
-        const [brand, model, year] = cleanParam.split(separator);
-        setCurrentFilter(`${brand} ${model} ${year}`);
-      } else if (tireParam) {
-        setCurrentFilter(`Neumáticos: ${tireParam}`);
-      } else if (urlCategory) {
-        const decoded = decodeURIComponent(urlCategory);
-        setCurrentFilter(decoded.charAt(0).toUpperCase() + decoded.slice(1));
-      } else if (query) {
-        setCurrentFilter(`Búsqueda: "${query}"`);
-      } else {
-        setCurrentFilter(null);
-      }
-
-    // 2. Trigger fetch
-      if (motoParam || urlCategory || query || categoryIdParam) {
-        console.log(`[APP] Catalog View Update: Page ${currentPage}, Filters: ${motoParam || urlCategory || categoryIdParam || 'none'}`);
-        handleProductFetch(currentPage);
-      } else {
-        setProducts([]);
-        setTotalPages(1);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentView, urlCategory, query, motoParam, categoryIdParam, brandParam, tireParam, perPage, sortBy, currentPage]);
-
-  // Handle filter-induced page reset separately (if needed)
-  useEffect(() => {
-    if (currentView === 'catalog' && currentPage !== 1) {
-      // When top-level filters change but we are not on page 1, reset to page 1
-      // This will trigger the consolidated effect above via the currentPage dependency
-      setCurrentPage(1);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlCategory, query, motoParam, categoryIdParam, brandParam, tireParam, perPage, sortBy]);
-
-  // Load Product Detail - handled by URL sync effect above
-
-  const loadFeaturedProducts = async () => {
-    const CACHE_KEY = 'home_featured_pool';
-    const CACHE_TTL = 1000 * 60 * 60; // 1 hour
-
-    let cachedPool: { category: string, products: Product[] }[] | null = null;
-    let isExpired = true;
-
-    try {
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        cachedPool = parsed.pool;
-        isExpired = Date.now() - parsed.timestamp > CACHE_TTL;
-      }
-    } catch (e) { console.error('Cache read error', e); }
-
-    // STALE-WHILE-REVALIDATE: If we have cached data, show it immediately
-    if (cachedPool) {
-      console.log('[APP] SWR: Showing stale featured products');
-      renderFeaturedFromPool(cachedPool);
-    }
-
-    // If no cache or expired, refresh in background (or foreground if no cache at all)
-    if (!cachedPool || isExpired) {
-      if (!cachedPool) setLoading(true);
-
-      const searchTerms = ['casco integral', 'baul', 'chaqueta', 'silencioso'];
-      try {
-        console.log('[APP] Refreshing featured products pool...');
-        // Use 'fast' mode to avoid heavy server-side searches (crucial for 94k items)
-        const promises = searchTerms.map(term => fetchProducts(term, undefined, 1, 10, 'date', 'desc', true));
-        const results = await Promise.all(promises);
-
-        const newPool = results.map((res, index) => {
-          let validProducts = res.products.filter(p => p.image !== STORE_CONFIG.defaultProductImage && p.inStock && p.title.toLowerCase().includes(searchTerms[index].split(' ')[0]));
-          if (validProducts.length === 0) {
-            validProducts = res.products.filter(p => p.image !== STORE_CONFIG.defaultProductImage && p.inStock);
-          }
-          return { category: searchTerms[index], products: validProducts };
-        });
-
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), pool: newPool }));
-
-        // Only re-render if we didn't have cache OR if it was expired
-        renderFeaturedFromPool(newPool);
-      } catch (e: any) {
-        if (!cachedPool) {
-          setError("Error de conexión con el catálogo.");
-        }
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      setLoading(false);
-    }
-
-    // Silently update total catalog count in background using ultra-fast mode
-    fetchProducts(undefined, undefined, 1, 1, 'date', 'desc', true).then(r => {
-      if (r.totalProducts > 0) setTotalCatalogProducts(r.totalProducts);
-    }).catch(() => { });
-  };
-
-  const renderFeaturedFromPool = (pool: { category: string, products: Product[] }[]) => {
-    const curated: Product[] = [];
-    pool.forEach(catPool => {
-      if (catPool.products.length > 0) {
-        const validOptions = catPool.products.filter(p => !curated.some(c => c.id === p.id));
-        if (validOptions.length > 0) {
-          const randomIndex = Math.floor(Math.random() * validOptions.length);
-          curated.push(validOptions[randomIndex]);
-        }
-      }
-    });
-
-    // Fill missing spots if any (fallback to latest products)
-    if (curated.length < 4) {
-      fetchProducts(undefined, undefined, 1, 10, 'date', 'desc', true).then(res => {
-        const remaining = res.products.filter(p => !curated.some(c => c.id === p.id) && p.image !== STORE_CONFIG.defaultProductImage && p.inStock);
-        const finalSet = [...curated, ...remaining.slice(0, 4 - curated.length)];
-        setProducts(finalSet.slice(0, 4));
-      }).catch(() => setProducts(curated.slice(0, 4)));
-    } else {
-      setProducts(curated.slice(0, 4));
-    }
-  };
-
-  const handleProductFetch = async (pageToLoad: number = 1) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const orderBy = sortBy === 'date' ? 'date' : 'price';
-      const order = sortBy === 'price-asc' ? 'asc' : 'desc';
-
-      let targetCatId = categoryIdParam ? parseInt(categoryIdParam) : undefined;
-
-      // 1. CASO ESPECIAL: Búsqueda por Moto con motor optimizado
-      if (motoParam && !query) {
-        const decoded = decodeURIComponent(motoParam);
-        const [brand, model, year] = decoded.includes('|') ? decoded.split('|') : decoded.split('-');
-        
-        const { products: matches, totalPages: pages, totalProducts } = await fetchCompatibleProducts(
-          brand, 
-          model, 
-          year, 
-          targetCatId, 
-          pageToLoad, 
-          perPage
-        );
-        
-        setProducts(matches);
-        setTotalPages(pages);
-        if (totalProducts > 0) setTotalCatalogProducts(totalProducts);
-        setCurrentPage(pageToLoad);
-        return; // Terminamos aquí
-      }
-
-      // 2. CASO GENERAL: Búsqueda de WooCommerce estándar
-      // Restrict to Tires category if searching by tire dimension
-      if (tireParam) {
-        targetCatId = TIRE_CATEGORY_ID;
-      } else if (!targetCatId && urlCategory) {
-        try {
-          const allCats = await fetchCategories();
-
-          const decodedUrlCat = decodeURIComponent(urlCategory).toLowerCase();
-
-          const match = allCats.find(c =>
-            c.slug.toLowerCase() === decodedUrlCat ||
-            c.name.toLowerCase() === decodedUrlCat ||
-            // Fallback: Check if decoded URL contains the slug (handle partials like 'portamatriculas' vs 'portamatrículas')
-            c.slug.normalize("NFD").replace(/[\u0300-\u036f]/g, "") === decodedUrlCat.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-          );
-
-          if (match) {
-            targetCatId = match.id;
-            if (currentView === 'catalog') setCurrentFilter(match.name);
-          } else {
-            // If no exact match found, it might be a sub-category or custom route not in main list
-            // Try to search by slug directly in product fetch if ID resolution fails
-            console.warn(`[CATALOG] Category ID resolution failed for: ${urlCategory}`);
-          }
-        } catch (err) {
-          console.error("Error resolving category slug", err);
-        }
-      }
-
-      // 3. COMBINE SEARCH TERMS FOR SERVER-SIDE FILTERING
-      // This forces the server to search across Title, SKU and Description
-      const searchTerms: string[] = [];
-      let motoData: { brand: string, model: string, year?: string } | undefined = undefined;
-
-      if (query) searchTerms.push(query);
-
-      if (motoParam) {
-        const cleanParam = decodeURIComponent(motoParam);
-        const separator = cleanParam.includes('|') ? '|' : '-';
-        const [brand, model, year] = cleanParam.split(separator);
-        motoData = { brand, model, year };
-        // Inject vehicle info into search - BROAD SEARCH (No Year) to find compatible consumables
-        searchTerms.push(`${brand} ${model}`);
-      }
-
-      if (brandParam) {
-        searchTerms.push(brandParam);
-      }
-
-      if (tireParam) {
-        // We push the tire measure to search. 
-        // We use space as separator for broad matching (120 70 17)
-        const cleanTire = tireParam.replace(/[/\-]/g, ' ');
-        searchTerms.push(cleanTire);
-      }
-
-      const combinedQuery = searchTerms.length > 0 ? searchTerms.join(' ') : undefined;
-
-      const { products: matches, totalPages: pages, totalProducts } = await fetchProducts(
-        combinedQuery,
-        targetCatId,
-        pageToLoad,
-        perPage,
-        orderBy,
-        order,
-        false,
-        motoData
-      );
-
-      // No client-side filtering needed anymore as we are using the enhanced server search
-      setProducts(matches);
-      setTotalPages(pages);
-      if (totalProducts > 0) setTotalCatalogProducts(totalProducts);
-      setCurrentPage(pageToLoad);
-    } catch (e: any) {
-      setError("Error cargando productos");
-      setErrorDetail(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleTextSearch = (q: string) => {
     setSearchParams({ q });
@@ -542,7 +191,6 @@ function App() {
   const handleBikeSearch = (selection: BikeSelection) => {
     const param = `${selection.brand}|${selection.model}|${selection.year}`;
     const vehicleName = `${selection.brand} ${selection.model} ${selection.year !== 'General' ? selection.year : ''}`.trim();
-    
     setSelectedVehicleName(vehicleName);
     setSearchParams({ moto: param });
     navigate(`/recambios?moto=${encodeURIComponent(param)}`);
@@ -559,14 +207,9 @@ function App() {
     else if (target === 'catalog') {
       if (catOrQuery) {
         const isKnownCat = KNOWN_CATEGORIES.includes(catOrQuery.toLowerCase());
-        if (isKnownCat) {
-          navigate(`/${catOrQuery.toLowerCase()}`);
-        } else {
-          navigate(`/recambios?q=${encodeURIComponent(catOrQuery)}`);
-        }
-      } else {
-        navigate('/recambios');
-      }
+        if (isKnownCat) navigate(`/${catOrQuery.toLowerCase()}`);
+        else navigate(`/recambios?q=${encodeURIComponent(catOrQuery)}`);
+      } else navigate('/recambios');
     }
     else if (target === 'cart') navigate('/carrito');
     else if (target === 'orders') navigate('/mis-pedidos');
@@ -585,337 +228,6 @@ function App() {
     navigate('/recambios');
     handleProductFetch(1);
   };
-
-  const addToCart = (product: Product, quantity: number = 1) => {
-    trackAddToCart(product, quantity);
-    setCart(prev => {
-      const existing = prev.find(item => item.id === product.id);
-      if (existing) {
-        return prev.map(item =>
-          item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
-        );
-      }
-      return [...prev, { ...product, quantity }];
-    });
-
-    // Show Toast
-    setToast({
-      message: `Añadido: ${product.title} (${quantity})`,
-      type: 'success'
-    });
-
-    // Auto-hide toast
-    setTimeout(() => setToast(null), 3000);
-  };
-
-  // Sync Cart with LocalStorage and Server
-  useEffect(() => {
-    localStorage.setItem('escapesymas_cart', JSON.stringify(cart));
-
-    if (user && user.id && user.id > 0 && cart.length > 0) {
-      const cartData = cart.map(item => ({ product_id: item.id, quantity: item.quantity }));
-      saveUserCart(user.id, cartData);
-    }
-  }, [cart, user]);
-
-  const renderPagination = () => {
-    if (totalPages <= 1 || loading) return null;
-
-    const getPageRange = () => {
-      const delta = 2; // Páginas a mostrar a cada lado de la actual
-      const range: (number | string)[] = [];
-      range.push(1);
-      const start = Math.max(2, currentPage - delta);
-      const end = Math.min(totalPages - 1, currentPage + delta);
-      if (start > 2) range.push('...');
-      for (let i = start; i <= end; i++) {
-        range.push(i);
-      }
-      if (end < totalPages - 1) range.push('...');
-      if (totalPages > 1) range.push(totalPages);
-      return range;
-    };
-
-    const pages = getPageRange();
-
-    const handleGoToPage = (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
-      const input = e.currentTarget.elements.namedItem('pageInput') as HTMLInputElement;
-      const page = parseInt(input.value);
-      if (page >= 1 && page <= totalPages) {
-        handleProductFetch(page);
-        input.value = '';
-      }
-    };
-
-    return (
-      <div className="flex flex-wrap justify-center items-center gap-2 mt-12 py-8 border-t border-zinc-900">
-        <button
-          disabled={currentPage === 1}
-          onClick={() => handleProductFetch(currentPage - 1)}
-          className="p-3 bg-zinc-900 border border-zinc-800 rounded-sm text-zinc-400 hover:text-white hover:border-racing-orange disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-
-        {pages.map((p, idx) => (
-          p === '...' ? (
-            <span key={`ellipsis-${idx}`} className="text-zinc-600 px-2">...</span>
-          ) : (
-            <button
-              key={p}
-              onClick={() => handleProductFetch(p as number)}
-              className={`w-10 h-10 rounded-sm font-bold text-sm border transition-all ${currentPage === p ? 'bg-racing-orange border-racing-orange text-white' : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-600'}`}
-            >
-              {p}
-            </button>
-          )
-        ))}
-
-        <button
-          disabled={currentPage === totalPages}
-          onClick={() => handleProductFetch(currentPage + 1)}
-          className="p-3 bg-zinc-900 border border-zinc-800 rounded-sm text-zinc-400 hover:text-white hover:border-racing-orange disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-        >
-          <ArrowRight className="w-5 h-5" />
-        </button>
-
-        {/* Input para ir a página específica */}
-        <form onSubmit={handleGoToPage} className="flex items-center gap-2 ml-4">
-          <span className="text-zinc-500 text-xs">Ir a:</span>
-          <input
-            type="number"
-            name="pageInput"
-            min={1}
-            max={totalPages}
-            placeholder={currentPage.toString()}
-            className="w-16 bg-zinc-900 border border-zinc-800 text-white text-sm px-2 py-2 rounded-sm focus:border-racing-orange focus:outline-none text-center"
-          />
-          <span className="text-zinc-600 text-xs">/ {totalPages}</span>
-        </form>
-      </div>
-    );
-  };
-
-  const renderProductGrid = () => {
-    if (loading) return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Loader2 className="w-10 h-10 text-racing-orange animate-spin mb-4" />
-        <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Sincronizando garaje...</p>
-      </div>
-    );
-
-    if (error) return (
-      <div className="text-center py-20 bg-zinc-900/30 rounded-sm border border-zinc-800 p-8">
-        <WifiOff className="w-12 h-12 text-red-500 mx-auto mb-4" />
-        <h3 className="text-white font-bold mb-2">{error}</h3>
-        <p className="text-zinc-500 text-sm mb-6 max-w-xs mx-auto">{errorDetail}</p>
-        <button onClick={handleClearFilters} className="bg-racing-orange text-white px-6 py-2 rounded-sm font-bold uppercase text-xs">Reintentar</button>
-      </div>
-    );
-
-    if (products.length === 0) return (
-      <div className="text-center py-24 bg-white dark:bg-zinc-900/10 rounded-sm border border-zinc-200 dark:border-zinc-800 p-12 max-w-2xl mx-auto shadow-sm">
-        <div className="bg-zinc-100 dark:bg-zinc-900 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-          <Package className="w-10 h-10 text-zinc-300 dark:text-zinc-700" />
-        </div>
-        <h3 className="text-2xl font-black uppercase italic text-zinc-900 dark:text-white mb-4">No hemos encontrado piezas exactas</h3>
-        <p className="text-zinc-500 dark:text-zinc-400 mb-8 leading-relaxed">
-          Nuestra base de datos es enorme, pero a veces el motor de búsqueda necesita un poco de ayuda. Prueba a buscar por marca o modelo general, o contacta con nuestros expertos.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <button onClick={handleClearFilters} className="bg-zinc-900 dark:bg-zinc-800 text-white px-8 py-3 rounded-sm font-bold uppercase text-xs tracking-widest hover:bg-black transition-colors">
-            Ver todo el catálogo
-          </button>
-          <button onClick={() => navigate('/contacto')} className="border border-racing-orange text-racing-orange px-8 py-3 rounded-sm font-bold uppercase text-xs tracking-widest hover:bg-racing-orange hover:text-white transition-all">
-            Contactar Experto
-          </button>
-        </div>
-      </div>
-    );
-
-    return (
-      <>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-          {products.map((product, index) => (
-            <ProductCard
-              key={product?.id || `p-${index}`}
-              priority={index < 4}
-              product={product}
-              onClick={(p) => {
-                if (!p?.id) return;
-                setSelectedProduct(p);
-                trackViewItem(p);
-                const slugSuffix = p.slug ? `-${p.slug}` : '';
-                navigate(`/${p.categorySlug || 'recambios'}/${p.id}${slugSuffix}`);
-              }}
-              onAddToCart={() => product && addToCart(product, 1)}
-            />
-          ))}
-        </div>
-        {currentView === 'catalog' && renderPagination()}
-
-        {currentView === 'catalog' && urlCategory && !query && (
-          <section className="mt-16 pt-16 border-t border-zinc-200 dark:border-zinc-800">
-            <div className="container mx-auto px-4 max-w-4xl">
-              <h2 className="text-2xl font-bold text-zinc-900 dark:text-white mb-6 uppercase italic">
-                {CATEGORIES.find(c => c.id === urlCategory)?.name || urlCategory}
-              </h2>
-              <div className="prose prose-zinc dark:prose-invert max-w-none text-zinc-600 dark:text-zinc-400">
-                <p>
-                  {CATEGORIES.find(c => c.id === urlCategory)?.description}
-                </p>
-                <p className="mt-4">
-                  En <strong>Escapes y Más</strong> seleccionamos cuidadosamente cada componente para asegurar el máximo rendimiento de tu motocicleta.
-                  Trabajamos con las mejores marcas del mercado como Akrapovič, Mivv, Brembo y Öhlins para ofrecerte piezas originales con garantía oficial.
-                </p>
-              </div>
-            </div>
-          </section>
-        )}
-      </>
-    );
-  };
-
-  // SEO Logic
-  const seoData = useMemo(() => {
-    switch (currentView) {
-      case 'home':
-        return {
-          title: 'Tienda de Escapes y Recambios para Moto',
-          description: 'Encuentra los mejores escapes y accesorios para tu moto. Akrapovic, Mivv, Arrow y más al mejor precio.',
-          canonical: '/'
-        };
-      case 'catalog':
-        const knownCat = CATEGORIES.find(c => c.id === urlCategory);
-        const catName = knownCat ? knownCat.name : (urlCategory ? urlCategory.charAt(0).toUpperCase() + urlCategory.slice(1) : 'Catálogo');
-
-        let seoTitle = query ? `Búsqueda: ${query}` : `${catName} para Moto`;
-        let seoDesc = query
-          ? `Resultados de búsqueda para "${query}" en Escapes y Más.`
-          : knownCat?.description || `Compra ${catName.toLowerCase()} online. Gran variedad de marcas y modelos para tu moto.`;
-
-        // --- Mejoras de SEO para Filtros ---
-        if (motoParam) {
-          const cleanParam = decodeURIComponent(motoParam);
-          const parts = cleanParam.includes('|') ? cleanParam.split('|') : cleanParam.split('-');
-          const [brand, model, year] = parts;
-          seoTitle = `${catName} para ${brand} ${model}${year ? ` (${year})` : ''}`;
-          seoDesc = `Selección exclusiva de ${catName.toLowerCase()} compatibles con tu ${brand} ${model}. Máximo rendimiento y ajuste perfecto garantizado.`;
-        } else if (brandParam) {
-          seoTitle = `${catName} de la marca ${brandParam}`;
-          seoDesc = `Catálogo completo de ${catName.toLowerCase()} ${brandParam}. Compra productos originales con garantía oficial del fabricante.`;
-        }
-
-        const jsonLd: any[] = [
-          {
-            "@context": "https://schema.org",
-            "@type": "BreadcrumbList",
-            "itemListElement": [
-              {
-                "@type": "ListItem",
-                "position": 1,
-                "name": "Inicio",
-                "item": "https://escapesymas.com/"
-              },
-              {
-                "@type": "ListItem",
-                "position": 2,
-                "name": catName,
-                "item": `https://escapesymas.com/${urlCategory || 'recambios'}`
-              }
-            ]
-          }
-        ];
-
-        if (!query && !motoParam && !brandParam) {
-          jsonLd.push({
-            "@context": "https://schema.org",
-            "@type": "CollectionPage",
-            "name": seoTitle,
-            "description": seoDesc,
-            "url": `https://escapesymas.com/${urlCategory || 'recambios'}`
-          });
-        }
-
-        return {
-          title: seoTitle,
-          description: seoDesc,
-          canonical: (!urlCategory || urlCategory === 'recambios') ? '/recambios' : `/${urlCategory}`,
-          jsonLd
-        };
-      case 'product':
-        if (selectedProduct) {
-          const cleanDesc = selectedProduct.description?.replace(/<[^>]*>/g, '').substring(0, 160).trim() || `Comprar ${selectedProduct.title}`;
-          return {
-            title: selectedProduct.title,
-            description: cleanDesc,
-            canonical: `/${selectedProduct.categorySlug || 'recambios'}/${selectedProduct.id}${selectedProduct.slug ? `-${selectedProduct.slug}` : ''}`,
-            image: selectedProduct.image,
-            jsonLd: [
-              {
-                "@context": "https://schema.org",
-                "@type": "Product",
-                "name": selectedProduct.title,
-                "image": [selectedProduct.image],
-                "description": cleanDesc,
-                "sku": selectedProduct.sku,
-                "brand": {
-                  "@type": "Brand",
-                  "name": selectedProduct.brand || "Generico"
-                },
-                "offers": {
-                  "@type": "Offer",
-                  "url": `https://escapesymas.com/${selectedProduct.categorySlug || 'recambios'}/${selectedProduct.id}${selectedProduct.slug ? `-${selectedProduct.slug}` : ''}`,
-                  "priceCurrency": "EUR",
-                  "price": selectedProduct.price,
-                  "availability": selectedProduct.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-                  "itemCondition": "https://schema.org/NewCondition"
-                },
-                "aggregateRating": {
-                  "@type": "AggregateRating",
-                  "ratingValue": selectedProduct.averageRating && selectedProduct.averageRating > 0 ? selectedProduct.averageRating : 5,
-                  "reviewCount": selectedProduct.ratingCount && selectedProduct.ratingCount > 0 ? selectedProduct.ratingCount : 1
-                }
-              },
-              {
-                "@context": "https://schema.org",
-                "@type": "BreadcrumbList",
-                "itemListElement": [
-                  {
-                    "@type": "ListItem",
-                    "position": 1,
-                    "name": "Home",
-                    "item": "https://escapesymas.com/"
-                  },
-                  {
-                    "@type": "ListItem",
-                    "position": 2,
-                    "name": selectedProduct.category || "Recambios",
-                    "item": `https://escapesymas.com/${selectedProduct.categorySlug || 'recambios'}`
-                  },
-                  {
-                    "@type": "ListItem",
-                    "position": 3,
-                    "name": selectedProduct.title,
-                    "item": `https://escapesymas.com/${selectedProduct.categorySlug || 'recambios'}/${selectedProduct.id}${selectedProduct.slug ? `-${selectedProduct.slug}` : ''}`
-                  }
-                ]
-              }
-            ]
-          };
-        }
-        return { title: 'Cargando producto...', canonical: '' };
-      case 'contact':
-        return { title: 'Contacto', description: 'Contacta con nuestro equipo para dudas sobre escapes y recambios.', canonical: '/contacto' };
-      case 'cart':
-        return { title: 'Carrito', canonical: '/carrito' };
-      case 'checkout':
-        return { title: 'Finalizar Compra', canonical: '/checkout' };
-      default:
-        return { title: 'Escapes y Más', canonical: window.location.pathname };
-    }
-  }, [currentView, urlCategory, selectedProduct, query]);
 
   return (
     <ErrorBoundary>
@@ -995,7 +307,6 @@ function App() {
                   </div>
                 </section>
 
-                {/* Stock Counter Bar */}
                 <section className="bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 border-t border-b border-zinc-700/50">
                   <div className="container mx-auto px-4 py-5">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
@@ -1032,13 +343,9 @@ function App() {
                   </div>
                 </section>
 
-                {/* Search Improvements Banner */}
                 <SearchImprovementsBanner onClick={() => navigate('/contacto')} />
-
-                {/* Klarna Promo Banner */}
                 <KlarnaBanner onClick={() => navigate('/recambios')} />
 
-                {/* Featured Products Section */}
                 <section className="py-12 bg-white dark:bg-zinc-950 container mx-auto px-4">
                   <h2 className="text-2xl font-bold text-zinc-900 dark:text-white uppercase italic mb-8 border-l-4 border-racing-orange pl-4">Productos Destacados</h2>
                   {loading ? (
@@ -1047,7 +354,7 @@ function App() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {products.slice(0, 4).map((product, index) => (
+                      {products.slice(0, 4).map((product) => (
                         <ProductCard
                           key={product.id}
                           priority={true}
@@ -1094,7 +401,6 @@ function App() {
                 </section>
                 
                 <section className="py-12 bg-white dark:bg-zinc-950 min-h-screen container mx-auto px-4 border-t border-zinc-200 dark:border-zinc-900">
-                  {/* Si hay moto seleccionada pero NO hay categoría ni búsqueda aún, mostramos categorías compatibles */}
                   {motoParam && !categoryIdParam && !urlCategory && !query ? (
                     <CompatibleCategories 
                       categories={compatibleCats}
@@ -1123,7 +429,6 @@ function App() {
                           </div>
 
                           <div className="flex flex-wrap items-center gap-4">
-                            {/* Brand Filter */}
                             <select
                               value={brandParam || ''}
                               onChange={(e) => {
@@ -1141,7 +446,6 @@ function App() {
                               ))}
                             </select>
 
-                            {/* Category Filter */}
                             <select
                               value={urlCategory || ''}
                               onChange={(e) => {
@@ -1197,11 +501,33 @@ function App() {
                       </div>
 
                       <div className="min-h-[500px]">
-                        {loading ? (
+                        {loading && products.length === 0 ? (
                           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                             {[...Array(8)].map((_, i) => <ProductSkeleton key={i} />)}
                           </div>
-                        ) : renderProductGrid()}
+                        ) : (
+                          <ProductGrid 
+                            loading={loading}
+                            error={error}
+                            errorDetail={errorDetail}
+                            products={products}
+                            currentView={currentView}
+                            urlCategory={urlCategory}
+                            query={query}
+                            onClearFilters={handleClearFilters}
+                            onContactClick={() => navigate('/contacto')}
+                            onViewAllClick={handleClearFilters}
+                            onProductClick={(p) => {
+                              setSelectedProduct(p);
+                              const slugSuffix = p.slug ? `-${p.slug}` : '';
+                              navigate(`/${p.categorySlug || 'recambios'}/${p.id}${slugSuffix}`);
+                            }}
+                            onAddToCart={(p) => addToCart(p, 1)}
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            onPageChange={(page) => handleProductFetch(page)}
+                          />
+                        )}
                       </div>
                     </>
                   )}
@@ -1212,7 +538,6 @@ function App() {
         </main>
         <Footer onNavClick={handleNavClick} />
 
-        {/* Global Toast Notification */}
         {toast && (
           <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-fade-in-up">
             <div className={`px-6 py-4 rounded-sm shadow-2xl flex items-center gap-3 border ${toast.type === 'success' ? 'bg-racing-orange text-white border-orange-400' :
@@ -1230,7 +555,7 @@ function App() {
         )}
 
         <Suspense fallback={null}>
-          <AIAdvisor onProductClick={(p) => { setSelectedProduct(p); navigate(`/producto/${p.id}`); }} onAddToCart={(p) => addToCart(p)} user={user} onLoginRequest={() => navigate('/login')} />
+          <AIAdvisor onProductClick={(p) => { setSelectedProduct(p); navigate(`/producto/${p.id}`); }} onAddToCart={(p) => addToCart(p, 1)} user={user} onLoginRequest={() => navigate('/login')} />
         </Suspense>
       </div>
     </ErrorBoundary>
