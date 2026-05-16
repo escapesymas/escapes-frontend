@@ -87,35 +87,27 @@ async function handleLogin(req: VercelRequest, res: VercelResponse) {
   try {
     if (ObjectData.user_email) {
       const email = ObjectData.user_email;
-      const username = ObjectData.user_nicename || ObjectData.user_display_name || email.split('@')[0];
-      
-      const userRole = (email === 'info@escapesymas.com') ? 'admin' : 'customer';
+      const userRole = (email.toLowerCase() === 'info@escapesymas.com') ? 'admin' : 'customer';
 
       const [dbUser] = await db.insert(schema.users).values({
-          wpId: ObjectData.user_id,
-          username: ObjectData.user_nicename,
+          wpId: ObjectData.user_id || 0,
+          username: ObjectData.user_nicename || email.split('@')[0],
           email: email,
-          firstName: ObjectData.user_display_name,
+          firstName: ObjectData.user_display_name || email.split('@')[0],
           avatarUrl: ObjectData.avatarUrl || null,
           role: userRole
       })
       .onConflictDoUpdate({
           target: schema.users.email,
           set: {
-              username: ObjectData.user_nicename,
-              firstName: ObjectData.user_display_name,
-              avatarUrl: ObjectData.avatarUrl || null,
               role: userRole,
               updatedAt: new Date()
           }
       })
       .returning();
 
-      console.log(`[DB] Usuario sincronizado en Postgres: ${email}`);
-
-      // 3. Devolver datos combinados
-      ObjectData.role = dbUser?.role || 'customer';
-      ObjectData.id = dbUser?.id || ObjectData.user_id; 
+      ObjectData.role = userRole;
+      ObjectData.id = dbUser?.id;
       
       console.log(`[DB] Login exitoso con rol: ${ObjectData.role}`);
     }
