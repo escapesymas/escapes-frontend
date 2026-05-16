@@ -29,6 +29,26 @@ export const AdminDashboard: React.FC<{ user: UserType | null; onBack: () => voi
         fetchStats();
     }, [user]);
 
+    const [showNewForm, setShowNewForm] = useState(false);
+
+    const handleCreateProduct = async (formData: any) => {
+        try {
+            const stored = localStorage.getItem('escapes_user');
+            const currentUser = user || (stored ? JSON.parse(stored) : null);
+            const userId = currentUser.id || currentUser.wpId || currentUser.user_id;
+            
+            const res = await fetch(`/api/admin?action=create-product&userId=${userId}&email=${currentUser.email}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+            if (res.ok) {
+                setShowNewForm(false);
+                // Aquí podrías recargar estadísticas o lista
+            }
+        } catch (e) { console.error(e); }
+    };
+
     if (loading) return <div className="h-screen bg-black flex items-center justify-center text-white italic uppercase tracking-widest">Sincronizando...</div>;
 
     return (
@@ -68,13 +88,64 @@ export const AdminDashboard: React.FC<{ user: UserType | null; onBack: () => voi
                 )}
 
                 {activeTab === 'products' && (
-                    <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-20 text-center">
-                        <Icons.Package size={48} className="mx-auto mb-4 text-zinc-700" />
-                        <p className="font-bold uppercase italic text-zinc-500">Módulo de productos listo para poblar.</p>
-                        <button className="mt-6 bg-[#ff4d00] text-white px-8 py-3 rounded-full font-black uppercase italic text-xs tracking-widest shadow-xl shadow-orange-900/30">Nuevo Producto</button>
-                    </div>
+                    <>
+                        <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-20 text-center relative overflow-hidden">
+                            <Icons.Package size={48} className="mx-auto mb-4 text-zinc-700" />
+                            <p className="font-bold uppercase italic text-zinc-500">Módulo de productos listo para poblar.</p>
+                            <button onClick={() => setShowNewForm(true)} className="mt-6 bg-[#ff4d00] text-white px-8 py-3 rounded-full font-black uppercase italic text-xs tracking-widest shadow-xl shadow-orange-900/30 hover:scale-105 transition-transform">Nuevo Producto</button>
+                        </div>
+
+                        {showNewForm && (
+                            <NewProductForm 
+                                onClose={() => setShowNewForm(false)} 
+                                onSubmit={handleCreateProduct} 
+                            />
+                        )}
+                    </>
                 )}
             </main>
+        </div>
+    );
+};
+
+const NewProductForm = ({ onClose, onSubmit }: any) => {
+    const [form, setForm] = useState({ name: '', sku: '', price: '', stock: '', brand: '' });
+    
+    return (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-zinc-950 border border-zinc-800 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in duration-300">
+                <div className="p-6 border-b border-zinc-900 flex justify-between items-center bg-zinc-900/50">
+                    <h3 className="font-black italic uppercase">Nuevo Producto</h3>
+                    <button onClick={onClose} className="text-zinc-500 hover:text-white">✕</button>
+                </div>
+                <form onSubmit={(e) => { e.preventDefault(); onSubmit(form); }} className="p-8 space-y-4">
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-zinc-500 uppercase">Nombre</label>
+                        <input required className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:border-[#ff4d00] outline-none" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-zinc-500 uppercase">SKU</label>
+                            <input required className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:border-[#ff4d00] outline-none" value={form.sku} onChange={e => setForm({...form, sku: e.target.value})} />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-zinc-500 uppercase">Marca</label>
+                            <input className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:border-[#ff4d00] outline-none" value={form.brand} onChange={e => setForm({...form, brand: e.target.value})} />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-zinc-500 uppercase">Precio (€)</label>
+                            <input required type="number" step="0.01" className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:border-[#ff4d00] outline-none" value={form.price} onChange={e => setForm({...form, price: e.target.value})} />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-zinc-500 uppercase">Stock</label>
+                            <input required type="number" className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:border-[#ff4d00] outline-none" value={form.stock} onChange={e => setForm({...form, stock: e.target.value})} />
+                        </div>
+                    </div>
+                    <button type="submit" className="w-full bg-[#ff4d00] py-4 rounded-xl font-black uppercase italic tracking-widest mt-4 shadow-lg shadow-orange-900/40">Crear Producto</button>
+                </form>
+            </div>
         </div>
     );
 };
