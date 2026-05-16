@@ -11,7 +11,13 @@ if (!connectionString) {
 // Configuración de la conexión a PostgreSQL (VPS)
 const pool = new pg.Pool({
   connectionString: connectionString,
-  ssl: connectionString?.includes('localhost') ? false : { rejectUnauthorized: false }
+  ssl: {
+    rejectUnauthorized: false // Permite conectar aunque el VPS no tenga un certificado SSL firmado por una CA
+  }
+});
+
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
 });
 
 export const db = drizzle(pool, { schema });
