@@ -88,6 +88,10 @@ export default defineConfig(({ mode }) => {
             if (id.includes('node_modules/react-router') || id.includes('@remix-run/router')) {
               return 'vendor-router';
             }
+            // Social Auth (Only loaded when login/register is opened)
+            if (id.includes('node_modules/@react-oauth') || id.includes('node_modules/react-apple-signin-auth') || id.includes('node_modules/react-facebook-login')) {
+              return 'vendor-auth';
+            }
             // Other node_modules
             if (id.includes('node_modules')) {
               return 'vendor-libs';
