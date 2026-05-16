@@ -26,7 +26,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   } catch (err: any) {
     console.error("[AUTH ERROR]:", err.message);
-    res.status(500).json({ error: "Internal Server Error", detail: err.message });
+    res.status(500).json({ 
+      error: "Error interno en la API de Escapes", 
+      message: err.message,
+      stack: err.stack?.split('\n')[0], // Solo la primera línea del stack para no exceder límites
+      hint: "Verifica que DATABASE_URL esté correctamente configurada en el panel de Vercel"
+    });
   }
 }
 
