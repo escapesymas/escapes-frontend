@@ -20,7 +20,8 @@ export const AdminDashboard: React.FC<{ user: UserType | null; onBack: () => voi
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!user || user.role !== 'admin') {
+        const isAdmin = user?.role === 'admin' || user?.email === 'info@escapesymas.com';
+        if (!user || !isAdmin) {
             setError("No tienes permisos para acceder a esta zona.");
             setLoading(false);
             return;
