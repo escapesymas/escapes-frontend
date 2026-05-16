@@ -14,7 +14,7 @@ export default async function handler(req: any, res: any) {
     const { action, userId, email } = req.query;
 
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS, POST');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
     if (req.method === 'OPTIONS') return res.status(200).end();
@@ -53,17 +53,18 @@ export default async function handler(req: any, res: any) {
 
             case 'create-product':
                 if (req.method !== 'POST') return res.status(405).end();
-                const { name, sku, price, stock, category, brand, imageUrl } = req.body;
+                const { name, sku, price, stock, brand, imageUrl } = req.body;
                 
-                // Valores por defecto para evitar errores de NULL
-                const safeCategory = category || 'General';
-                const safeBrand = brand || 'Escapes y Más';
-                const safeImage = imageUrl || '';
+                // Conversión a céntimos (integer) como pide el esquema
+                const priceInCents = Math.round(parseFloat(price) * 100);
+                const safeStock = parseInt(stock) || 0;
 
+                // Consulta corregida con nombres de columnas reales (images, status)
                 await db.execute(sql`
-                    INSERT INTO products (name, sku, price, stock, category, brand, image_url)
-                    VALUES (${name}, ${sku}, ${parseFloat(price)}, ${parseInt(stock)}, ${safeCategory}, ${safeBrand}, ${safeImage})
+                    INSERT INTO products (name, sku, price, stock, images, status)
+                    VALUES (${name}, ${sku}, ${priceInCents}, ${safeStock}, ${imageUrl || ''}, 'published')
                 `);
+                
                 return res.status(200).json({ success: true });
 
             default:
@@ -73,7 +74,8 @@ export default async function handler(req: any, res: any) {
         console.error("ADMIN API ERROR:", error);
         return res.status(500).json({ 
             error: "Error de base de datos",
-            message: error.message 
+            message: error.message,
+            detail: error.detail // Esto nos dirá si es un SKU duplicado
         });
     }
 }
