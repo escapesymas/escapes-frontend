@@ -40,8 +40,9 @@ const Warranty = React.lazy(() => import('./components/Warranty').then(m => ({ d
 const AIAdvisor = React.lazy(() => import('./components/AIAdvisor').then(m => ({ default: m.AIAdvisor })));
 const SocialFeed = React.lazy(() => import('./components/social/SocialFeed').then(m => ({ default: m.SocialFeed })));
 const UserProfile = React.lazy(() => import('./components/social/UserProfile').then(m => ({ default: m.UserProfile })));
+const AdminDashboard = React.lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 
-type ViewState = 'home' | 'catalog' | 'product' | 'cart' | 'checkout' | 'login' | 'register' | 'orders' | 'account' | 'categories' | 'forum' | 'contact' | 'warranty' | 'social' | 'user_profile';
+type ViewState = 'home' | 'catalog' | 'product' | 'cart' | 'checkout' | 'login' | 'register' | 'orders' | 'account' | 'categories' | 'forum' | 'contact' | 'warranty' | 'social' | 'user_profile' | 'admin';
 
 const KNOWN_CATEGORIES = ['escapes', 'frenos', 'accesorios', 'protecciones', 'recambios', 'lubricantes', 'electrónica', 'suspensiones'];
 
@@ -50,7 +51,8 @@ const parsePathToView = (path: string): { view: ViewState; category?: string; pr
   if (cleanPath === '' || cleanPath === '/') return { view: 'home' };
   if (cleanPath === '/recambios') return { view: 'catalog' };
   if (cleanPath === '/carrito') return { view: 'cart' };
-  if (cleanPath === '/checkout') return { view: 'checkout' };
+  if (cleanPath === '/mi-cuenta') return { view: 'account' };
+  if (cleanPath === '/admin') return { view: 'admin' };
   if (cleanPath === '/login') return { view: 'login' };
   if (cleanPath === '/registro') return { view: 'register' };
   if (cleanPath.startsWith('/mi-cuenta')) return { view: 'account' };
@@ -291,6 +293,7 @@ function App() {
             {currentView === 'social' && <SocialFeed user={user} onBack={() => navigate('/')} onLoginRequest={() => navigate('/login')} />}
             {currentView === 'user_profile' && <UserProfile currentUser={user} targetUserId={parseInt(parsePathToView(location.pathname).userId || '0')} onBack={() => window.history.back()} onLoginRequest={() => navigate('/login')} />}
             {currentView === 'contact' && <Contact onBack={() => navigate('/')} />}
+            {currentView === 'admin' && <AdminDashboard user={user} onBack={() => navigate('/')} />}
 
             {currentView === 'cart' && (
               <Cart
