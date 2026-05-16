@@ -1,7 +1,12 @@
 import sharp from 'sharp';
+import { Agent, setGlobalDispatcher } from 'undici';
 
 // Bypass SSL certificate issues for backendescapes.com
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
+// Configurar el dispatcher global para que fetch ignore errores de SSL
+const agent = new Agent({ connect: { rejectUnauthorized: false } });
+setGlobalDispatcher(agent);
 
 export default async function handler(req, res) {
     // Enable CORS
