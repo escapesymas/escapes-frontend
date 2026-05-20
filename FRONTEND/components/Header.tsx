@@ -5,6 +5,8 @@ import { STORE_CONFIG, NAV_LINKS } from '../storeData';
 import { User as UserType, UserRank } from '../types';
 import { RankBadge } from './RankBadge';
 import { fetchUserRank } from '../services/woocommerce';
+import { optimizeImage } from '../utils/imageOptimizer';
+import { MegaMenuNav } from './MegaMenu';
 
 
 interface HeaderProps {
@@ -35,8 +37,10 @@ export const Header: React.FC<HeaderProps> = ({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [userRank, setUserRank] = useState<UserRank | null>(null);
+  const [avatarError, setAvatarError] = useState(false);
 
   React.useEffect(() => {
+    setAvatarError(false);
     if (user && user.id) {
       fetchUserRank(user.id).then(rank => {
         if (rank) setUserRank(rank);
@@ -62,8 +66,8 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full bg-white/95 dark:bg-racing-carbon/95 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      <header className="sticky top-0 z-50 w-full bg-white/95 dark:bg-racing-carbon/95 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 overflow-visible">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between relative overflow-visible">
 
           <div className="flex items-center gap-2 md:gap-4">
             <button
@@ -86,18 +90,10 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          <nav className="hidden md:flex items-center gap-6">
-            {filteredNavLinks.map((link, idx) => (
-              <button
-                key={idx}
-                onClick={() => onNavClick(link.view || 'catalog', link.category)}
-                className={`text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-1.5 ${link.highlight ? 'text-racing-orange hover:text-black dark:hover:text-white' : 'text-zinc-600 dark:text-zinc-400 hover:text-racing-orange dark:hover:text-white'}`}
-              >
-                {link.view === 'forum' && <MessageSquare className="w-3.5 h-3.5" />}
-                {link.label}
-              </button>
-            ))}
-          </nav>
+          {/* ── DESKTOP MEGA MENU ── */}
+          <div className="hidden md:block">
+            <MegaMenuNav onNavClick={onNavClick} />
+          </div>
 
 
 
@@ -138,8 +134,13 @@ export const Header: React.FC<HeaderProps> = ({
                 className="text-zinc-600 dark:text-zinc-400 hover:text-racing-orange dark:hover:text-white transition-colors flex items-center gap-2"
                 aria-label="Perfil de usuario"
               >
-                {user?.avatarUrl ? (
-                  <img src={user.avatarUrl} className="w-7 h-7 rounded-full border-2 border-racing-orange object-cover" width="28" height="28" alt="Avatar" />
+                {user?.avatarUrl && !user.avatarUrl.includes('wp-content') && !avatarError ? (
+                  <img
+                    src={optimizeImage(user.avatarUrl, { width: 50, height: 50, fit: 'cover', format: 'webp' })}
+                    className="w-7 h-7 rounded-full border-2 border-racing-orange object-cover"
+                    width="28" height="28" alt="Avatar"
+                    onError={() => setAvatarError(true)}
+                  />
                 ) : user ? (
                   <div className="w-7 h-7 rounded-full bg-racing-orange flex items-center justify-center">
                     <span className="text-white text-xs font-bold">{user.firstName?.charAt(0).toUpperCase()}</span>
@@ -220,16 +221,17 @@ export const Header: React.FC<HeaderProps> = ({
               {user && (
                 <div className="mb-6 p-4 bg-zinc-900 rounded-sm border border-zinc-800 flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden">
-                    {user.avatarUrl ? (
+                    {user.avatarUrl && !user.avatarUrl.includes('wp-content') && !avatarError ? (
                       <img
-                        src={user.avatarUrl}
+                        src={optimizeImage(user.avatarUrl, { width: 80, height: 80, fit: 'cover', format: 'webp' })}
                         className="w-full h-full object-cover"
-                        width="40"
-                        height="40"
-                        alt="Avatar"
+                        width="40" height="40" alt="Avatar"
+                        onError={() => setAvatarError(true)}
                       />
                     ) : (
-                      <User className="w-full h-full p-2 text-zinc-500" />
+                      <div className="w-full h-full flex items-center justify-center bg-racing-orange">
+                        <span className="text-white font-bold text-lg">{user.firstName?.charAt(0).toUpperCase()}</span>
+                      </div>
                     )}
                   </div>
                   <div>
