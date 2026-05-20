@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as Icons from 'lucide-react';
+import AccountingTab from './AccountingTab';
 
 interface AdminDashboardProps {
   session: any;
@@ -474,6 +475,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ session, onLogou
           >
             <Icons.TrendingUp size={16} /> Precios y Márgenes
           </button>
+
+          <button
+            onClick={() => { setActiveTab('accounting'); setIsMobileMenuOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-xs font-black uppercase italic tracking-wider transition-all ${
+              activeTab === 'accounting' ? 'bg-zinc-900 text-racing-orange' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/40'
+            }`}
+          >
+            <Icons.Receipt size={16} /> Contabilidad
+          </button>
         </nav>
 
         <div className="p-4 border-t border-zinc-900 flex flex-col gap-2 bg-zinc-950/80">
@@ -600,6 +610,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ session, onLogou
           >
             <Icons.TrendingUp size={16} /> Precios y Márgenes
           </button>
+
+          <button
+            onClick={() => setActiveTab('accounting')}
+            className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-xs font-black uppercase italic tracking-wider transition-all ${
+              activeTab === 'accounting' ? 'bg-zinc-900 text-racing-orange' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/40'
+            }`}
+          >
+            <Icons.Receipt size={16} /> Contabilidad
+          </button>
         </nav>
 
         <div className="p-4 border-t border-zinc-900 flex flex-col gap-2 bg-zinc-950/80">
@@ -643,6 +662,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ session, onLogou
               {activeTab === 'seo' && 'SEO Auto-Linking'}
               {activeTab === 'sync' && 'Consola de Sincronización (Bihr)'}
               {activeTab === 'margins' && 'Precios y Márgenes'}
+              {activeTab === 'accounting' && 'Contabilidad y Facturación'}
             </h1>
             <p className="text-zinc-500 text-xs mt-1 font-medium">
               {activeTab === 'stats' && 'Vista general del rendimiento del e-commerce.'}
@@ -653,6 +673,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ session, onLogou
               {activeTab === 'seo' && 'Gestiona el diccionario de palabras clave del enlazado interno dofollow.'}
               {activeTab === 'sync' && 'Monitorea e inicia la sincronización de catálogos e imágenes del distribuidor.'}
               {activeTab === 'margins' && 'Configura márgenes por marca, categoría o globales y ejecuta el recálculo masivo de precios.'}
+              {activeTab === 'accounting' && 'Analíticas financieras, libro de ventas, IVA repercutido y descarga de facturas PDF.'}
             </p>
           </div>
           {activeTab === 'products' && (
@@ -1393,6 +1414,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ session, onLogou
         {activeTab === 'margins' && (
           <MarginsTab adminWpId={adminWpId} adminEmail={adminEmail} />
         )}
+
+        {activeTab === 'accounting' && (
+          <AccountingTab adminWpId={adminWpId} adminEmail={adminEmail} />
+        )}
       </main>
 
       {/* ORDER DETAILS MODAL */}
@@ -1484,6 +1509,51 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ session, onLogou
               <div className="bg-zinc-900/40 p-4 border-t border-zinc-900 flex justify-between items-center text-sm">
                 <span className="font-bold text-zinc-400">Total Facturado</span>
                 <span className="text-xl font-black italic text-racing-orange">{(selectedOrder.total / 100).toFixed(2)}€</span>
+              </div>
+            </div>
+
+            {/* FACTURA PDF */}
+            <div className="bg-zinc-900/50 p-5 border border-zinc-900 rounded-xl mb-4">
+              <div className="flex justify-between items-center mb-3">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Factura PDF</h4>
+                {selectedOrder.invoiceNumber && (
+                  <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-emerald-950/30 text-emerald-400 border border-emerald-900/30">
+                    {selectedOrder.invoiceNumber}
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-3 flex-wrap">
+                {!selectedOrder.invoiceNumber ? (
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await fetch(`/api/admin?action=generate-invoice&userId=${adminWpId}&email=${adminEmail}`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ orderId: selectedOrder.id }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Error generando factura');
+                        setSelectedOrder({ ...selectedOrder, invoiceNumber: data.invoice.invoice_number });
+                        alert(`✅ Factura generada: ${data.invoice.invoice_number}`);
+                      } catch (err: any) {
+                        alert(`❌ ${err.message}`);
+                      }
+                    }}
+                    className="bg-racing-orange hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase italic tracking-wider transition-all flex items-center gap-2"
+                  >
+                    <Icons.FilePlus className="w-3.5 h-3.5" />
+                    <span>Generar Factura</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => window.open(`/api/admin?action=download-invoice&userId=${adminWpId}&email=${adminEmail}&orderId=${selectedOrder.id}`, '_blank')}
+                    className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 px-4 py-2 rounded-xl text-[10px] font-black uppercase italic tracking-wider transition-all flex items-center gap-2"
+                  >
+                    <Icons.Download className="w-3.5 h-3.5" />
+                    <span>Descargar PDF</span>
+                  </button>
+                )}
               </div>
             </div>
 
