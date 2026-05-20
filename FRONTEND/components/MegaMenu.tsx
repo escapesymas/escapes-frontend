@@ -6,9 +6,12 @@ interface MegaMenuProps {
   onNavClick: (view: string, category?: string) => void;
 }
 
-// Max columns to show in dropdown (4 columns layout)
 const MAX_COLS = 4;
 
+/* ────────────────────────────────────────────────────────────
+   DropdownPanel — usa position:fixed anclado al header (64px)
+   para evitar cualquier overflow lateral.
+──────────────────────────────────────────────────────────── */
 const DropdownPanel: React.FC<{
   item: MegaMenuItem;
   onNavClick: (view: string, category?: string) => void;
@@ -16,19 +19,21 @@ const DropdownPanel: React.FC<{
 }> = ({ item, onNavClick, onClose }) => {
   if (!item.groups || item.groups.length === 0) return null;
 
-  const handleClick = (view: string, category?: string) => {
-    onNavClick(view, category);
-    onClose();
-  };
-
-  // Distribute groups into columns (max MAX_COLS)
   const groups = item.groups;
   const colCount = Math.min(groups.length, MAX_COLS);
 
+  const handleSubClick = (view: string, label: string, category?: string) => {
+    // Si el sub-ítem tiene un slug de categoría concreto úsalo,
+    // si no, pasa el label como búsqueda para que el catálogo lo filtre.
+    onNavClick(view, category || label);
+    onClose();
+  };
+
   return (
+    /* Panel fijo justo debajo del header (h-16 = 64px) */
     <div
-      className="absolute top-full left-0 z-50 w-screen max-w-screen-xl bg-racing-carbon border-t-2 border-racing-orange shadow-2xl animate-mega-in"
-      style={{ marginLeft: '50%', transform: 'translateX(-50%)' }}
+      className="fixed left-0 right-0 z-[200] bg-racing-carbon border-t-2 border-racing-orange shadow-2xl animate-mega-in overflow-y-auto"
+      style={{ top: '64px', maxHeight: 'calc(100vh - 64px)' }}
       onMouseLeave={onClose}
     >
       <div className="container mx-auto px-6 py-6">
@@ -37,15 +42,21 @@ const DropdownPanel: React.FC<{
           style={{ gridTemplateColumns: `repeat(${colCount}, minmax(0, 1fr))` }}
         >
           {groups.map((group, gi) => (
-            <div key={gi} className="flex flex-col gap-1.5">
+            <div key={gi} className="flex flex-col gap-1">
               <p className="text-racing-orange text-[11px] font-black uppercase tracking-widest mb-2 border-b border-zinc-800 pb-2">
                 {group.title}
               </p>
               {group.items.map((sub, si) => (
                 <button
                   key={si}
-                  onClick={() => handleClick(sub.view || item.view, sub.category || item.category)}
-                  className="text-left text-zinc-400 hover:text-white text-[12px] leading-snug transition-colors hover:translate-x-0.5 transform duration-100 py-0.5"
+                  onClick={() =>
+                    handleSubClick(
+                      sub.view || item.view,
+                      sub.label,
+                      sub.category
+                    )
+                  }
+                  className="text-left text-zinc-400 hover:text-white text-[12px] leading-snug transition-colors duration-100 py-0.5 hover:pl-1"
                 >
                   {sub.label}
                 </button>
@@ -55,13 +66,16 @@ const DropdownPanel: React.FC<{
         </div>
 
         {/* Footer CTA */}
-        <div className="mt-6 pt-4 border-t border-zinc-800 flex justify-between items-center">
+        <div className="mt-6 pt-4 border-t border-zinc-800 flex justify-between items-center flex-wrap gap-3">
           <span className="text-zinc-600 text-[10px] uppercase tracking-widest font-bold">
-            {item.label} — Catálogo completo Bihr
+            {item.label}
           </span>
           <button
-            onClick={() => handleClick(item.view, item.category)}
-            className="bg-racing-orange hover:bg-orange-500 text-white text-[10px] font-black uppercase tracking-wider px-4 py-2 transition-colors flex items-center gap-2"
+            onClick={() => {
+              onNavClick(item.view, item.category);
+              onClose();
+            }}
+            className="bg-racing-orange hover:bg-orange-500 text-white text-[10px] font-black uppercase tracking-wider px-5 py-2 transition-colors"
           >
             Ver todas las categorías →
           </button>
@@ -71,10 +85,23 @@ const DropdownPanel: React.FC<{
   );
 };
 
+/* ────────────────────────────────────────────────────────────
+   Overlay — bloquea el resto de la página al abrir el panel
+──────────────────────────────────────────────────────────── */
+const Overlay: React.FC<{ onClick: () => void }> = ({ onClick }) => (
+  <div
+    className="fixed inset-0 z-[199] bg-black/50"
+    style={{ top: '64px' }}
+    onClick={onClick}
+  />
+);
+
+/* ────────────────────────────────────────────────────────────
+   MegaMenuNav — barra de navegación principal
+──────────────────────────────────────────────────────────── */
 export const MegaMenuNav: React.FC<MegaMenuProps> = ({ onNavClick }) => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const navRef = useRef<HTMLDivElement>(null);
 
   const open = useCallback((idx: number) => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
@@ -82,27 +109,40 @@ export const MegaMenuNav: React.FC<MegaMenuProps> = ({ onNavClick }) => {
   }, []);
 
   const scheduleClose = useCallback(() => {
-    closeTimer.current = setTimeout(() => setOpenIndex(null), 180);
+    closeTimer.current = setTimeout(() => setOpenIndex(null), 220);
   }, []);
 
   const cancelClose = useCallback(() => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
   }, []);
 
-  // Close on outside click
+  const close = useCallback(() => setOpenIndex(null), []);
+
+  // Cierra con Escape
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (navRef.current && !navRef.current.contains(e.target as Node)) {
-        setOpenIndex(null);
-      }
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [close]);
+
+  const openItem = openIndex !== null ? MEGA_MENU[openIndex] : null;
+  const hasDropdownOpen = openItem !== null && Boolean(openItem?.groups?.length);
 
   return (
-    <div ref={navRef} className="relative">
-      {/* Nav bar */}
+    <>
+      {/* Overlay */}
+      {hasDropdownOpen && <Overlay onClick={close} />}
+
+      {/* Dropdown panel — renderizado fuera del nav para no verse afectado por overflow */}
+      {hasDropdownOpen && openItem && (
+        <div onMouseEnter={cancelClose} onMouseLeave={scheduleClose}>
+          <DropdownPanel item={openItem} onNavClick={onNavClick} onClose={close} />
+        </div>
+      )}
+
+      {/* Barra de nav */}
       <nav className="flex items-center gap-0.5">
         {MEGA_MENU.map((item, idx) => {
           const hasDropdown = Boolean(item.groups && item.groups.length > 0);
@@ -111,7 +151,6 @@ export const MegaMenuNav: React.FC<MegaMenuProps> = ({ onNavClick }) => {
           return (
             <div
               key={idx}
-              className="relative"
               onMouseEnter={() => hasDropdown ? open(idx) : undefined}
               onMouseLeave={hasDropdown ? scheduleClose : undefined}
             >
@@ -119,18 +158,20 @@ export const MegaMenuNav: React.FC<MegaMenuProps> = ({ onNavClick }) => {
                 onClick={() => {
                   if (!hasDropdown) {
                     onNavClick(item.view, item.category);
-                    setOpenIndex(null);
+                    close();
                   } else {
                     setOpenIndex(isOpen ? null : idx);
                   }
                 }}
-                className={`flex items-center gap-1 px-3 py-5 text-[11px] font-black uppercase tracking-widest transition-colors whitespace-nowrap border-b-2 ${
+                className={`flex items-center gap-1 px-3 py-5 text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2 ${
                   isOpen
                     ? 'text-racing-orange border-racing-orange'
                     : item.highlight
                     ? 'text-racing-orange border-transparent hover:border-racing-orange'
                     : 'text-zinc-400 border-transparent hover:text-white hover:border-zinc-700'
                 }`}
+                aria-expanded={isOpen}
+                aria-haspopup={hasDropdown}
               >
                 {item.label}
                 {hasDropdown && (
@@ -139,17 +180,10 @@ export const MegaMenuNav: React.FC<MegaMenuProps> = ({ onNavClick }) => {
                   />
                 )}
               </button>
-
-              {/* Dropdown */}
-              {isOpen && hasDropdown && (
-                <div onMouseEnter={cancelClose} onMouseLeave={scheduleClose}>
-                  <DropdownPanel item={item} onNavClick={onNavClick} onClose={() => setOpenIndex(null)} />
-                </div>
-              )}
             </div>
           );
         })}
       </nav>
-    </div>
+    </>
   );
 };

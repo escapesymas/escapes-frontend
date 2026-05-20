@@ -66,8 +66,8 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full bg-white/95 dark:bg-racing-carbon/95 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 overflow-visible">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between relative overflow-visible">
+      <header className="sticky top-0 z-50 w-full bg-white/95 dark:bg-racing-carbon/95 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between relative">
 
           <div className="flex items-center gap-2 md:gap-4">
             <button
