@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User } from '../types';
 import { getSession, saveSession } from '../services/auth';
-import { fetchCustomerByEmail } from '../services/woocommerce';
+import { fetchCustomerByEmail } from '../services/apiService';
 import { fetchGarage } from '../services/garage';
 
 export function useAuth() {

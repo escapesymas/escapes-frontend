@@ -4,7 +4,7 @@ import { User as UserType } from '../../types';
 import { PostCard } from './PostCard';
 import { PostComposer } from './PostComposer';
 import { fetchSocialFeed, createSocialPost, toggleLike, sendReply, SocialPostType } from '../../services/socialApi';
-import { uploadFile } from '../../services/woocommerce';
+import { uploadFile } from '../../services/apiService';
 
 interface SocialFeedProps {
     user: UserType | null;

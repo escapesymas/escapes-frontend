@@ -4,7 +4,7 @@ import {
   AlignLeft, AlignCenter, AlignRight, Link as LinkIcon,
   Quote, Code, Image as ImageIcon, Smile, Paperclip, Palette, Loader2, AtSign
 } from 'lucide-react';
-import { uploadFile, searchUsers } from '../services/woocommerce';
+import { uploadFile, searchUsers } from '../services/apiService';
 
 interface RichTextEditorProps {
   value: string;

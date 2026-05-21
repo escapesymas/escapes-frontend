@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ShieldCheck, ArrowLeft, Lock, CheckCircle, Loader2, AlertCircle, XCircle, User, ArrowRight, Mail, HelpCircle, MessageSquare } from 'lucide-react';
 import { CartItem, User as UserType } from '../types';
-import { createOrder, updateOrderStatus, fetchUserRank, makeRequest } from '../services/woocommerce';
+import { createOrder, updateOrderStatus, fetchUserRank, makeRequest } from '../services/apiService';
 import { createSumUpCheckout } from '../services/sumup';
 import { loginUser, registerUser } from '../services/auth';
 import { trackPurchase } from '../utils/analytics';

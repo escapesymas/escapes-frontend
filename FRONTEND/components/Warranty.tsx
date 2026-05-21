@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, ShieldCheck, Plus, Trash2, Upload, Loader2, CheckCircle, AlertCircle, Camera, Search, FileText } from 'lucide-react';
-import { fetchProducts, fetchCustomerOrders } from '../services/woocommerce';
+import { fetchProducts, fetchCustomerOrders } from '../services/apiService';
 import { Product, Order, User } from '../types';
 
 interface WarrantyProps {

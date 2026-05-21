@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Send, Loader2, Bot, User as UserIcon, ExternalLink, Package, ShoppingCart, Truck, LogIn, CheckCircle, AlertCircle } from 'lucide-react';
 import { Product, User } from '../types';
-import { makeRequest } from '../services/woocommerce';
+import { makeRequest } from '../services/apiService';
 import { optimizeImage } from '../utils/imageOptimizer';
 
 interface PedidoProduct {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Product } from '../types';
-import { fetchProducts, fetchCompatibleProducts, fetchCategories } from '../services/woocommerce';
+import { fetchProducts, fetchCompatibleProducts, fetchCategories } from '../services/apiService';
 import { STORE_CONFIG, TIRE_CATEGORY_ID } from '../storeData';
 
 interface UseCatalogProps {

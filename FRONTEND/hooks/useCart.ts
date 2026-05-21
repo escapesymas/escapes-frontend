@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { CartItem, Product, User } from '../types';
-import { getUserCart, fetchProducts, saveUserCart, API_BASE } from '../services/woocommerce';
+import { getUserCart, fetchProducts, saveUserCart, API_BASE } from '../services/apiService';
 import { trackAddToCart } from '../utils/analytics';
 
 export function useCart(user: User | null, setToast: (toast: any) => void) {

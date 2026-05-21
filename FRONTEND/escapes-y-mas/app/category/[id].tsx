@@ -2,7 +2,7 @@ import { View, Text, FlatList, Image, TouchableOpacity, ActivityIndicator } from
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { fetchProducts } from "../../services/woocommerce";
+import { fetchProducts } from "../../services/apiService";
 import { Product } from "../../types";
 
 export default function CategoryScreen() {

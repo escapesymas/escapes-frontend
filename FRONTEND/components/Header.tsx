@@ -4,7 +4,7 @@ import { ShoppingCart, User, Menu, LogOut, Package, Settings, MessageSquare, X, 
 import { STORE_CONFIG, NAV_LINKS } from '../storeData';
 import { User as UserType, UserRank } from '../types';
 import { RankBadge } from './RankBadge';
-import { fetchUserRank } from '../services/woocommerce';
+import { fetchUserRank } from '../services/apiService';
 import { optimizeImage } from '../utils/imageOptimizer';
 import { MegaMenuNav } from './MegaMenu';
 

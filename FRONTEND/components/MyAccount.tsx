@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User as UserIcon, MapPin, Save, ArrowLeft, Mail, Phone, Loader2, CheckCircle, Camera, X, Lock, Upload } from 'lucide-react';
 import { User, UserRank } from '../types';
-import { updateCustomer, fetchAvatars, updateCustomerAvatar, uploadCustomerPhoto, AvatarOption, fetchUserRank } from '../services/woocommerce';
+import { updateCustomer, fetchAvatars, updateCustomerAvatar, uploadCustomerPhoto, AvatarOption, fetchUserRank } from '../services/apiService';
 
 import { RankBadge } from './RankBadge';
 import { MyGarage } from './MyGarage';
