@@ -73,8 +73,37 @@ class ImageDownloader:
         sys.exit(0)
     
     def save_state(self):
-        with open(STATE_FILE, 'w') as f:
-            json.dump(self.stats, f)
+        """Guarda el estado en PostgreSQL y como fallback en fichero local."""
+        try:
+            conn = psycopg2.connect(
+                host=DB_HOST, port=DB_PORT, database=DB_NAME,
+                user=DB_USER, password=DB_PASSWORD
+            )
+            with conn.cursor() as cur:
+                cur.execute("""
+                    UPDATE image_regen_state
+                    SET status=%s, processed=%s, success=%s, failed=%s,
+                        skipped=%s, total=%s, current_sku=%s, updated_at=NOW()
+                    WHERE id=1
+                """, (
+                    self.stats.get('status', 'idle'),
+                    self.stats.get('processed', 0),
+                    self.stats.get('success', 0),
+                    self.stats.get('failed', 0),
+                    self.stats.get('skipped', 0),
+                    self.stats.get('total', 0),
+                    self.stats.get('current_sku', '')
+                ))
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"[STATE DB ERROR] {e} - falling back to file")
+            # Fallback al fichero JSON legacy
+            try:
+                with open(STATE_FILE, 'w') as f:
+                    json.dump(self.stats, f)
+            except Exception as fe:
+                print(f"[STATE FILE ERROR] {fe}")
     
     def get_db_connection(self):
         return psycopg2.connect(
