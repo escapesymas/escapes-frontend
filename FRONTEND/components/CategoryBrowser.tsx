@@ -5,7 +5,7 @@ import { Category } from '../types';
 import { optimizeImage } from '../utils/imageOptimizer';
 
 interface CategoryBrowserProps {
-  onSelectCategory: (id: number, name: string) => void;
+  onSelectCategory: (id: number, name: string, slug: string) => void;
   onBack: () => void;
 }
 
@@ -51,7 +51,7 @@ export const CategoryBrowser: React.FC<CategoryBrowserProps> = ({ onSelectCatego
       setCurrentParentId(cat.id);
     } else {
       // It's a leaf node, select it
-      onSelectCategory(cat.id, cat.name);
+      onSelectCategory(cat.id, cat.name, cat.slug);
     }
   };
 
@@ -110,7 +110,7 @@ export const CategoryBrowser: React.FC<CategoryBrowserProps> = ({ onSelectCatego
             <FolderOpen className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
             <p className="text-zinc-500 text-lg">No hay subcategorías aquí.</p>
             <button
-              onClick={() => currentParentCat && onSelectCategory(currentParentCat.id, currentParentCat.name)}
+              onClick={() => currentParentCat && onSelectCategory(currentParentCat.id, currentParentCat.name, currentParentCat.slug)}
               className="mt-4 text-racing-orange hover:text-white font-bold uppercase text-sm"
             >
               Ver productos de {currentParentCat?.name}

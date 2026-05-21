@@ -1,7 +1,7 @@
 module.exports = {
   apps: [{
     name: 'escapes-backend',
-    script: 'dist/index.js',
+    script: 'index.js',
     cwd: '/var/www/vhosts/backendescapes.com/server',
     instances: 1,
     autorestart: true,
@@ -12,8 +12,9 @@ module.exports = {
       PORT: 3001,
       DATABASE_URL: 'postgresql://postgres:EscapesPostgres2026Vercel@localhost:5432/escapes_db',
       WP_URL: 'https://backendescapes.com',
-      WOO_KEY: 'ck_1525ca6e68eadc50cd7b69ae408ebb05b93c78e9',
-      WOO_SECRET: 'cs_42b5d60e45d4f6e710fa0fa0b35f1ae21964981a'
+      BIHR_USERNAME: 'info@escapesymas.com',
+      BIHR_MACKEY: '3799B392-3934-4514-ABF0-9EF7F544A117',
+      BIHR_API_BASE: 'https://api.bihr.net'
     }
   }]
 };

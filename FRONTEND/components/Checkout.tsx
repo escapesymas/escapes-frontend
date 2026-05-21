@@ -12,6 +12,9 @@ import { MARKETING_TIERS } from '../storeData';
 interface CheckoutProps {
   cart: CartItem[];
   user?: UserType | null;
+  isAuthLoading?: boolean;
+  appliedPromo: string | null;
+  setAppliedPromo: (promo: string | null) => void;
   onBack: () => void;
   onOrderComplete: () => void;
   onLoginSuccess: (user: UserType) => void;
@@ -73,6 +76,41 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
   // Pending Order State (para tracking de carritos abandonados)
   const [pendingOrderId, setPendingOrderId] = useState<number | null>(null);
 
+  // Coupon / Promo Code State
+  const [promoCodeInput, setPromoCodeInput] = useState('');
+  const { appliedPromo, setAppliedPromo } = props;
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoSuccessMsg, setPromoSuccessMsg] = useState<string | null>(null);
+
+  const applyPromoCode = async (code: string) => {
+    setPromoError(null);
+    setPromoSuccessMsg(null);
+    const upperCode = code.trim().toUpperCase();
+
+    if (upperCode === 'WELCOME10' || upperCode === 'RIDER20' || upperCode === 'ENVIOFREE') {
+      setAppliedPromo(upperCode);
+      setPromoSuccessMsg(`Cupón ${upperCode} aplicado con éxito.`);
+      
+      // Forzar recreación del pedido pendiente en la base de datos para registrar el cupón
+      setPendingOrderId(null);
+      // Reiniciar widget de SumUp con el nuevo total
+      setSumupCheckoutId(null);
+    } else {
+      setPromoError("El código de cupón no es válido o ha expirado.");
+    }
+  };
+
+  const removePromoCode = () => {
+    setAppliedPromo(null);
+    setPromoSuccessMsg(null);
+    setPromoError(null);
+    setPromoCodeInput('');
+    
+    // Forzar recreación del pedido pendiente
+    setPendingOrderId(null);
+    setSumupCheckoutId(null);
+  };
+
   // Form States
   const [formData, setFormData] = useState({
     firstName: '',
@@ -123,9 +161,19 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
   };
 
   const currentTier = getTier(subtotal);
-  const discountAmount = (subtotal * currentTier.discount) / 100;
-  const shippingCost = currentTier.shipping;
-  const total = subtotal + shippingCost - discountAmount;
+  const tierDiscount = (subtotal * currentTier.discount) / 100;
+
+  // Calcular cupón de descuento
+  const promoDiscount = appliedPromo === 'WELCOME10' 
+    ? (subtotal * 0.10) 
+    : appliedPromo === 'RIDER20' 
+      ? (subtotal * 0.20) 
+      : 0;
+
+  const isFreeShippingPromo = appliedPromo === 'ENVIOFREE';
+  const shippingCost = isFreeShippingPromo ? 0 : currentTier.shipping;
+  const discountAmount = tierDiscount + promoDiscount;
+  const total = Math.max(0, subtotal + shippingCost - discountAmount);
 
   // Initialize Payment Gateways when user is logged in
   useEffect(() => {
@@ -147,16 +195,26 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
   }, [props.user, isRankLoading, paymentMethod]);
 
   // Crear pedido pendiente en WooCommerce
-  const createPendingOrder = async () => {
-    if (!props.user || pendingOrderId) return;
+  const createPendingOrder = async (forcePromo?: string) => {
+    if (!props.user) return;
+    if (pendingOrderId && !forcePromo) return;
 
     const currentData = formDataRef.current;
+    const activePromo = forcePromo !== undefined ? forcePromo : appliedPromo;
+    const currentPromoDiscount = activePromo === 'WELCOME10' 
+      ? (subtotal * 0.10) 
+      : activePromo === 'RIDER20' 
+        ? (subtotal * 0.20) 
+        : 0;
+    const currentDiscountAmount = tierDiscount + currentPromoDiscount;
+
     const orderPayload = {
       status: 'pending',
       payment_method: paymentMethod === 'sumup' ? 'sumup_gateway' : 'woocommerce_payments',
       payment_method_title: paymentMethod === 'sumup' ? 'Tarjeta (SumUp)' : 'Klarna / Pago Flexible',
       set_paid: false,
       customer_id: props.user.id || 0,
+      promoCode: activePromo || undefined,
       billing: {
         first_name: currentData.firstName || props.user.firstName || 'Cliente',
         last_name: currentData.lastName || props.user.lastName || '',
@@ -179,10 +237,10 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
         product_id: item.id,
         quantity: item.quantity
       })),
-      fee_lines: discountAmount > 0 ? [
+      fee_lines: currentDiscountAmount > 0 ? [
         {
-          name: `Descuento ${currentTier.label}`,
-          total: `-${discountAmount.toFixed(2)}`
+          name: `Descuento ${currentTier.label} ${activePromo ? `+ Cupón ${activePromo}` : ''}`,
+          total: `-${currentDiscountAmount.toFixed(2)}`
         }
       ] : [],
       meta_data: [
@@ -500,6 +558,50 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
         props.cart
       );
 
+      // Automated Dropshipping Order to Central Warehouse
+      try {
+        console.log('[DROPSHIPPING]: Lanzando pedido automatizado al almacén central...');
+        const dropshipItems = props.cart
+          .filter(item => item.sku)
+          .map(item => ({
+            productCode: item.sku,
+            quantity: item.quantity
+          }));
+
+        if (dropshipItems.length > 0) {
+          const bihrOrderRes = await fetch('/api/bihr/order', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              deliveryAddress: {
+                firstName: currentData.firstName || 'Cliente',
+                lastName: currentData.lastName || 'Tienda',
+                street: currentData.address || 'Dirección Pendiente',
+                zipCode: currentData.zip || '00000',
+                city: currentData.city || 'Ciudad Pendiente',
+                countryCode: 'ES',
+                phoneNumber: currentData.phone || '000000000',
+                email: safeEmail
+              },
+              items: dropshipItems,
+              customerOrderReference: `ESCAPES-ORDER-${result.id || Date.now()}`,
+              isDropshipping: true
+            })
+          });
+          
+          if (bihrOrderRes.ok) {
+            const bihrData = await bihrOrderRes.json();
+            console.log('[DROPSHIPPING SUCCESS]: Pedido registrado en almacén central:', bihrData);
+          } else {
+            console.error('[DROPSHIPPING ERROR]: Falló respuesta del backend del almacén central');
+          }
+        }
+      } catch (dropshipErr) {
+        console.error('[DROPSHIPPING EXCEPTION]: Error al procesar dropshipping con almacén central:', dropshipErr);
+      }
+
       setStep('success');
     } else {
       console.error("Error creating order after payment:", result.error);
@@ -521,7 +623,7 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
             Tu pedido ha sido procesado correctamente. Hemos enviado el recibo a tu email.
           </p>
           <div className="bg-zinc-900/50 p-4 rounded-sm border border-zinc-800 mb-8 text-left">
-            <p className="text-zinc-500 text-xs uppercase font-bold mb-1">Referencia Pedido</p>
+            <p className="text-zinc-400 text-xs uppercase font-bold mb-1">Referencia Pedido</p>
             <p className="text-white font-mono tracking-widest">#{orderId}</p>
           </div>
           <button
@@ -535,10 +637,70 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
     );
   }
 
+  // LOADING VIEW (High-fidelity skeleton matching the 2-column layout to eradicate CLS)
+  if (props.isAuthLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8 animate-pulse min-h-[80vh]">
+        {/* Title skeleton */}
+        <div className="h-8 bg-zinc-800 rounded w-48 mb-8"></div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* LEFT COLUMN: FORMS SKELETON */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* 1. Shipping Info Skeleton */}
+            <div className="bg-racing-carbon border border-zinc-800 p-6 rounded-sm space-y-6">
+              <div className="h-6 bg-zinc-800 rounded w-1/3 mb-4"></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="h-12 bg-zinc-900 border border-zinc-800 rounded-sm w-full"></div>
+                <div className="h-12 bg-zinc-900 border border-zinc-800 rounded-sm w-full"></div>
+                <div className="h-12 bg-zinc-900 border border-zinc-800 rounded-sm w-full md:col-span-2"></div>
+                <div className="h-12 bg-zinc-900 border border-zinc-800 rounded-sm w-full md:col-span-2"></div>
+                <div className="h-12 bg-zinc-900 border border-zinc-800 rounded-sm w-full"></div>
+                <div className="h-12 bg-zinc-900 border border-zinc-800 rounded-sm w-full"></div>
+                <div className="h-12 bg-zinc-900 border border-zinc-800 rounded-sm w-full md:col-span-2"></div>
+              </div>
+            </div>
+
+            {/* 2. Payment Selector Skeleton */}
+            <div className="bg-racing-carbon border border-zinc-800 p-6 rounded-sm space-y-6">
+              <div className="h-6 bg-zinc-800 rounded w-1/3 mb-4"></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="h-24 bg-zinc-900 border border-zinc-800 rounded-sm w-full"></div>
+                <div className="h-24 bg-zinc-900 border border-zinc-800 rounded-sm w-full"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN: SUMMARY SKELETON */}
+          <div className="space-y-6">
+            <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-sm space-y-6">
+              <div className="h-6 bg-zinc-800 rounded w-1/2 mb-4"></div>
+              <div className="space-y-4">
+                <div className="flex justify-between">
+                  <div className="h-4 bg-zinc-850 rounded w-1/3"></div>
+                  <div className="h-4 bg-zinc-850 rounded w-12"></div>
+                </div>
+                <div className="flex justify-between">
+                  <div className="h-4 bg-zinc-850 rounded w-1/4"></div>
+                  <div className="h-4 bg-zinc-850 rounded w-10"></div>
+                </div>
+                <div className="border-t border-zinc-800 pt-4 flex justify-between">
+                  <div className="h-6 bg-zinc-850 rounded w-1/3"></div>
+                  <div className="h-6 bg-zinc-850 rounded w-16"></div>
+                </div>
+              </div>
+              <div className="h-14 bg-zinc-850 rounded w-full mt-6"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // AUTH GATE VIEW (Inline Login/Register)
   if (!props.user) {
     return (
-      <div className="container mx-auto px-4 py-8 animate-fade-in">
+      <div className="container mx-auto px-4 py-8 animate-fade-in min-h-[80vh]">
         <div className="mb-8 flex items-center gap-4">
           <button
             onClick={props.onBack}
@@ -558,13 +720,13 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
             <div className="flex gap-4 mb-8 border-b border-zinc-700">
               <button
                 onClick={() => setAuthMode('login')}
-                className={`pb-2 text-sm font-bold uppercase tracking-wider transition-colors border-b-2 ${authMode === 'login' ? 'text-racing-orange border-racing-orange' : 'text-zinc-500 border-transparent hover:text-white'}`}
+                className={`pb-2 text-sm font-bold uppercase tracking-wider transition-colors border-b-2 ${authMode === 'login' ? 'text-racing-orange border-racing-orange' : 'text-zinc-400 border-transparent hover:text-white'}`}
               >
                 Ya soy cliente
               </button>
               <button
                 onClick={() => setAuthMode('register')}
-                className={`pb-2 text-sm font-bold uppercase tracking-wider transition-colors border-b-2 ${authMode === 'register' ? 'text-racing-orange border-racing-orange' : 'text-zinc-500 border-transparent hover:text-white'}`}
+                className={`pb-2 text-sm font-bold uppercase tracking-wider transition-colors border-b-2 ${authMode === 'register' ? 'text-racing-orange border-racing-orange' : 'text-zinc-400 border-transparent hover:text-white'}`}
               >
                 Nuevo Cliente
               </button>
@@ -612,7 +774,7 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
           <div>
             <h2 className="text-white font-bold uppercase mb-4 text-xl">Resumen de tu pedido</h2>
             <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-sm">
-              <div className="space-y-4 mb-6">
+              <div className="space-y-4 mb-6 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
                 {props.cart.map(item => (
                   <div key={item.id} className="flex gap-3">
                     <div className="w-12 h-12 bg-white rounded-sm overflow-hidden flex-shrink-0">
@@ -620,14 +782,89 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
                     </div>
                     <div>
                       <p className="text-white text-sm font-bold line-clamp-1">{item.title}</p>
-                      <p className="text-zinc-500 text-xs">{item.quantity} x {formatPrice(item.price)}</p>
+                      <p className="text-zinc-400 text-xs">{item.quantity} x {formatPrice(item.price)}</p>
                     </div>
                   </div>
                 ))}
               </div>
+
+              <div className="border-t border-zinc-800 pt-4 space-y-2 mb-6">
+                <div className="flex justify-between text-zinc-400 text-xs">
+                  <span>Subtotal</span>
+                  <span className="text-white font-medium">{formatPrice(subtotal)}</span>
+                </div>
+
+                {tierDiscount > 0 && (
+                  <div className="flex justify-between text-racing-orange text-xs font-bold uppercase">
+                    <span>Descuento {currentTier.label}</span>
+                    <span>-{formatPrice(tierDiscount)}</span>
+                  </div>
+                )}
+
+                {promoDiscount > 0 && (
+                  <div className="flex justify-between text-green-500 text-xs font-bold uppercase animate-pulse">
+                    <span>Cupón {appliedPromo}</span>
+                    <span>-{formatPrice(promoDiscount)}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-between text-zinc-400 text-xs">
+                  <span>Envío</span>
+                  <span className={shippingCost === 0 ? "text-green-500 font-bold" : "text-white font-medium"}>
+                    {shippingCost === 0 ? "GRATIS" : formatPrice(shippingCost)}
+                  </span>
+                </div>
+
+                {/* Promo Code Section */}
+                <div className="border-t border-zinc-800 pt-4 mt-4">
+                  <span className="text-white font-bold text-xs uppercase tracking-wide block mb-2">¿Tienes un cupón de descuento?</span>
+                  {appliedPromo ? (
+                    <div className="bg-green-950/20 border border-green-900 rounded-sm p-3 flex items-center justify-between">
+                      <div>
+                        <span className="text-green-400 font-black text-xs block uppercase">Cupón {appliedPromo}</span>
+                        <span className="text-zinc-400 text-[10px]">
+                          {appliedPromo === 'WELCOME10' ? '10% de descuento' : appliedPromo === 'RIDER20' ? '20% de descuento' : 'Envío Gratis'}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={removePromoCode}
+                        className="text-red-500 hover:text-red-400 font-bold uppercase text-[10px] tracking-wide"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Introduce tu cupón"
+                          value={promoCodeInput}
+                          onChange={(e) => setPromoCodeInput(e.target.value)}
+                          className="bg-zinc-950 border border-zinc-800 rounded-sm py-2 px-3 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-racing-orange flex-1 uppercase font-semibold"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => applyPromoCode(promoCodeInput)}
+                          className="bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase py-2 px-4 rounded-sm text-xs transition-colors"
+                        >
+                          Aplicar
+                        </button>
+                      </div>
+                      {promoError && (
+                        <p className="text-red-500 text-[11px] font-semibold mt-1 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" /> {promoError}
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+
               <div className="flex justify-between items-center pt-4 border-t border-zinc-800">
-                <span className="text-zinc-400">Total a pagar</span>
-                <span className="text-xl font-bold text-white">{formatPrice(total)}</span>
+                <span className="text-zinc-400 font-bold">Total a pagar</span>
+                <span className="text-2xl font-bold text-white">{formatPrice(total)}</span>
               </div>
             </div>
             <div className="mt-6 flex gap-4 text-zinc-400 text-xs font-medium">
@@ -642,7 +879,7 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
 
   // CHECKOUT FORM VIEW (Logged In)
   return (
-    <div className="container mx-auto px-4 py-8 animate-fade-in">
+    <div className="container mx-auto px-4 py-8 animate-fade-in min-h-[80vh]">
       <div className="mb-8 flex items-center gap-4">
         <button
           onClick={props.onBack}
@@ -663,10 +900,10 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
 
           {/* 1. Shipping Info */}
           <section className="bg-racing-carbon border border-zinc-800 p-6 rounded-sm">
-            <h3 className="text-white font-bold uppercase mb-6 tracking-wide border-b border-zinc-800 pb-2 flex items-center gap-2">
+            <h2 className="text-white font-bold uppercase mb-6 tracking-wide border-b border-zinc-800 pb-2 flex items-center gap-2">
               <span className="bg-racing-orange text-white w-6 h-6 flex items-center justify-center rounded-full text-xs">1</span>
               Datos de Envío
-            </h3>
+            </h2>
 
             {props.user && (
               <div className="mb-4 bg-blue-900/20 border border-blue-800 p-3 rounded-sm text-blue-200 text-sm flex items-center gap-2">
@@ -690,10 +927,10 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
 
           {/* 2. Payment Method Selector */}
           <section className="bg-racing-carbon border border-zinc-800 p-6 rounded-sm">
-            <h3 className="text-white font-bold uppercase mb-6 tracking-wide border-b border-zinc-800 pb-2 flex items-center gap-2">
+            <h2 className="text-white font-bold uppercase mb-6 tracking-wide border-b border-zinc-800 pb-2 flex items-center gap-2">
               <span className="bg-racing-orange text-white w-6 h-6 flex items-center justify-center rounded-full text-xs">2</span>
               Método de Pago
-            </h3>
+            </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
               <button
@@ -712,14 +949,18 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
                 )}
                 <div className="flex items-center gap-3">
                   <div className="bg-white p-1 rounded-sm flex items-center justify-center">
-                    <img src="/card-icon.png" className="h-5 w-auto" alt="Tarjeta" />
+                    <img src="/card-icon.png" className="h-5 w-auto" width="20" height="20" alt="Tarjeta de crédito" />
                   </div>
                   <span className="text-white font-extrabold text-sm uppercase tracking-tighter">Tarjeta de Crédito</span>
                 </div>
                 <div className="flex gap-2 items-center">
-                  <img src="/Visa_Inc._logo_(2021–present).svg" className="h-2.5 object-contain" alt="Visa" />
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/1280px-Mastercard-logo.svg.png" className="h-3 object-contain" />
-                  <span className="text-[10px] text-zinc-500 font-medium">y más...</span>
+                  <img src="/Visa_Inc._logo_(2021–present).svg" className="h-2.5 object-contain" width="36" height="10" alt="Visa" />
+                  <svg viewBox="0 0 24 15" fill="none" xmlns="http://www.w3.org/2000/svg" width="20" height="12" className="h-3 object-contain" aria-label="Mastercard">
+                    <circle cx="7" cy="7.5" r="7" fill="#EB001B"/>
+                    <circle cx="17" cy="7.5" r="7" fill="#F79E1B"/>
+                    <path d="M12 11.16a6.96 6.96 0 0 1-1.84-3.66 6.96 6.96 0 0 1 1.84-3.66c1.1 1 1.84 2.24 1.84 3.66s-.73 2.66-1.84 3.66Z" fill="#FF5F00"/>
+                  </svg>
+                  <span className="text-[10px] text-zinc-300 font-medium">y más...</span>
                 </div>
               </button>
 
@@ -741,8 +982,8 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
                   <span className="text-[#FFB3C7] font-black text-2xl tracking-tighter leading-none">Klarna.</span>
                   <span className="text-white font-extrabold text-sm uppercase tracking-tighter">Pago Flexible</span>
                 </div>
-                <div className="bg-zinc-800/50 px-3 py-0.5 rounded-full">
-                  <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">3 Plazos Sin Intereses</span>
+                <div className="bg-zinc-800 px-3 py-0.5 rounded-full">
+                  <span className="text-[10px] text-zinc-200 font-bold uppercase tracking-widest">3 Plazos Sin Intereses</span>
                 </div>
               </button>
             </div>
@@ -761,7 +1002,7 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
 
                   <div id="sumup-card" className="bg-white rounded-md p-1 min-h-[150px] w-full"></div>
 
-                  <div className="flex items-center gap-2 text-[10px] text-zinc-500 justify-center pt-4">
+                  <div className="flex items-center gap-2 text-[10px] text-zinc-400 justify-center pt-4">
                     <Lock className="w-3 h-3" />
                     Transacción segura vía <span className="text-zinc-300 font-bold italic">SumUp</span>
                   </div>
@@ -771,7 +1012,7 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
                   <div className="mb-6">
                     <span className="text-[#FFB3C7] font-black text-4xl block mb-2">Klarna.</span>
                     <p className="text-white text-sm font-medium">Paga en 3 plazos de {formatPrice(total / 3)} sin intereses.</p>
-                    <p className="text-zinc-500 text-xs mt-1">Recibirás tu pedido ahora y pagarás después.</p>
+                    <p className="text-zinc-400 text-xs mt-1">Recibirás tu pedido ahora y pagarás después.</p>
                   </div>
 
                   <button
@@ -824,10 +1065,17 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
                 <span className="text-white font-medium">{formatPrice(subtotal)}</span>
               </div>
 
-              {discountAmount > 0 && (
+              {tierDiscount > 0 && (
                 <div className="flex justify-between text-racing-orange text-sm font-bold uppercase">
                   <span>Descuento {currentTier.label}</span>
-                  <span>-{formatPrice(discountAmount)}</span>
+                  <span>-{formatPrice(tierDiscount)}</span>
+                </div>
+              )}
+
+              {promoDiscount > 0 && (
+                <div className="flex justify-between text-green-500 text-sm font-bold uppercase animate-pulse">
+                  <span>Cupón {appliedPromo}</span>
+                  <span>-{formatPrice(promoDiscount)}</span>
                 </div>
               )}
 
@@ -837,9 +1085,51 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
                   {shippingCost === 0 ? "GRATIS" : formatPrice(shippingCost)}
                 </span>
               </div>
-              <div className="flex justify-between items-end pt-4 border-t border-zinc-800 mt-4">
-                <span className="text-white font-bold text-lg">Total</span>
-                <span className="text-2xl font-bold text-white">{formatPrice(total)}</span>
+
+              {/* Promo Code Section */}
+              <div className="border-t border-zinc-800 pt-4 mt-4">
+                <span className="text-white font-bold text-xs uppercase tracking-wide block mb-2">¿Tienes un cupón de descuento?</span>
+                {appliedPromo ? (
+                  <div className="bg-green-950/20 border border-green-900 rounded-sm p-3 flex items-center justify-between">
+                    <div>
+                      <span className="text-green-400 font-black text-xs block uppercase">Cupón {appliedPromo}</span>
+                      <span className="text-zinc-400 text-[10px]">
+                        {appliedPromo === 'WELCOME10' ? '10% de descuento adicional' : appliedPromo === 'RIDER20' ? '20% de descuento adicional' : 'Envío Gratuito'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={removePromoCode}
+                      className="text-red-500 hover:text-red-400 font-bold uppercase text-[10px] tracking-wide"
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Introduce tu cupón"
+                        value={promoCodeInput}
+                        onChange={(e) => setPromoCodeInput(e.target.value)}
+                        className="bg-zinc-950 border border-zinc-800 rounded-sm py-2 px-3 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-racing-orange flex-1 uppercase font-semibold"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => applyPromoCode(promoCodeInput)}
+                        className="bg-racing-orange hover:bg-orange-600 text-white font-bold uppercase py-2 px-4 rounded-sm text-xs transition-colors"
+                      >
+                        Aplicar
+                      </button>
+                    </div>
+                    {promoError && (
+                      <p className="text-red-500 text-[11px] font-semibold mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> {promoError}
+                      </p>
+                    )}
+                  </>
+                )}
               </div>
             </div>
 
@@ -847,7 +1137,7 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
               <span className="text-white font-bold uppercase">Total</span>
               <div className="text-right">
                 <span className="text-3xl font-bold text-white block leading-none">{formatPrice(total)}</span>
-                <span className="text-zinc-500 text-xs">Impuestos incluidos</span>
+                <span className="text-zinc-400 text-xs">Impuestos incluidos</span>
               </div>
             </div>
 
@@ -872,7 +1162,7 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
                         setErrorMessage(null);
                         setIsKlarnaCancel(false);
                       }}
-                      className="flex items-center justify-center gap-2 text-zinc-500 text-[10px] font-black uppercase tracking-widest hover:text-white transition-all"
+                      className="flex items-center justify-center gap-2 text-zinc-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition-all"
                     >
                       Cerrar e intentar de nuevo
                     </button>
@@ -883,10 +1173,10 @@ export const Checkout: React.FC<CheckoutProps> = (props) => {
 
             {/* Trust Badges */}
             <div className="mt-6 pt-6 border-t border-zinc-800 grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-2 text-zinc-500 text-[10px] uppercase font-bold">
+              <div className="flex items-center gap-2 text-zinc-400 text-[10px] uppercase font-bold">
                 <ShieldCheck className="w-3 h-3" /> SSL Seguro
               </div>
-              <div className="flex items-center gap-2 text-zinc-500 text-[10px] uppercase font-bold">
+              <div className="flex items-center gap-2 text-zinc-400 text-[10px] uppercase font-bold">
                 <CheckCircle className="w-3 h-3" /> Garantía Oficial
               </div>
             </div>

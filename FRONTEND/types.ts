@@ -6,7 +6,7 @@ export interface Product {
   regularPrice: number; // Added: Original price before discount
   sku: string; // Added: Product reference
   image: string;
-  images: { src: string; alt: string }[]; // All product images
+  images: { src: string; alt: string; srcMobile?: string; srcCardDesktop?: string; srcCardMobile?: string }[]; // All product images
   inStock: boolean;
   category: string;
   categorySlug?: string; // Added: URL safe category name

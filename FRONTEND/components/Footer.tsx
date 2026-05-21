@@ -58,7 +58,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick }) => {
 
           {/* QUICK LINKS */}
           <div>
-            <h3 className="text-zinc-900 dark:text-white font-bold uppercase mb-6 tracking-wide border-b border-zinc-200 dark:border-zinc-800 pb-2 inline-block">Navegación</h3>
+            <h2 className="text-zinc-900 dark:text-white font-bold uppercase mb-6 tracking-wide border-b border-zinc-200 dark:border-zinc-800 pb-2 inline-block">Navegación</h2>
             <ul className="space-y-3">
               {footerNavLinks.map((link, idx) => (
                 <li key={idx}>
@@ -88,7 +88,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick }) => {
 
           {/* CONTACT / SUPPORT */}
           <div id="contact-section">
-            <h3 className="text-zinc-900 dark:text-white font-bold uppercase mb-6 tracking-wide border-b border-zinc-200 dark:border-zinc-800 pb-2 inline-block">Soporte</h3>
+            <h2 className="text-zinc-900 dark:text-white font-bold uppercase mb-6 tracking-wide border-b border-zinc-200 dark:border-zinc-800 pb-2 inline-block">Soporte</h2>
             <ul className="space-y-4">
               <li className="pt-2">
                 <button
@@ -103,7 +103,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick }) => {
 
           {/* NEWSLETTER */}
           <div>
-            <h3 className="text-zinc-900 dark:text-white font-bold uppercase mb-6 tracking-wide border-b border-zinc-200 dark:border-zinc-800 pb-2 inline-block">Newsletter</h3>
+            <h2 className="text-zinc-900 dark:text-white font-bold uppercase mb-6 tracking-wide border-b border-zinc-200 dark:border-zinc-800 pb-2 inline-block">Newsletter</h2>
             <p className="text-zinc-600 dark:text-zinc-400 mb-4 text-xs">
               Recibe ofertas exclusivas, novedades de Racing y códigos de descuento.
             </p>

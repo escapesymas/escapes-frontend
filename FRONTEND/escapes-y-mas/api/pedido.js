@@ -32,14 +32,14 @@ export default async function handler(req, res) {
         const WOO_SECRET = process.env.WOO_SECRET;
 
         // Build email content
-        const subject = `🏍️ Solicitud de pedido Bihr — Ref: ${referencia}`;
+        const subject = `🏍️ Solicitud de pedido Especial — Ref: ${referencia}`;
         const body = `
-Nueva solicitud de pedido del catálogo Bihr
+Nueva solicitud de pedido del catálogo Especial
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📦 DATOS DEL PEDIDO
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Referencia Bihr: ${referencia}
+Referencia Especial: ${referencia}
 ${mensaje ? `Mensaje del cliente: ${mensaje}` : ''}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -85,15 +85,15 @@ Plazo estimado de entrega: 2-5 días laborables.
                         last_name: '',
                         email: userEmail,
                     },
-                    customer_note: `PEDIDO BIHR — Referencia: ${referencia}${mensaje ? `\nMensaje: ${mensaje}` : ''}`,
+                    customer_note: `PEDIDO ESPECIAL — Referencia: ${referencia}${mensaje ? `\nMensaje: ${mensaje}` : ''}`,
                     line_items: [],
                     fee_lines: [{
-                        name: `Pedido Bihr - Ref: ${referencia}`,
+                        name: `Pedido Especial - Ref: ${referencia}`,
                         total: '0.00'
                     }],
                     meta_data: [
-                        { key: '_pedido_bihr', value: 'yes' },
-                        { key: '_bihr_referencia', value: referencia },
+                        { key: '_pedido_especial', value: 'yes' },
+                        { key: '_especial_referencia', value: referencia },
                         { key: '_solicitado_via', value: 'uri_asesor' }
                     ]
                 })

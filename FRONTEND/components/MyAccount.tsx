@@ -5,6 +5,7 @@ import { updateCustomer, fetchAvatars, updateCustomerAvatar, uploadCustomerPhoto
 
 import { RankBadge } from './RankBadge';
 import { MyGarage } from './MyGarage';
+import { optimizeImage } from '../utils/imageOptimizer';
 
 interface MyAccountProps {
   user: User;
@@ -232,7 +233,7 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
                     className={`aspect-square rounded-sm overflow-hidden border-2 transition-all hover:scale-105 ${selectedAvatar === avatar.url ? 'border-racing-orange' : 'border-zinc-700 hover:border-zinc-500'}`}
                   >
                     <img
-                      src={avatar.url.startsWith('data:') ? avatar.url : `https://wsrv.nl/?url=${encodeURIComponent(avatar.url)}&w=150&h=150&fit=cover&output=webp`}
+                      src={optimizeImage(avatar.url, { width: 150, height: 150, fit: 'cover' })}
                       alt={avatar.title}
                       className="w-full h-full object-cover"
                     />
@@ -341,17 +342,22 @@ export const MyAccount: React.FC<MyAccountProps> = ({ user, onBack, onUpdateUser
           <div className="bg-racing-carbon border border-zinc-800 p-6 rounded-sm text-center">
             <div className="relative inline-block">
               <div className="w-24 h-24 bg-zinc-800 rounded-full mx-auto mb-4 overflow-hidden border-2 border-racing-orange">
-                {(selectedAvatar || user.avatarUrl) ? (
-                  <img
-                    src={(selectedAvatar || user.avatarUrl).startsWith('data:') ? (selectedAvatar || user.avatarUrl) : `https://wsrv.nl/?url=${encodeURIComponent(selectedAvatar || user.avatarUrl)}&w=200&h=200&fit=cover&output=webp`}
-                    alt="Avatar"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <UserIcon className="w-12 h-12 text-zinc-600" />
-                  </div>
-                )}
+                {(() => {
+                  const avatarSrc = selectedAvatar || user.avatarUrl;
+                  const isValidAvatar = avatarSrc && !avatarSrc.includes('wp-content');
+                  return isValidAvatar ? (
+                    <img
+                      src={optimizeImage(avatarSrc, { width: 200, height: 200, fit: 'cover' })}
+                      alt="Avatar"
+                      className="w-full h-full object-cover"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-racing-orange">
+                      <span className="text-white font-black text-3xl">{user.firstName?.charAt(0).toUpperCase() || user.username?.charAt(0).toUpperCase()}</span>
+                    </div>
+                  );
+                })()}
               </div>
               <button
                 onClick={() => setShowAvatarPicker(true)}

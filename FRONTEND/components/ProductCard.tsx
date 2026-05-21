@@ -1,10 +1,11 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ShoppingCart, CheckCircle } from 'lucide-react';
 import { Product } from '../types';
 import { STORE_CONFIG } from '../storeData';
 import { optimizeImage } from '../utils/imageOptimizer';
+import { cleanProductTitle } from '../utils/productUtils';
 
 interface ProductCardProps {
   product: Product;
@@ -14,6 +15,7 @@ interface ProductCardProps {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAddToCart, priority = false }) => {
+  const location = useLocation();
   const [imgSrc, setImgSrc] = React.useState<string>("");
   const [imageError, setImageError] = React.useState(false);
 
@@ -27,11 +29,29 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
   const hasDiscount = product.regularPrice > product.price;
   const isDefaultImage = product.image === STORE_CONFIG.defaultProductImage;
 
-  // Use optimized image initially, but allow fallback
-  // Use 300px for base (mobile/desktop cards) and 600px for retina srcSet
-  const displayImage = isDefaultImage ? product.image : optimizeImage(product.image, { width: 315, height: 315, fit: 'cover' });
-  const srcSet = isDefaultImage ? '' : `${optimizeImage(product.image, { width: 315, height: 315, fit: 'cover' })} 1x, ${optimizeImage(product.image, { width: 630, height: 630, fit: 'cover' })} 2x`;
+  // Use pre-optimized card thumbnails if available
+  const firstImage = Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : null;
+  const cardDesktop = isDefaultImage ? product.image : (firstImage?.srcCardDesktop || firstImage?.src || product.image);
+  const cardMobile = isDefaultImage ? product.image : (firstImage?.srcCardMobile || firstImage?.srcMobile || firstImage?.src || product.image);
 
+  const displayImage = isDefaultImage 
+    ? product.image 
+    : (firstImage?.srcCardDesktop || optimizeImage(product.image, { width: 250, height: 250, fit: 'contain' }));
+
+  // Dynamic hierarchical link constructor
+  const getProductLink = () => {
+    const cleanPath = location.pathname.replace(/\/$/, '');
+    const parts = cleanPath.split('/').filter(Boolean);
+    const slugSuffix = product.slug ? `-${product.slug}` : '';
+    
+    if (parts[0]?.toLowerCase() === 'recambios' && parts.length >= 4) {
+      const brand = parts[1];
+      const model = parts[2];
+      const year = parts[3];
+      return `/recambios/${brand}/${model}/${year}/${product.categorySlug || 'recambios'}/${product.id}${slugSuffix}`;
+    }
+    return `/${product.categorySlug || 'recambios'}/${product.id}${slugSuffix}`;
+  };
 
   // Reset state when product changes
   React.useEffect(() => {
@@ -42,7 +62,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
   return (
     <div className="group bg-white dark:bg-racing-carbon border border-zinc-200 dark:border-zinc-800 hover:border-racing-orange/50 transition-all duration-300 rounded-sm overflow-hidden flex flex-col h-full shadow-sm dark:shadow-none">
       <Link
-        to={`/${product.categorySlug ? product.categorySlug : 'recambios'}/${product.id}${product.slug ? `-${product.slug}` : ''}`}
+        to={getProductLink()}
         className="block relative aspect-square overflow-hidden bg-zinc-50 dark:bg-zinc-900 flex items-center justify-center"
         onClick={() => onClick?.(product)}
       >
@@ -50,26 +70,27 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10" />
         )}
 
-        <picture>
-
+        <picture className="w-full h-full flex items-center justify-center">
+          {!imageError && !isDefaultImage && (
+            <source media="(max-width: 768px)" srcSet={cardMobile} />
+          )}
           <img
             src={imageError ? product.image : imgSrc}
-            srcSet={!imageError ? srcSet : undefined}
             onError={() => {
               if (!imageError) {
                 setImgSrc(product.image); // Fallback to original
                 setImageError(true); // Stop using picture sources
               }
             }}
-            alt={product.title}
+            alt={cleanProductTitle(product.title)}
             loading={priority ? "eager" : "lazy"}
             // @ts-ignore
             fetchPriority={priority ? "high" : "auto"}
-            width="300"
-            height="300"
+            width="250"
+            height="250"
             className={`w-full h-full transition-transform duration-500 ${isDefaultImage
               ? 'object-contain p-4 md:p-8 group-hover:scale-110 opacity-100'
-              : 'object-cover group-hover:scale-105'
+              : 'object-contain group-hover:scale-105'
               }`}
           />
         </picture>
@@ -98,11 +119,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
           {product.category}
         </span>
         <Link
-          to={`/${product.categorySlug ? product.categorySlug : 'recambios'}/${product.id}${product.slug ? `-${product.slug}` : ''}`}
+          to={getProductLink()}
           onClick={() => onClick?.(product)}
         >
           <h3 className="text-zinc-900 dark:text-white font-bold text-sm md:text-lg leading-tight mb-2 group-hover:text-racing-orange transition-colors line-clamp-2">
-            {product.title}
+            {cleanProductTitle(product.title)}
           </h3>
         </Link>
 
@@ -134,7 +155,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onAd
             }}
             className="bg-zinc-100 dark:bg-zinc-800 hover:bg-racing-orange dark:hover:bg-racing-orange text-zinc-900 dark:text-white hover:text-white p-2 md:p-3 rounded-sm transition-colors duration-200 shadow-sm"
             title="Añadir al carrito"
-            aria-label={`Añadir ${product.title} al carrito`}
+            aria-label={`Añadir ${cleanProductTitle(product.title)} al carrito`}
           >
             <ShoppingCart className="w-4 h-4 md:w-5 md:h-5" />
           </button>

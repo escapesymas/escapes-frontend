@@ -6,44 +6,50 @@ import { fetchGarage } from '../services/garage';
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const initialize = async () => {
-      const savedUser = getSession();
-      if (savedUser) {
-        let currentUser = savedUser as unknown as User;
-        
-        // AUTO-REPAIR Logic
-        if ((!currentUser.id || currentUser.id === 0) && (currentUser.email || (savedUser as any).user_email)) {
-          try {
-            const email = currentUser.email || (savedUser as any).user_email;
-            const freshData = await fetchCustomerByEmail(email);
-            if (freshData && freshData.id > 0) {
-              currentUser = { ...currentUser, ...freshData, token: (savedUser as any).token };
-              saveSession(currentUser);
-            }
-          } catch (e) { 
-            console.error('Error auto-repairing session', e); 
-          }
-        }
-
-        // CARGAR GARAJE DESDE POSTGRES
-        try {
+      try {
+        const savedUser = getSession();
+        if (savedUser) {
+          let currentUser = savedUser as unknown as User;
+          
+          // ALWAYS fetch fresh profile data on initialization to synchronize DB state (avatars, ranks, etc)
           const email = currentUser.email || (savedUser as any).user_email;
           if (email) {
-            const garage = await fetchGarage(email);
-            currentUser = { ...currentUser, garage };
+            try {
+              const freshData = await fetchCustomerByEmail(email);
+              if (freshData) {
+                // Ensure we merge fresh DB fields (like avatarUrl, rank, firstName, etc)
+                currentUser = { ...currentUser, ...freshData, token: (savedUser as any).token };
+                saveSession(currentUser);
+              }
+            } catch (e) {
+              console.error('Error fetching fresh user session', e);
+            }
           }
-        } catch (e) {
-          console.error('Error loading garage from Postgres', e);
-        }
 
-        setUser(currentUser);
+          // CARGAR GARAJE DESDE POSTGRES
+          try {
+            const email = currentUser.email || (savedUser as any).user_email;
+            if (email) {
+              const garage = await fetchGarage(email);
+              currentUser = { ...currentUser, garage };
+            }
+          } catch (e) {
+            console.error('Error loading garage from Postgres', e);
+          }
+
+          setUser(currentUser);
+        }
+      } finally {
+        setLoading(false);
       }
     };
     
     initialize();
   }, []);
 
-  return { user, setUser };
+  return { user, setUser, loading };
 }
