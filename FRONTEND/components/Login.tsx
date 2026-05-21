@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User, Lock, AlertCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import { loginUser, socialLoginUser } from "../services/auth";
 import { User as UserType } from '../types';
-import { fetchCustomerByEmail } from '../services/woocommerce';
+import { fetchCustomerByEmail } from '../services/apiService';
 import { useGoogleLogin } from '@react-oauth/google';
 import FacebookLogin from 'react-facebook-login/dist/facebook-login-render-props';
 import AppleSignin from 'react-apple-signin-auth';

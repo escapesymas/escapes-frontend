@@ -134,7 +134,7 @@ export const TIRE_PROFILES = ["30", "35", "40", "45", "50", "55", "60", "65", "7
 export const TIRE_RIMS = ['12', '13', '14', '15', '16', '17', '18', '19', '21'];
 export const TIRE_CATEGORY_ID = 296;
 
-// Obsolete static bike data removed. Use services/woocommerce.ts functions instead.
+// Obsolete static bike data removed. Use services/apiService.ts functions instead.
 
 /**
  * ESTRATEGIA DE MARKETING Y NIVELES DE CLIENTE

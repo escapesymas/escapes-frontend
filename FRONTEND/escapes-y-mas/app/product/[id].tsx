@@ -3,7 +3,7 @@ import { Image } from "expo-image";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { fetchProductById } from "../../services/woocommerce";
+import { fetchProductById } from "../../services/apiService";
 import { Product } from "../../types";
 import Button from "../../components/ui/Button";
 import { ShoppingCart } from "lucide-react-native";

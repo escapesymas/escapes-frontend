@@ -15,7 +15,7 @@ import { RichTextEditor } from '../RichTextEditor'; // Assuming this is reusable
 import { SEO } from '../SEO';
 import { RankBadge } from '../RankBadge';
 import { autoLinkHtml, registerDynamicKeywords } from '../../utils/autoLinker';
-import { fetchProducts, fetchProductsByIds } from '../../services/woocommerce';
+import { fetchProducts, fetchProductsByIds } from '../../services/apiService';
 import { ProductCard } from '../ProductCard';
 
 const CategoryFolder: React.FC<{ 

@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Search, ChevronDown, ChevronUp, Bike, SlidersHorizontal, Disc, Settings2, Plus, Loader2 } from 'lucide-react';
 import { BikeSelection, TireSelection } from '../types';
 import { TIRE_WIDTHS, TIRE_PROFILES, TIRE_RIMS } from '../storeData';
-import { fetchMasterBrands, fetchMasterModels, fetchMasterYears } from '../services/woocommerce';
+import { fetchMasterBrands, fetchMasterModels, fetchMasterYears } from '../services/apiService';
 
 interface BikeSelectorProps {
   onSearch?: (selection: BikeSelection) => void;

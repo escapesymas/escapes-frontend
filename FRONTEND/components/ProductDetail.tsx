@@ -5,7 +5,7 @@ import { Product } from '../types';
 import { STORE_CONFIG } from '../storeData';
 import { optimizeImage } from '../utils/imageOptimizer';
 import { cleanProductTitle } from '../utils/productUtils';
-import { fetchProducts, fetchProductCompatibility } from '../services/woocommerce';
+import { fetchProducts, fetchProductCompatibility } from '../services/apiService';
 import { ProductCard } from './ProductCard';
 
 interface ProductDetailProps {

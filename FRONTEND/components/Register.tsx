@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { registerUser, saveSession, socialLoginUser } from "../services/auth";
-import { fetchCustomerByEmail } from '../services/woocommerce';
+import { fetchCustomerByEmail } from '../services/apiService';
 import { useGoogleLogin } from '@react-oauth/google';
 import FacebookLogin from 'react-facebook-login/dist/facebook-login-render-props';
 import AppleSignin from 'react-apple-signin-auth';

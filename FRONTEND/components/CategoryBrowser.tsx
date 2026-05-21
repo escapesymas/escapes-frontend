@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, ArrowLeft, Layers, Loader2, FolderOpen } from 'lucide-react';
-import { fetchCategories } from '../services/woocommerce';
+import { fetchCategories } from '../services/apiService';
 import { Category } from '../types';
 import { optimizeImage } from '../utils/imageOptimizer';
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Package, Calendar, DollarSign, Loader2, ArrowLeft, AlertCircle } from 'lucide-react';
 import { Order, User } from '../types';
-import { fetchCustomerOrders } from '../services/woocommerce';
+import { fetchCustomerOrders } from '../services/apiService';
 
 interface MyOrdersProps {
   user: User;

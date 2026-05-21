@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bike, Plus, Trash2, Loader2 } from 'lucide-react';
 import { BikeSelection, User } from '../types';
-import { fetchMasterBrands, fetchMasterModels, fetchMasterYears } from '../services/woocommerce';
+import { fetchMasterBrands, fetchMasterModels, fetchMasterYears } from '../services/apiService';
 import { fetchGarage, addBikeToGarage, removeBikeFromGarage } from '../services/garage';
 
 interface MyGarageProps {

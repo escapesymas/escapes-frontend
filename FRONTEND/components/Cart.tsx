@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Truck, ArrowLeft, AlertCircle, RotateCcw, Loader2, Package, ShieldCheck } from 'lucide-react';
 import { CartItem, User, Order, Product } from '../types';
 import { optimizeImage } from '../utils/imageOptimizer';
-import { fetchPendingOrders, fetchProductsByIds, fetchUserRank, fetchProducts } from '../services/woocommerce';
+import { fetchPendingOrders, fetchProductsByIds, fetchUserRank, fetchProducts } from '../services/apiService';
 import { MARKETING_TIERS } from '../storeData';
 import { CartProgressBar } from './CartProgressBar';
 import { ProductCard } from './ProductCard';

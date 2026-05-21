@@ -2,7 +2,7 @@ import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from "react
 import { Image } from "expo-image";
 import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
-import { fetchProducts } from "../services/woocommerce";
+import { fetchProducts } from "../services/apiService";
 import { Product } from "../types";
 import Card from "./ui/Card";
 

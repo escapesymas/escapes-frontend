@@ -15,7 +15,7 @@ import { SearchImprovementsBanner } from './components/SearchImprovementsBanner'
 import { ProductSkeleton } from './components/ProductSkeleton';
 import { ProductGrid } from './components/ProductGrid';
 import { STORE_CONFIG, CATEGORIES, FLAT_CATEGORIES } from './storeData';
-import { fetchProductsByIds, fetchCompatibleCategories } from './services/woocommerce';
+import { fetchProductsByIds, fetchCompatibleCategories } from './services/apiService';
 import { saveSession, logoutSession } from './services/auth';
 import { trackPageView, trackViewItem } from './utils/analytics';
 import { Product, BikeSelection, TireSelection, Category } from './types';
