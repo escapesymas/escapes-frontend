@@ -1,4 +1,4 @@
-import { pgTable, serial, text, varchar, timestamp, integer } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, varchar, timestamp, integer, jsonb } from 'drizzle-orm/pg-core';
 
 // Tabla de Usuarios (Sincronizada con WP o independiente en el futuro)
 export const users = pgTable('users', {
@@ -6,6 +6,7 @@ export const users = pgTable('users', {
   wpId: integer('wp_id').unique(), // ID de WordPress para migración
   username: varchar('username', { length: 255 }).notNull().unique(),
   email: varchar('email', { length: 255 }).notNull().unique(),
+  passwordHash: varchar('password_hash', { length: 255 }),
   firstName: varchar('first_name', { length: 255 }),
   lastName: varchar('last_name', { length: 255 }),
   avatarUrl: text('avatar_url'),
@@ -72,6 +73,7 @@ export const products = pgTable('products', {
   compatibility: text('compatibility'), // JSON con marcas/modelos/años
   categoryId: integer('category_id'),
   status: varchar('status', { length: 20 }).default('draft'), // draft, published, out_of_stock
+  attributes: jsonb('attributes').default({}),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });

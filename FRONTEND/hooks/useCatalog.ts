@@ -11,6 +11,9 @@ interface UseCatalogProps {
   categoryIdParam?: string | null;
   brandParam?: string | null;
   tireParam?: string | null;
+  brandUrl?: string;
+  modelUrl?: string;
+  yearUrl?: string;
 }
 
 export function useCatalog({
@@ -20,7 +23,10 @@ export function useCatalog({
   motoParam,
   categoryIdParam,
   brandParam,
-  tireParam
+  tireParam,
+  brandUrl,
+  modelUrl,
+  yearUrl
 }: UseCatalogProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -116,14 +122,42 @@ export function useCatalog({
       const orderBy = sortBy === 'date' ? 'date' : 'price';
       const order = sortBy === 'price-asc' ? 'asc' : 'desc';
 
-      let targetCatId = categoryIdParam ? parseInt(categoryIdParam) : undefined;
+      let targetCatId: number | undefined = undefined;
+      if (categoryIdParam) {
+        const parsed = parseInt(categoryIdParam);
+        if (!isNaN(parsed)) {
+          targetCatId = parsed;
+          try {
+            const allCats = await fetchCategories();
+            const match = allCats.find(c => c.id === parsed);
+            if (match && currentView === 'catalog') setCurrentFilter(match.name);
+          } catch {}
+        } else {
+          try {
+            const allCats = await fetchCategories();
+            const decodedCat = decodeURIComponent(categoryIdParam).toLowerCase();
+            const match = allCats.find(c =>
+              c.slug.toLowerCase() === decodedCat ||
+              c.name.toLowerCase() === decodedCat ||
+              c.slug.normalize("NFD").replace(/[\u0300-\u036f]/g, "") === decodedCat.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            );
+            if (match) {
+              targetCatId = match.id;
+              if (currentView === 'catalog') setCurrentFilter(match.name);
+            }
+          } catch (err) {
+            console.error("Error resolving categoryIdParam slug", err);
+          }
+        }
+      }
 
-      if (motoParam && !query) {
-        const decoded = decodeURIComponent(motoParam);
-        const [brand, model, year] = decoded.includes('|') ? decoded.split('|') : decoded.split('-');
-        
+      const activeBrand = brandUrl || (motoParam ? decodeURIComponent(motoParam).split(motoParam.includes('|') ? '|' : '-')[0] : undefined);
+      const activeModel = modelUrl || (motoParam ? decodeURIComponent(motoParam).split(motoParam.includes('|') ? '|' : '-')[1] : undefined);
+      const activeYear = yearUrl || (motoParam ? decodeURIComponent(motoParam).split(motoParam.includes('|') ? '|' : '-')[2] : undefined);
+
+      if (activeBrand && activeModel && activeYear && !query) {
         const { products: matches, totalPages: pages, totalProducts } = await fetchCompatibleProducts(
-          brand, model, year, targetCatId, pageToLoad, perPage
+          activeBrand, activeModel, activeYear, targetCatId, pageToLoad, perPage
         );
         
         setProducts(matches);
@@ -192,7 +226,7 @@ export function useCatalog({
     } finally {
       setLoading(false);
     }
-  }, [categoryIdParam, motoParam, query, perPage, tireParam, urlCategory, currentView, brandParam, sortBy]);
+  }, [categoryIdParam, motoParam, query, perPage, tireParam, urlCategory, currentView, brandParam, sortBy, brandUrl, modelUrl, yearUrl]);
 
   // Handle Home Featured loading
   useEffect(() => {
@@ -204,7 +238,9 @@ export function useCatalog({
   // Handle Catalog fetching
   useEffect(() => {
     if (currentView === 'catalog') {
-      if (motoParam) {
+      if (brandUrl && modelUrl) {
+        setCurrentFilter(`${brandUrl} ${modelUrl} ${yearUrl && yearUrl !== 'General' ? yearUrl : ''}`.trim());
+      } else if (motoParam) {
         const cleanParam = decodeURIComponent(motoParam);
         const separator = cleanParam.includes('|') ? '|' : '-';
         const [brand, model, year] = cleanParam.split(separator);
@@ -220,7 +256,7 @@ export function useCatalog({
         setCurrentFilter(null);
       }
 
-      if (motoParam || urlCategory || query || categoryIdParam) {
+      if (brandUrl || motoParam || urlCategory || query || categoryIdParam) {
         handleProductFetch(currentPage);
       } else {
         setProducts([]);
@@ -228,14 +264,14 @@ export function useCatalog({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentView, urlCategory, query, motoParam, categoryIdParam, brandParam, tireParam, perPage, sortBy, currentPage]);
+  }, [currentView, urlCategory, query, motoParam, categoryIdParam, brandParam, tireParam, perPage, sortBy, currentPage, brandUrl, modelUrl, yearUrl]);
 
   useEffect(() => {
     if (currentView === 'catalog' && currentPage !== 1) {
       setCurrentPage(1);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlCategory, query, motoParam, categoryIdParam, brandParam, tireParam, perPage, sortBy]);
+  }, [urlCategory, query, motoParam, categoryIdParam, brandParam, tireParam, perPage, sortBy, brandUrl, modelUrl, yearUrl]);
 
   return {
     products, setProducts, loading, setLoading, error, errorDetail,

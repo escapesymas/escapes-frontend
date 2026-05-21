@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Product } from '../types';
-import { CATEGORIES } from '../storeData';
+import { CATEGORIES, FLAT_CATEGORIES } from '../storeData';
+import { cleanProductTitle } from '../utils/productUtils';
 
 interface UseSEOProps {
   currentView: string;
@@ -9,9 +10,12 @@ interface UseSEOProps {
   query?: string;
   motoParam?: string | null;
   brandParam?: string | null;
+  brandUrl?: string;
+  modelUrl?: string;
+  yearUrl?: string;
 }
 
-export function useSEO({ currentView, urlCategory, selectedProduct, query, motoParam, brandParam }: UseSEOProps) {
+export function useSEO({ currentView, urlCategory, selectedProduct, query, motoParam, brandParam, brandUrl, modelUrl, yearUrl }: UseSEOProps) {
   return useMemo(() => {
     switch (currentView) {
       case 'home':
@@ -21,21 +25,23 @@ export function useSEO({ currentView, urlCategory, selectedProduct, query, motoP
           canonical: '/'
         };
       case 'catalog':
-        const knownCat = CATEGORIES.find(c => c.id === urlCategory);
-        const catName = knownCat ? knownCat.name : (urlCategory ? urlCategory.charAt(0).toUpperCase() + urlCategory.slice(1) : 'Catálogo');
+        const flatCat = urlCategory ? (FLAT_CATEGORIES[decodeURIComponent(urlCategory).toLowerCase()] || FLAT_CATEGORIES[urlCategory]) : null;
+        const catName = flatCat ? flatCat.name : (urlCategory ? urlCategory.charAt(0).toUpperCase() + urlCategory.slice(1) : 'Catálogo');
+        const knownCat = CATEGORIES.find(c => c.id === urlCategory) || flatCat;
 
         let seoTitle = query ? `Búsqueda: ${query}` : `${catName} para Moto`;
         let seoDesc = query
           ? `Resultados de búsqueda para "${query}" en Escapes y Más.`
           : knownCat?.description || `Compra ${catName.toLowerCase()} online. Gran variedad de marcas y modelos para tu moto.`;
 
-        // SEO dinámico para Filtros
-        if (motoParam) {
-          const cleanParam = decodeURIComponent(motoParam);
-          const parts = cleanParam.includes('|') ? cleanParam.split('|') : cleanParam.split('-');
-          const [brand, model, year] = parts;
-          seoTitle = `${catName} para ${brand} ${model}${year && year !== 'General' ? ` (${year})` : ''}`;
-          seoDesc = `Selección exclusiva de ${catName.toLowerCase()} compatibles con tu ${brand} ${model}. Máximo rendimiento y ajuste perfecto garantizado.`;
+        // SEO dinámico para Filtros (Unificado SWR + Hierarchical URLs)
+        const activeBrand = brandUrl || (motoParam ? decodeURIComponent(motoParam).split(motoParam.includes('|') ? '|' : '-')[0] : undefined);
+        const activeModel = modelUrl || (motoParam ? decodeURIComponent(motoParam).split(motoParam.includes('|') ? '|' : '-')[1] : undefined);
+        const activeYear = yearUrl || (motoParam ? decodeURIComponent(motoParam).split(motoParam.includes('|') ? '|' : '-')[2] : undefined);
+
+        if (activeBrand && activeModel) {
+          seoTitle = `${catName} para ${activeBrand} ${activeModel}${activeYear && activeYear !== 'General' ? ` (${activeYear})` : ''}`;
+          seoDesc = `Selección exclusiva de ${catName.toLowerCase()} compatibles con tu ${activeBrand} ${activeModel}. Máximo rendimiento y ajuste perfecto garantizado.`;
         } else if (brandParam) {
           seoTitle = `${catName} de la marca ${brandParam}`;
           seoDesc = `Catálogo completo de ${catName.toLowerCase()} ${brandParam}. Compra productos originales con garantía oficial del fabricante.`;
@@ -80,9 +86,58 @@ export function useSEO({ currentView, urlCategory, selectedProduct, query, motoP
         };
       case 'product':
         if (selectedProduct) {
-          const cleanDesc = selectedProduct.description?.replace(/<[^>]*>/g, '').substring(0, 160).trim() || `Comprar ${selectedProduct.title}`;
+          const cleanTitle = cleanProductTitle(selectedProduct.title);
+          const cleanDesc = selectedProduct.description?.replace(/<[^>]*>/g, '').substring(0, 160).trim() || `Comprar ${cleanTitle}`;
+          
+          const activeBrand = brandUrl || (motoParam ? decodeURIComponent(motoParam).split(motoParam.includes('|') ? '|' : '-')[0] : undefined);
+          const activeModel = modelUrl || (motoParam ? decodeURIComponent(motoParam).split(motoParam.includes('|') ? '|' : '-')[1] : undefined);
+          const activeYear = yearUrl || (motoParam ? decodeURIComponent(motoParam).split(motoParam.includes('|') ? '|' : '-')[2] : undefined);
+
+          const breadcrumbs: any[] = [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Inicio",
+              "item": "https://escapesymas.com/"
+            }
+          ];
+
+          let currentPos = 2;
+          if (activeBrand && activeModel) {
+            const bikeName = `${activeBrand} ${activeModel}${activeYear && activeYear !== 'General' ? ` (${activeYear})` : ''}`;
+            const bikeSlug = `/recambios/${encodeURIComponent(activeBrand)}/${encodeURIComponent(activeModel)}/${encodeURIComponent(activeYear || 'General')}`;
+            
+            breadcrumbs.push({
+              "@type": "ListItem",
+              "position": currentPos++,
+              "name": bikeName,
+              "item": `https://escapesymas.com${bikeSlug}`
+            });
+
+            breadcrumbs.push({
+              "@type": "ListItem",
+              "position": currentPos++,
+              "name": selectedProduct.category || "Recambios",
+              "item": `https://escapesymas.com${bikeSlug}/${selectedProduct.categorySlug || 'recambios'}`
+            });
+          } else {
+            breadcrumbs.push({
+              "@type": "ListItem",
+              "position": currentPos++,
+              "name": selectedProduct.category || "Recambios",
+              "item": `https://escapesymas.com/${selectedProduct.categorySlug || 'recambios'}`
+            });
+          }
+
+          breadcrumbs.push({
+            "@type": "ListItem",
+            "position": currentPos,
+            "name": cleanTitle,
+            "item": `https://escapesymas.com/${selectedProduct.categorySlug || 'recambios'}/${selectedProduct.id}${selectedProduct.slug ? `-${selectedProduct.slug}` : ''}`
+          });
+
           return {
-            title: selectedProduct.title,
+            title: cleanTitle,
             description: cleanDesc,
             canonical: `/${selectedProduct.categorySlug || 'recambios'}/${selectedProduct.id}${selectedProduct.slug ? `-${selectedProduct.slug}` : ''}`,
             image: selectedProduct.image,
@@ -90,7 +145,7 @@ export function useSEO({ currentView, urlCategory, selectedProduct, query, motoP
               {
                 "@context": "https://schema.org",
                 "@type": "Product",
-                "name": selectedProduct.title,
+                "name": cleanTitle,
                 "image": [selectedProduct.image],
                 "description": cleanDesc,
                 "sku": selectedProduct.sku,
@@ -115,26 +170,7 @@ export function useSEO({ currentView, urlCategory, selectedProduct, query, motoP
               {
                 "@context": "https://schema.org",
                 "@type": "BreadcrumbList",
-                "itemListElement": [
-                  {
-                    "@type": "ListItem",
-                    "position": 1,
-                    "name": "Home",
-                    "item": "https://escapesymas.com/"
-                  },
-                  {
-                    "@type": "ListItem",
-                    "position": 2,
-                    "name": selectedProduct.category || "Recambios",
-                    "item": `https://escapesymas.com/${selectedProduct.categorySlug || 'recambios'}`
-                  },
-                  {
-                    "@type": "ListItem",
-                    "position": 3,
-                    "name": selectedProduct.title,
-                    "item": `https://escapesymas.com/${selectedProduct.categorySlug || 'recambios'}/${selectedProduct.id}${selectedProduct.slug ? `-${selectedProduct.slug}` : ''}`
-                  }
-                ]
+                "itemListElement": breadcrumbs
               }
             ]
           };

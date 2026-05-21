@@ -1,6 +1,6 @@
 import React, { useEffect, useState, Suspense, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { Loader2, Trash2, Package, Truck, ShieldCheck, CheckCircle, AlertCircle, Bike } from 'lucide-react';
+import { Loader2, Trash2, Package, Truck, ShieldCheck, CheckCircle, AlertCircle, Bike, ChevronRight } from 'lucide-react';
 import { Header } from './components/Header';
 import { SEO } from './components/SEO';
 import { Footer } from './components/Footer';
@@ -8,17 +8,13 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { BikeSelector } from './components/BikeSelector';
 import { CompatibleCategories } from './components/CompatibleCategories';
 import { ProductCard } from './components/ProductCard';
-import { ProductDetail } from './components/ProductDetail';
-import { Cart } from './components/Cart';
-import { CategoryBrowser } from './components/CategoryBrowser';
-import { Contact } from './components/Contact';
 import { BrandSlider } from './components/BrandSlider';
 import { FeaturesBanner } from './components/FeaturesBanner';
 import { KlarnaBanner } from './components/KlarnaBanner';
 import { SearchImprovementsBanner } from './components/SearchImprovementsBanner';
 import { ProductSkeleton } from './components/ProductSkeleton';
 import { ProductGrid } from './components/ProductGrid';
-import { STORE_CONFIG, CATEGORIES } from './storeData';
+import { STORE_CONFIG, CATEGORIES, FLAT_CATEGORIES } from './storeData';
 import { fetchProductsByIds, fetchCompatibleCategories } from './services/woocommerce';
 import { saveSession, logoutSession } from './services/auth';
 import { trackPageView, trackViewItem } from './utils/analytics';
@@ -40,42 +36,84 @@ const Warranty = React.lazy(() => import('./components/Warranty').then(m => ({ d
 const AIAdvisor = React.lazy(() => import('./components/AIAdvisor').then(m => ({ default: m.AIAdvisor })));
 const SocialFeed = React.lazy(() => import('./components/social/SocialFeed').then(m => ({ default: m.SocialFeed })));
 const UserProfile = React.lazy(() => import('./components/social/UserProfile').then(m => ({ default: m.UserProfile })));
-const AdminDashboard = React.lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const Cart = React.lazy(() => import('./components/Cart').then(m => ({ default: m.Cart })));
+const ProductDetail = React.lazy(() => import('./components/ProductDetail').then(m => ({ default: m.ProductDetail })));
+const CategoryBrowser = React.lazy(() => import('./components/CategoryBrowser').then(m => ({ default: m.CategoryBrowser })));
+const Contact = React.lazy(() => import('./components/Contact').then(m => ({ default: m.Contact })));
 
-type ViewState = 'home' | 'catalog' | 'product' | 'cart' | 'checkout' | 'login' | 'register' | 'orders' | 'account' | 'categories' | 'forum' | 'contact' | 'warranty' | 'social' | 'user_profile' | 'admin';
+type ViewState = 'home' | 'catalog' | 'product' | 'cart' | 'checkout' | 'login' | 'register' | 'orders' | 'account' | 'categories' | 'forum' | 'contact' | 'warranty' | 'social' | 'user_profile';
 
 const KNOWN_CATEGORIES = ['escapes', 'frenos', 'accesorios', 'protecciones', 'recambios', 'lubricantes', 'electrónica', 'suspensiones'];
 
-const parsePathToView = (path: string): { view: ViewState; category?: string; productId?: string; userId?: string } => {
-  const cleanPath = path.toLowerCase().replace(/\/$/, '');
-  if (cleanPath === '' || cleanPath === '/') return { view: 'home' };
-  if (cleanPath === '/recambios') return { view: 'catalog' };
-  if (cleanPath === '/carrito') return { view: 'cart' };
-  if (cleanPath === '/mi-cuenta') return { view: 'account' };
-  if (cleanPath === '/admin') return { view: 'admin' };
-  if (cleanPath === '/login') return { view: 'login' };
-  if (cleanPath === '/registro') return { view: 'register' };
-  if (cleanPath.startsWith('/mi-cuenta')) return { view: 'account' };
-  if (cleanPath === '/mis-pedidos') return { view: 'orders' };
-  if (cleanPath === '/garantia') return { view: 'warranty' };
-  if (cleanPath === '/contacto') return { view: 'contact' };
-  if (cleanPath.startsWith('/paddock/user/')) {
-    const parts = cleanPath.split('/paddock/user/');
-    if (parts.length > 1 && parts[1]) return { view: 'user_profile', userId: parts[1].split('/')[0] };
+const parsePathToView = (path: string): {
+  view: ViewState;
+  category?: string;
+  productId?: string;
+  userId?: string;
+  brand?: string;
+  model?: string;
+  year?: string;
+} => {
+  const cleanPath = path.replace(/\/$/, '');
+  const lowerPath = cleanPath.toLowerCase();
+
+  if (lowerPath === '' || lowerPath === '/') return { view: 'home' };
+  if (lowerPath === '/recambios') return { view: 'catalog' };
+  if (lowerPath === '/carrito') return { view: 'cart' };
+  if (lowerPath === '/checkout') return { view: 'checkout' };
+  if (lowerPath === '/mi-cuenta') return { view: 'account' };
+  if (lowerPath === '/login') return { view: 'login' };
+  if (lowerPath === '/registro') return { view: 'register' };
+  if (lowerPath.startsWith('/mi-cuenta')) return { view: 'account' };
+  if (lowerPath === '/mis-pedidos') return { view: 'orders' };
+  if (lowerPath === '/garantia') return { view: 'warranty' };
+  if (lowerPath === '/contacto') return { view: 'contact' };
+
+  if (lowerPath.startsWith('/paddock/user/')) {
+    const parts = cleanPath.split('/');
+    if (parts.length > 3 && parts[3]) return { view: 'user_profile', userId: parts[3] };
   }
-  if (cleanPath.startsWith('/foro') || cleanPath.startsWith('/paddock')) return { view: 'forum' };
-  if (cleanPath === '/social') return { view: 'social' };
-  if (cleanPath === '/categorias') return { view: 'categories' };
+  if (lowerPath.startsWith('/foro') || lowerPath.startsWith('/paddock')) return { view: 'forum' };
+  if (lowerPath === '/social') return { view: 'social' };
+  if (lowerPath === '/categorias') return { view: 'categories' };
 
   const parts = cleanPath.split('/').filter(Boolean);
+
+  if (parts[0].toLowerCase() === 'recambios') {
+    // Check if it's /recambios/{marca}/{modelo}/{año}
+    if (parts.length >= 4) {
+      const brand = decodeURIComponent(parts[1]);
+      const model = decodeURIComponent(parts[2]);
+      const year = decodeURIComponent(parts[3]);
+
+      // /recambios/{marca}/{modelo}/{año}/{categoria}/{producto}
+      if (parts.length >= 6) {
+        const category = decodeURIComponent(parts[4]);
+        const lastPart = parts[5];
+        const idMatch = lastPart.match(/^(\d+)/);
+        if (idMatch) {
+          return { view: 'product', brand, model, year, category, productId: idMatch[1] };
+        }
+      }
+
+      // /recambios/{marca}/{modelo}/{año}/{categoria}
+      if (parts.length >= 5) {
+        return { view: 'catalog', brand, model, year, category: decodeURIComponent(parts[4]) };
+      }
+
+      return { view: 'catalog', brand, model, year };
+    }
+  }
+
+  // Fallback for standard product paths: /{category}/{productId-slug}
   if (parts.length >= 2) {
     const idMatch = parts[1].match(/^(\d+)/);
     if (idMatch) {
-      return { view: 'product', category: parts[0], productId: idMatch[1] };
+      return { view: 'product', category: decodeURIComponent(parts[0]), productId: idMatch[1] };
     }
   }
   if (parts.length >= 1) {
-    return { view: 'catalog', category: parts[0] };
+    return { view: 'catalog', category: decodeURIComponent(parts[0]) };
   }
   return { view: 'home' };
 };
@@ -89,6 +127,9 @@ function App() {
   const [currentView, setCurrentView] = useState<ViewState>(initialParsed.view);
   const [urlCategory, setUrlCategory] = useState<string | undefined>(initialParsed.category);
   const [urlProductId, setUrlProductId] = useState<string | undefined>(initialParsed.productId);
+  const [urlBrand, setUrlBrand] = useState<string | undefined>(initialParsed.brand);
+  const [urlModel, setUrlModel] = useState<string | undefined>(initialParsed.model);
+  const [urlYear, setUrlYear] = useState<string | undefined>(initialParsed.year);
 
   const query = searchParams.get('q') || undefined;
   const categoryIdParam = searchParams.get('cat');
@@ -100,15 +141,37 @@ function App() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   // Instanciar custom hooks refactorizados
-  const { user, setUser } = useAuth();
+  const { user, setUser, loading: authLoading } = useAuth();
   const { cart, setCart, addToCart } = useCart(user, setToast);
-  const { 
+  const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
+  const {
     products, loading, setLoading, error, errorDetail,
     currentFilter, setCurrentFilter, currentPage, setCurrentPage,
     totalPages, totalCatalogProducts, perPage, setPerPage, sortBy, setSortBy,
-    handleProductFetch 
-  } = useCatalog({ currentView, urlCategory, query, motoParam, categoryIdParam, brandParam, tireParam });
-  const seoData = useSEO({ currentView, urlCategory, selectedProduct, query, motoParam, brandParam });
+    handleProductFetch
+  } = useCatalog({
+    currentView,
+    urlCategory,
+    query,
+    motoParam,
+    categoryIdParam,
+    brandParam,
+    tireParam,
+    brandUrl: urlBrand,
+    modelUrl: urlModel,
+    yearUrl: urlYear
+  });
+  const seoData = useSEO({
+    currentView,
+    urlCategory,
+    selectedProduct,
+    query,
+    motoParam,
+    brandParam,
+    brandUrl: urlBrand,
+    modelUrl: urlModel,
+    yearUrl: urlYear
+  });
 
   const catalogRef = useRef<HTMLDivElement>(null);
   const lastMotoRef = useRef<string | null>(null);
@@ -116,6 +179,50 @@ function App() {
   const [compLoading, setCompLoading] = useState(false);
   const [selectedVehicleName, setSelectedVehicleName] = useState<string | null>(null);
   const [brands, setBrands] = useState<{ name: string; logo?: string }[]>([]);
+  const renderBreadcrumbs = () => {
+    const targetKey = categoryIdParam || (urlCategory ? decodeURIComponent(urlCategory).toLowerCase() : null);
+    if (!targetKey) return null;
+
+    const currentCat = FLAT_CATEGORIES[targetKey];
+    if (!currentCat) return null;
+
+    const parentCat = currentCat.parentId ? FLAT_CATEGORIES[currentCat.parentId.toString()] : null;
+
+    return (
+      <nav className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-4 animate-fade-in">
+        <button
+          onClick={() => {
+            handleClearFilters();
+            navigate('/');
+          }}
+          className="hover:text-racing-orange transition-colors"
+        >
+          Inicio
+        </button>
+        <ChevronRight className="w-3 h-3 text-zinc-600" />
+
+        {parentCat ? (
+          <>
+            <button
+              onClick={() => {
+                const newParams = new URLSearchParams();
+                newParams.set('cat', parentCat.slug);
+                setSearchParams(newParams);
+                navigate(`/recambios?cat=${parentCat.slug}`);
+              }}
+              className="hover:text-racing-orange transition-colors"
+            >
+              {parentCat.name}
+            </button>
+            <ChevronRight className="w-3 h-3 text-zinc-600" />
+            <span className="text-racing-orange">{currentCat.name}</span>
+          </>
+        ) : (
+          <span className="text-racing-orange">{currentCat.name}</span>
+        )}
+      </nav>
+    );
+  };
 
   // Load Brands
   useEffect(() => {
@@ -149,22 +256,26 @@ function App() {
     setCurrentView(parsed.view);
     setUrlCategory(parsed.category);
     setUrlProductId(parsed.productId);
+    setUrlBrand(parsed.brand);
+    setUrlModel(parsed.model);
+    setUrlYear(parsed.year);
 
-    const moto = searchParams.get('moto');
+    const moto = searchParams.get('moto') || (parsed.brand && parsed.model && parsed.year ? `${parsed.brand}|${parsed.model}|${parsed.year}` : null);
     if (moto) {
       const decoded = decodeURIComponent(moto);
       const [brand, model, year] = decoded.includes('|') ? decoded.split('|') : decoded.split('-');
       const vName = `${brand} ${model} ${year !== 'General' ? year : ''}`.trim();
       setSelectedVehicleName(vName);
-      
-      if (moto !== lastMotoRef.current && !compLoading && !categoryIdParam && !urlCategory && !query) {
+
+      const categorySlug = parsed.category || categoryIdParam;
+      if (moto !== lastMotoRef.current && !compLoading && !categorySlug && !query) {
         lastMotoRef.current = moto;
         setCompLoading(true);
         fetchCompatibleCategories(brand, model, year)
           .then(setCompatibleCats)
           .catch(err => {
-             console.error(err);
-             setCompatibleCats([]);
+            console.error(err);
+            setCompatibleCats([]);
           })
           .finally(() => setCompLoading(false));
       }
@@ -191,11 +302,13 @@ function App() {
   };
 
   const handleBikeSearch = (selection: BikeSelection) => {
-    const param = `${selection.brand}|${selection.model}|${selection.year}`;
     const vehicleName = `${selection.brand} ${selection.model} ${selection.year !== 'General' ? selection.year : ''}`.trim();
     setSelectedVehicleName(vehicleName);
-    setSearchParams({ moto: param });
-    navigate(`/recambios?moto=${encodeURIComponent(param)}`);
+
+    const cleanBrand = encodeURIComponent(selection.brand);
+    const cleanModel = encodeURIComponent(selection.model);
+    const cleanYear = encodeURIComponent(selection.year);
+    navigate(`/recambios/${cleanBrand}/${cleanModel}/${cleanYear}`);
   };
 
   const handleTireSearch = (selection: TireSelection) => {
@@ -209,9 +322,22 @@ function App() {
     else if (target === 'catalog') {
       if (catOrQuery) {
         const isKnownCat = KNOWN_CATEGORIES.includes(catOrQuery.toLowerCase());
-        if (isKnownCat) navigate(`/${catOrQuery.toLowerCase()}`);
-        else navigate(`/recambios?q=${encodeURIComponent(catOrQuery)}`);
-      } else navigate('/recambios');
+        if (isKnownCat) {
+          if (urlBrand && urlModel && urlYear) {
+            navigate(`/recambios/${encodeURIComponent(urlBrand)}/${encodeURIComponent(urlModel)}/${encodeURIComponent(urlYear)}/${catOrQuery.toLowerCase()}`);
+          } else {
+            navigate(`/${catOrQuery.toLowerCase()}`);
+          }
+        } else {
+          navigate(`/recambios?q=${encodeURIComponent(catOrQuery)}`);
+        }
+      } else {
+        if (urlBrand && urlModel && urlYear) {
+          navigate(`/recambios/${encodeURIComponent(urlBrand)}/${encodeURIComponent(urlModel)}/${encodeURIComponent(urlYear)}`);
+        } else {
+          navigate('/recambios');
+        }
+      }
     }
     else if (target === 'cart') navigate('/carrito');
     else if (target === 'orders') navigate('/mis-pedidos');
@@ -235,7 +361,7 @@ function App() {
     <ErrorBoundary>
       <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-black w-full overflow-x-hidden">
         <SEO {...seoData} />
-        
+
         {/* Contextual Garage Banner */}
         {user?.garage && user.garage.length > 0 && (
           <div className="bg-zinc-950 border-b border-racing-orange/50 py-1.5 px-4 flex justify-between items-center z-[60] relative animate-fade-in shadow-lg">
@@ -243,12 +369,16 @@ function App() {
               <div className="flex items-center gap-2 text-zinc-300 uppercase font-bold tracking-widest overflow-hidden">
                 <Bike className="w-3.5 h-3.5 text-racing-orange shrink-0" />
                 <span className="hidden sm:inline">Mi Garaje:</span>
-                <select 
+                <select
+                  id="garage-contextual-select"
+                  aria-label="Seleccionar vehículo de mi garaje"
                   className="bg-transparent text-white border-none outline-none font-black italic cursor-pointer truncate max-w-[200px] md:max-w-xs focus:ring-0 appearance-none"
-                  value={motoParam || ""}
+                  value={urlBrand && urlModel && urlYear ? encodeURIComponent(`${urlBrand}|${urlModel}|${urlYear}`) : ""}
                   onChange={(e) => {
                     if (e.target.value) {
-                      navigate(`/recambios?moto=${e.target.value}`);
+                      const decoded = decodeURIComponent(e.target.value);
+                      const [brand, model, year] = decoded.split('|');
+                      navigate(`/recambios/${encodeURIComponent(brand)}/${encodeURIComponent(model)}/${encodeURIComponent(year)}`);
                     } else {
                       navigate(`/recambios`);
                     }
@@ -284,26 +414,37 @@ function App() {
           <Suspense fallback={<div className="h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 text-racing-orange animate-spin" /></div>}>
             {currentView === 'login' && <Login onLoginSuccess={(u) => { setUser(u); saveSession(u); navigate(-1); }} onBack={() => navigate(-1)} onRegisterClick={() => navigate('/registro')} />}
             {currentView === 'register' && <Register onRegisterSuccess={() => navigate('/login')} onBack={() => navigate('/login')} onGoToLogin={() => navigate('/login')} />}
-            {currentView === 'forum' && <Paddock user={user} onBack={() => navigate('/')} onLoginRequest={() => navigate('/login')} />}
-            {currentView === 'categories' && <CategoryBrowser onSelectCategory={(_, name) => navigate(`/${name.toLowerCase()}`)} onBack={() => navigate('/')} />}
-            {currentView === 'checkout' && <Checkout cart={cart} user={user} onBack={() => navigate('/carrito')} onOrderComplete={() => { setCart([]); navigate('/'); }} onLoginSuccess={(u) => { setUser(u); saveSession(u); }} />}
+            {currentView === 'forum' && <Paddock user={user} onBack={() => navigate('/')} onLoginRequest={() => navigate('/login')} onAddToCart={(p) => addToCart(p, 1)} />}
+            {currentView === 'categories' && <CategoryBrowser onSelectCategory={(_, __, slug) => navigate(`/${slug}`)} onBack={() => navigate('/')} />}
+            {currentView === 'checkout' && <Checkout cart={cart} user={user} isAuthLoading={authLoading} appliedPromo={appliedPromo} setAppliedPromo={setAppliedPromo} onBack={() => navigate('/carrito')} onOrderComplete={() => { setCart([]); setAppliedPromo(null); navigate('/'); }} onLoginSuccess={(u) => { setUser(u); saveSession(u); }} />}
             {currentView === 'orders' && user && <MyOrders user={user} onBack={() => navigate('/')} />}
             {currentView === 'account' && user && <MyAccount user={user} onBack={() => navigate('/')} onUpdateUser={setUser} />}
-            {currentView === 'warranty' && <Warranty user={user} onBack={() => navigate('/')} onLoginRequest={() => navigate('/login')} />}
+            {currentView === 'warranty' && user && <Warranty user={user} onBack={() => navigate('/')} onLoginRequest={() => navigate('/login')} />}
             {currentView === 'social' && <SocialFeed user={user} onBack={() => navigate('/')} onLoginRequest={() => navigate('/login')} />}
             {currentView === 'user_profile' && <UserProfile currentUser={user} targetUserId={parseInt(parsePathToView(location.pathname).userId || '0')} onBack={() => window.history.back()} onLoginRequest={() => navigate('/login')} />}
             {currentView === 'contact' && <Contact onBack={() => navigate('/')} />}
-            {currentView === 'admin' && <AdminDashboard user={user} onBack={() => navigate('/')} />}
 
             {currentView === 'cart' && (
               <Cart
                 items={cart}
                 user={user}
+                appliedPromo={appliedPromo}
+                setAppliedPromo={setAppliedPromo}
                 onUpdateQuantity={(id, delta) => setCart(p => p.map(i => i.id === id ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i))}
                 onRemove={(id) => setCart(p => p.filter(i => i.id !== id))}
                 onCheckout={() => navigate('/checkout')}
                 onContinueShopping={() => navigate('/recambios')}
                 onRestoreCart={(items) => setCart(items)}
+                onProductClick={(product) => {
+                  setSelectedProduct(product);
+                  const slugSuffix = product.slug ? `-${product.slug}` : '';
+                  if (urlBrand && urlModel && urlYear) {
+                    navigate(`/recambios/${encodeURIComponent(urlBrand)}/${encodeURIComponent(urlModel)}/${encodeURIComponent(urlYear)}/${product.categorySlug || 'recambios'}/${product.id}${slugSuffix}`);
+                  } else {
+                    navigate(`/${product.categorySlug || 'recambios'}/${product.id}${slugSuffix}`);
+                  }
+                }}
+                onAddToCart={(product, qty) => addToCart(product, qty)}
               />
             )}
 
@@ -311,11 +452,15 @@ function App() {
               <ProductDetail
                 product={selectedProduct}
                 onBack={() => navigate(-1)}
-                onAddToCart={(qty) => addToCart(selectedProduct, qty)}
+                onAddToCart={(qty, productOverride) => addToCart(productOverride || selectedProduct, qty)}
                 onProductClick={(product) => {
                   setSelectedProduct(product);
                   const slugSuffix = product.slug ? `-${product.slug}` : '';
-                  navigate(`/${product.categorySlug || 'recambios'}/${product.id}${slugSuffix}`);
+                  if (urlBrand && urlModel && urlYear) {
+                    navigate(`/recambios/${encodeURIComponent(urlBrand)}/${encodeURIComponent(urlModel)}/${encodeURIComponent(urlYear)}/${product.categorySlug || 'recambios'}/${product.id}${slugSuffix}`);
+                  } else {
+                    navigate(`/${product.categorySlug || 'recambios'}/${product.id}${slugSuffix}`);
+                  }
                 }}
               />
             )}
@@ -380,7 +525,8 @@ function App() {
                 </section>
 
                 <SearchImprovementsBanner onClick={() => navigate('/contacto')} />
-                <KlarnaBanner onClick={() => navigate('/recambios')} />
+                {/* <KlarnaBanner onClick={() => navigate('/recambios')} /> */}
+
 
                 <section className="py-12 bg-white dark:bg-zinc-950 container mx-auto px-4">
                   <h2 className="text-2xl font-bold text-zinc-900 dark:text-white uppercase italic mb-8 border-l-4 border-racing-orange pl-4">Productos Destacados</h2>
@@ -398,7 +544,11 @@ function App() {
                           onClick={(p) => {
                             setSelectedProduct(p);
                             trackViewItem(p);
-                            navigate(`/${p.categorySlug || 'recambios'}/${p.id}`);
+                            if (urlBrand && urlModel && urlYear) {
+                              navigate(`/recambios/${encodeURIComponent(urlBrand)}/${encodeURIComponent(urlModel)}/${encodeURIComponent(urlYear)}/${p.categorySlug || 'recambios'}/${p.id}`);
+                            } else {
+                              navigate(`/${p.categorySlug || 'recambios'}/${p.id}`);
+                            }
                           }}
                           onAddToCart={() => addToCart(product, 1)}
                         />
@@ -435,16 +585,22 @@ function App() {
                     />
                   </div>
                 </section>
-                
+
                 <section className="py-12 bg-white dark:bg-zinc-950 min-h-screen container mx-auto px-4 border-t border-zinc-200 dark:border-zinc-900">
                   {motoParam && !categoryIdParam && !urlCategory && !query ? (
-                    <CompatibleCategories 
+                    <CompatibleCategories
                       categories={compatibleCats}
                       onSelectCategory={(id) => {
-                        const newParams = new URLSearchParams(searchParams);
-                        newParams.set('cat', id.toString());
-                        setSearchParams(newParams);
-                        navigate(`/recambios?${newParams.toString()}`);
+                        const catItem = FLAT_CATEGORIES[id.toString()] || CATEGORIES.find(c => c.id.toString() === id.toString());
+                        const catSlug = catItem ? catItem.slug.toLowerCase() : id.toString();
+                        if (urlBrand && urlModel && urlYear) {
+                          navigate(`/recambios/${encodeURIComponent(urlBrand)}/${encodeURIComponent(urlModel)}/${encodeURIComponent(urlYear)}/${catSlug}`);
+                        } else {
+                          const newParams = new URLSearchParams(searchParams);
+                          newParams.set('cat', id.toString());
+                          setSearchParams(newParams);
+                          navigate(`/recambios?${newParams.toString()}`);
+                        }
                       }}
                       isLoading={compLoading}
                       vehicleName={selectedVehicleName || 'tu moto'}
@@ -452,10 +608,23 @@ function App() {
                   ) : (
                     <>
                       <div className="flex flex-col gap-6 mb-10">
+                        {renderBreadcrumbs()}
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                           <div className="flex items-center gap-4">
                             <h2 className="text-2xl font-bold text-zinc-900 dark:text-white uppercase italic">
-                              {urlCategory ? (CATEGORIES.find(c => c.id === urlCategory || c.name.toLowerCase() === urlCategory.toLowerCase())?.name || urlCategory) : (currentFilter || "Catálogo")}
+                              {urlCategory ? (() => {
+                                const decoded = decodeURIComponent(urlCategory).toLowerCase();
+                                const flatMatch = FLAT_CATEGORIES[decoded] || FLAT_CATEGORIES[urlCategory];
+                                if (flatMatch) return flatMatch.name;
+                                const match = CATEGORIES.find(c =>
+                                  c.id === urlCategory ||
+                                  c.name.toLowerCase() === decoded ||
+                                  c.slug.toLowerCase() === decoded ||
+                                  decoded.includes(c.name.toLowerCase()) ||
+                                  c.name.toLowerCase().includes(decoded)
+                                );
+                                return match ? match.name : decodeURIComponent(urlCategory);
+                              })() : (currentFilter ? decodeURIComponent(currentFilter) : "Catálogo")}
                             </h2>
                             {(currentFilter || brandParam || motoParam) && (
                               <button onClick={handleClearFilters} className="text-zinc-500 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2">
@@ -466,6 +635,8 @@ function App() {
 
                           <div className="flex flex-wrap items-center gap-4">
                             <select
+                              id="brand-filter-select"
+                              aria-label="Filtrar por marca de fabricante"
                               value={brandParam || ''}
                               onChange={(e) => {
                                 const newParams = new URLSearchParams(searchParams);
@@ -483,17 +654,19 @@ function App() {
                             </select>
 
                             <select
+                              id="category-filter-select"
+                              aria-label="Filtrar por categoría de producto"
                               value={urlCategory || ''}
                               onChange={(e) => {
                                 if (e.target.value) {
-                                   const newParams = new URLSearchParams(searchParams);
-                                   const match = CATEGORIES.find(c => c.name === e.target.value);
-                                   if (match) newParams.set('cat', match.id.toString());
-                                   navigate(`/recambios?${newParams.toString()}`);
+                                  const newParams = new URLSearchParams(searchParams);
+                                  const match = CATEGORIES.find(c => c.name === e.target.value);
+                                  if (match) newParams.set('cat', match.id.toString());
+                                  navigate(`/recambios?${newParams.toString()}`);
                                 } else {
-                                   const newParams = new URLSearchParams(searchParams);
-                                   newParams.delete('cat');
-                                   navigate(`/recambios?${newParams.toString()}`);
+                                  const newParams = new URLSearchParams(searchParams);
+                                  newParams.delete('cat');
+                                  navigate(`/recambios?${newParams.toString()}`);
                                 }
                               }}
                               className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm px-3 py-2 rounded-sm focus:border-racing-orange focus:outline-none cursor-pointer max-w-[150px]"
@@ -542,7 +715,7 @@ function App() {
                             {[...Array(8)].map((_, i) => <ProductSkeleton key={i} />)}
                           </div>
                         ) : (
-                          <ProductGrid 
+                          <ProductGrid
                             loading={loading}
                             error={error}
                             errorDetail={errorDetail}
@@ -556,12 +729,16 @@ function App() {
                             onProductClick={(p) => {
                               setSelectedProduct(p);
                               const slugSuffix = p.slug ? `-${p.slug}` : '';
-                              navigate(`/${p.categorySlug || 'recambios'}/${p.id}${slugSuffix}`);
+                              if (urlBrand && urlModel && urlYear) {
+                                navigate(`/recambios/${encodeURIComponent(urlBrand)}/${encodeURIComponent(urlModel)}/${encodeURIComponent(urlYear)}/${p.categorySlug || 'recambios'}/${p.id}${slugSuffix}`);
+                              } else {
+                                navigate(`/${p.categorySlug || 'recambios'}/${p.id}${slugSuffix}`);
+                              }
                             }}
                             onAddToCart={(p) => addToCart(p, 1)}
                             currentPage={currentPage}
                             totalPages={totalPages}
-                            onPageChange={(page) => handleProductFetch(page)}
+                            onPageChange={(page) => setCurrentPage(page)}
                           />
                         )}
                       </div>

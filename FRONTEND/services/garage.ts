@@ -1,6 +1,7 @@
 import { BikeSelection } from "../types";
 
-const API_URL = "/api/garage";
+const API_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? '' : 'https://backendescapes.com';
+const API_URL = `${API_BASE}/api/garage`;
 
 export async function fetchGarage(userEmail: string): Promise<BikeSelection[]> {
   const res = await fetch(`${API_URL}?userEmail=${encodeURIComponent(userEmail)}`);

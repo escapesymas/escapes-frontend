@@ -17,7 +17,8 @@ interface CreateCheckoutResponse {
 export const createSumUpCheckout = async (amount: number, orderRef: string): Promise<CreateCheckoutResponse | null> => {
   try {
     // We call our own server instead of api.sumup.com
-    const response = await fetch('/api/checkout', {
+    const API_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? '' : 'https://backendescapes.com';
+    const response = await fetch(`${API_BASE}/api/checkout`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

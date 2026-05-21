@@ -1,16 +1,14 @@
 
-import { WOO_CONFIG, STORE_CONFIG } from '../storeData';
-import { Product, WooProduct, OrderPayload, Order, User, WooCategory, Category, UserRank } from '../types';
-import { optimizeImage } from '../utils/imageOptimizer';
+import { STORE_CONFIG } from '../storeData';
+import { Product, OrderPayload, Order, User, Category, UserRank } from '../types';
+
+export const API_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? '' : 'https://backendescapes.com';
 
 export const isConfigValid = () => {
-  // baseUrl can be empty string for relative URLs, solo comprobamos que baseUrl esté definido
-  // Las credenciales de Auth las inyecta server.js (proxy)
-  return WOO_CONFIG.baseUrl !== undefined;
+  return true;
 };
 
 const getAuthHeaders = () => {
-  // NOTE: Authorization is handled by server.js proxy, not needed here
   return {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
@@ -18,9 +16,8 @@ const getAuthHeaders = () => {
 };
 
 export const makeRequest = async (path: string, options: RequestInit = {}) => {
-  let baseUrl = WOO_CONFIG.baseUrl.replace(/\/$/, "");
+  let baseUrl = API_BASE;
 
-  // Cache busting: Add timestamp to avoid caching issues with W3 Total Cache / WP REST Cache
   const cacheBuster = `_t=${new Date().getTime()}`;
   const separator = path.includes('?') ? '&' : '?';
   let url = `${baseUrl}/wp-json${path}${separator}${cacheBuster}`;
@@ -67,86 +64,203 @@ export const makeRequest = async (path: string, options: RequestInit = {}) => {
 };
 
 export const fetchCategories = async (): Promise<Category[]> => {
-  if (!isConfigValid()) throw new Error("Configuración incompleta");
+  const mainCategories: Category[] = [
+    {
+      id: 1,
+      name: "Sistemas de Escape",
+      slug: "escapes",
+      parent: 0,
+      description: "Silenciosos, colectores y líneas completas de alto rendimiento.",
+      image: "https://images.unsplash.com/photo-1532588237936-a14a3818bc79?auto=format&fit=crop&q=80&w=800",
+      count: 1918,
+      children: [
+        { id: 101, name: "Línea Completa (Racing)", slug: "linea-completa", parent: 1, description: "", image: "", count: 480 },
+        { id: 102, name: "Slip-On (Silenciosos)", slug: "silenciadores", parent: 1, description: "", image: "", count: 850 },
+        { id: 103, name: "Colectores", slug: "colectores", parent: 1, description: "", image: "", count: 320 },
+        { id: 104, name: "Accesorios Escape", slug: "accesorios-escape", parent: 1, description: "", image: "", count: 268 }
+      ]
+    },
+    {
+      id: 2,
+      name: "Frenos de Competición",
+      slug: "frenos",
+      parent: 0,
+      description: "Máxima potencia y control: bombas radiales, discos y pastillas.",
+      image: "https://images.unsplash.com/photo-1563618147570-36034c4f0282?auto=format&fit=crop&q=80&w=800",
+      count: 12023,
+      children: [
+        { id: 201, name: "Pastillas Sinterizadas", slug: "pastillas-sinterizadas", parent: 2, description: "", image: "", count: 6420 },
+        { id: 202, name: "Discos de Freno", slug: "discos-freno", parent: 2, description: "", image: "", count: 3850 },
+        { id: 203, name: "Bombas Radiales", slug: "bombas-radiales", parent: 2, description: "", image: "", count: 980 },
+        { id: 204, name: "Latiguillos Metálicos", slug: "latiguillos-metalicos", parent: 2, description: "", image: "", count: 773 }
+      ]
+    },
+    {
+      id: 3,
+      name: "Ciclista & Chasis",
+      slug: "suspensiones",
+      parent: 0,
+      description: "Estabilidad extrema con suspensiones Pro y componentes de chasis.",
+      image: "https://images.unsplash.com/photo-1444491741275-3747c53c99b4?auto=format&fit=crop&q=80&w=800",
+      count: 14429,
+      children: [
+        { id: 301, name: "Amortiguadores Traseros", slug: "amortiguadores-traseros", parent: 3, description: "", image: "", count: 3200 },
+        { id: 302, name: "Cartuchos Horquilla", slug: "cartuchos-horquilla", parent: 3, description: "", image: "", count: 4850 },
+        { id: 303, name: "Amortiguadores Dirección", slug: "amortiguadores-direccion", parent: 3, description: "", image: "", count: 1840 },
+        { id: 304, name: "Estriberas", slug: "estriberas", parent: 3, description: "", image: "", count: 4539 }
+      ]
+    },
+    {
+      id: 4,
+      name: "Electrónica & ECU",
+      slug: "electronica",
+      parent: 0,
+      description: "Gestión de motor, Quickshifters y telemetría de competición.",
+      image: "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&q=80&w=800",
+      count: 3571,
+      children: [
+        { id: 401, name: "Centralitas (ECU)", slug: "centralitas", parent: 4, description: "", image: "", count: 520 },
+        { id: 402, name: "Quickshifters", slug: "quickshifters", parent: 4, description: "", image: "", count: 830 },
+        { id: 403, name: "Módulos ABS/TC", slug: "modulos-abs-tc", parent: 4, description: "", image: "", count: 420 },
+        { id: 404, name: "Baterías Litio", slug: "baterias-litio", parent: 4, description: "", image: "", count: 1801 }
+      ]
+    },
+    {
+      id: 5,
+      name: "Transmisión & Desarrollo",
+      slug: "transmision",
+      parent: 0,
+      description: "Kits de arrastre reforzados, piñones y coronas aligeradas.",
+      image: "https://images.unsplash.com/photo-1592657434559-99469f3752e2?auto=format&fit=crop&q=80&w=800",
+      count: 21163,
+      children: [
+        { id: 501, name: "Kits Cadena Completos", slug: "kits-cadena", parent: 5, description: "", image: "", count: 9480 },
+        { id: 502, name: "Cadenas X-Ring/Z-Ring", slug: "cadenas-arrastre", parent: 5, description: "", image: "", count: 5630 },
+        { id: 503, name: "Piñones", slug: "pinones", parent: 5, description: "", image: "", count: 2840 },
+        { id: 504, name: "Coronas Ergal", slug: "coronas", parent: 5, description: "", image: "", count: 3213 }
+      ]
+    },
+    {
+      id: 6,
+      name: "Mantenimiento & Fluidos",
+      slug: "mantenimiento",
+      parent: 0,
+      description: "Filtros de alto flujo y lubricantes de máxima protección.",
+      image: "https://images.unsplash.com/photo-1502444390311-53697eb4b62d?auto=format&fit=crop&q=80&w=800",
+      count: 21616,
+      children: [
+        { id: 601, name: "Filtros Aire Racing", slug: "filtros-aire", parent: 6, description: "", image: "", count: 5420 },
+        { id: 602, name: "Filtros Aceite", slug: "filtros-aceite", parent: 6, description: "", image: "", count: 4850 },
+        { id: 603, name: "Aceites Motor Pro", slug: "aceites-motor", parent: 6, description: "", image: "", count: 7430 },
+        { id: 604, name: "Líquidos Hidráulicos", slug: "liquidos-hidraulicos", parent: 6, description: "", image: "", count: 3916 }
+      ]
+    },
+    {
+      id: 7,
+      name: "Neumáticos & Paddock",
+      slug: "neumaticos",
+      parent: 0,
+      description: "Gomas de alto agarre, calentadores y equipamiento de garaje.",
+      image: "https://images.unsplash.com/photo-1578844251758-2f71da645217?auto=format&fit=crop&q=80&w=800",
+      count: 6069,
+      children: [
+        { id: 701, name: "Neumáticos Slick/Sport", slug: "neumaticos-slick", parent: 7, description: "", image: "", count: 3210 },
+        { id: 702, name: "Calentadores", slug: "calentadores", parent: 7, description: "", image: "", count: 980 },
+        { id: 703, name: "Caballetes", slug: "caballetes", parent: 7, description: "", image: "", count: 1240 },
+        { id: 704, name: "Manómetros & Accesorios", slug: "manometros-accesorios", parent: 7, description: "", image: "", count: 639 }
+      ]
+    },
+    {
+      id: 8,
+      name: "Cascos",
+      slug: "cascos",
+      parent: 0,
+      description: "Cascos integrales, modulares, jet y off-road de las mejores marcas.",
+      image: "https://images.unsplash.com/photo-1599819811279-d5ad9cccf838?auto=format&fit=crop&q=80&w=800",
+      count: 3114,
+      children: [
+        { id: 801, name: "Cascos Integrales", slug: "cascos-integrales", parent: 8, description: "", image: "", count: 1240 },
+        { id: 802, name: "Cascos Modulares", slug: "cascos-modulares", parent: 8, description: "", image: "", count: 850 },
+        { id: 803, name: "Cascos Jet", slug: "cascos-jet", parent: 8, description: "", image: "", count: 620 },
+        { id: 804, name: "Cascos Off-Road", slug: "cascos-off-road", parent: 8, description: "", image: "", count: 404 }
+      ]
+    },
+    {
+      id: 9,
+      name: "Equipación Piloto",
+      slug: "equipacion",
+      parent: 0,
+      description: "Monos de competición, chaquetas, guantes, botas y protecciones.",
+      image: "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&q=80&w=800",
+      count: 6147,
+      children: [
+        { id: 901, name: "Chaquetas Moto", slug: "chaquetas-moto", parent: 9, description: "", image: "", count: 2450 },
+        { id: 902, name: "Monos", slug: "monos", parent: 9, description: "", image: "", count: 1240 },
+        { id: 903, name: "Guantes de Competición", slug: "guantes-competicion", parent: 9, description: "", image: "", count: 1480 },
+        { id: 904, name: "Botas Racing", slug: "botas-racing", parent: 9, description: "", image: "", count: 977 }
+      ]
+    },
+    {
+      id: 10,
+      name: "Accesorios & Maletas",
+      slug: "accesorios",
+      parent: 0,
+      description: "Sistemas de equipaje, soportes Quad Lock, intercomunicadores y cúpulas.",
+      image: "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&q=80&w=800",
+      count: 13943,
+      children: [
+        { id: 1001, name: "Maletas & Baúles", slug: "maletas-baules", parent: 10, description: "", image: "", count: 4850 },
+        { id: 1002, name: "Soportes Quad Lock", slug: "soportes-quad-lock", parent: 10, description: "", image: "", count: 3210 },
+        { id: 1003, name: "Intercomunicadores", slug: "intercomunicadores", parent: 10, description: "", image: "", count: 2480 },
+        { id: 1004, name: "Personalización & Espejos", slug: "personalizacion-espejos", parent: 10, description: "", image: "", count: 3403 }
+      ]
+    }
+  ];
 
-  // Implementation of 24h caching to avoid redundant paginated fetches
-  const CACHE_KEY = 'escapes_categories_cache';
-  const CACHE_TIME = 24 * 60 * 60 * 1000; // 24 hours
-
-  try {
-    const cached = localStorage.getItem(CACHE_KEY);
-    if (cached) {
-      const { data, timestamp } = JSON.parse(cached);
-      if (Date.now() - timestamp < CACHE_TIME) {
-        return data as Category[];
+  const flatList: Category[] = [];
+  for (const cat of mainCategories) {
+    flatList.push(cat);
+    if (cat.children) {
+      for (const child of cat.children) {
+        flatList.push(child);
       }
     }
-  } catch (e) { console.error("Cache read error", e); }
-
-  try {
-    let allWooCats: WooCategory[] = [];
-    let page = 1;
-    let totalPages = 1;
-
-    do {
-      const { data, totalPages: pages } = await makeRequest(`/wc/v3/products/categories?per_page=100&page=${page}`);
-      allWooCats = [...allWooCats, ...(data as WooCategory[])];
-      totalPages = pages;
-      page++;
-    } while (page <= totalPages);
-
-    const categories = allWooCats.map(c => ({
-      id: c.id,
-      name: c.name,
-      slug: c.slug,
-      parent: c.parent,
-      description: c.description,
-      image: c.image ? c.image.src : '',
-      count: c.count
-    }));
-
-    try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify({
-        data: categories,
-        timestamp: Date.now()
-      }));
-    } catch (e) { console.error("Cache write error", e); }
-
-    return categories;
-  } catch (error) {
-    throw error;
   }
+  return flatList;
 };
 
 /**
  * Obtiene productos específicos por sus IDs
  */
 export const fetchProductsByIds = async (ids: number[]): Promise<Product[]> => {
-  if (!isConfigValid() || ids.length === 0) return [];
+  if (ids.length === 0) return [];
 
   try {
-    const { data } = await makeRequest(`/wc/v3/products?include=${ids.join(',')}&per_page=${ids.length}`);
+    const res = await fetch(`${API_BASE}/api/catalog/products-by-skus?ids=${ids.join(',')}`);
+    if (!res.ok) return [];
+    const data = await res.json();
     return (data as any[]).map(p => ({
       id: p.id,
-      title: p.name,
+      title: p.title || p.name,
       slug: p.slug,
-      price: parseFloat(p.price) || 0,
-      regularPrice: parseFloat(p.regular_price) || parseFloat(p.price) || 0,
-      image: p.images?.[0]?.src || '',
-      category: p.categories?.[0]?.name || '',
-      categorySlug: p.categories?.[0]?.slug || 'recambios',
-      categoryId: p.categories?.[0]?.id || 0,
-      description: p.short_description || p.description || '',
-      stock: p.stock_quantity ?? (p.stock_status === 'instock' ? 99 : 0),
-      inStock: p.stock_status === 'instock',
+      price: typeof p.price === 'string' ? parseFloat(p.price) : p.price,
+      regularPrice: typeof p.regularPrice === 'string' ? parseFloat(p.regularPrice) : p.regularPrice,
       sku: p.sku || '',
-      attributes: p.attributes || [],
+      image: p.image || p.images?.[0]?.src || '',
       images: p.images || [],
-      averageRating: parseFloat(p.average_rating || "0"),
-      ratingCount: p.rating_count || 0,
+      inStock: p.inStock,
+      stock: p.stock || 0,
+      category: p.category || 'General',
+      categorySlug: p.categorySlug || 'general',
+      categoryId: p.categoryId || 0,
+      description: p.description || '',
+      shortDescription: p.shortDescription || '',
+      attributes: p.attributes || [],
+      averageRating: p.averageRating || 0,
+      ratingCount: p.ratingCount || 0
     }));
   } catch (error) {
-    console.error('[WC] Failed to fetch products by IDs:', error);
+    console.error('[CATALOG] Failed to fetch products by IDs:', error);
     return [];
   }
 };
@@ -176,47 +290,15 @@ export const fetchProducts = async (
   moto?: { brand: string, model: string, year?: string }
 ): Promise<{ products: Product[], totalPages: number, totalProducts: number }> => {
 
-  const BROKEN_IMG_URL = "https://backendescapes.com/wp-content/uploads/2026/01/Sprint20Filter20P1420Filtro20de20Aire20Yamaha20T-150202015-.jpg";
+  // --- COMPATIBILIDAD CON MOTOS (100% NATIVA EN POSTGRESQL) ---
+  if (moto && moto.brand && moto.model) {
+    return fetchCompatibleProducts(moto.brand, moto.model, moto.year, categoryId, page, perPage);
+  }
 
-  const mapProduct = (p: WooProduct): Product => {
-    let imageUrl = p.images.length > 0 ? p.images[0].src : '';
-    if (!imageUrl || imageUrl === BROKEN_IMG_URL) {
-      imageUrl = STORE_CONFIG.defaultProductImage;
-    }
-    return {
-      id: p.id,
-      title: p.name,
-      slug: p.slug,
-      price: parseFloat(p.price || p.regular_price || "0"),
-      regularPrice: parseFloat(p.regular_price || p.price || "0"),
-      sku: p.sku || `REF-${p.id}`,
-      image: imageUrl,
-      images: (p.images || []).map(img => ({ ...img, src: img.src })),
-      inStock: p.stock_status === 'instock',
-      category: p.categories.length > 0 ? p.categories[0].name : 'General',
-      categorySlug: p.categories.length > 0 ? p.categories[0].slug : 'recambios',
-      categoryId: p.categories.length > 0 ? p.categories[0].id : 0,
-      permalink: p.permalink,
-      attributes: p.attributes.map(attr => ({ name: attr.name, options: attr.options })),
-      description: p.description,
-      shortDescription: p.short_description,
-      averageRating: parseFloat(p.average_rating || "0"),
-      ratingCount: p.rating_count || 0,
-    };
-  };
-
-  // ===================================================================
-  // FUENTE PRINCIPAL: PostgreSQL Nativo (Catálogo Maestro)
-  // ===================================================================
   try {
-    let catalogUrl = `/api/admin?action=catalog-products&page=${page}&per_page=${perPage}`;
+    let catalogUrl = `${API_BASE}/api/catalog/products?page=${page}&per_page=${perPage}`;
     if (searchQuery) catalogUrl += `&search=${encodeURIComponent(searchQuery)}`;
-
-    // Compatibilidad con motos (nativo)
-    if (moto && moto.brand && moto.model) {
-      catalogUrl = `/api/admin?action=catalog-compatible&brand=${encodeURIComponent(moto.brand)}&model=${encodeURIComponent(moto.model)}&page=${page}&per_page=${perPage}`;
-      if (moto.year) catalogUrl += `&year=${encodeURIComponent(moto.year)}`;
-    }
+    if (categoryId) catalogUrl += `&category_id=${categoryId}`;
 
     const nativeRes = await fetch(catalogUrl);
     if (nativeRes.ok) {
@@ -224,118 +306,59 @@ export const fetchProducts = async (
       const totalProducts = parseInt(nativeRes.headers.get('X-WP-Total') || '0');
       const totalPages = parseInt(nativeRes.headers.get('X-WP-TotalPages') || '1');
 
-      // Si PostgreSQL tiene productos, los usamos directamente
-      if (Array.isArray(nativeProducts) && nativeProducts.length > 0) {
-        console.log(`[CATALOG] ✅ ${nativeProducts.length} productos desde PostgreSQL`);
-        return { products: nativeProducts, totalPages, totalProducts };
-      }
+      return { products: nativeProducts, totalPages, totalProducts };
     }
   } catch (pgError) {
-    console.warn('[CATALOG] PostgreSQL no disponible, usando WooCommerce como fallback:', pgError);
+    console.error('[CATALOG ERROR] Failed to fetch native products:', pgError);
   }
 
-  // ===================================================================
-  // FALLBACK: WooCommerce (Solo si PostgreSQL no tiene datos)
-  // ===================================================================
-  if (!isConfigValid()) throw new Error("Configuración inválida");
-
-  try {
-    // --- COMPATIBILIDAD CON MOTOS (FALLBACK WP) ---
-    if (moto && moto.brand && moto.model) {
-      return fetchCompatibleProducts(moto.brand, moto.model, moto.year, categoryId, page, perPage);
-    }
-
-    // If no search query, just fetch normally
-    if (!searchQuery) {
-      let path = `/wc/v3/products?per_page=${perPage}&page=${page}&status=publish&orderby=${orderBy}&order=${order}`;
-      if (categoryId) path += `&category=${categoryId}`;
-
-      const { data, totalPages, totalProducts } = await makeRequest(path);
-      return { products: (data as WooProduct[]).map(mapProduct), totalPages, totalProducts };
-    }
-
-    // --- CACHE CHECK ---
-    const cacheKey = `${searchQuery}_${categoryId || 0}_${page}_${perPage}_${orderBy}_${order}_${fast}`;
-    const cached = searchCache.get(cacheKey);
-    if (cached && (Date.now() - cached.timestamp < SEARCH_CACHE_TTL)) {
-      console.log(`[WC] Search cache hit for: ${searchQuery}`);
-      return { products: cached.products, totalPages: cached.totalPages, totalProducts: cached.totalProducts };
-    }
-
-    // ENHANCED SEARCH: Search by title AND SKU in parallel
-    const allProducts: Product[] = [];
-    const seenIds = new Set<number>();
-    let apiTotalPages = 1;
-    let apiTotalProducts = 0;
-
-    const titlePath = `/wc/v3/products?per_page=${perPage}&page=${page}&status=publish&orderby=${orderBy}&order=${order}&search=${encodeURIComponent(searchQuery)}${categoryId ? `&category=${categoryId}` : ''}`;
-    const skuPath = `/wc/v3/products?per_page=${perPage}&page=${page}&status=publish&sku=${encodeURIComponent(searchQuery)}${categoryId ? `&category=${categoryId}` : ''}`;
-
-    // Execute multiple search strategies in parallel to reduce wait time
-    const results = await Promise.allSettled([
-      makeRequest(titlePath),
-      makeRequest(skuPath)
-    ]);
-
-    results.forEach(res => {
-      if (res.status === 'fulfilled') {
-        const { data, totalPages, totalProducts } = res.value;
-        if (totalPages > apiTotalPages) apiTotalPages = totalPages;
-        if (totalProducts > apiTotalProducts) apiTotalProducts = totalProducts;
-
-        (data as WooProduct[]).forEach(p => {
-          if (!seenIds.has(p.id)) {
-            seenIds.add(p.id);
-            allProducts.push(mapProduct(p));
-          }
-        });
-      }
-    });
-
-    // 3. Fallback: only if we have very few results AND NOT IN FAST MODE, try the heavy description search
-    if (!fast && allProducts.length < perPage / 2) {
-      try {
-        const extraPath = `/wc/v3/products?per_page=40&status=publish${categoryId ? `&category=${categoryId}` : ''}`;
-        const { data: extraResults } = await makeRequest(extraPath);
-
-        const searchLower = searchQuery.toLowerCase();
-        (extraResults as WooProduct[]).forEach(p => {
-          if (!seenIds.has(p.id)) {
-            const matchesDesc = (p.description || '').toLowerCase().includes(searchLower);
-            const matchesShortDesc = (p.short_description || '').toLowerCase().includes(searchLower);
-
-            if (matchesDesc || matchesShortDesc) {
-              seenIds.add(p.id);
-              allProducts.push(mapProduct(p));
-            }
-          }
-        });
-      } catch { }
-    }
-
-    const result = {
-      products: allProducts.slice(0, perPage),
-      totalPages: Math.max(apiTotalPages, Math.ceil(allProducts.length / perPage)),
-      totalProducts: Math.max(apiTotalProducts, allProducts.length)
-    };
-
-    // Save to cache
-    searchCache.set(cacheKey, { ...result, timestamp: Date.now() });
-
-    return result;
-  } catch (error) {
-    throw error;
-  }
+  return { products: [], totalPages: 1, totalProducts: 0 };
 };
 
 export const createOrder = async (orderData: OrderPayload | any): Promise<{ success: boolean; id?: number; error?: string }> => {
   try {
-    const { data } = await makeRequest('/wc/v3/orders', {
+    // Traducir el OrderPayload de WooCommerce a nuestro esquema de PostgreSQL
+    const userEmail = orderData.billing?.email || orderData.email || '';
+    const cart = orderData.line_items?.map((item: any) => ({
+      id: item.product_id || item.id,
+      quantity: item.quantity
+    })) || [];
+    
+    const shippingData = {
+      firstName: orderData.billing?.first_name || 'Cliente',
+      lastName: orderData.billing?.last_name || '',
+      email: userEmail,
+      address: orderData.billing?.address_1 || '',
+      city: orderData.billing?.city || '',
+      zip: orderData.billing?.postcode || '',
+      phone: orderData.billing?.phone || ''
+    };
+
+    const paymentMethod = orderData.payment_method || 'sumup';
+    const promoCode = orderData.promoCode || undefined;
+
+    const response = await fetch(`${API_BASE}/api/orders/create`, {
       method: 'POST',
-      body: JSON.stringify(orderData)
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        userEmail,
+        cart,
+        shippingData,
+        paymentMethod,
+        promoCode
+      })
     });
-    return { success: true, id: data.id };
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || `Error ${response.status}`);
+    }
+
+    return { success: true, id: result.orderId };
   } catch (error: any) {
+    console.error('[DATABASE ORDER] Failed to create order in PostgreSQL:', error);
     return { success: false, error: error.message };
   }
 };
@@ -348,19 +371,18 @@ export const createOrder = async (orderData: OrderPayload | any): Promise<{ succ
  */
 export const fetchPendingOrders = async (customerId: number, email?: string): Promise<Order[]> => {
   try {
-    let query = '/wc/v3/orders?status=pending&per_page=5';
-
+    let url = `${API_BASE}/api/orders?status=pending`;
     if (customerId && customerId > 0) {
-      query += `&customer=${customerId}`;
+      url += `&userId=${customerId}`;
     } else if (email) {
-      // Buscar por email en billing
-      query += `&search=${encodeURIComponent(email)}`;
+      url += `&email=${encodeURIComponent(email)}`;
     } else {
       return [];
     }
 
-    const { data } = await makeRequest(query);
-    return data as Order[];
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    return await res.json() as Order[];
   } catch (error) {
     console.error('[ORDERS] Failed to fetch pending orders:', error);
     return [];
@@ -390,80 +412,35 @@ const formatUserResponse = (customer: any): User => {
  */
 export const fetchCustomerByEmail = async (email: string): Promise<User | null> => {
   try {
-    const { data } = await makeRequest(`/wc/v3/customers?email=${encodeURIComponent(email)}`);
-    const customers = data as any[];
-
-    if (customers && customers.length > 0) {
-      const customer = customers[0];
-      let avatarUrl = customer.avatar_url;
-      let garage = undefined;
-      
-      if (customer.meta_data) {
-        const customAvatar = customer.meta_data.find((m: any) => m.key === '_custom_avatar');
-        if (customAvatar) {
-          avatarUrl = customAvatar.value;
-        }
-        
-        const garageMeta = customer.meta_data.find((m: any) => m.key === '_user_garage');
-        if (garageMeta && garageMeta.value) {
-          try {
-            garage = JSON.parse(garageMeta.value);
-          } catch(e) {}
-        }
-      }
-
-      const user = formatUserResponse(customer);
-      user.avatarUrl = avatarUrl;
-      if (garage) user.garage = garage;
-      return user;
-    }
-    return null;
+    const res = await fetch(`${API_BASE}/api/auth?action=get-profile&email=${encodeURIComponent(email)}`);
+    if (!res.ok) return null;
+    const user = await res.json();
+    return user as User;
   } catch (error) {
-    console.error('[WC] Error fetching customer by email:', error);
+    console.error('[CATALOG] Error fetching customer by email:', error);
     return null;
   }
 };
 
 export const updateCustomer = async (userId: number, data: Partial<User>): Promise<boolean> => {
   try {
-    const payload: any = {};
-
-    // Only include fields that have values
-    if (data.firstName) payload.first_name = data.firstName;
-    if (data.lastName !== undefined) payload.last_name = data.lastName || '';
-    if (data.email) payload.email = data.email;
-
-    // Handle billing data - only include if there's actual data
-    if (data.billing) {
-      payload.billing = {
-        first_name: data.firstName || '',
-        last_name: data.lastName || '',
-        email: data.email || ''
-      };
-
-      // Add optional fields only if they have values
-      if (data.billing.address_1) payload.billing.address_1 = data.billing.address_1;
-      if (data.billing.city) payload.billing.city = data.billing.city;
-      if (data.billing.postcode) payload.billing.postcode = data.billing.postcode;
-      if (data.billing.phone) payload.billing.phone = data.billing.phone;
-    }
-    
-    if (data.garage !== undefined) {
-      payload.meta_data = [
-        {
-          key: '_user_garage',
-          value: JSON.stringify(data.garage)
-        }
-      ];
-    }
-
-    await makeRequest(`/wc/v3/customers/${userId}`, {
-      method: 'PUT',
-      body: JSON.stringify(payload)
+    const response = await fetch(`${API_BASE}/api/auth?action=update-profile`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        userId,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        billing: data.billing,
+        garage: data.garage,
+        avatarUrl: data.avatarUrl
+      })
     });
-    return true;
+    return response.ok;
   } catch (error) {
-    console.error('[WC] Error updating customer:', error);
+    console.error('[CATALOG] Error updating customer:', error);
     return false;
   }
 };
@@ -484,23 +461,17 @@ export const saveUserCart = async (userId: number, cartItems: CartItemData[]): P
   if (!userId || userId === 0) return false;
 
   try {
-    await makeRequest(`/wc/v3/customers/${userId}`, {
-      method: 'PUT',
+    const response = await fetch(`${API_BASE}/api/auth?action=save-cart`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({
-        meta_data: [
-          {
-            key: '_saved_cart',
-            value: JSON.stringify(cartItems)
-          },
-          {
-            key: '_saved_cart_date',
-            value: new Date().toISOString()
-          }
-        ]
+        userId,
+        cart: cartItems
       })
     });
-    console.log('[CART SYNC] Cart saved for user:', userId);
-    return true;
+    return response.ok;
   } catch (error) {
     console.error('[CART SYNC] Failed to save cart:', error);
     return false;
@@ -514,18 +485,10 @@ export const getUserCart = async (userId: number): Promise<CartItemData[]> => {
   if (!userId || userId === 0) return [];
 
   try {
-    const { data } = await makeRequest(`/wc/v3/customers/${userId}`);
-    const customer = data as any;
-
-    if (customer.meta_data) {
-      const savedCart = customer.meta_data.find((m: any) => m.key === '_saved_cart');
-      if (savedCart && savedCart.value) {
-        const parsed = JSON.parse(savedCart.value);
-        console.log('[CART SYNC] Cart recovered for user:', userId, parsed);
-        return parsed;
-      }
-    }
-    return [];
+    const response = await fetch(`${API_BASE}/api/auth?action=get-profile&id=${userId}`);
+    if (!response.ok) return [];
+    const profile = await response.json();
+    return (profile.cart || []) as CartItemData[];
   } catch (error) {
     console.error('[CART SYNC] Failed to get cart:', error);
     return [];
@@ -541,17 +504,31 @@ export const getUserCart = async (userId: number): Promise<CartItemData[]> => {
  */
 export const updateOrderStatus = async (
   orderId: number,
-  status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled'
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled',
+  paymentId?: string
 ): Promise<boolean> => {
   try {
-    await makeRequest(`/wc/v3/orders/${orderId}`, {
-      method: 'PUT',
-      body: JSON.stringify({ status })
+    const response = await fetch(`${API_BASE}/api/orders/finalize`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        orderId,
+        paymentId: paymentId || `TX-${Date.now()}`,
+        status
+      })
     });
-    console.log(`[ORDER] Updated order ${orderId} to status: ${status}`);
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || `Error ${response.status}`);
+    }
+
+    console.log(`[ORDER] Updated PostgreSQL order ${orderId} to status: ${status}`);
     return true;
   } catch (error) {
-    console.error('[ORDER] Failed to update status:', error);
+    console.error('[ORDER] Failed to update status in PostgreSQL:', error);
     return false;
   }
 };
@@ -559,36 +536,54 @@ export const updateOrderStatus = async (
 /**
  * Obtiene los pedidos de un cliente
  */
-export const fetchCustomerOrders = async (customerId: number, status: string = 'any'): Promise<Order[]> => {
-  console.log('[ORDERS] 🔍 Fetching orders for customer ID:', customerId, '| Status filter:', status);
+export const fetchCustomerOrders = async (
+  customerId: number,
+  status: string = 'any',
+  email?: string
+): Promise<Order[] | any[]> => {
+  console.log('[ORDERS] 🔍 Fetching PostgreSQL orders. Email:', email, '| Status filter:', status);
 
-  // Validate customer ID
-  if (!customerId || customerId === 0) {
-    console.error('[ORDERS] ❌ Invalid customer ID:', customerId);
-    throw new Error('ID de cliente inválido. Por favor, cierra sesión y vuelve a iniciar sesión.');
+  if (!email) {
+    console.warn('[ORDERS] No email provided, attempting to recover from local storage');
+    const localUserStr = localStorage.getItem('escapes_user');
+    if (localUserStr) {
+      try {
+        const localUser = JSON.parse(localUserStr);
+        email = localUser.email || localUser.user_email;
+      } catch {}
+    }
   }
 
-  // Build endpoint
-  let endpoint = `/wc/v3/orders?customer=${customerId}&per_page=50`;
-  if (status !== 'any') {
-    endpoint += `&status=${status}`;
+  if (!email) {
+    console.error('[ORDERS] ❌ No user email found to fetch orders');
+    return [];
   }
-
-  console.log('[ORDERS] 📡 API endpoint:', endpoint);
 
   try {
-    const { data } = await makeRequest(endpoint);
-    console.log('[ORDERS] ✅ Received', Array.isArray(data) ? data.length : 0, 'orders');
-
-    if (!Array.isArray(data)) {
-      console.error('[ORDERS] ❌ API returned non-array:', data);
-      throw new Error('Respuesta inesperada del servidor');
+    const response = await fetch(`${API_BASE}/api/orders/my-orders?userEmail=${encodeURIComponent(email)}`);
+    if (!response.ok) {
+      throw new Error(`Error ${response.status}`);
     }
 
-    return data as Order[];
+    const pgOrders = await response.json();
+
+    // Traducir de esquema de PostgreSQL a WooCommerce para compatibilidad con el frontend React
+    return pgOrders.map((order: any) => ({
+      id: order.id,
+      status: order.status,
+      date_created: order.createdAt,
+      total: order.total.toString(),
+      line_items: order.items.map((item: any) => ({
+        id: item.id,
+        name: item.productName,
+        quantity: item.quantity,
+        total: (item.price * item.quantity).toString(),
+        product_id: item.productId
+      }))
+    })).filter((order: any) => status === 'any' || order.status === status);
   } catch (error: any) {
-    console.error('[ORDERS] ❌ Error fetching orders:', error);
-    throw new Error(error.message || 'Error al cargar pedidos del servidor');
+    console.error('[ORDERS] Failed to fetch PostgreSQL orders:', error);
+    return [];
   }
 };
 
@@ -606,19 +601,14 @@ export interface AvatarOption {
  * Busca imágenes en la media library de WordPress que contengan "AVATAR" en el título
  */
 export const fetchAvatars = async (): Promise<AvatarOption[]> => {
-  try {
-    // Usar la API de WordPress Media para buscar por título
-    const { data } = await makeRequest('/wp/v2/media?search=AVATAR&per_page=20&media_type=image');
-
-    return (data as any[]).map(media => ({
-      id: media.id,
-      url: media.source_url || media.guid?.rendered || '',
-      title: media.title?.rendered || `Avatar ${media.id}`
-    })).filter(a => a.url); // Solo devolver los que tienen URL
-  } catch (error) {
-    console.error('[AVATAR] Failed to fetch avatars from media library:', error);
-    return [];
-  }
+  return [
+    { id: 1, url: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=150&auto=format&fit=crop', title: 'Moto Retro' },
+    { id: 2, url: 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=150&auto=format&fit=crop', title: 'Rider Black' },
+    { id: 3, url: 'https://images.unsplash.com/photo-1599819811279-d5ad9cccf838?w=150&auto=format&fit=crop', title: 'Superbike' },
+    { id: 4, url: 'https://images.unsplash.com/photo-1558981359-219d6364c9c8?w=150&auto=format&fit=crop', title: 'Chopper Custom' },
+    { id: 5, url: 'https://images.unsplash.com/photo-1609630875171-b1321377ee65?w=150&auto=format&fit=crop', title: 'Enduro Mud' },
+    { id: 6, url: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=150&auto=format&fit=crop', title: 'Helmet Carbon' }
+  ];
 };
 
 /**
@@ -628,61 +618,32 @@ export const fetchAvatars = async (): Promise<AvatarOption[]> => {
 export const updateCustomerAvatar = async (userId: number, avatarData: string | number): Promise<boolean> => {
   if (!userId || userId === 0) return false;
 
-  const meta_data = [];
-
-  if (typeof avatarData === 'number') {
-    // Es un ID (Media Library)
-    meta_data.push({ key: 'wp_user_avatar', value: avatarData });
+  let avatarUrl = "";
+  if (typeof avatarData === 'string') {
+    avatarUrl = avatarData;
   } else {
-    // Es una URL (Legacy o Fallback)
-    meta_data.push({ key: '_custom_avatar', value: avatarData });
-    // Intenta guardar también en wp_user_avatar si parece un ID, o déjalo.
-    // Si solo tenemos URL, no podemos deducir el ID fácilmente sin buscar.
+    avatarUrl = `/assets/avatars/avatar-${avatarData}.png`;
   }
 
-  try {
-    await makeRequest(`/wc/v3/customers/${userId}`, {
-      method: 'PUT',
-      body: JSON.stringify({ meta_data })
-    });
-    console.log('[AVATAR] Avatar updated for user:', userId);
-    return true;
-  } catch (error) {
-    console.error('[AVATAR] Failed to update avatar:', error);
-    return false;
-  }
+  return updateCustomer(userId, { avatarUrl });
 };
 
-/**
- * Sube una foto personalizada para el cliente
- */
 export const uploadFile = async (file: File): Promise<{ id: number; url: string }> => {
-  let baseUrl = WOO_CONFIG.baseUrl.replace(/\/$/, "");
-  // Use WP API Media endpoint
-  const url = `${baseUrl}/wp-json/wp/v2/media`;
-
-  const credentials = btoa(`${WOO_CONFIG.consumerKey}:${WOO_CONFIG.consumerSecret}`);
-  const headers = {
-    'Authorization': `Basic ${credentials}`,
-    'Content-Disposition': `attachment; filename="${file.name}"`,
-    'Cache-Control': 'no-cache'
-  };
-
   try {
-    const response = await fetch(url + `?_t=${new Date().getTime()}`, {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_BASE}/api/upload/generic`, {
       method: 'POST',
-      headers: headers,
-      body: file
+      body: formData
     });
 
     if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.message || 'Error al subir archivo');
+      throw new Error('Error al subir archivo');
     }
 
     const data = await response.json();
-    console.log('[UPLOAD] Success:', data.id, data.source_url);
-    return { id: data.id, url: data.source_url };
+    return { id: data.id, url: data.url };
   } catch (error) {
     console.error('[UPLOAD] Error:', error);
     throw error;
@@ -700,7 +661,7 @@ export const uploadCustomerPhoto = async (userId: number, file: File, token?: st
     formData.append('avatar', file);
 
     // Usar nuestro endpoint local en server.js
-    const response = await fetch(`/api/upload/avatar`, {
+    const response = await fetch(`${API_BASE}/api/upload/avatar`, {
       method: 'POST',
       // NO establecer Content-Type header manualmente con FormData, fetch lo hace automático con boundary
       body: formData,
@@ -726,15 +687,9 @@ export const searchUsers = async (query: string): Promise<{ id: number; name: st
   if (!query || query.length < 2) return [];
 
   try {
-    // Usamos endpoints de WP o WC. WC Customers es más seguro si tenemos keys de tienda.
-    const { data } = await makeRequest(`/wc/v3/customers?search=${encodeURIComponent(query)}&per_page=5`);
-    const customers = data as any[];
-
-    return customers.map(c => ({
-      id: c.id,
-      name: c.username || c.first_name + ' ' + c.last_name,
-      avatar: c.avatar_url || ''
-    }));
+    const res = await fetch(`${API_BASE}/api/auth?action=search-users&q=${encodeURIComponent(query)}`);
+    if (!res.ok) return [];
+    return await res.json();
   } catch (error) {
     console.error('[SEARCH USERS] Error:', error);
     return [];
@@ -746,7 +701,8 @@ export const searchUsers = async (query: string): Promise<{ id: number; name: st
 // =====================
 
 /**
- * Obtiene el rango y stats de un usuario
+/**
+ * Obtiene el rango y stats de un usuario — endpoint nativo PostgreSQL
  */
 export const fetchUserRank = async (userId: number): Promise<UserRank> => {
   if (!userId || userId === 0) return {
@@ -754,20 +710,20 @@ export const fetchUserRank = async (userId: number): Promise<UserRank> => {
   };
 
   try {
-    const { data } = await makeRequest(`/paddock/v1/user/${userId}/rank`);
-    const rank = data as any;
+    const res = await fetch(`${API_BASE}/api/user/${userId}/rank`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const rank = await res.json();
 
-    // Mapear colores e iconos según el título (fallback si el backend no lo envía)
+    // Mapear colores e iconos según el título
     const getRankMeta = (title: string) => {
       switch (title) {
-        case 'Novato': return { color: '#9CA3AF', icon: '🔰' };
-        case 'Aficionado': return { color: '#60A5FA', icon: '🧢' };
-        case 'Entusiasta': return { color: '#34D399', icon: '🔥' };
-        case 'Experto': return { color: '#FBBF24', icon: '⚡' };
-        case 'Pro Racer': return { color: '#F97316', icon: '🏆' };
-        case 'Leyenda': return { color: '#EF4444', icon: '👑' };
-        case 'Administrador': return { color: '#ef4444', icon: '🛡️' };
-        default: return { color: '#9CA3AF', icon: '👤' };
+        case 'Novato':     return { color: '#9CA3AF', icon: '🔰' };
+        case 'Aprendiz':   return { color: '#60A5FA', icon: '⚡' };
+        case 'Piloto':     return { color: '#34D399', icon: '🏁' };
+        case 'Experto':    return { color: '#FBBF24', icon: '🔥' };
+        case 'Profesional': return { color: '#F97316', icon: '💨' };
+        case 'Leyenda':    return { color: '#EF4444', icon: '👑' };
+        default:           return { color: '#9CA3AF', icon: '👤' };
       }
     };
 
@@ -780,10 +736,10 @@ export const fetchUserRank = async (userId: number): Promise<UserRank> => {
       xpToNext: rank.next_xp,
       discount: rank.discount,
       color: meta.color,
-      icon: meta.icon
+      icon: meta.icon || rank.icon
     };
   } catch (error) {
-    console.error('[PADDOCK] Error fetching rank:', error);
+    console.error('[RANK] Error fetching rank:', error);
     return {
       level: 1, title: 'Novato', xp: 0, xpToNext: 100, discount: 0, color: '#9CA3AF', icon: '🔰'
     };
@@ -884,8 +840,10 @@ export const fetchCompatibleCategories = async (brand: string, model: string, ye
  */
 export const fetchProductCompatibility = async (productId: number): Promise<{ brand: string, model: string, year?: string }[]> => {
   try {
-    const { data } = await makeRequest(`/escapes/v1/product-compatibility?product_id=${productId}`);
-    return (data as any).bikes;
+    const response = await fetch(`${API_BASE}/api/catalog/product-compatibility/${productId}`);
+    if (!response.ok) throw new Error('Error al obtener compatibilidad');
+    const data = await response.json();
+    return data || [];
   } catch (error) {
     console.error('[COMPATIBILITY] Error fetching product compatibility:', error);
     return [];
@@ -905,7 +863,7 @@ export const fetchCompatibleProducts = async (
 ): Promise<{ products: Product[], totalPages: number, totalProducts: number }> => {
   try {
     // 1. Get compatible SKUs from our high-performance SQLite DB on Vercel
-    const skuPath = `/api/vehicles?action=compatible-skus&brand=${encodeURIComponent(brand)}&model=${encodeURIComponent(model)}&page=${page}&per_page=${perPage}`;
+    const skuPath = `${API_BASE}/api/vehicles?action=compatible-skus&brand=${encodeURIComponent(brand)}&model=${encodeURIComponent(model)}&page=${page}&per_page=${perPage}`;
     const yearParam = (year && year !== 'General' && year !== '') ? `&year=${encodeURIComponent(year)}` : '';
     
     const skuRes = await fetch(skuPath + yearParam);
@@ -913,30 +871,31 @@ export const fetchCompatibleProducts = async (
     
     if (skus.length === 0) return { products: [], totalPages: 1, totalProducts: 0 };
 
-    // 2. Fetch the actual products from WordPress using our new fast SKU lookup
-    let wpPath = `/escapes/v1/products-by-skus?skus=${skus.slice(0, perPage).join(',')}`;
-    if (categoryId) wpPath += `&category_id=${categoryId}`;
+    // 2. Fetch the actual products natively from PostgreSQL
+    let fetchUrl = `${API_BASE}/api/catalog/products-by-skus?skus=${skus.slice(0, perPage).join(',')}`;
+    if (categoryId) fetchUrl += `&category_id=${categoryId}`;
 
-    const { data } = await makeRequest(wpPath);
+    const response = await fetch(fetchUrl);
+    const data = await response.json();
     
     const products = (data as any[]).map(p => ({
       id: p.id,
-      title: p.name,
+      title: p.title || p.name,
       slug: p.slug,
-      price: parseFloat(p.price || "0"),
-      regularPrice: parseFloat(p.regular_price || p.price || "0"),
+      price: typeof p.price === 'string' ? parseFloat(p.price) : p.price,
+      regularPrice: typeof p.regularPrice === 'string' ? parseFloat(p.regularPrice) : p.regularPrice,
       sku: p.sku || `REF-${p.id}`,
-      image: p.images?.[0]?.src || '',
-      images: (p.images || []).map((img: any) => ({ src: img.src, alt: p.name })),
-      inStock: p.stock_status === 'instock',
-      category: p.categories?.[0]?.name || 'General',
-      categorySlug: p.categories?.[0]?.slug || 'recambios',
-      categoryId: p.categories?.[0]?.id || 0,
-      description: p.description,
-      shortDescription: p.short_description,
+      image: p.image || p.images?.[0]?.src || '',
+      images: (p.images || []).map((img: any) => ({ src: img.src || img, alt: p.title || p.name })),
+      inStock: p.inStock,
+      category: p.category || 'General',
+      categorySlug: p.categorySlug || 'recambios',
+      categoryId: p.categoryId || 0,
+      description: p.description || '',
+      shortDescription: p.shortDescription || '',
       attributes: p.attributes || [],
-      averageRating: parseFloat(p.average_rating || "0"),
-      ratingCount: p.rating_count || 0
+      averageRating: p.averageRating || 0,
+      ratingCount: p.ratingCount || 0
     }));
 
     return { 
@@ -957,7 +916,7 @@ export const fetchCompatibleProducts = async (
 
 export const fetchMasterBrands = async (): Promise<string[]> => {
     try {
-        const res = await fetch('/api/vehicles?action=brands');
+        const res = await fetch(`${API_BASE}/api/vehicles?action=brands`);
         const data = await res.json();
         return data as string[];
     } catch (error) {
@@ -969,7 +928,7 @@ export const fetchMasterBrands = async (): Promise<string[]> => {
 export const fetchMasterModels = async (brand: string): Promise<string[]> => {
     if (!brand) return [];
     try {
-        const res = await fetch(`/api/vehicles?action=models&brand=${encodeURIComponent(brand)}`);
+        const res = await fetch(`${API_BASE}/api/vehicles?action=models&brand=${encodeURIComponent(brand)}`);
         const data = await res.json();
         return data as string[];
     } catch (error) {
@@ -981,7 +940,7 @@ export const fetchMasterModels = async (brand: string): Promise<string[]> => {
 export const fetchMasterYears = async (brand: string, model: string): Promise<string[]> => {
     if (!brand || !model) return [];
     try {
-        const res = await fetch(`/api/vehicles?action=years&brand=${encodeURIComponent(brand)}&model=${encodeURIComponent(model)}`);
+        const res = await fetch(`${API_BASE}/api/vehicles?action=years&brand=${encodeURIComponent(brand)}&model=${encodeURIComponent(model)}`);
         const data = await res.json();
         return data as string[];
     } catch (error) {

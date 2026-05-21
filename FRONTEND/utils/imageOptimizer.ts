@@ -29,14 +29,23 @@ export const optimizeImage = (
   url: string,
   options: OptimizeOptions = {}
 ): string => {
-  if (!url) return '';
+  if (!url || url.includes('wp-content/') || url.includes('wp-json/')) {
+    // Retornar un fallback premium y limpio para imágenes rotas/borradas de WordPress
+    if (options.width && options.width <= 200) {
+      return 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=150&auto=format&fit=crop';
+    }
+    return 'https://placehold.co/800x800/18181b/f97316?text=ESCAPES+Y+MAS';
+  }
 
   // Si la imagen ya es local o data URI, no optimizar con servicio externo
   if (url.startsWith('data:') || url.startsWith('/')) return url;
 
-  // Handle already proxied URLs or backend URLs
-  const isProxied = url.startsWith('/api/proxy?');
+  // Si la imagen pertenece al backend, retornarla directamente sin pasar por el proxy inexistente
   const isBackend = url.startsWith('https://backendescapes.com/');
+  if (isBackend) return url;
+
+  // Handle already proxied URLs
+  const isProxied = url.startsWith('/api/proxy?');
 
   if (isProxied || isBackend) {
     let relativePath = '';

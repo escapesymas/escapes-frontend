@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
     MessageSquare, Clock, Hash, ChevronRight, ArrowLeft, Send,
     User, Loader2, PlusCircle, AlertCircle, CheckCircle,
-    Trash2, Heart, Share2, Search, RefreshCw
+    Trash2, Heart, Share2, Search, RefreshCw, Lock
 } from 'lucide-react';
 import { User as UserType } from '../../types';
 import {
@@ -14,6 +14,9 @@ import {
 import { RichTextEditor } from '../RichTextEditor'; // Assuming this is reusable
 import { SEO } from '../SEO';
 import { RankBadge } from '../RankBadge';
+import { autoLinkHtml, registerDynamicKeywords } from '../../utils/autoLinker';
+import { fetchProducts, fetchProductsByIds } from '../../services/woocommerce';
+import { ProductCard } from '../ProductCard';
 
 const CategoryFolder: React.FC<{ 
     category: PaddockCategory; 
@@ -92,9 +95,10 @@ interface PaddockProps {
     user: UserType | null;
     onBack: () => void;
     onLoginRequest: () => void;
+    onAddToCart?: (product: any) => void;
 }
 
-export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }) => {
+export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest, onAddToCart }) => {
     const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
 
@@ -115,17 +119,162 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [recommendedProducts, setRecommendedProducts] = useState<any[]>([]);
+    const [loadingProducts, setLoadingProducts] = useState(false);
+
+    // Product Tagging States
+    const [isTagModalOpen, setIsTagModalOpen] = useState(false);
+    const [tagTarget, setTagTarget] = useState<'thread' | 'reply'>('thread');
+    const [tagSearchQuery, setTagSearchQuery] = useState('');
+    const [tagSearchResults, setTagSearchResults] = useState<any[]>([]);
+    const [loadingTagSearch, setLoadingTagSearch] = useState(false);
+    const [taggedProductsMap, setTaggedProductsMap] = useState<Record<number, any>>({});
 
     // Inputs
     const [newThreadTitle, setNewThreadTitle] = useState('');
     const [newThreadContent, setNewThreadContent] = useState('');
     const [replyContent, setReplyContent] = useState('');
 
+    // Contextual matching engine for recommending catalog products inside threads
+    const loadRecommendedProducts = async () => {
+        if (!selectedThread) return;
+        setLoadingProducts(true);
+        try {
+            // Fetch catalog products page 1
+            const result = await fetchProducts("", undefined, 1, 30);
+            const allProducts = result.products || [];
+            
+            // Scan thread title and content for keywords to filter
+            const textToScan = `${selectedThread.title || ''} ${selectedThread.content || ''}`.toLowerCase();
+            
+            // Filter products whose brand, category name, title or tags matches
+            const matched = allProducts.filter(p => {
+                if (!p) return false;
+                const titleWords = p.title?.toLowerCase().split(/\s+/) || [];
+                const titleMatch = titleWords.some(word => word.length > 3 && textToScan.includes(word));
+                const brandMatch = p.brand && textToScan.includes(p.brand.toLowerCase());
+                const categoryMatch = p.category && textToScan.includes(p.category.toLowerCase());
+                return titleMatch || brandMatch || categoryMatch;
+            });
+            
+            // Limit to 3 recommended products
+            setRecommendedProducts(matched.slice(0, 3));
+        } catch (err) {
+            console.error("Error loading forum products:", err);
+        } finally {
+            setLoadingProducts(false);
+        }
+    };
+
+    // Contextual product loader hook
+    useEffect(() => {
+        if (view === 'thread_detail' && selectedThread) {
+            loadRecommendedProducts();
+        } else {
+            setRecommendedProducts([]);
+        }
+    }, [view, selectedThread?.id]);
+
+    // Scans thread content and replies for tagged shortcodes and resolves them from WooCommerce catalog
+    const loadTaggedProducts = async (thread: PaddockThread, threadReplies: any[]) => {
+        if (!thread) return;
+        const ids = new Set<number>();
+        const productRegex = /\[product-(\d+)\]/g;
+        
+        let match;
+        // Scan thread content
+        if (thread.content) {
+            while ((match = productRegex.exec(thread.content)) !== null) {
+                ids.add(parseInt(match[1]));
+            }
+        }
+        
+        // Scan replies
+        threadReplies.forEach(reply => {
+            if (reply.content) {
+                // reset regex index
+                productRegex.lastIndex = 0;
+                while ((match = productRegex.exec(reply.content)) !== null) {
+                    ids.add(parseInt(match[1]));
+                }
+            }
+        });
+        
+        if (ids.size === 0) {
+            setTaggedProductsMap({});
+            return;
+        }
+        
+        try {
+            const productIdsArray = Array.from(ids);
+            const fetched = await fetchProductsByIds(productIdsArray);
+            
+            const map: Record<number, any> = {};
+            fetched.forEach(p => {
+                if (p) map[p.id] = p;
+            });
+            setTaggedProductsMap(map);
+        } catch (err) {
+            console.error("Error loading tagged products:", err);
+        }
+    };
+
+    // Live search catalog for tagging modal
+    const handleTagSearch = async (query: string) => {
+        setTagSearchQuery(query);
+        if (query.trim().length < 2) {
+            setTagSearchResults([]);
+            return;
+        }
+        setLoadingTagSearch(true);
+        try {
+            const res = await fetchProducts(query, undefined, 1, 10);
+            setTagSearchResults(res.products || []);
+        } catch (err) {
+            console.error("Error searching products to tag:", err);
+        } finally {
+            setLoadingTagSearch(false);
+        }
+    };
+
+    // Inserts the selected shortcode token into the corresponding editor input
+    const handleSelectTagProduct = (product: any) => {
+        if (!product) return;
+        const token = ` [product-${product.id}] `;
+        if (tagTarget === 'thread') {
+            setNewThreadContent(prev => prev + token);
+        } else {
+            setReplyContent(prev => prev + token);
+        }
+        setIsTagModalOpen(false);
+        setTagSearchQuery('');
+        setTagSearchResults([]);
+    };
+
+    const openTagModal = (target: 'thread' | 'reply') => {
+        setTagTarget(target);
+        setIsTagModalOpen(true);
+    };
+
     // --- EFFECTS ---
 
-    // Load Categories on Mount
+    // Load Categories and SEO Keywords on Mount
     useEffect(() => {
         loadCategories();
+        
+        const loadSeoKeywords = async () => {
+            try {
+                const res = await fetch('/api/seo/autolinks');
+                if (res.ok) {
+                    const mapping = await res.json();
+                    const list = Object.entries(mapping).map(([keyword, url]: any) => ({ keyword, url, active: 1 }));
+                    registerDynamicKeywords(list);
+                }
+            } catch (e) {
+                console.error("Error al cargar SEO keywords dinámicos:", e);
+            }
+        };
+        loadSeoKeywords();
     }, []);
 
     const findCategoryById = (cats: PaddockCategory[], id: number): PaddockCategory | undefined => {
@@ -159,6 +308,7 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
             if (result) {
                 setSelectedThread(result.thread);
                 setReplies(result.replies);
+                loadTaggedProducts(result.thread, result.replies);
             }
             setLoading(false);
         }
@@ -221,7 +371,10 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
         if (result.success) {
             setReplyContent('');
             const updated = await fetchPaddockThread(selectedThread.id);
-            if (updated) setReplies(updated.replies);
+            if (updated) {
+                setReplies(updated.replies);
+                loadTaggedProducts(selectedThread, updated.replies);
+            }
             setSuccessMsg("Respuesta enviada");
             setTimeout(() => setSuccessMsg(null), 3000);
         } else {
@@ -264,9 +417,205 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
         return 'Paddock';
     };
 
+    // Build JSON-LD structured data dynamically for SEO
+    const getJsonLd = () => {
+        const baseUrl = 'https://escapesymas.com';
+        
+        if (view === 'categories') {
+            return [
+                {
+                    "@context": "https://schema.org",
+                    "@type": "BreadcrumbList",
+                    "itemListElement": [
+                        {
+                            "@type": "ListItem",
+                            "position": 1,
+                            "name": "Inicio",
+                            "item": `${baseUrl}/`
+                        },
+                        {
+                            "@type": "ListItem",
+                            "position": 2,
+                            "name": "Paddock Foro",
+                            "item": `${baseUrl}/paddock`
+                        }
+                    ]
+                },
+                {
+                    "@context": "https://schema.org",
+                    "@type": "CollectionPage",
+                    "name": "Paddock - Foro de Motos",
+                    "description": "El corazón de la comunidad motera. Comparte conocimientos, organiza rutas, quedadas y discute sobre mecánica.",
+                    "url": `${baseUrl}/paddock`
+                }
+            ];
+        }
+
+        if (view === 'threads' && selectedCategory) {
+            return [
+                {
+                    "@context": "https://schema.org",
+                    "@type": "BreadcrumbList",
+                    "itemListElement": [
+                        {
+                            "@type": "ListItem",
+                            "position": 1,
+                            "name": "Inicio",
+                            "item": `${baseUrl}/`
+                        },
+                        {
+                            "@type": "ListItem",
+                            "position": 2,
+                            "name": "Paddock Foro",
+                            "item": `${baseUrl}/paddock`
+                        },
+                        {
+                            "@type": "ListItem",
+                            "position": 3,
+                            "name": selectedCategory.title,
+                            "item": `${baseUrl}/paddock?view=threads&cat=${selectedCategory.id}`
+                        }
+                    ]
+                },
+                {
+                    "@context": "https://schema.org",
+                    "@type": "CollectionPage",
+                    "name": `${selectedCategory.title} | Paddock`,
+                    "description": selectedCategory.description,
+                    "url": `${baseUrl}/paddock?view=threads&cat=${selectedCategory.id}`
+                }
+            ];
+        }
+
+        if (view === 'thread_detail' && selectedThread) {
+            const threadUrl = `${baseUrl}/paddock?view=thread_detail&cat=${categoryId}&thread=${selectedThread.id}`;
+            const cleanBody = selectedThread.content?.replace(/<[^>]*>/g, '').trim().substring(0, 300) || '';
+            
+            const comments = replies.map((reply, idx) => ({
+                "@type": "Comment",
+                "text": reply.content?.replace(/<[^>]*>/g, '').trim() || '',
+                "dateCreated": reply.created_at || reply.date || new Date().toISOString(),
+                "position": idx + 1,
+                "author": {
+                    "@type": "Person",
+                    "name": reply.author || 'Piloto'
+                }
+            }));
+
+            return [
+                {
+                    "@context": "https://schema.org",
+                    "@type": "BreadcrumbList",
+                    "itemListElement": [
+                        {
+                            "@type": "ListItem",
+                            "position": 1,
+                            "name": "Inicio",
+                            "item": `${baseUrl}/`
+                        },
+                        {
+                            "@type": "ListItem",
+                            "position": 2,
+                            "name": "Paddock Foro",
+                            "item": `${baseUrl}/paddock`
+                        },
+                        {
+                            "@type": "ListItem",
+                            "position": 3,
+                            "name": selectedCategory?.title || "Categoría",
+                            "item": `${baseUrl}/paddock?view=threads&cat=${categoryId}`
+                        },
+                        {
+                            "@type": "ListItem",
+                            "position": 4,
+                            "name": selectedThread.title,
+                            "item": threadUrl
+                        }
+                    ]
+                },
+                {
+                    "@context": "https://schema.org",
+                    "@type": "DiscussionForumPosting",
+                    "mainEntityOfPage": threadUrl,
+                    "headline": selectedThread.title,
+                    "articleBody": cleanBody,
+                    "datePublished": selectedThread.created_at || new Date().toISOString(),
+                    "author": {
+                        "@type": "Person",
+                        "name": selectedThread.author?.name || 'Piloto Anónimo'
+                    },
+                    "interactionStatistic": {
+                        "@type": "InteractionCounter",
+                        "interactionType": "https://schema.org/CommentAction",
+                        "userInteractionCount": replies.length
+                    },
+                    "comment": comments
+                }
+            ];
+        }
+
+        return undefined;
+    };
+
+    const renderPostContent = (content: string) => {
+        if (!content) return null;
+
+        // 1. Apply auto-linking for SEO brands/keywords
+        let linked = autoLinkHtml(content);
+
+        // 2. Parse tagged products [product-123] and inject inline preview components
+        const parts = linked.split(/(\[product-\d+\])/g);
+        
+        return (
+            <div className="space-y-4 text-zinc-800 dark:text-zinc-300 leading-relaxed text-sm md:text-base break-words">
+                {parts.map((part, index) => {
+                    const match = part.match(/\[product-(\d+)\]/);
+                    if (match) {
+                        const pid = parseInt(match[1]);
+                        const product = taggedProductsMap[pid];
+                        if (product) {
+                            return (
+                                <div key={index} className="my-6 p-4 bg-zinc-50 dark:bg-zinc-950/40 rounded-xl border border-zinc-150 dark:border-zinc-850 flex items-center justify-between gap-4 max-w-md shadow-sm transition-all hover:shadow-md hover:border-racing-orange/30">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-14 h-14 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 overflow-hidden flex-shrink-0">
+                                            <img src={product.image} className="w-full h-full object-cover" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-bold text-zinc-900 dark:text-white line-clamp-1">{product.title}</h4>
+                                            <span className="text-xs text-racing-orange font-bold font-mono">{product.price}€</span>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        onClick={() => onAddToCart?.(product)}
+                                        className="bg-zinc-900 dark:bg-zinc-800 hover:bg-racing-orange dark:hover:bg-racing-orange text-white text-xs font-bold uppercase py-2 px-3 rounded-lg transition-colors flex-shrink-0"
+                                    >
+                                        Añadir
+                                    </button>
+                                </div>
+                            );
+                        }
+                        return null; // Don't render raw shortcode if not loaded yet
+                    }
+
+                    // Otherwise, render HTML safely with our auto-links
+                    return (
+                        <span 
+                            key={index} 
+                            dangerouslySetInnerHTML={{ __html: part }} 
+                        />
+                    );
+                })}
+            </div>
+        );
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-black animate-fade-in pb-20 pt-8">
-            <SEO title={getPageTitle()} description="Foro de motos y mecánica" />
+            <SEO 
+                title={getPageTitle()} 
+                description={view === 'thread_detail' && selectedThread ? selectedThread.content?.replace(/<[^>]*>/g, '').trim().substring(0, 155) : "Foro de motos y mecánica"} 
+                jsonLd={getJsonLd()}
+            />
 
             <div className="container mx-auto px-4 max-w-6xl">
                 {/* Navigation / Breadcrumbs */}
@@ -457,7 +806,8 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
 
                                         <div className="flex-grow min-w-0">
                                             <div className="flex items-center gap-2 mb-1">
-                                                {thread.is_pinned && <span className="bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-full">Fijado</span>}
+                                                {(thread.isPinned || thread.is_pinned) ? <span className="bg-[#ff4d00]/10 border border-[#ff4d00]/30 text-[#ff4d00] text-[10px] uppercase font-bold px-2 py-0.5 rounded-full">Fijado</span> : null}
+                                                {(thread.isClosed || thread.is_closed) ? <span className="bg-zinc-200 dark:bg-zinc-800 text-zinc-650 dark:text-zinc-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full flex items-center gap-1"><Lock className="w-3 h-3" /> Cerrado</span> : null}
                                                 <h3 className="text-zinc-900 dark:text-white font-bold text-base truncate group-hover:text-racing-orange transition-colors">{thread.title || 'Sin Título'}</h3>
                                             </div>
                                             <div className="flex items-center gap-3 text-xs text-zinc-500">
@@ -499,7 +849,16 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
                             </div>
 
                             <div>
-                                <label className="block text-zinc-500 dark:text-zinc-400 text-xs font-bold uppercase mb-2">Contenido</label>
+                                <div className="flex justify-between items-center mb-2">
+                                    <label className="text-zinc-500 dark:text-zinc-400 text-xs font-bold uppercase">Contenido</label>
+                                    <button 
+                                        type="button"
+                                        onClick={() => openTagModal('thread')} 
+                                        className="text-xs bg-zinc-100 dark:bg-zinc-800 hover:bg-racing-orange hover:text-white text-zinc-600 dark:text-zinc-300 font-bold px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 shadow-sm"
+                                    >
+                                        <Hash className="w-3.5 h-3.5 text-racing-orange group-hover:text-white" /> Etiquetar Producto
+                                    </button>
+                                </div>
                                 <RichTextEditor
                                     value={newThreadContent}
                                     onChange={setNewThreadContent}
@@ -546,7 +905,26 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
 
                                     <h1 className="text-2xl md:text-3xl font-black text-zinc-900 dark:text-white italic uppercase mb-6 leading-tight">{selectedThread.title}</h1>
 
-                                    <div className="prose prose-zinc dark:prose-invert prose-orange max-w-none text-zinc-700 dark:text-zinc-300" dangerouslySetInnerHTML={{ __html: selectedThread.content }} />
+                                    {renderPostContent(selectedThread.content)}
+
+                                    {recommendedProducts.length > 0 && (
+                                        <div className="mt-8 pt-6 border-t border-zinc-150 dark:border-zinc-800/80 animate-fade-in">
+                                            <h4 className="text-xs font-black uppercase italic text-racing-orange tracking-wider mb-4 flex items-center gap-2">
+                                                <span className="w-1.5 h-3 bg-racing-orange inline-block transform -skew-x-12"></span>
+                                                Piezas recomendadas compatibles para este debate
+                                            </h4>
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                                {recommendedProducts.map(product => (
+                                                    <div key={product.id} className="transform hover:-translate-y-1 transition-all duration-300">
+                                                        <ProductCard
+                                                            product={product}
+                                                            onAddToCart={() => onAddToCart?.(product)}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Actions Bar */}
@@ -585,7 +963,7 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
                                                     <span className="text-zinc-500 dark:text-zinc-600 text-xs block">{reply.date}</span>
                                                 </div>
                                             </div>
-                                            <div className="text-zinc-700 dark:text-zinc-300 text-sm prose prose-zinc dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: reply.content }} />
+                                            {renderPostContent(reply.content)}
                                         </div>
                                     </div>
                                 ))}
@@ -593,7 +971,18 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
 
                             {/* Reply Input */}
                             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-xl shadow-sm dark:shadow-none">
-                                <h3 className="text-zinc-900 dark:text-white font-bold mb-4">Tu Respuesta</h3>
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-zinc-900 dark:text-white font-bold">Tu Respuesta</h3>
+                                    {user && (
+                                        <button 
+                                            type="button"
+                                            onClick={() => openTagModal('reply')} 
+                                            className="text-xs bg-zinc-100 dark:bg-zinc-800 hover:bg-racing-orange hover:text-white text-zinc-600 dark:text-zinc-300 font-bold px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 shadow-sm"
+                                        >
+                                            <Hash className="w-3.5 h-3.5 text-racing-orange group-hover:text-white" /> Etiquetar Producto
+                                        </button>
+                                    )}
+                                </div>
                                 {user ? (
                                     <div className="space-y-4">
                                         <RichTextEditor value={replyContent} onChange={setReplyContent} className="bg-gray-50 dark:bg-zinc-950" />
@@ -632,6 +1021,77 @@ export const Paddock: React.FC<PaddockProps> = ({ user, onBack, onLoginRequest }
                     </div>
                 )}
             </div>
+
+            {/* Tag Product Search Modal */}
+            {isTagModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl animate-scale-in">
+                        <div className="p-6 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-gray-50 dark:bg-zinc-950/50">
+                            <div>
+                                <h3 className="text-lg font-black uppercase italic text-zinc-900 dark:text-white">Etiquetar Producto</h3>
+                                <p className="text-xs text-zinc-500 dark:text-zinc-400">Inserta un enlace visual dinámico en tu publicación</p>
+                            </div>
+                            <button 
+                                onClick={() => { setIsTagModalOpen(false); setTagSearchQuery(''); setTagSearchResults([]); }}
+                                className="text-zinc-400 hover:text-zinc-650 dark:hover:text-white font-bold p-1"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div className="relative">
+                                <Search className="absolute left-4 top-3.5 w-5 h-5 text-zinc-400" />
+                                <input
+                                    type="text"
+                                    value={tagSearchQuery}
+                                    onChange={(e) => handleTagSearch(e.target.value)}
+                                    placeholder="Buscar por marca, modelo o escape..."
+                                    className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl py-3.5 pl-12 pr-4 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-600 focus:border-racing-orange focus:ring-1 focus:ring-racing-orange/50 transition-all outline-none font-bold"
+                                    autoFocus
+                                />
+                            </div>
+
+                            <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                                {loadingTagSearch ? (
+                                    <div className="flex flex-col items-center justify-center py-8 text-zinc-400">
+                                        <Loader2 className="w-8 h-8 text-racing-orange animate-spin mb-2" />
+                                        <span className="text-xs font-medium uppercase tracking-wider">Buscando en el catálogo...</span>
+                                    </div>
+                                ) : tagSearchResults.length > 0 ? (
+                                    tagSearchResults.map(product => (
+                                        <div 
+                                            key={product.id}
+                                            onClick={() => handleSelectTagProduct(product)}
+                                            className="p-3 border border-zinc-200 dark:border-zinc-800/80 hover:border-racing-orange dark:hover:border-racing-orange rounded-xl bg-zinc-50/50 dark:bg-zinc-950/20 hover:bg-zinc-100 dark:hover:bg-zinc-900/30 transition-all flex items-center justify-between cursor-pointer group"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-12 h-12 rounded-lg bg-white dark:bg-zinc-850 border border-zinc-200 dark:border-zinc-700 overflow-hidden flex-shrink-0">
+                                                    <img src={product.image} className="w-full h-full object-cover" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-sm font-bold text-zinc-900 dark:text-white group-hover:text-racing-orange transition-colors line-clamp-1">{product.title}</h4>
+                                                    <span className="text-xs text-zinc-500 dark:text-zinc-400 font-bold">{product.price}€</span>
+                                                </div>
+                                            </div>
+                                            <span className="text-[10px] font-black uppercase text-racing-orange opacity-0 group-hover:opacity-100 transition-opacity">
+                                                Insertar +
+                                            </span>
+                                        </div>
+                                    ))
+                                ) : tagSearchQuery.trim().length >= 2 ? (
+                                    <div className="text-center py-8 text-zinc-500">
+                                        No se encontraron productos que coincidan.
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8 text-zinc-400 text-xs font-bold uppercase tracking-wider">
+                                        Escribe al menos 2 letras para buscar...
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

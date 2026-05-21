@@ -15,8 +15,10 @@ type ApiResult<T> = {
   error?: string;
 };
 
+const API_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? '' : 'https://backendescapes.com';
+
 async function safeFetch<T>(url: string, options: RequestInit): Promise<ApiResult<T>> {
-  const res = await fetch(url, options);
+  const res = await fetch(`${API_BASE}${url}`, options);
   const text = await res.text();
 
   try {

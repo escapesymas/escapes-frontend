@@ -4,16 +4,19 @@ Como Consultor Senior en SEO Técnico, WPO y Product Manager, presento a continu
 
 ## 1. Matriz de Prioridades (Impacto vs. Esfuerzo)
 
-| Iniciativa | Impacto Estimado | Esfuerzo Técnico | Prioridad |
+| Iniciativa | Impacto Estimado | Esfuerzo Técnico | Prioridad / Estado |
 | :--- | :---: | :---: | :---: |
-| **Optimización Critical Rendering Path (CRP)** | 🔴 Alto | 🟠 Medio | **P0 - Crítica** |
-| **Estrategia de Caché Híbrida (Foro/Tienda)** | 🔴 Alto | 🔴 Alto | **P1 - Alta** |
-| **Arquitectura de URLs (Marca/Modelo/Año)** | 🔴 Alto | 🔴 Alto | **P1 - Alta** |
-| **Datos Estructurados (Schema.org)** | 🟠 Medio | 🟢 Bajo | **P2 - Media** |
-| **Mi Garaje (Perfil Usuario)** | 🔴 Alto | 🔴 Alto | **P2 - Media** |
-| **Mejora Checkout Móvil** | 🔴 Alto | 🟠 Medio | **P0 - Crítica** |
-| **Optimización Imágenes (WebP/AVIF + Lazy)** | 🟠 Medio | 🟢 Bajo | **P1 - Alta** |
-| **Enlazado Interno Automático (Foro -> Producto)** | 🟠 Medio | 🟠 Medio | **P2 - Media** |
+| **Optimización de CLS en Checkout** | 🔴 Alto | 🟢 Bajo | **✅ COMPLETADA** |
+| **Sistema de Cupones / Promo Codes** | 🔴 Alto | 🟢 Bajo | **✅ COMPLETADA** |
+| **Optimización Critical Rendering Path (CRP)** | 🔴 Alto | 🟠 Medio | **✅ COMPLETADA** |
+| **Mejora Checkout Móvil** | 🔴 Alto | 🟠 Medio | **✅ COMPLETADA** |
+| **Venta Cruzada Contextual en Carrito** | 🔴 Alto | 🟠 Medio | **✅ COMPLETADA** |
+| **Estrategia de Caché Híbrida (Foro/Tienda)** | 🔴 Alto | 🔴 Alto | **✅ COMPLETADA** |
+| **Arquitectura de URLs (Marca/Modelo/Año)** | 🔴 Alto | 🔴 Alto | **✅ COMPLETADA** |
+| **Datos Estructurados (Schema.org)** | 🟠 Medio | 🟢 Bajo | **✅ COMPLETADA** |
+| **Mi Garaje (Perfil Usuario)** | 🔴 Alto | 🔴 Alto | **✅ COMPLETADA** |
+| **Enlazado Interno Automático (Foro -> Producto)** | 🟠 Medio | 🟠 Medio | **✅ COMPLETADA** |
+| **Integración Foro-Tienda ("Etiquetado de Piezas")** | 🔴 Alto | 🟠 Medio | **✅ COMPLETADA** |
 | **Buscador VIN / Matrícula** | 🟣 Muy Alto (UX) | 🔴 Alto | **P3 - Futuro** |
 
 ---
@@ -39,6 +42,12 @@ El desafío es mezclar contenido estático (tienda) con dinámico (foro).
     *   No usar JPG/PNG planos. Usar **SVG** siempre que sea vectorizable para nitidez infinita al hacer zoom.
     *   Si son bitmapped, usar "Lazy Loading" nativo (`loading="lazy"`) y asegurar que tengan dimensiones explícitas (`width`/`height`) para evitar CLS (Cumulative Layout Shift).
     *   Implementar un visor "pan & zoom" eficiente que cargue azulejos (tiling) solo si la imagen original es inmensa (>4k px).
+
+#### Estabilidad Visual y Optimización de CLS en Checkout
+*   **Problema de Lighthouse:** Cambio acumulado de diseño en Checkout (CLS de 0.608) debido a la carga asíncrona de datos del usuario logueado y la inserción tardía del widget de pasarela de pago (SumUp / Klarna).
+*   **Acciones:**
+    *   Implementar un **Auth Gate Skeleton** de alta fidelidad y un cargador de esqueleto en el resumen de compra para reservar espacio estable antes de la carga asíncrona.
+    *   Definir alturas de contenedor mínimas consistentes en CSS (`min-h-[200px]` o `min-h-[80vh]` para toda la página) evitando saltos bruscos tras el montaje del SDK de SumUp.
 
 ### 2. SEO y Arquitectura de la Información
 
@@ -89,3 +98,19 @@ Script que analiza el contenido de los posts del foro:
 #### Sistema de Reseñas Verificadas (Karma + Compra)
 *   Distinguir reseñas de "Comprador Verificado" (icono verde) de "Opinión de Usuario".
 *   Mostrar el "Rango del Foro" del usuario junto a su reseña en el producto. Una opinión de un "Mecánico Experto" (Rango Foro) vale x10 para la conversión que la de un anónimo.
+
+#### Sistema de Cupones y Códigos de Descuento (Promo Codes)
+*   Añadir un input premium colapsable en el resumen del Carrito y en Checkout: *"¿Tienes un cupón de descuento?"*.
+*   Validar cupones en tiempo real del lado del cliente y comunicarlos al backend en PostgreSQL:
+    *   `WELCOME10`: 10% de descuento adicional.
+    *   `RIDER20`: 20% de descuento adicional.
+    *   `ENVIOFREE`: Coste de envío 100% gratuito.
+*   Ofrecer feedback interactivo instantáneo con mensajes en verde/rojo para disparar la sensación de urgencia y recompensa.
+
+#### Venta Cruzada Contextual Activa ("Frecuentemente Comprados Juntos")
+*   Integrar un carrusel dinámico en la parte inferior del carrito activo sugiriendo consumibles o pequeños accesorios de bajo coste (menos de 15€).
+*   **Lógica de Emparejamiento por Categoría:**
+    *   *Sistemas de Escape:* Recomendar abrazaderas de escape, juntas de cobre, silentblocks.
+    *   *Transmisión:* Recomendar grasa de cadena Motul, limpiadores de cadena.
+    *   *Frenos:* Recomendar líquido de frenos Dot 4, limpiador de discos.
+    *   *Genéricos:* Tapones de válvula de aluminio, paños de microfibra premium.

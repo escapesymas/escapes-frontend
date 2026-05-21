@@ -29,26 +29,26 @@ export const MEGA_MENU: MegaMenuItem[] = [
         title: 'Escapes',
         items: [
           { label: 'Bufandas de escape', category: 'escapes' },
-          { label: 'Sistemas completos de escape', category: 'escapes' },
-          { label: 'Silenciadores', category: 'escapes' },
-          { label: 'Silenciadores universales', category: 'escapes' },
-          { label: 'Colectores de escape', category: 'escapes' },
-          { label: 'Recambios y accesorios de escape', category: 'escapes' },
-          { label: 'Protectores de colector de escape', category: 'escapes' },
-          { label: 'Tapones para silenciador', category: 'escapes' },
-          { label: 'Tubos de conexión de escape', category: 'escapes' },
+          { label: 'Sistemas completos de escape', category: 'linea-completa' },
+          { label: 'Silenciadores', category: 'silenciadores' },
+          { label: 'Silenciadores universales', category: 'silenciadores' },
+          { label: 'Colectores de escape', category: 'colectores' },
+          { label: 'Recambios y accesorios de escape', category: 'accesorios-escape' },
+          { label: 'Protectores de colector de escape', category: 'accesorios-escape' },
+          { label: 'Tapones para silenciador', category: 'accesorios-escape' },
+          { label: 'Tubos de conexión de escape', category: 'accesorios-escape' },
         ],
       },
       {
         title: 'Frenos',
         items: [
-          { label: 'Bombas de freno', category: 'frenos' },
+          { label: 'Bombas de freno', category: 'bombas-radiales' },
           { label: 'Manetas de freno', category: 'frenos' },
           { label: 'Manetas completas de freno', category: 'frenos' },
-          { label: 'Pastillas de freno', category: 'frenos' },
-          { label: 'Discos de freno', category: 'frenos' },
+          { label: 'Pastillas de freno', category: 'pastillas-sinterizadas' },
+          { label: 'Discos de freno', category: 'discos-freno' },
           { label: 'Pinzas de freno', category: 'frenos' },
-          { label: 'Latiguillos de freno', category: 'frenos' },
+          { label: 'Latiguillos de freno', category: 'latiguillos-metalicos' },
           { label: 'Pedales de freno', category: 'frenos' },
           { label: 'Kits de reparación de pinza de freno', category: 'frenos' },
         ],
@@ -56,7 +56,7 @@ export const MEGA_MENU: MegaMenuItem[] = [
       {
         title: 'Parte eléctrica',
         items: [
-          { label: 'Baterías', category: 'electronica' },
+          { label: 'Baterías', category: 'baterias-litio' },
           { label: 'Cargadores y arrancadores de batería', category: 'electronica' },
           { label: 'Bujías', category: 'electronica' },
           { label: 'Lámparas', category: 'electronica' },
@@ -64,18 +64,18 @@ export const MEGA_MENU: MegaMenuItem[] = [
           { label: 'Arranque', category: 'electronica' },
           { label: 'Estátores', category: 'electronica' },
           { label: 'Reguladores', category: 'electronica' },
-          { label: 'Centralitas (ECU / ECM / CDI)', category: 'electronica' },
+          { label: 'Centralitas (ECU / ECM / CDI)', category: 'centralitas' },
         ],
       },
       {
         title: 'Transmisión',
         items: [
-          { label: 'Kits de cadena', category: 'transmision' },
-          { label: 'Cadenas', category: 'transmision' },
+          { label: 'Kits de cadena', category: 'kits-cadena' },
+          { label: 'Cadenas', category: 'cadenas-arrastre' },
           { label: 'Rodillos de variador para scooter', category: 'transmision' },
           { label: 'Variadores para scooter', category: 'transmision' },
-          { label: 'Piñones', category: 'transmision' },
-          { label: 'Coronas', category: 'transmision' },
+          { label: 'Piñones', category: 'pinones' },
+          { label: 'Coronas', category: 'coronas' },
           { label: 'Correas de transmisión', category: 'transmision' },
           { label: 'Muelles de embrague', category: 'transmision' },
           { label: 'Enganches de cadena', category: 'transmision' },
@@ -86,7 +86,7 @@ export const MEGA_MENU: MegaMenuItem[] = [
         items: [
           { label: 'Kits de cilindro', category: 'motor' },
           { label: 'Pistones', category: 'motor' },
-          { label: 'Filtros de aceite', category: 'mantenimiento' },
+          { label: 'Filtros de aceite', category: 'filtros-aceite' },
           { label: 'Ejes de biela', category: 'motor' },
           { label: 'Distribución', category: 'motor' },
           { label: 'Refrigeración', category: 'motor' },
@@ -99,7 +99,7 @@ export const MEGA_MENU: MegaMenuItem[] = [
         title: 'Admisión y embrague',
         items: [
           { label: 'Embragues completo', category: 'motor' },
-          { label: 'Filtros de aire', category: 'mantenimiento' },
+          { label: 'Filtros de aire', category: 'filtros-aire' },
           { label: 'Macarrones, filtros y racores de gasolina', category: 'motor' },
           { label: 'Bombas de embrague', category: 'motor' },
           { label: 'Admisión', category: 'motor' },
@@ -112,7 +112,7 @@ export const MEGA_MENU: MegaMenuItem[] = [
       {
         title: 'Ruedas',
         items: [
-          { label: 'Neumáticos', category: 'neumaticos' },
+          { label: 'Neumáticos', category: 'neumaticos-slick' },
           { label: 'Llantas', category: 'neumaticos' },
           { label: 'Ruedas completas', category: 'neumaticos' },
           { label: 'Juegos de radios', category: 'neumaticos' },
@@ -124,8 +124,8 @@ export const MEGA_MENU: MegaMenuItem[] = [
       {
         title: 'Amortiguación',
         items: [
-          { label: 'Amortiguadores', category: 'suspensiones' },
-          { label: 'Horquilla', category: 'suspensiones' },
+          { label: 'Amortiguadores', category: 'amortiguadores-traseros' },
+          { label: 'Horquilla', category: 'cartuchos-horquilla' },
           { label: 'Retenes de horquilla', category: 'suspensiones' },
           { label: 'Tubos de horquilla', category: 'suspensiones' },
           { label: 'Kits de retenes de horquilla', category: 'suspensiones' },
@@ -145,17 +145,17 @@ export const MEGA_MENU: MegaMenuItem[] = [
       {
         title: 'Monos',
         items: [
-          { label: 'Monos', category: 'equipacion' },
-          { label: 'Mono con Airbag', category: 'equipacion' },
+          { label: 'Monos', category: 'monos' },
+          { label: 'Mono con Airbag', category: 'monos' },
           { label: 'Deslizaderas', category: 'equipacion' },
         ],
       },
       {
         title: 'Chaquetas y Camisetas',
         items: [
-          { label: 'Chaquetas de cuero', category: 'equipacion' },
-          { label: 'Chaquetas textiles', category: 'equipacion' },
-          { label: 'Chaquetas de Enduro', category: 'equipacion' },
+          { label: 'Chaquetas de cuero', category: 'chaquetas-moto' },
+          { label: 'Chaquetas textiles', category: 'chaquetas-moto' },
+          { label: 'Chaquetas de Enduro', category: 'chaquetas-moto' },
           { label: 'Camisetas', category: 'equipacion' },
           { label: 'Espalderas', category: 'equipacion' },
           { label: 'Chaqueta con Airbag', category: 'equipacion' },
@@ -173,18 +173,18 @@ export const MEGA_MENU: MegaMenuItem[] = [
       {
         title: 'Guantes',
         items: [
-          { label: 'Guantes de cuero', category: 'equipacion' },
-          { label: 'Guantes textiles', category: 'equipacion' },
-          { label: 'Guantes Off-Road', category: 'equipacion' },
+          { label: 'Guantes de cuero', category: 'guantes-competicion' },
+          { label: 'Guantes textiles', category: 'guantes-competicion' },
+          { label: 'Guantes Off-Road', category: 'guantes-competicion' },
         ],
       },
       {
         title: 'Botas y Calzado',
         items: [
-          { label: 'Botas de competición', category: 'equipacion' },
-          { label: 'Botas Touring', category: 'equipacion' },
+          { label: 'Botas de competición', category: 'botas-racing' },
+          { label: 'Botas Touring', category: 'botas-racing' },
           { label: 'Zapatos casual', category: 'equipacion' },
-          { label: 'Botas Off-Road', category: 'equipacion' },
+          { label: 'Botas Off-Road', category: 'botas-racing' },
         ],
       },
       {
@@ -311,10 +311,10 @@ export const MEGA_MENU: MegaMenuItem[] = [
       {
         title: 'Personalización',
         items: [
-          { label: 'Silenciadores', category: 'escapes' },
-          { label: 'Sistemas completos de escape', category: 'escapes' },
+          { label: 'Silenciadores', category: 'silenciadores' },
+          { label: 'Sistemas completos de escape', category: 'linea-completa' },
           { label: 'Soportes portamatrículas', category: 'accesorios' },
-          { label: 'Retrovisores universales', category: 'accesorios' },
+          { label: 'Retrovisores universales', category: 'personalizacion-espejos' },
           { label: 'Pantallas y parabrisas', category: 'accesorios' },
           { label: 'Estriberas retrasadas', category: 'accesorios' },
           { label: 'Kits de adhesivos', category: 'accesorios' },
@@ -323,13 +323,13 @@ export const MEGA_MENU: MegaMenuItem[] = [
       {
         title: 'Equipaje y movilidad',
         items: [
-          { label: 'Soportes para smartphone QUAD LOCK', category: 'accesorios' },
-          { label: 'Baúles y maletas laterales', category: 'accesorios' },
+          { label: 'Soportes para smartphone QUAD LOCK', category: 'soportes-quad-lock' },
+          { label: 'Baúles y maletas laterales', category: 'maletas-baules' },
           { label: 'Bolsas traseras y alforjas', category: 'accesorios' },
           { label: 'Bolsas sobredepósito', category: 'accesorios' },
           { label: 'Baúles para ATV', category: 'accesorios' },
           { label: 'Fijaciones', category: 'accesorios' },
-          { label: 'Intercomunicadores', category: 'accesorios' },
+          { label: 'Intercomunicadores', category: 'intercomunicadores' },
           { label: 'Tomas de encendedor y USB', category: 'electronica' },
         ],
       },

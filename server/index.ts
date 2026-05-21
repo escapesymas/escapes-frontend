@@ -712,7 +712,6 @@ app.get('/api/catalog/products', async (req, res) => {
         if (!isNaN(catId)) {
           if (catId >= 100) {
             const parentId = Math.floor(catId / 100);
-            let subQuery = ` AND category_id = ${parentId}`;
             const categoryRules: Record<number, string> = {
               101: "(LOWER(name) LIKE '%racing%' OR LOWER(name) LIKE '%completo%')",
               102: "(LOWER(name) LIKE '%silenciador%' OR LOWER(name) LIKE '%silencioso%' OR LOWER(name) LIKE '%slip-on%' OR LOWER(name) LIKE '%escape%')",
@@ -757,11 +756,12 @@ app.get('/api/catalog/products', async (req, res) => {
             };
             const clause = categoryRules[catId];
             if (clause) {
-              subQuery += ` AND ${clause}`;
+              baseWhereClause += ` AND (category_id = ${catId} OR (category_id = ${parentId} AND ${clause}))`;
+            } else {
+              baseWhereClause += ` AND category_id = ${catId}`;
             }
-            baseWhereClause += subQuery;
           } else {
-            baseWhereClause += ` AND category_id = ${catId}`;
+            baseWhereClause += ` AND (category_id = ${catId} OR category_id BETWEEN ${catId * 100} AND ${(catId + 1) * 100 - 1})`;
           }
         }
       }
@@ -899,7 +899,6 @@ app.get('/api/catalog/products-by-skus', async (req, res) => {
       if (!isNaN(catId)) {
         if (catId >= 100) {
           const parentId = Math.floor(catId / 100);
-          baseWhereClause += ` AND category_id = ${parentId}`;
           // Custom category matching expressions
           const categoryRules: Record<number, string> = {
             101: "(LOWER(name) LIKE '%racing%' OR LOWER(name) LIKE '%completo%')",
@@ -947,10 +946,12 @@ app.get('/api/catalog/products-by-skus', async (req, res) => {
           };
           const clause = categoryRules[catId];
           if (clause) {
-            baseWhereClause += ` AND ${clause}`;
+            baseWhereClause += ` AND (category_id = ${catId} OR (category_id = ${parentId} AND ${clause}))`;
+          } else {
+            baseWhereClause += ` AND category_id = ${catId}`;
           }
         } else {
-          baseWhereClause += ` AND category_id = ${catId}`;
+          baseWhereClause += ` AND (category_id = ${catId} OR category_id BETWEEN ${catId * 100} AND ${(catId + 1) * 100 - 1})`;
         }
       }
     }
@@ -1013,6 +1014,220 @@ app.get('/api/orders', async (req, res) => {
   } catch (err: any) {
     console.error('[ORDERS GET ERROR]:', err);
     return res.status(500).json({ error: err.message });
+  }
+});
+
+// ================================================================
+// COMPARTIDO & FACTURACIÓN PDF
+// ================================================================
+async function createInvoiceForOrder(orderId: number) {
+  // Check if invoice already exists
+  const existingInv = await db.execute(sql`SELECT * FROM invoices WHERE order_id = ${orderId}`);
+  if (existingInv.rows.length > 0) {
+    return existingInv.rows[0];
+  }
+
+  // Load order
+  const orderRes = await db.execute(sql`SELECT * FROM orders WHERE id = ${orderId}`);
+  const order = orderRes.rows[0] as any;
+  if (!order) throw new Error('Pedido no encontrado');
+
+  // Generate invoice number: EYMAS-YYYY-NNNNNN
+  const year = new Date().getFullYear();
+  const countRes = await db.execute(sql`SELECT COUNT(*) as cnt FROM invoices WHERE issued_at >= date_trunc('year', NOW())`);
+  const seqNum = String((Number((countRes.rows[0] as any).cnt) + 1)).padStart(6, '0');
+  const invoiceNumber = `EYMAS-${year}-${seqNum}`;
+
+  // Fetch items from database (order_items table!)
+  const itemsRes = await db.execute(sql`
+    SELECT oi.*, p.name as product_name
+    FROM order_items oi
+    LEFT JOIN products p ON oi.product_id = p.id
+    WHERE oi.order_id = ${orderId}
+  `);
+  const items = itemsRes.rows;
+
+  const shippingData = (() => { try { return JSON.parse(order.shipping_data || '{}'); } catch { return {}; } })();
+  const subtotal = order.subtotal || order.total || 0;
+  const shippingCost = order.shipping_cost || 0;
+  const discountAmount = order.discount_amount || 0;
+  const totalCents = order.total || 0;
+
+  // COGS (cost_total) update: let's also update order.cost_total if not set!
+  let calculatedCostTotal = 0;
+  for (const item of items) {
+    const pCostRes = await db.execute(sql`SELECT cost FROM products WHERE id = ${item.product_id}`);
+    const costVal = pCostRes.rows[0] ? (pCostRes.rows[0] as any).cost || 0 : 0;
+    calculatedCostTotal += costVal * (item.quantity || 1);
+  }
+  
+  if (calculatedCostTotal > 0 && (!order.cost_total || order.cost_total === 0)) {
+    await db.execute(sql`UPDATE orders SET cost_total = ${calculatedCostTotal} WHERE id = ${orderId}`);
+  }
+
+  // IVA 21% inverso del total bruto
+  const taxAmount = Math.round(totalCents * 21 / 121);
+
+  // Generate PDF
+  const invoicesDir = path.join(process.cwd(), 'invoices');
+  if (!fs.existsSync(invoicesDir)) fs.mkdirSync(invoicesDir, { recursive: true });
+  const pdfFileName = `${invoiceNumber}.pdf`;
+  const pdfPath = path.join(invoicesDir, pdfFileName);
+
+  await new Promise<void>((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 50, size: 'A4' });
+    const stream = fs.createWriteStream(pdfPath);
+    doc.pipe(stream);
+
+    // ── HEADER ──────────────────────────────────────────────────
+    doc.fontSize(22).font('Helvetica-Bold').text('ESCAPES Y MÁS', 50, 50);
+    doc.fontSize(9).font('Helvetica').fillColor('#666666')
+      .text('info@escapesymas.com  |  www.escapesymas.com', 50, 78)
+      .text('CIF: B-XXXXXXXX  |  Dirección fiscal: C/ Ejemplo 1, 28001 Madrid', 50, 90);
+
+    // Invoice title block
+    doc.fillColor('#FF6B00').roundedRect(400, 45, 145, 55, 4).fill();
+    doc.fillColor('#FFFFFF').fontSize(11).font('Helvetica-Bold')
+      .text('FACTURA', 415, 55)
+      .fontSize(10).font('Helvetica')
+      .text(invoiceNumber, 415, 72)
+      .text(new Date().toLocaleDateString('es-ES'), 415, 86);
+
+    doc.fillColor('#000000');
+
+    // ── DIVIDER ──────────────────────────────────────────────────
+    doc.moveTo(50, 115).lineTo(545, 115).strokeColor('#EEEEEE').lineWidth(1).stroke();
+
+    // ── BILLING DATA ─────────────────────────────────────────────
+    doc.fontSize(8).font('Helvetica-Bold').fillColor('#888888').text('FACTURAR A:', 50, 130);
+    doc.fontSize(10).font('Helvetica').fillColor('#000000')
+      .text(`${shippingData.firstName || ''} ${shippingData.lastName || ''}`, 50, 145)
+      .text(shippingData.email || '', 50, 158)
+      .text(shippingData.address || '', 50, 171)
+      .text(`${shippingData.city || ''} ${shippingData.postcode || ''} ${shippingData.country || ''}`, 50, 184);
+
+    doc.fontSize(8).font('Helvetica-Bold').fillColor('#888888').text('PEDIDO Nº:', 350, 130);
+    doc.fontSize(10).font('Helvetica').fillColor('#000000')
+      .text(`#${order.id}`, 350, 145)
+      .text(new Date(order.created_at).toLocaleDateString('es-ES'), 350, 158);
+
+    // ── LINE ITEMS ────────────────────────────────────────────────
+    const tableTop = 220;
+    doc.fillColor('#1A1A1A').rect(50, tableTop, 495, 20).fill();
+    doc.fillColor('#FFFFFF').fontSize(8).font('Helvetica-Bold')
+      .text('DESCRIPCIÓN', 58, tableTop + 6)
+      .text('CANT.', 370, tableTop + 6)
+      .text('PRECIO UNIT.', 410, tableTop + 6)
+      .text('TOTAL', 475, tableTop + 6);
+
+    doc.fillColor('#000000');
+    let yPos = tableTop + 28;
+    let lineNum = 0;
+
+    for (const item of items) {
+      if (lineNum % 2 === 0) {
+        doc.fillColor('#F9F9F9').rect(50, yPos - 4, 495, 18).fill();
+      }
+      const unitPrice = ((item.price || 0) / 100).toFixed(2);
+      const lineTotal = (((item.price || 0) * (item.quantity || 1)) / 100).toFixed(2);
+      doc.fillColor('#222222').fontSize(9).font('Helvetica')
+        .text(item.product_name || item.name || 'Producto', 58, yPos, { width: 300 })
+        .text(String(item.quantity || 1), 380, yPos)
+        .text(`${unitPrice}€`, 415, yPos)
+        .text(`${lineTotal}€`, 472, yPos);
+      yPos += 20;
+      lineNum++;
+    }
+
+    // ── TOTALS ────────────────────────────────────────────────────
+    yPos += 10;
+    doc.moveTo(50, yPos).lineTo(545, yPos).strokeColor('#EEEEEE').lineWidth(0.5).stroke();
+    yPos += 12;
+
+    const totalBlock = (label: string, val: string, bold = false) => {
+      doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(bold ? 11 : 9)
+        .fillColor(bold ? '#FF6B00' : '#333333')
+        .text(label, 350, yPos)
+        .text(val, 472, yPos);
+      yPos += bold ? 18 : 16;
+    };
+
+    if (discountAmount > 0) totalBlock('Descuento:', `-${(discountAmount / 100).toFixed(2)}€`);
+    if (shippingCost > 0) totalBlock('Envío:', `${(shippingCost / 100).toFixed(2)}€`);
+    totalBlock('Base imponible:', `${((totalCents - taxAmount) / 100).toFixed(2)}€`);
+    totalBlock('IVA (21%):', `${(taxAmount / 100).toFixed(2)}€`);
+    totalBlock('TOTAL:', `${(totalCents / 100).toFixed(2)}€`, true);
+
+    // ── FOOTER ────────────────────────────────────────────────────
+    doc.fontSize(7).fillColor('#AAAAAA')
+      .text('Gracias por tu confianza en Escapes y Más. Esta factura es el documento legal de tu compra.', 50, 760, { align: 'center', width: 495 });
+
+    doc.end();
+    stream.on('finish', resolve);
+    stream.on('error', reject);
+  });
+
+  // Save invoice record
+  try {
+    await db.execute(sql`
+      INSERT INTO invoices (order_id, invoice_number, subtotal, tax_amount, shipping_cost, discount_amount, total, pdf_path)
+      VALUES (${orderId}, ${invoiceNumber}, ${subtotal}, ${taxAmount}, ${shippingCost}, ${discountAmount}, ${totalCents}, ${pdfPath})
+    `);
+  } catch (err: any) {
+    if (err.code === '23505') { // Unique constraint violation in postgres
+      const dup = await db.execute(sql`SELECT * FROM invoices WHERE order_id = ${orderId}`);
+      return dup.rows[0];
+    }
+    throw err;
+  }
+
+  const invRes = await db.execute(sql`SELECT * FROM invoices WHERE order_id = ${orderId}`);
+  return invRes.rows[0];
+}
+
+app.get('/api/orders/download-invoice', async (req: any, res: any) => {
+  const { orderId, userEmail } = req.query as any;
+  if (!orderId) return res.status(400).json({ error: 'Falta orderId' });
+
+  try {
+    const orderRes = await db.execute(sql`SELECT * FROM orders WHERE id = ${parseInt(orderId)}`);
+    const order = orderRes.rows[0] as any;
+    if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
+
+    let isAuthorized = false;
+    if (userEmail) {
+      if (userEmail.toLowerCase() === 'info@escapesymas.com') {
+        isAuthorized = true;
+      } else {
+        const uRes = await db.execute(sql`SELECT id FROM users WHERE email = ${userEmail}`);
+        if (uRes.rows.length > 0 && uRes.rows[0].id === order.user_id) {
+          isAuthorized = true;
+        }
+      }
+    }
+
+    if (!isAuthorized) {
+      return res.status(401).json({ error: 'No autorizado para ver esta factura' });
+    }
+
+    const invRow = await db.execute(sql`SELECT * FROM invoices WHERE order_id = ${parseInt(orderId)}`);
+    if (!invRow.rows.length) {
+      return res.status(404).json({ error: 'Factura no generada todavía.' });
+    }
+
+    const inv = invRow.rows[0] as any;
+    const pdfFile = inv.pdf_path;
+
+    if (!pdfFile || !fs.existsSync(pdfFile)) {
+      return res.status(404).json({ error: 'Archivo PDF no encontrado en el servidor.' });
+    }
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${inv.invoice_number}.pdf"`);
+    fs.createReadStream(pdfFile).pipe(res);
+  } catch (err: any) {
+    console.error('[CUSTOMER INVOICE DOWNLOAD ERROR]:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -1280,6 +1495,16 @@ app.all('/api/admin', async (req, res) => {
           SET status = ${status}
           WHERE id = ${parseInt(orderId)}
         `);
+
+        // Auto-generate invoice if manually moved to paid status
+        if (status === 'processing' || status === 'completed') {
+          try {
+            await createInvoiceForOrder(parseInt(orderId));
+            console.log(`[AUTO-INVOICE] Invoice auto-generated on manual status update for Order ${orderId}`);
+          } catch (e: any) {
+            console.error(`[AUTO-INVOICE ERROR] Failed to auto-generate invoice on manual status update for Order ${orderId}:`, e);
+          }
+        }
         return res.json({ success: true });
       }
 
@@ -1474,7 +1699,8 @@ app.all('/api/admin', async (req, res) => {
           if (brandRule) {
             margin = Number(brandRule.margin_percent);
           } else {
-            const categoryRule = rules.find(r => r.rule_type === 'category' && r.target_id === String(catId));
+            const parentId = catId >= 100 ? Math.floor(catId / 100) : catId;
+            const categoryRule = rules.find(r => r.rule_type === 'category' && (r.target_id === String(catId) || r.target_id === String(parentId)));
             if (categoryRule) {
               margin = Number(categoryRule.margin_percent);
             } else {
@@ -1498,7 +1724,7 @@ app.all('/api/admin', async (req, res) => {
             }
             return null;
           }).filter(Boolean);
- 
+
           if (updateQueries.length > 0) {
             await Promise.all(updateQueries);
           }
@@ -1507,151 +1733,18 @@ app.all('/api/admin', async (req, res) => {
         return res.json({ success: true, updatedCount: updateCount });
       }
 
-      // ================================================================
-      // FASE 4: CONTABILIDAD Y FACTURACIÓN PDF
-      // ================================================================
-
       case 'generate-invoice': {
         if (req.method !== 'POST') return res.status(405).end();
         const { orderId } = req.body;
         if (!orderId) return res.status(400).json({ error: 'Falta orderId' });
 
-        // Load order
-        const orderRes = await db.execute(sql`SELECT * FROM orders WHERE id = ${parseInt(orderId)}`);
-        const order = orderRes.rows[0] as any;
-        if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
-
-        // Check if invoice already exists
-        const existingInv = await db.execute(sql`SELECT * FROM invoices WHERE order_id = ${parseInt(orderId)}`);
-        if (existingInv.rows.length > 0) {
-          return res.json({ success: true, invoice: existingInv.rows[0], alreadyExists: true });
+        try {
+          const invoice = await createInvoiceForOrder(parseInt(orderId));
+          return res.json({ success: true, invoice });
+        } catch (e: any) {
+          console.error('[GENERATE INVOICE ERROR]:', e);
+          return res.status(500).json({ error: e.message || 'Error al generar la factura' });
         }
-
-        // Generate invoice number: EYMAS-YYYY-NNNNNN
-        const year = new Date().getFullYear();
-        const countRes = await db.execute(sql`SELECT COUNT(*) as cnt FROM invoices WHERE issued_at >= date_trunc('year', NOW())`);
-        const seqNum = String((Number((countRes.rows[0] as any).cnt) + 1)).padStart(6, '0');
-        const invoiceNumber = `EYMAS-${year}-${seqNum}`;
-
-        // Parse items
-        let items: any[] = [];
-        try { items = JSON.parse(order.items || '[]'); } catch {}
-
-        const shippingData = (() => { try { return JSON.parse(order.shipping_data || '{}'); } catch { return {}; } })();
-        const subtotal = order.subtotal || order.total || 0;
-        const shippingCost = order.shipping_cost || 0;
-        const discountAmount = order.discount_amount || 0;
-        const totalCents = order.total || 0;
-        // IVA 21% inverso del total bruto
-        const taxAmount = Math.round(totalCents * 21 / 121);
-
-        // Generate PDF
-        const invoicesDir = path.join(process.cwd(), 'invoices');
-        if (!fs.existsSync(invoicesDir)) fs.mkdirSync(invoicesDir, { recursive: true });
-        const pdfFileName = `${invoiceNumber}.pdf`;
-        const pdfPath = path.join(invoicesDir, pdfFileName);
-
-        await new Promise<void>((resolve, reject) => {
-          const doc = new PDFDocument({ margin: 50, size: 'A4' });
-          const stream = fs.createWriteStream(pdfPath);
-          doc.pipe(stream);
-
-          // ── HEADER ──────────────────────────────────────────────────
-          doc.fontSize(22).font('Helvetica-Bold').text('ESCAPES Y MÁS', 50, 50);
-          doc.fontSize(9).font('Helvetica').fillColor('#666666')
-            .text('info@escapesymas.com  |  www.escapesymas.com', 50, 78)
-            .text('CIF: B-XXXXXXXX  |  Dirección fiscal: C/ Ejemplo 1, 28001 Madrid', 50, 90);
-
-          // Invoice title block
-          doc.fillColor('#FF6B00').roundedRect(400, 45, 145, 55, 4).fill();
-          doc.fillColor('#FFFFFF').fontSize(11).font('Helvetica-Bold')
-            .text('FACTURA', 415, 55)
-            .fontSize(10).font('Helvetica')
-            .text(invoiceNumber, 415, 72)
-            .text(new Date().toLocaleDateString('es-ES'), 415, 86);
-
-          doc.fillColor('#000000');
-
-          // ── DIVIDER ──────────────────────────────────────────────────
-          doc.moveTo(50, 115).lineTo(545, 115).strokeColor('#EEEEEE').lineWidth(1).stroke();
-
-          // ── BILLING DATA ─────────────────────────────────────────────
-          doc.fontSize(8).font('Helvetica-Bold').fillColor('#888888').text('FACTURAR A:', 50, 130);
-          doc.fontSize(10).font('Helvetica').fillColor('#000000')
-            .text(`${shippingData.firstName || ''} ${shippingData.lastName || ''}`, 50, 145)
-            .text(shippingData.email || '', 50, 158)
-            .text(shippingData.address || '', 50, 171)
-            .text(`${shippingData.city || ''} ${shippingData.postcode || ''} ${shippingData.country || ''}`, 50, 184);
-
-          doc.fontSize(8).font('Helvetica-Bold').fillColor('#888888').text('PEDIDO Nº:', 350, 130);
-          doc.fontSize(10).font('Helvetica').fillColor('#000000')
-            .text(`#${order.id}`, 350, 145)
-            .text(new Date(order.created_at).toLocaleDateString('es-ES'), 350, 158);
-
-          // ── LINE ITEMS ────────────────────────────────────────────────
-          const tableTop = 220;
-          doc.fillColor('#1A1A1A').rect(50, tableTop, 495, 20).fill();
-          doc.fillColor('#FFFFFF').fontSize(8).font('Helvetica-Bold')
-            .text('DESCRIPCIÓN', 58, tableTop + 6)
-            .text('CANT.', 370, tableTop + 6)
-            .text('PRECIO UNIT.', 410, tableTop + 6)
-            .text('TOTAL', 475, tableTop + 6);
-
-          doc.fillColor('#000000');
-          let yPos = tableTop + 28;
-          let lineNum = 0;
-
-          for (const item of items) {
-            if (lineNum % 2 === 0) {
-              doc.fillColor('#F9F9F9').rect(50, yPos - 4, 495, 18).fill();
-            }
-            const unitPrice = ((item.price || 0) / 100).toFixed(2);
-            const lineTotal = (((item.price || 0) * (item.quantity || 1)) / 100).toFixed(2);
-            doc.fillColor('#222222').fontSize(9).font('Helvetica')
-              .text(item.product_name || item.name || 'Producto', 58, yPos, { width: 300 })
-              .text(String(item.quantity || 1), 380, yPos)
-              .text(`${unitPrice}€`, 415, yPos)
-              .text(`${lineTotal}€`, 472, yPos);
-            yPos += 20;
-            lineNum++;
-          }
-
-          // ── TOTALS ────────────────────────────────────────────────────
-          yPos += 10;
-          doc.moveTo(50, yPos).lineTo(545, yPos).strokeColor('#EEEEEE').lineWidth(0.5).stroke();
-          yPos += 12;
-
-          const totalBlock = (label: string, val: string, bold = false) => {
-            doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(bold ? 11 : 9)
-              .fillColor(bold ? '#FF6B00' : '#333333')
-              .text(label, 350, yPos)
-              .text(val, 472, yPos);
-            yPos += bold ? 18 : 16;
-          };
-
-          if (discountAmount > 0) totalBlock('Descuento:', `-${(discountAmount / 100).toFixed(2)}€`);
-          if (shippingCost > 0) totalBlock('Envío:', `${(shippingCost / 100).toFixed(2)}€`);
-          totalBlock('Base imponible:', `${((totalCents - taxAmount) / 100).toFixed(2)}€`);
-          totalBlock('IVA (21%):', `${(taxAmount / 100).toFixed(2)}€`);
-          totalBlock('TOTAL:', `${(totalCents / 100).toFixed(2)}€`, true);
-
-          // ── FOOTER ────────────────────────────────────────────────────
-          doc.fontSize(7).fillColor('#AAAAAA')
-            .text('Gracias por tu confianza en Escapes y Más. Esta factura es el documento legal de tu compra.', 50, 760, { align: 'center', width: 495 });
-
-          doc.end();
-          stream.on('finish', resolve);
-          stream.on('error', reject);
-        });
-
-        // Save invoice record
-        await db.execute(sql`
-          INSERT INTO invoices (order_id, invoice_number, subtotal, tax_amount, shipping_cost, discount_amount, total, pdf_path)
-          VALUES (${parseInt(orderId)}, ${invoiceNumber}, ${subtotal}, ${taxAmount}, ${shippingCost}, ${discountAmount}, ${totalCents}, ${pdfPath})
-        `);
-
-        const invRes = await db.execute(sql`SELECT * FROM invoices WHERE order_id = ${parseInt(orderId)}`);
-        return res.json({ success: true, invoice: invRes.rows[0] });
       }
 
       case 'download-invoice': {
@@ -1739,13 +1832,7 @@ app.all('/api/admin', async (req, res) => {
         const cogsRes = await db.execute(sql`
           SELECT COALESCE(SUM(p.cost * oi.quantity), 0) as cogs
           FROM orders o
-          CROSS JOIN LATERAL (
-            SELECT 
-              (item->>'product_id')::integer as product_id,
-              (item->>'quantity')::integer as quantity
-            FROM json_array_elements(o.items::json) as item
-            WHERE item->>'product_id' IS NOT NULL
-          ) oi
+          LEFT JOIN order_items oi ON oi.order_id = o.id
           LEFT JOIN products p ON p.id = oi.product_id
           WHERE o.created_at >= ${intervalExpr}
             AND o.status NOT IN ('cancelled', 'refunded')
@@ -1756,11 +1843,11 @@ app.all('/api/admin', async (req, res) => {
           SELECT 
             p.name,
             p.sku,
-            SUM((item->>'price')::integer * (item->>'quantity')::integer) as revenue,
-            SUM((item->>'quantity')::integer) as units_sold
+            SUM(oi.price * oi.quantity) as revenue,
+            SUM(oi.quantity) as units_sold
           FROM orders o
-          CROSS JOIN LATERAL json_array_elements(o.items::json) as item
-          LEFT JOIN products p ON p.id = (item->>'product_id')::integer
+          LEFT JOIN order_items oi ON oi.order_id = o.id
+          LEFT JOIN products p ON p.id = oi.product_id
           WHERE o.created_at >= ${intervalExpr}
             AND o.status NOT IN ('cancelled', 'refunded')
             AND p.name IS NOT NULL
@@ -2904,6 +2991,14 @@ app.post('/api/orders/finalize', async (req: any, res: any) => {
           WHERE id = ${parseInt(item.product_id as string)}
         `);
       }
+
+      // Auto-generate invoice when paid
+      try {
+        await createInvoiceForOrder(parseInt(orderId));
+        console.log(`[AUTO-INVOICE] Invoice auto-generated successfully for Order ${orderId}`);
+      } catch (e: any) {
+        console.error(`[AUTO-INVOICE ERROR] Failed to auto-generate invoice for Order ${orderId}:`, e);
+      }
     }
 
     res.json({ success: true });
@@ -3239,7 +3334,57 @@ function mapProductToFrontend(row: any) {
     7: { name: "Neumáticos & Paddock", slug: "neumaticos" },
     8: { name: "Cascos", slug: "cascos" },
     9: { name: "Equipación Piloto", slug: "equipacion" },
-    10: { name: "Accesorios & Maletas", slug: "accesorios" }
+    10: { name: "Accesorios & Maletas", slug: "accesorios" },
+
+    101: { name: "Línea Completa (Racing)", slug: "linea-completa" },
+    102: { name: "Slip-On (Silenciosos)", slug: "silenciadores" },
+    103: { name: "Colectores", slug: "colectores" },
+    104: { name: "Accesorios Escape", slug: "accesorios-escape" },
+
+    201: { name: "Pastillas Sinterizadas", slug: "pastillas-sinterizadas" },
+    202: { name: "Discos de Freno", slug: "discos-freno" },
+    203: { name: "Bombas Radiales", slug: "bombas-radiales" },
+    204: { name: "Latiguillos Metálicos", slug: "latiguillos-metalicos" },
+
+    301: { name: "Amortiguadores Traseros", slug: "amortiguadores-traseros" },
+    302: { name: "Cartuchos Horquilla", slug: "cartuchos-horquilla" },
+    303: { name: "Amortiguadores Dirección", slug: "amortiguadores-direccion" },
+    304: { name: "Estriberas", slug: "estriberas" },
+
+    401: { name: "Centralitas (ECU)", slug: "centralitas" },
+    402: { name: "Quickshifters", slug: "quickshifters" },
+    403: { name: "Módulos ABS/TC", slug: "modulos-abs-tc" },
+    404: { name: "Baterías Litio", slug: "baterias-litio" },
+
+    501: { name: "Kits Cadena Completos", slug: "kits-cadena" },
+    502: { name: "Cadenas X-Ring/Z-Ring", slug: "cadenas-arrastre" },
+    503: { name: "Piñones", slug: "pinones" },
+    504: { name: "Coronas Ergal", slug: "coronas" },
+
+    601: { name: "Filtros Aire Racing", slug: "filtros-aire" },
+    602: { name: "Filtros Aceite", slug: "filtros-aceite" },
+    603: { name: "Aceites Motor Pro", slug: "aceites-motor" },
+    604: { name: "Líquidos Hidráulicos", slug: "liquidos-hidraulicos" },
+
+    701: { name: "Neumáticos Slick/Sport", slug: "neumaticos-slick" },
+    702: { name: "Calentadores", slug: "calentadores" },
+    703: { name: "Caballetes", slug: "caballetes" },
+    704: { name: "Manómetros & Accesorios", slug: "manometros-accesorios" },
+
+    801: { name: "Cascos Integrales", slug: "cascos-integrales" },
+    802: { name: "Cascos Modulares", slug: "cascos-modulares" },
+    803: { name: "Cascos Jet", slug: "cascos-jet" },
+    804: { name: "Cascos Off-Road", slug: "cascos-off-road" },
+
+    901: { name: "Chaquetas Moto", slug: "chaquetas-moto" },
+    902: { name: "Monos", slug: "monos" },
+    903: { name: "Guantes de Competición", slug: "guantes-competicion" },
+    904: { name: "Botas Racing", slug: "botas-racing" },
+
+    1001: { name: "Maletas & Baúles", slug: "maletas-baules" },
+    1002: { name: "Soportes Quad Lock", slug: "soportes-quad-lock" },
+    1003: { name: "Intercomunicadores", slug: "intercomunicadores" },
+    1004: { name: "Personalización & Espejos", slug: "personalizacion-espejos" }
   };
   const catInfo = categoryMap[row.category_id] || { name: "General", slug: "general" };
 

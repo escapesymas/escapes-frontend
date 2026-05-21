@@ -51,53 +51,84 @@ export const NAV_LINKS: { label: string; view: string; category?: string; highli
  */
 export const CATEGORIES = [
   {
-    id: "escapes",
+    id: 1,
     name: "Sistemas de Escape",
+    slug: "escapes",
     image: "https://images.unsplash.com/photo-1532588237936-a14a3818bc79?auto=format&fit=crop&q=80&w=800",
     description: "Silenciosos, colectores y líneas completas de alto rendimiento.",
     subcategories: ["Línea Completa (Racing)", "Slip-On (Silenciosos)", "Colectores", "Accesorios Escape"]
   },
   {
-    id: "frenos",
+    id: 2,
     name: "Frenos de Competición",
+    slug: "frenos",
     image: "https://images.unsplash.com/photo-1563618147570-36034c4f0282?auto=format&fit=crop&q=80&w=800",
-    description: "Máxima potencia y control: bombas radiales, discos y pastillas.",
+    description: "Máxima potencia and control: bombas radiales, discos y pastillas.",
     subcategories: ["Pastillas Sinterizadas", "Discos de Freno", "Bombas Radiales", "Latiguillos Metálicos"]
   },
   {
-    id: "suspensiones",
+    id: 3,
     name: "Ciclista & Chasis",
+    slug: "suspensiones",
     image: "https://images.unsplash.com/photo-1444491741275-3747c53c99b4?auto=format&fit=crop&q=80&w=800",
     description: "Estabilidad extrema con suspensiones Pro y componentes de chasis.",
     subcategories: ["Amortiguadores traseros", "Cartuchos Horquilla", "Amortiguadores Dirección", "Estriberas"]
   },
   {
-    id: "electronica",
+    id: 4,
     name: "Electrónica & ECU",
+    slug: "electronica",
     image: "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&q=80&w=800",
     description: "Gestión de motor, Quickshifters y telemetría de competición.",
     subcategories: ["Centralitas (ECU)", "Quickshifters", "Módulos ABS/TC", "Baterías Litio"]
   },
   {
-    id: "transmision",
+    id: 5,
     name: "Transmisión & Desarrollo",
+    slug: "transmision",
     image: "https://images.unsplash.com/photo-1592657434559-99469f3752e2?auto=format&fit=crop&q=80&w=800",
     description: "Kits de arrastre reforzados, piñones y coronas aligeradas.",
     subcategories: ["Kits Cadena Completos", "Cadenas X-Ring/Z-Ring", "Piñones", "Coronas Ergal"]
   },
   {
-    id: "mantenimiento",
+    id: 6,
     name: "Mantenimiento & Fluidos",
+    slug: "mantenimiento",
     image: "https://images.unsplash.com/photo-1502444390311-53697eb4b62d?auto=format&fit=crop&q=80&w=800",
     description: "Filtros de alto flujo y lubricantes de máxima protección.",
     subcategories: ["Filtros Aire Racing", "Filtros Aceite", "Aceites Motor Pro", "Líquidos Hidráulicos"]
   },
   {
-    id: "neumaticos",
+    id: 7,
     name: "Neumáticos & Paddock",
+    slug: "neumaticos",
     image: "https://images.unsplash.com/photo-1578844251758-2f71da645217?auto=format&fit=crop&q=80&w=800",
     description: "Gomas de alto agarre, calentadores y equipamiento de garaje.",
     subcategories: ["Neumáticos Slick/Sport", "Calentadores", "Caballetes", "Manómetros & Accesorios"]
+  },
+  {
+    id: 8,
+    name: "Cascos",
+    slug: "cascos",
+    image: "https://images.unsplash.com/photo-1599819811279-d5ad9cccf838?auto=format&fit=crop&q=80&w=800",
+    description: "Cascos integrales, modulares, jet y off-road de las mejores marcas.",
+    subcategories: ["Cascos Integrales", "Cascos Modulares", "Cascos Jet", "Cascos Off-Road"]
+  },
+  {
+    id: 9,
+    name: "Equipación Piloto",
+    slug: "equipacion",
+    image: "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&q=80&w=800",
+    description: "Monos de competición, chaquetas, guantes, botas y protecciones.",
+    subcategories: ["Chaquetas Moto", "Monos", "Guantes de Competición", "Botas Racing"]
+  },
+  {
+    id: 10,
+    name: "Accesorios & Maletas",
+    slug: "accesorios",
+    image: "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&q=80&w=800",
+    description: "Sistemas de equipaje, soportes Quad Lock, intercomunicadores y cúpulas.",
+    subcategories: ["Maletas & Baúles", "Soportes Quad Lock", "Intercomunicadores", "Personalización & Espejos"]
   }
 ];
 

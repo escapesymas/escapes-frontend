@@ -2,6 +2,8 @@ import { makeRequest } from './woocommerce';
 import { User } from '../types';
 import { optimizeImage } from '../utils/imageOptimizer';
 
+const BACKEND_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? '' : 'https://backendescapes.com';
+
 // Helper to proxy URLs from backendescapes.com
 const proxyUrl = (url: string) => {
     if (!url || !url.startsWith('https://backendescapes.com/')) return url;
@@ -187,7 +189,7 @@ const buildPaddockTree = (flatList: any[], parentId: number = 0): PaddockCategor
 
 export const fetchPaddockCategories = async (): Promise<PaddockCategory[]> => {
     try {
-        const response = await fetch('/api/forum?action=categories');
+        const response = await fetch(`${BACKEND_URL}/api/forum?action=categories`);
         if (!response.ok) throw new Error('Error al obtener categorías');
         return await response.json();
     } catch (error) {
@@ -204,7 +206,7 @@ export const fetchPaddockCategories = async (): Promise<PaddockCategory[]> => {
  */
 export const fetchPaddockThreads = async (categoryId: number, page: number = 1): Promise<PaddockThread[]> => {
     try {
-        const response = await fetch(`/api/forum?action=threads&category_id=${categoryId}&page=${page}`);
+        const response = await fetch(`${BACKEND_URL}/api/forum?action=threads&category_id=${categoryId}&page=${page}`);
         if (!response.ok) throw new Error('Error al obtener hilos');
         const result = await response.json();
         
@@ -244,7 +246,7 @@ export const createPaddockThread = async (
         // Obtenemos el userId del token o del estado global (asumimos que el token es el JSON del usuario por ahora en tu sistema actual)
         const user = JSON.parse(atob(token.split('.')[1] || 'e30=')); // Fallback simple para pruebas
         
-        const response = await fetch('/api/forum?action=create-thread', {
+        const response = await fetch(`${BACKEND_URL}/api/forum?action=create-thread`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, content, userId: user.id || 1, category: String(categoryId) })
@@ -261,7 +263,7 @@ export const createPaddockThread = async (
  */
 export const fetchPaddockThread = async (threadId: number): Promise<{ thread: PaddockThread; replies: any[] } | null> => {
     try {
-        const response = await fetch(`/api/forum?action=thread-detail&thread_id=${threadId}`);
+        const response = await fetch(`${BACKEND_URL}/api/forum?action=thread-detail&thread_id=${threadId}`);
         if (!response.ok) throw new Error('Error al obtener detalle');
         const data = await response.json();
         
@@ -319,7 +321,7 @@ export const toggleLike = async (
 ): Promise<{ success: boolean; liked: boolean }> => {
     try {
         const user = JSON.parse(atob(token.split('.')[1] || 'e30='));
-        const response = await fetch('/api/forum?action=toggle-like', {
+        const response = await fetch(`${BACKEND_URL}/api/forum?action=toggle-like`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ targetType, targetId, currentUserId: user.id || 1 })
@@ -343,7 +345,7 @@ export const sendReply = async (
     try {
         const user = JSON.parse(atob(token.split('.')[1] || 'e30='));
         
-        const response = await fetch('/api/forum?action=reply', {
+        const response = await fetch(`${BACKEND_URL}/api/forum?action=reply`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ postId, replyContent: content, replyUserId: user.id || 1 })

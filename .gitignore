@@ -7,7 +7,6 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -20,11 +19,20 @@ lerna-debug.log*
 *.sw?
 *.sql
 
-# Backups
+# Backups and huge outputs
 **/*.zip
+repomix-output.xml
 
 # Prompts
 prompt_seo_wpo.md
 
+# Build & Dependency Artifacts
+node_modules/
+dist/
+build/
+.env
+.env.*
+
 # Backend
 BACKEND/
+
