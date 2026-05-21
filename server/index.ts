@@ -99,6 +99,19 @@ const db = drizzle(pool);
         pdf_path TEXT,
         issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS image_regen_state (
+        id SERIAL PRIMARY KEY,
+        status VARCHAR(50) DEFAULT 'idle',
+        processed INTEGER DEFAULT 0,
+        success INTEGER DEFAULT 0,
+        failed INTEGER DEFAULT 0,
+        skipped INTEGER DEFAULT 0,
+        total INTEGER DEFAULT 0,
+        current_sku VARCHAR(255) DEFAULT '',
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      INSERT INTO image_regen_state (id, status) VALUES (1, 'idle') ON CONFLICT (id) DO NOTHING;
     `);
     console.log('✅ Database schema aligned successfully!');
   } catch (err) {
@@ -510,13 +523,21 @@ app.post('/api/bihr/sync-catalog', async (req: any, res: any) => {
 
 app.get('/api/bihr/sync-status', async (req: any, res: any) => {
   try {
-    // 1. Leer estado de imágenes
+    // 1. Leer estado de imágenes desde PostgreSQL (migrado de /tmp/image_regen_state.json)
     let imageStats: any = null;
-    const imageStateFile = '/tmp/image_regen_state.json';
-    if (fs.existsSync(imageStateFile)) {
-      try {
-        imageStats = JSON.parse(fs.readFileSync(imageStateFile, 'utf-8'));
-      } catch (e) {}
+    try {
+      const stateResult = await pool.query('SELECT * FROM image_regen_state WHERE id = 1');
+      if (stateResult.rows.length > 0) {
+        imageStats = stateResult.rows[0];
+      }
+    } catch (e) {
+      // Fallback a fichero legacy si existe
+      const imageStateFile = '/tmp/image_regen_state.json';
+      if (fs.existsSync(imageStateFile)) {
+        try {
+          imageStats = JSON.parse(fs.readFileSync(imageStateFile, 'utf-8'));
+        } catch {} 
+      }
     }
 
     // 2. Leer estado de catálogo
@@ -1045,7 +1066,7 @@ async function createInvoiceForOrder(orderId: number) {
     LEFT JOIN products p ON oi.product_id = p.id
     WHERE oi.order_id = ${orderId}
   `);
-  const items = itemsRes.rows;
+  const items = itemsRes.rows as any[];
 
   const shippingData = (() => { try { return JSON.parse(order.shipping_data || '{}'); } catch { return {}; } })();
   const subtotal = order.subtotal || order.total || 0;
@@ -1309,11 +1330,11 @@ app.all('/api/admin', async (req, res) => {
           regenPercent: 0
         };
         
-        // Leer estado del script de regeneración de imágenes
+        // Leer estado del script de regeneración de imágenes desde PostgreSQL
         try {
-          const stateFile = '/tmp/image_regen_state.json';
-          if (fs.existsSync(stateFile)) {
-            const state = JSON.parse(fs.readFileSync(stateFile, 'utf-8'));
+          const stateResult = await pool.query('SELECT * FROM image_regen_state WHERE id = 1');
+          if (stateResult.rows.length > 0) {
+            const state = stateResult.rows[0];
             imageStats.regenerating = state.status === 'running';
             imageStats.regenProcessed = state.processed || 0;
             imageStats.regenSuccess = state.success || 0;
@@ -1328,9 +1349,18 @@ app.all('/api/admin', async (req, res) => {
             } else if (state.status === 'running') {
               imageStats.status = `Regenerando imágenes (${imageStats.regenPercent}%)`;
             }
+          } else {
+            // Fallback: intentar leer fichero legacy si tabla vacía
+            const stateFile = '/tmp/image_regen_state.json';
+            if (fs.existsSync(stateFile)) {
+              const state = JSON.parse(fs.readFileSync(stateFile, 'utf-8'));
+              imageStats.regenerating = state.status === 'running';
+              imageStats.regenProcessed = state.processed || 0;
+              imageStats.regenSuccess = state.success || 0;
+            }
           }
         } catch (e) {
-          console.error('Error reading regen state:', e);
+          console.error('Error reading regen state from DB:', e);
         }
 
         // Stats de la base de datos
@@ -3303,12 +3333,9 @@ app.post('/api/warranty', async (req: any, res: any) => {
 });
 
 // ================================================================
-// WP PROXY — ELIMINADO (WordPress fue desinstalado)
-// Devuelve 410 Gone para cualquier llamada legacy
+// WP PROXY — ELIMINADO (WordPress fue desinstalado, endpoint removido)
 // ================================================================
-app.all('/wp-json/*', (_req, res) => {
-  res.status(410).json({ error: 'WordPress eliminado. Usa /api/* en backendescapes.com' });
-});
+// El endpoint /wp-json/* fue eliminado. Todas las peticiones deben usar /api/*
 
 // ================================================================
 // UTILIDADES
