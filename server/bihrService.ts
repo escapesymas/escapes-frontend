@@ -147,9 +147,14 @@ export async function getLiveStockValue(productCode: string): Promise<number> {
 /**
  * Comprueba disponibilidad en vivo de múltiples referencias (ideal para checkout/carrito)
  */
-export async function checkProductsInfo(items: Array<{ ProductCode: string; Quantity: number }>) {
+export async function checkProductsInfo(items: Array<{ ProductCode?: string; ProductId?: string; Quantity: number }>) {
   try {
     const token = await getBihrToken();
+
+    const payload = items.map(item => ({
+      ProductId: item.ProductId || item.ProductCode || '',
+      Quantity: item.Quantity
+    }));
 
     const response = await fetch(`${BIHR_API_BASE}/api/v2.1/Inventory/ProductsInfo`, {
       method: 'POST',
@@ -158,7 +163,7 @@ export async function checkProductsInfo(items: Array<{ ProductCode: string; Quan
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      body: JSON.stringify(items)
+      body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
@@ -168,7 +173,7 @@ export async function checkProductsInfo(items: Array<{ ProductCode: string; Quan
     return await response.json();
   } catch (error) {
     console.error('[BIHR SERVICE]: Error en checkProductsInfo:', error);
-    return items.map(item => ({ productCode: item.ProductCode, available: false }));
+    return items.map(item => ({ productCode: item.ProductCode || item.ProductId, available: false }));
   }
 }
 
@@ -289,7 +294,6 @@ export async function syncBihrCatalog(catalogType: 'HardPart' | 'RiderGear' | 'P
 
   try {
     console.log(`[BIHR SERVICE]: Solicitando generación de catálogo ${catalogType}...`);
-    // Solicita generación de catálogo en formato ZIP - JSON
     const response = await fetch(`${BIHR_API_BASE}/api/v2.1/Catalog/ZIP/JSON/${catalogType}/Full`, {
       method: 'POST',
       headers: {
@@ -298,59 +302,69 @@ export async function syncBihrCatalog(catalogType: 'HardPart' | 'RiderGear' | 'P
       }
     });
 
+    const rawBody = await response.text();
+    console.log(`[BIHR SERVICE]: HTTP ${response.status}: ${rawBody.substring(0, 300)}`);
+
     if (response.status === 200) {
       console.log('[BIHR SERVICE]: Catálogo ya estaba generado. Descargando...');
-      // Si ya está generado, podemos procesarlo directamente
-      const downloadData = await response.json();
-      if (downloadData.downloadId) {
-        await downloadAndProcessCatalog(downloadData.downloadId, catalogType, startTime);
+      let downloadData;
+      try { downloadData = JSON.parse(rawBody); } catch { downloadData = {}; }
+      const downloadId = downloadData.downloadId || downloadData.DownloadId;
+      if (downloadId) {
+        await downloadAndProcessCatalog(downloadId, catalogType, startTime);
         return true;
       }
-    } else if (response.status === 202) {
-      const requestData = await response.json();
-      const ticketId = requestData.ticketId;
-      console.log(`[BIHR SERVICE]: Petición aceptada. TicketID recibido: ${ticketId}. Esperando generación...`);
-      
-      updateCatalogSyncState({
-        status: 'waiting_generation',
-        catalogType,
-        startTime,
-        ticketId
-      });
-
-      // Consultar estado en bucle con espera de 30 segundos
-      let attempts = 0;
-      const maxAttempts = 20; // 10 minutos
-      
-      while (attempts < maxAttempts) {
-        await new Promise(r => setTimeout(r, 30000));
-        attempts++;
-        
-        console.log(`[BIHR SERVICE]: Comprobando estado de ticket ${ticketId} (intento ${attempts})...`);
-        const statusRes = await fetch(`${BIHR_API_BASE}/api/v2.1/Catalog/GenerationStatus?ticketId=${ticketId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          }
-        });
-        
-        if (!statusRes.ok) continue;
-        
-        const statusData = await statusRes.json();
-        console.log(`[BIHR SERVICE]: Estado de generación: ${statusData.requestStatus}`);
-        
-        if (statusData.requestStatus === 'DONE') {
-          console.log(`[BIHR SERVICE]: Catálogo listo. Descargando con downloadId: ${statusData.downloadId}`);
-          await downloadAndProcessCatalog(statusData.downloadId, catalogType, startTime);
-          return true;
-        } else if (statusData.requestStatus === 'ERROR') {
-          throw new Error('La generación de catálogo en los servidores de Bihr falló.');
-        }
-      }
-      
-      throw new Error('Tiempo de espera agotado para la generación del catálogo.');
     } else {
-      throw new Error(`Código HTTP de respuesta no esperado: ${response.status}`);
+      let requestData;
+      try { requestData = JSON.parse(rawBody); } catch { requestData = {}; }
+      const ticketId = requestData.ticketId || requestData.TicketId || requestData.TicketID;
+      const resultCode = requestData.ResultCode || requestData.resultCode;
+
+      if (resultCode === 'OK' && ticketId) {
+        console.log(`[BIHR SERVICE]: Petición aceptada. TicketID: ${ticketId}. Esperando generación...`);
+
+        updateCatalogSyncState({
+          status: 'waiting_generation',
+          catalogType,
+          startTime,
+          ticketId
+        });
+
+        let attempts = 0;
+        const maxAttempts = 20;
+
+        while (attempts < maxAttempts) {
+          await new Promise(r => setTimeout(r, 30000));
+          attempts++;
+
+          console.log(`[BIHR SERVICE]: Comprobando estado ticket ${ticketId} (intento ${attempts})...`);
+          const statusRes = await fetch(`${BIHR_API_BASE}/api/v2.1/Catalog/GenerationStatus?ticketId=${ticketId}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/json'
+            }
+          });
+
+          if (!statusRes.ok) continue;
+
+          const statusData = await statusRes.json();
+          const requestStatus = statusData.requestStatus || statusData.RequestStatus || statusData.status;
+          const downloadId = statusData.downloadId || statusData.DownloadId;
+          console.log(`[BIHR SERVICE]: Estado generación: ${requestStatus}`);
+
+          if (requestStatus === 'DONE' && downloadId) {
+            console.log(`[BIHR SERVICE]: Catálogo listo. Descargando con downloadId: ${downloadId}`);
+            await downloadAndProcessCatalog(downloadId, catalogType, startTime);
+            return true;
+          } else if (requestStatus === 'ERROR') {
+            throw new Error('La generación de catálogo en los servidores de Bihr falló.');
+          }
+        }
+
+        throw new Error('Tiempo de espera agotado para la generación del catálogo.');
+      } else {
+        throw new Error(`Respuesta inesperada de Bihr: HTTP ${response.status}, body: ${rawBody.substring(0, 200)}`);
+      }
     }
 
     return false;
@@ -531,7 +545,9 @@ async function processCatalogJson(filePath: string, catalogType: string, startTi
         const sku = ref.ProductCode || ref.SupplierProductCode || ref.PartNumber || '';
         const name = ref.ProductName || ref.Description || ref.Designation || 'Sin nombre';
         const brand = ref.Brand || '';
-        
+        const supplierCode = ref.SupplierProductCode || '';
+        const oldPartNumber = ref.OldPartNumber || '';
+
         let cost = 0;
         if (ref.BaseDealerPriceExcludingTax) {
           cost = Math.round(parseFloat(ref.BaseDealerPriceExcludingTax) * 100);
@@ -542,19 +558,45 @@ async function processCatalogJson(filePath: string, catalogType: string, startTi
         const barcode = ref.BarCode || '';
         const stockVal = ref.StockValue ? parseInt(ref.StockValue) : 0;
         const description = ref.Description || ref.HtmlDescription || '';
-        
+
+        // Mapeo de categorías Bihr a IDs de categorías locales
         const categoryMap: Record<string, number> = {
           'RIDER GEAR': 9,
           'HARD PARTS': 1,
           'PROTECTION': 9,
           'TYRES': 7,
           'OILS': 6,
-          'ACCESSORIES': 10
+          'LIQUIDS & LUBRICANTS': 6,
+          'ACCESSORIES': 10,
+          'VEHICLE PARTS & ACCESSORIES': 1,
+          'TOOLING & WS': 7,
+          'OTHER PRODUCTS & SERVICES': 10
         };
         const categoryId = categoryMap[ref.Category1?.toUpperCase()] || 1;
 
+        // Mapeo de subcategorías Bihr a IDs de subcategorías locales
+        const subcategoryMap: Record<string, number> = {
+          'HELMET FULL FACE': 801,
+          'HELMET FLIP UP': 802,
+          'HELMET OPEN FACE': 803,
+          'APPAREL JACKET': 901,
+          'APPAREL SUIT': 902,
+          'APPAREL GLOVES': 903,
+          'FOOTWEAR BOOTS': 904,
+          'BAG&PACK TRAVEL': 1001,
+          'BAGS & PACKS': 1001,
+          'COMMUNICATION & TECH': 1003,
+          'ACCESSORIES': 1004,
+          'ACC. ACCESS.': 1004,
+          'ACC. ELECTRIC': 404,
+          'ACC. ELECTRONIC': 401,
+          'MAINTENANCE & CARE': 601,
+          'MNT&CARE CLEAN&CARE': 601
+        };
+        const category2Id = subcategoryMap[ref.Category3?.toUpperCase()] || subcategoryMap[ref.Category2?.toUpperCase()] || null;
+
         // Calcular precio según márgenes
-        let marginPercent = 20; // default 20%
+        let marginPercent = 20;
         const brandRule = pricingRules.find(r => r.rule_type === 'brand' && r.target_id?.toLowerCase() === brand?.toLowerCase());
         if (brandRule) {
           marginPercent = brandRule.margin_percent;
@@ -581,23 +623,69 @@ async function processCatalogJson(filePath: string, catalogType: string, startTi
           }
           cost = Math.round(price / 1.20);
         }
-        
+
+        // Campos físicos
+        const weightG = ref['Weight (g)'] ? parseInt(ref['Weight (g)']) : null;
+        const lengthMm = ref['Length (mm)'] ? parseInt(ref['Length (mm)']) : null;
+        const widthMm = ref['Width (mm)'] ? parseInt(ref['Width (mm)']) : null;
+        const heightMm = ref['Height (mm)'] ? parseInt(ref['Height (mm)']) : null;
+        const volumeCm3 = ref['Volume (cm³)'] ? parseInt(ref['Volume (cm³)']) : null;
+
+        // Logística
+        const dropshipping = ref.DropShipping === '1' || ref.DropShipping === true;
+        const ondemand = ref.OnDemand === '1' || ref.OnDemand === true;
+        const deliveryPlant = ref.DeliveryPlant || '';
+        const commodityCode = ref.CommodityCode || '';
+
         const result = await client.query(`
-          INSERT INTO products (sku, name, brand, cost, price, stock, barcode, description, category_id, status, created_at, updated_at)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'published', NOW(), NOW())
+          INSERT INTO products (
+            sku, name, brand, supplier_code, old_part_number,
+            cost, price, stock, barcode, description,
+            category_id, category2, category3, category2_id,
+            weight_g, length_mm, width_mm, height_mm, volume_cm3,
+            dropshipping, ondemand, delivery_plant, commodity_code,
+            status, created_at, updated_at
+          ) VALUES (
+            $1, $2, $3, $4, $5,
+            $6, $7, $8, $9, $10,
+            $11, $12, $13, $14,
+            $15, $16, $17, $18, $19,
+            $20, $21, $22, $23,
+            'published', NOW(), NOW()
+          )
           ON CONFLICT (sku) DO UPDATE SET
             name = EXCLUDED.name,
             brand = EXCLUDED.brand,
+            supplier_code = EXCLUDED.supplier_code,
+            old_part_number = EXCLUDED.old_part_number,
             cost = EXCLUDED.cost,
             price = EXCLUDED.price,
             stock = EXCLUDED.stock,
             barcode = EXCLUDED.barcode,
             description = EXCLUDED.description,
             category_id = EXCLUDED.category_id,
+            category2 = EXCLUDED.category2,
+            category3 = EXCLUDED.category3,
+            category2_id = EXCLUDED.category2_id,
+            weight_g = EXCLUDED.weight_g,
+            length_mm = EXCLUDED.length_mm,
+            width_mm = EXCLUDED.width_mm,
+            height_mm = EXCLUDED.height_mm,
+            volume_cm3 = EXCLUDED.volume_cm3,
+            dropshipping = EXCLUDED.dropshipping,
+            ondemand = EXCLUDED.ondemand,
+            delivery_plant = EXCLUDED.delivery_plant,
+            commodity_code = EXCLUDED.commodity_code,
             updated_at = NOW()
           RETURNING id, (xmax = 0) AS inserted
-        `, [sku, name, brand, cost, price, stockVal, barcode, description, categoryId]);
-        
+        `, [
+          sku, name, brand, supplierCode, oldPartNumber,
+          cost, price, stockVal, barcode, description,
+          categoryId, ref.Category2 || '', ref.Category3 || '', category2Id,
+          weightG, lengthMm, widthMm, heightMm, volumeCm3,
+          dropshipping, ondemand, deliveryPlant, commodityCode
+        ]);
+
         if (result.rows[0]?.inserted) {
           totalInserted++;
         } else {

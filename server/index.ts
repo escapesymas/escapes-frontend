@@ -114,6 +114,8 @@ const db = drizzle(pool);
       INSERT INTO image_regen_state (id, status) VALUES (1, 'idle') ON CONFLICT (id) DO NOTHING;
     `);
     console.log('✅ Database schema aligned successfully!');
+    // Cargar índice de compatibilidades en segundo plano
+    initCompatIndex().catch(e => console.error('[COMPAT INDEX INITIAL LOAD ERROR]:', e));
   } catch (err) {
     console.error('❌ Failed to align database schema:', err);
   }
@@ -240,7 +242,7 @@ const app: any = express();
 app.set('trust proxy', 1);
 
 app.use(cors({
-  origin: ['https://escapesymas.com', 'https://www.escapesymas.com', 'http://localhost:5173'],
+  origin: ['https://escapesymas.com', 'https://www.escapesymas.com', 'https://test.escapesymas.com', 'http://localhost:5173', 'http://localhost:3000', 'http://localhost:3002'],
   credentials: true,
   exposedHeaders: ['X-WP-Total', 'X-WP-TotalPages']
 }));
@@ -252,7 +254,11 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 // Archivos estáticos ANTES del rate limiting
-app.use('/uploads', express.static(uploadDir));
+app.use('/uploads', express.static(uploadDir, {
+  setHeaders: (res) => {
+    res.set('X-Robots-Tag', 'noindex, nofollow');
+  }
+}));
 
 // ================================================================
 // RATE LIMITING BÁSICO (100 req/min por IP) - Excluye uploads y health
@@ -616,6 +622,56 @@ app.post('/api/bihr/sync-images/control', async (req: any, res: any) => {
   }
 });
 
+let compatIndex: Map<string, Map<number, Array<{ sku: string, model: string }>>> | null = null;
+let isIndexLoading = false;
+
+async function initCompatIndex() {
+  if (isIndexLoading) return;
+  isIndexLoading = true;
+  console.log('⚡ Loading compatibility index into memory...');
+  const start = Date.now();
+  try {
+    const res = await pool.query(
+      `SELECT sku, compatibility FROM products WHERE status = 'published' AND compatibility IS NOT NULL AND compatibility != '[]'`
+    );
+    const newIndex = new Map<string, Map<number, Array<{ sku: string, model: string }>>>();
+    for (const row of res.rows) {
+      if (!row.compatibility) continue;
+      for (const item of row.compatibility) {
+        if (!item.brand) continue;
+        const bKey = item.brand.toLowerCase();
+        const yKey = Number(item.year);
+        if (isNaN(yKey)) continue;
+        
+        let yearMap = newIndex.get(bKey);
+        if (!yearMap) {
+          yearMap = new Map();
+          newIndex.set(bKey, yearMap);
+        }
+        
+        let list = yearMap.get(yKey);
+        if (!list) {
+          list = [];
+          yearMap.set(yKey, list);
+        }
+        
+        list.push({ sku: row.sku, model: item.model });
+      }
+    }
+    compatIndex = newIndex;
+    console.log(`✅ Compatibility index ready! Loaded ${newIndex.size} brands in ${Date.now() - start}ms`);
+  } catch (err) {
+    console.error('❌ Failed to build compatibility index:', err);
+  } finally {
+    isIndexLoading = false;
+  }
+}
+
+// Recargar el índice cada 15 minutos para capturar importaciones externas
+setInterval(() => {
+  initCompatIndex().catch(e => console.error('[COMPAT INDEX AUTO REFRESH ERROR]:', e));
+}, 15 * 60 * 1000);
+
 // ================================================================
 // VEHICLE DISCOVERY & COMPATIBILITY
 // ================================================================
@@ -651,53 +707,141 @@ app.get('/api/vehicles', async (req, res) => {
 
     // Cachar jerarquía de vehículos por 5 min fresca, 30 min grace (SWR)
     const result = await executeSWR(cacheKey, async () => {
-      const { hierarchy, compatibility } = getCatalog();
+      try {
+        const { hierarchy, compatibility } = getCatalog();
 
-      if (action === 'brands') {
-        return Object.keys(hierarchy).sort();
-      }
-
-      if (action === 'models') {
-        return Object.keys(hierarchy[brand] || {}).sort();
-      }
-
-      if (action === 'years') {
-        return Object.keys(hierarchy[brand]?.[model] || {}).sort((a: any, b: any) => b - a);
-      }
-
-      if (action === 'compatible-skus') {
-        let codes: string[] = [];
-        if (!hierarchy[brand]) return [];
-
-        if (model) {
-          if (year && year !== 'General' && year !== '') {
-            codes = hierarchy[brand][model][year] || [];
-          } else {
-            // Todos los años para este modelo
-            Object.values(hierarchy[brand][model]).forEach((cList: any) => {
-              codes.push(...cList);
-            });
-          }
-        } else {
-          // Todos los modelos para esta marca
-          Object.values(hierarchy[brand]).forEach((modelsObj: any) => {
-            Object.values(modelsObj).forEach((cList: any) => {
-              codes.push(...cList);
-            });
-          });
+        if (action === 'brands') {
+          return Object.keys(hierarchy).sort();
         }
 
-        // Mapear códigos a SKUs
-        const skusSet = new Set<string>();
-        codes.forEach(code => {
-          const vehicleSkus = compatibility[code] || [];
-          vehicleSkus.forEach((sku: string) => skusSet.add(sku));
-        });
+        if (action === 'models') {
+          return Object.keys(hierarchy[brand] || {}).sort();
+        }
 
-        return Array.from(skusSet);
+        if (action === 'years') {
+          return Object.keys(hierarchy[brand]?.[model] || {}).sort((a: any, b: any) => b - a);
+        }
+
+        if (action === 'compatible-skus') {
+          const skusSet = new Set<string>();
+
+          // 1. Obtener SKUs compatibles desde la base de datos (compatibilidades sincronizadas) usando el índice en memoria
+          if (brand) {
+            const bKey = brand.toLowerCase();
+            const mKey = model ? model.toLowerCase() : '';
+            const yNum = year && year !== 'General' && year !== '' ? parseInt(year) : null;
+
+            if (compatIndex) {
+              const yearMap = compatIndex.get(bKey);
+              if (yearMap) {
+                if (yNum) {
+                  const list = yearMap.get(yNum);
+                  if (list) {
+                    for (const item of list) {
+                      if (mKey) {
+                        const cModel = item.model?.toLowerCase() || '';
+                        if (!cModel.includes(mKey) && !mKey.includes(cModel)) continue;
+                      }
+                      skusSet.add(item.sku);
+                    }
+                  }
+                } else {
+                  // Si no hay año, recorremos todos los años para esta marca
+                  for (const list of yearMap.values()) {
+                    for (const item of list) {
+                      if (mKey) {
+                        const cModel = item.model?.toLowerCase() || '';
+                        if (!cModel.includes(mKey) && !mKey.includes(cModel)) continue;
+                      }
+                      skusSet.add(item.sku);
+                    }
+                  }
+                }
+              }
+            } else {
+              // Fallback directo a la base de datos si el índice no está listo aún
+              console.warn('[VEHICLES COMPATIBILITY]: Index not ready, falling back to slow DB query');
+              const params: any[] = [brand];
+              let queryStr = `
+                SELECT DISTINCT sku 
+                FROM products 
+                WHERE status = 'published' 
+                  AND compatibility IS NOT NULL 
+                  AND compatibility != '[]'
+                  AND EXISTS (
+                    SELECT 1 FROM jsonb_array_elements(compatibility) elem
+                    WHERE LOWER(elem->>'brand') = LOWER($1)
+              `;
+              
+              let paramIdx = 2;
+              if (yNum) {
+                queryStr += ` AND (elem->>'year')::int = $${paramIdx++}`;
+                params.push(yNum);
+              }
+              if (mKey) {
+                queryStr += ` AND (
+                  LOWER(elem->>'model') LIKE $${paramIdx}
+                  OR $${paramIdx + 1} LIKE CONCAT('%', LOWER(elem->>'model'), '%')
+                )`;
+                params.push(`%${mKey}%`);
+                params.push(mKey);
+              }
+              queryStr += `)`; // cierra EXISTS
+              
+              try {
+                const dbRes = await pool.query(queryStr, params);
+                dbRes.rows.forEach((r: any) => {
+                  if (r.sku) skusSet.add(r.sku);
+                });
+              } catch (dbErr) {
+                console.error('[VEHICLES DB COMPATIBILITY ERROR]:', dbErr);
+              }
+            }
+          }
+
+          // 2. Obtener SKUs compatibles desde moto_catalog.json (compatibilidades estáticas)
+          if (brand && hierarchy[brand]) {
+            let codes: string[] = [];
+            if (model) {
+              if (year && year !== 'General' && year !== '') {
+                codes = hierarchy[brand][model]?.[year] || [];
+              } else if (hierarchy[brand][model]) {
+                Object.values(hierarchy[brand][model]).forEach((cList: any) => {
+                  codes.push(...cList);
+                });
+              }
+            } else {
+              Object.values(hierarchy[brand]).forEach((modelsObj: any) => {
+                if (modelsObj) {
+                  Object.values(modelsObj).forEach((cList: any) => {
+                    codes.push(...cList);
+                  });
+                }
+              });
+            }
+
+            codes.forEach(code => {
+              const vehicleSkus = compatibility[code] || [];
+              vehicleSkus.forEach((sku: string) => skusSet.add(sku));
+            });
+          }
+
+          return Array.from(skusSet);
+        }
+
+        throw new Error('Acción no válida');
+      } catch (swrErr: any) {
+        console.error('[VEHICLES SWR ERROR]:', swrErr);
+        // Fallback: if moto_catalog.json is missing, query DB directly
+        if (action === 'brands') {
+          const result = await db.execute(sql`SELECT DISTINCT brand FROM products WHERE brand IS NOT NULL AND brand != '' ORDER BY brand`);
+          return result.rows.map((r: any) => r.brand);
+        }
+        if (action === 'models' || action === 'years' || action === 'compatible-skus') {
+          return [];
+        }
+        throw new Error('Acción no válida');
       }
-
-      throw new Error('Acción no válida');
     }, 300, 1800);
 
     return res.json(result);
@@ -725,7 +869,14 @@ app.get('/api/catalog/products', async (req, res) => {
 
       if (search) {
         const s = sanitizeLike(search);
-        baseWhereClause += ` AND (LOWER(name) LIKE LOWER('%${s}%') ESCAPE '\\' OR LOWER(sku) LIKE LOWER('%${s}%') ESCAPE '\\' OR LOWER(description) LIKE LOWER('%${s}%') ESCAPE '\\')`;
+        baseWhereClause += ` AND (
+          LOWER(name) LIKE LOWER('%${s}%') ESCAPE '\\' 
+          OR LOWER(sku) LIKE LOWER('%${s}%') ESCAPE '\\' 
+          OR LOWER(description) LIKE LOWER('%${s}%') ESCAPE '\\'
+          OR LOWER(supplier_code) LIKE LOWER('%${s}%') ESCAPE '\\'
+          OR LOWER(barcode) LIKE LOWER('%${s}%') ESCAPE '\\'
+          OR LOWER(old_part_number) LIKE LOWER('%${s}%') ESCAPE '\\'
+        )`;
       }
 
       if (category_id) {
@@ -773,13 +924,15 @@ app.get('/api/catalog/products', async (req, res) => {
               1001: "(LOWER(name) LIKE '%baul%' OR LOWER(name) LIKE '%maleta%' OR LOWER(name) LIKE '%case%')",
               1002: "(LOWER(name) LIKE '%quad lock%')",
               1003: "(LOWER(name) LIKE '%intercom%')",
-              1004: "(LOWER(name) LIKE '%retrovisor%' OR LOWER(name) LIKE '%espejo%' OR LOWER(name) LIKE '%mirror%')"
+              1004: "(LOWER(name) LIKE '%retrovisor%' OR LOWER(name) LIKE '%espejo%' OR LOWER(name) LIKE '%mirror%')",
+              805: "(LOWER(name) LIKE '%recambio%' OR LOWER(name) LIKE '%accesorio%' OR LOWER(name) LIKE '%pieza%' OR LOWER(name) LIKE '%almohadilla%' OR LOWER(name) LIKE '%visera%' OR LOWER(name) LIKE '%pantalla%' OR LOWER(name) LIKE '%pinlock%')",
+              1005: "(LOWER(name) LIKE '%promocional%' OR LOWER(name) LIKE '%goodie%' OR LOWER(name) LIKE '%display%')"
             };
             const clause = categoryRules[catId];
             if (clause) {
-              baseWhereClause += ` AND (category_id = ${catId} OR (category_id = ${parentId} AND ${clause}))`;
+              baseWhereClause += ` AND (category_id = ${catId} OR category2_id = ${catId} OR category3_id = ${catId} OR (category_id = ${parentId} AND ${clause}))`;
             } else {
-              baseWhereClause += ` AND category_id = ${catId}`;
+              baseWhereClause += ` AND (category_id = ${catId} OR category2_id = ${catId} OR category3_id = ${catId})`;
             }
           } else {
             baseWhereClause += ` AND (category_id = ${catId} OR category_id BETWEEN ${catId * 100} AND ${(catId + 1) * 100 - 1})`;
@@ -963,13 +1116,15 @@ app.get('/api/catalog/products-by-skus', async (req, res) => {
             1001: "(LOWER(name) LIKE '%baul%' OR LOWER(name) LIKE '%maleta%' OR LOWER(name) LIKE '%case%')",
             1002: "(LOWER(name) LIKE '%quad lock%')",
             1003: "(LOWER(name) LIKE '%intercom%')",
-            1004: "(LOWER(name) LIKE '%retrovisor%' OR LOWER(name) LIKE '%espejo%' OR LOWER(name) LIKE '%mirror%')"
+              1004: "(LOWER(name) LIKE '%retrovisor%' OR LOWER(name) LIKE '%espejo%' OR LOWER(name) LIKE '%mirror%')",
+              805: "(LOWER(name) LIKE '%recambio%' OR LOWER(name) LIKE '%accesorio%' OR LOWER(name) LIKE '%pieza%' OR LOWER(name) LIKE '%almohadilla%' OR LOWER(name) LIKE '%visera%' OR LOWER(name) LIKE '%pantalla%' OR LOWER(name) LIKE '%pinlock%')",
+              1005: "(LOWER(name) LIKE '%promocional%' OR LOWER(name) LIKE '%goodie%' OR LOWER(name) LIKE '%display%')"
           };
           const clause = categoryRules[catId];
           if (clause) {
-            baseWhereClause += ` AND (category_id = ${catId} OR (category_id = ${parentId} AND ${clause}))`;
+            baseWhereClause += ` AND (category_id = ${catId} OR category2_id = ${catId} OR category3_id = ${catId} OR (category_id = ${parentId} AND ${clause}))`;
           } else {
-            baseWhereClause += ` AND category_id = ${catId}`;
+            baseWhereClause += ` AND (category_id = ${catId} OR category2_id = ${catId} OR category3_id = ${catId})`;
           }
         } else {
           baseWhereClause += ` AND (category_id = ${catId} OR category_id BETWEEN ${catId * 100} AND ${(catId + 1) * 100 - 1})`;
@@ -1274,7 +1429,12 @@ app.all('/api/admin', async (req, res) => {
     }
   }
 
-  if (!isAdmin) return res.status(401).json({ error: 'No autorizado' });
+  // Allow moderate-thread for thread owners (checked inside the action handler)
+  if (!isAdmin && action === 'moderate-thread') {
+    // Skip admin check, let the action handler verify ownership
+  } else if (!isAdmin) {
+    return res.status(401).json({ error: 'No autorizado' });
+  }
 
   try {
     switch (action) {
@@ -1418,18 +1578,85 @@ app.all('/api/admin', async (req, res) => {
       }
 
       case 'products-list': {
-        const { search, limit = '100', page = '1' } = req.query as any;
+        const {
+          search, brand, category_id, category2_id, category3_id,
+          stock_min, stock_max, price_min, price_max,
+          dropshipping, ondemand, status,
+          barcode, supplier_code,
+          limit = '100', page = '1', sort = 'created_at', order = 'DESC'
+        } = req.query as any;
         const lim = Math.min(parseIntSafe(limit) || 100, 500);
         const p = parseIntSafe(page) || 1;
         const offset = (p - 1) * lim;
 
-        let query = `SELECT * FROM products`;
+        const conditions: string[] = [];
+
         if (search) {
           const s = sanitizeLike(search);
-          query += ` WHERE LOWER(name) LIKE LOWER('%${s}%') ESCAPE '\\' OR LOWER(sku) LIKE LOWER('%${s}%') ESCAPE '\\' OR LOWER(description) LIKE LOWER('%${s}%') ESCAPE '\\'`;
+          conditions.push(`(
+            LOWER(name) LIKE LOWER('%${s}%') ESCAPE '\\' 
+            OR LOWER(sku) LIKE LOWER('%${s}%') ESCAPE '\\' 
+            OR LOWER(description) LIKE LOWER('%${s}%') ESCAPE '\\'
+            OR LOWER(supplier_code) LIKE LOWER('%${s}%') ESCAPE '\\'
+            OR LOWER(barcode) LIKE LOWER('%${s}%') ESCAPE '\\'
+            OR LOWER(old_part_number) LIKE LOWER('%${s}%') ESCAPE '\\'
+          )`);
         }
-        query += ` ORDER BY created_at DESC LIMIT ${lim} OFFSET ${offset}`;
-        
+        if (brand) {
+          const b = sanitizeString(brand);
+          conditions.push(`LOWER(brand) = LOWER('${b}')`);
+        }
+        if (category_id) {
+          conditions.push(`category_id = ${parseInt(category_id)}`);
+        }
+        if (category2_id) {
+          conditions.push(`category2_id = ${parseInt(category2_id)}`);
+        }
+        if (category3_id) {
+          conditions.push(`category3_id = ${parseInt(category3_id)}`);
+        }
+        if (stock_min) {
+          conditions.push(`stock >= ${parseInt(stock_min)}`);
+        }
+        if (stock_max) {
+          conditions.push(`stock <= ${parseInt(stock_max)}`);
+        }
+        if (price_min) {
+          conditions.push(`price >= ${Math.round(parseFloat(price_min) * 100)}`);
+        }
+        if (price_max) {
+          conditions.push(`price <= ${Math.round(parseFloat(price_max) * 100)}`);
+        }
+        if (dropshipping === 'true' || dropshipping === '1') {
+          conditions.push('dropshipping = true');
+        } else if (dropshipping === 'false' || dropshipping === '0') {
+          conditions.push('dropshipping = false');
+        }
+        if (ondemand === 'true' || ondemand === '1') {
+          conditions.push('ondemand = true');
+        } else if (ondemand === 'false' || ondemand === '0') {
+          conditions.push('ondemand = false');
+        }
+        if (status) {
+          const st = sanitizeString(status);
+          conditions.push(`status = '${st}'`);
+        }
+        if (barcode) {
+          const bc = sanitizeLike(barcode);
+          conditions.push(`barcode LIKE '%${bc}%'`);
+        }
+        if (supplier_code) {
+          const sc = sanitizeLike(supplier_code);
+          conditions.push(`supplier_code LIKE '%${sc}%'`);
+        }
+
+        const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+        const allowedSorts = ['created_at', 'name', 'sku', 'price', 'stock', 'brand', 'barcode', 'supplier_code'];
+        const safeSort = allowedSorts.includes(sort) ? sort : 'created_at';
+        const safeOrder = order === 'ASC' ? 'ASC' : 'DESC';
+
+        const query = `SELECT * FROM products ${whereClause} ORDER BY ${safeSort} ${safeOrder} LIMIT ${lim} OFFSET ${offset}`;
         const products = await db.execute(sql.raw(query));
         return res.json(products.rows);
       }
@@ -1448,10 +1675,14 @@ app.all('/api/admin', async (req, res) => {
         const imgs = b.images?.length > 0 ? JSON.stringify(b.images) : null;
         const compat = b.compatibility?.length > 0 ? JSON.stringify(b.compatibility) : null;
         const status = b.status || 'published';
+        const brand = b.brand || '';
+        const cost = b.cost ? Math.round(parseFloat(b.cost) * 100) : null;
+        const category2Id = b.category2Id ? parseInt(b.category2Id) : null;
+        const category3Id = b.category3Id ? parseInt(b.category3Id) : null;
 
         await db.execute(sql`
-          INSERT INTO products (name, sku, price, sale_price, stock, description, images, compatibility, status)
-          VALUES (${safeName}, ${safeSku}, ${priceInCents}, ${saleCents}, ${stock}, ${desc}, ${imgs}, ${compat}, ${status})
+          INSERT INTO products (name, sku, price, sale_price, stock, description, images, compatibility, status, brand, cost, category2_id, category3_id)
+          VALUES (${safeName}, ${safeSku}, ${priceInCents}, ${saleCents}, ${stock}, ${desc}, ${imgs}, ${compat}, ${status}, ${brand}, ${cost}, ${category2Id}, ${category3Id})
         `);
         return res.json({ success: true });
       }
@@ -2002,7 +2233,7 @@ app.all('/api/admin', async (req, res) => {
         const cartsRes = await db.execute(sql`
           SELECT c.*, u.email as user_email, u.first_name as user_firstname, u.last_name as user_lastname, u.username as user_username
           FROM carts c
-          LEFT JOIN users u ON c.user_id = u.wp_id
+          LEFT JOIN users u ON c.user_id = u.wp_id OR c.user_id = u.id
           ORDER BY c.updated_at DESC
         `);
         const result = [];
@@ -2161,8 +2392,16 @@ app.all('/api/admin', async (req, res) => {
 
       case 'moderate-thread': {
         if (req.method !== 'POST') return res.status(405).end();
-        const { threadId, isPinned, isClosed, deleteThread } = req.body;
+        const { threadId, isPinned, isClosed, deleteThread, userId } = req.body;
         if (!threadId) return res.status(400).json({ error: 'Falta threadId' });
+        
+        // Allow if admin OR the thread owner
+        if (userId && !isAdmin) {
+          const owner = await db.execute(sql`SELECT user_id FROM forum_posts WHERE id = ${parseInt(threadId)}`);
+          if (owner.rows[0]?.user_id !== parseInt(userId)) {
+            return res.status(403).json({ error: 'No puedes modificar un hilo que no te pertenece' });
+          }
+        }
         
         if (deleteThread) {
           await db.execute(sql`DELETE FROM forum_replies WHERE post_id = ${parseInt(threadId)}`);
@@ -2213,7 +2452,7 @@ app.all('/api/admin', async (req, res) => {
         const b = req.body;
         const productId = parseInt(b.id);
         if (!productId) return res.status(400).json({ error: 'Falta productId' });
-        
+
         const safeName = (b.name || "Sin nombre").substring(0, 255);
         const safeSku = (b.sku || `SKU-${Date.now()}`).substring(0, 100);
         const raw = parseFloat(b.price);
@@ -2225,11 +2464,31 @@ app.all('/api/admin', async (req, res) => {
         const imgs = b.images?.length > 0 ? JSON.stringify(b.images) : null;
         const compat = b.compatibility?.length > 0 ? JSON.stringify(b.compatibility) : null;
         const status = b.status || 'published';
+        const brand = b.brand || '';
+        const cost = b.cost ? Math.round(parseFloat(b.cost) * 100) : null;
+        const category2Id = b.category2Id ? parseInt(b.category2Id) : null;
+        const category3Id = b.category3Id ? parseInt(b.category3Id) : null;
+        const dropshipping = b.dropshipping === true || b.dropshipping === 'true';
+        const ondemand = b.ondemand === true || b.ondemand === 'true';
+        const barcode = b.barcode || '';
+        const supplierCode = b.supplierCode || '';
+        const weightG = b.weight_g ? parseInt(b.weight_g) : null;
+        const lengthMm = b.length_mm ? parseInt(b.length_mm) : null;
+        const widthMm = b.width_mm ? parseInt(b.width_mm) : null;
+        const heightMm = b.height_mm ? parseInt(b.height_mm) : null;
+        const deliveryPlant = b.deliveryPlant || '';
 
         await db.execute(sql`
           UPDATE products
           SET name = ${safeName}, sku = ${safeSku}, price = ${priceInCents}, sale_price = ${saleCents},
-              stock = ${stock}, description = ${desc}, images = ${imgs}, compatibility = ${compat}, status = ${status}
+              stock = ${stock}, description = ${desc}, images = ${imgs}, compatibility = ${compat},
+              status = ${status}, brand = ${brand}, cost = ${cost},
+              category2_id = ${category2Id}, category3_id = ${category3Id},
+              dropshipping = ${dropshipping}, ondemand = ${ondemand},
+              barcode = ${barcode}, supplier_code = ${supplierCode},
+              weight_g = ${weightG}, length_mm = ${lengthMm},
+              width_mm = ${widthMm}, height_mm = ${heightMm},
+              delivery_plant = ${deliveryPlant}
           WHERE id = ${productId}
         `);
         return res.json({ success: true });
@@ -2452,7 +2711,7 @@ app.post('/api/auth', async (req, res) => {
       return res.json(session);
 
     } else if (action === 'register') {
-      const { username, email, password } = body;
+      const { username, email, password, firstName, lastName, phone } = body;
       if (!username || !email || !password) return res.status(400).json({ error: 'Faltan campos obligatorios' });
 
       // Comprobar si ya existe
@@ -2467,10 +2726,11 @@ app.post('/api/auth', async (req, res) => {
 
       const passHash = crypto.createHash('sha256').update(password).digest('hex');
       const role = email.toLowerCase() === 'info@escapesymas.com' ? 'admin' : 'customer';
+      const billingData = JSON.stringify({ address_1: '', city: '', postcode: '', phone: phone || '' });
 
       const insertRes = await db.execute(sql`
-        INSERT INTO users (username, email, password_hash, first_name, role)
-        VALUES (${username}, ${email}, ${passHash}, ${username}, ${role})
+        INSERT INTO users (username, email, password_hash, first_name, last_name, role, billing)
+        VALUES (${username}, ${email}, ${passHash}, ${firstName || username}, ${lastName || ''}, ${role}, ${billingData})
         RETURNING id
       `);
 
@@ -2482,14 +2742,14 @@ app.post('/api/auth', async (req, res) => {
         user_id: newId,
         user_email: email,
         user_nicename: username,
-        user_display_name: username,
+        user_display_name: firstName || username,
         avatarUrl: '',
         role: role
       };
 
       return res.json(session);
     } else if (action === 'update-profile') {
-      const { userId, firstName, lastName, billing, garage, avatarUrl } = body;
+      const { userId, firstName, lastName, email, billing, garage, avatarUrl } = body;
       if (!userId) return res.status(400).json({ error: 'Falta userId' });
 
       // Cargar el usuario actual
@@ -2497,6 +2757,16 @@ app.post('/api/auth', async (req, res) => {
       if (userRes.rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
 
       const user = userRes.rows[0] as any;
+
+      if (email && email.toLowerCase() !== user.email.toLowerCase()) {
+        const existRes = await db.execute(sql`
+          SELECT id FROM users
+          WHERE LOWER(email) = LOWER(${email}) AND id != ${parseInt(userId)}
+        `);
+        if (existRes.rows.length > 0) {
+          return res.status(400).json({ error: 'El correo electrónico ya está registrado por otro usuario' });
+        }
+      }
 
       let billingJson = user.billing;
       if (billing !== undefined) {
@@ -2513,6 +2783,7 @@ app.post('/api/auth', async (req, res) => {
         SET 
           first_name = COALESCE(${firstName || null}, first_name),
           last_name = COALESCE(${lastName || null}, last_name),
+          email = COALESCE(${email || null}, email),
           billing = ${billingJson || null},
           garage = ${garageJson || null},
           avatar_url = COALESCE(${avatarUrl || null}, avatar_url)
@@ -2528,6 +2799,47 @@ app.post('/api/auth', async (req, res) => {
         SET cart = ${cart ? JSON.stringify(cart) : null}
         WHERE id = ${parseInt(userId)}
       `);
+      return res.json({ success: true });
+    } else if (action === 'delete-account') {
+      const { userId } = body;
+      if (!userId) return res.status(400).json({ error: 'Falta userId' });
+
+      const parsedId = parseInt(userId);
+      try {
+        await db.execute(sql`DELETE FROM users WHERE id = ${parsedId}`);
+      } catch (err) {
+        await db.execute(sql`
+          UPDATE users
+          SET 
+            username = ${`eliminado_${parsedId}`},
+            email = ${`eliminado_${parsedId}@escapesymas.com`},
+            first_name = 'Usuario',
+            last_name = 'Eliminado',
+            password_hash = '',
+            avatar_url = '',
+            billing = null,
+            garage = null,
+            cart = null,
+            role = 'customer'
+          WHERE id = ${parsedId}
+        `);
+      }
+    } else if (action === 'change-password') {
+      const { userId, currentPassword, newPassword } = body;
+      if (!userId || !currentPassword || !newPassword) return res.status(400).json({ error: 'Faltan campos obligatorios' });
+
+      const userRes = await db.execute(sql`SELECT password_hash FROM users WHERE id = ${parseInt(userId)}`);
+      if (userRes.rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+      const user = userRes.rows[0] as any;
+      const currentHash = crypto.createHash('sha256').update(currentPassword).digest('hex');
+
+      if (user.password_hash && user.password_hash !== currentHash) {
+        return res.status(401).json({ error: 'La contraseña actual es incorrecta' });
+      }
+
+      const newHash = crypto.createHash('sha256').update(newPassword).digest('hex');
+      await db.execute(sql`UPDATE users SET password_hash = ${newHash} WHERE id = ${parseInt(userId)}`);
       return res.json({ success: true });
     }
 
@@ -2826,13 +3138,13 @@ app.post('/api/orders/create', async (req: any, res: any) => {
 
     // Aplicar lógica de Tiers
     let discountPercent = 0;
-    let shippingCents = 495; // 4.95€ por defecto
+    let shippingCents = 1500; // 15.00€ por defecto
 
     const subtotalEur = subtotalCents / 100;
-    if (subtotalEur >= 750) {
+    if (subtotalEur >= 500) {
       discountPercent = 15;
       shippingCents = 0;
-    } else if (subtotalEur >= 350) {
+    } else if (subtotalEur >= 300) {
       discountPercent = 10;
       shippingCents = 0;
     } else if (subtotalEur >= 150) {
@@ -3149,6 +3461,7 @@ app.post('/api/checkout', async (req: any, res: any) => {
   if (!SUMUP_API_KEY) return res.status(500).json({ message: "Configuración incompleta: Falta SUMUP_SECRET_KEY" });
 
   try {
+    const finalMerchantEmail = merchantEmail || 'info@escapesymas.com';
     const response = await fetch('https://api.sumup.com/v0.1/checkouts', {
       method: 'POST',
       headers: {
@@ -3159,7 +3472,7 @@ app.post('/api/checkout', async (req: any, res: any) => {
         checkout_reference: orderRef,
         amount,
         currency: currency || 'EUR',
-        pay_to_email: merchantEmail,
+        pay_to_email: finalMerchantEmail,
         description: `Pedido ${orderRef}`,
         return_url: `https://${req.get('host')}/?payment_success=true&order=${orderRef}`
       })
@@ -3345,16 +3658,26 @@ function mapProductToFrontend(row: any) {
   const salePriceEur = row.sale_price ? row.sale_price / 100 : null;
   let images: any[] = [];
   try { images = row.images ? JSON.parse(row.images) : []; } catch { }
-  images = (Array.isArray(images) ? images : []).map((img: any) =>
-    typeof img === 'string' ? { src: img, alt: row.name } : img
-  );
+  images = (Array.isArray(images) ? images : []).map((img: any) => {
+    if (typeof img === 'string') return { src: img, alt: row.name };
+    if (img.srcSet && typeof img.srcSet === 'object') {
+      return {
+        src: img.src,
+        srcMobile: img.srcSet.mobile || img.srcSet['mobile'],
+        srcCardDesktop: img.srcSet['card-desktop'] || img.srcSet.cardDesktop,
+        srcCardMobile: img.srcSet['card-mobile'] || img.srcSet.cardMobile,
+        alt: img.alt || row.name
+      };
+    }
+    return img;
+  });
   let compatibility: any[] = [];
   try { compatibility = row.compatibility ? JSON.parse(row.compatibility) : []; } catch { }
 
   const categoryMap: Record<number, { name: string; slug: string }> = {
     1: { name: "Sistemas de Escape", slug: "escapes" },
     2: { name: "Frenos de Competición", slug: "frenos" },
-    3: { name: "Ciclista & Chasis", slug: "suspensiones" },
+    3: { name: "Parte ciclo & Chasis", slug: "suspensiones" },
     4: { name: "Electrónica & ECU", slug: "electronica" },
     5: { name: "Transmisión & Desarrollo", slug: "transmision" },
     6: { name: "Mantenimiento & Fluidos", slug: "mantenimiento" },
@@ -3420,6 +3743,10 @@ function mapProductToFrontend(row: any) {
   const placeholderImg = `https://placehold.co/800x800/18181b/f97316?text=${encodeURIComponent(row.name?.substring(0, 20) || 'ESCAPES+Y+MAS')}`;
   const finalImage = productImage || placeholderImg;
 
+  // Subcategorías
+  const cat2Info = row.category2_id ? categoryMap[row.category2_id] : null;
+  const cat3Info = row.category3_id ? categoryMap[row.category3_id] : null;
+
   return {
     id: row.id, title: row.name, name: row.name,
     slug: row.sku?.toLowerCase().replace(/[^a-z0-9]/g, '-') || `product-${row.id}`,
@@ -3427,12 +3754,111 @@ function mapProductToFrontend(row: any) {
     sku: row.sku || '', image: finalImage, images: images.length ? images : [{ src: placeholderImg, alt: row.name }],
     inStock: (row.stock || 0) > 0, stock: row.stock || 0,
     category: catInfo.name, categorySlug: catInfo.slug, categoryId: row.category_id || 0,
+    category2: row.category2 || '', category3: row.category3 || '',
+    category2Id: row.category2_id || null, category3Id: row.category3_id || null,
+    category2Name: cat2Info?.name || '', category2Slug: cat2Info?.slug || '',
+    category3Name: cat3Info?.name || '', category3Slug: cat3Info?.slug || '',
     description: row.description || '',
     shortDescription: row.description ? row.description.substring(0, 150) + '...' : '',
     status: row.status, compatibility, attributes: [],
+    brand: row.brand || '', barcode: row.barcode || '',
+    supplierCode: row.supplier_code || '', oldPartNumber: row.old_part_number || '',
+    weight_g: row.weight_g || null, length_mm: row.length_mm || null,
+    width_mm: row.width_mm || null, height_mm: row.height_mm || null,
+    volume_cm3: row.volume_cm3 || null,
+    dropshipping: row.dropshipping || false, ondemand: row.ondemand || false,
+    deliveryPlant: row.delivery_plant || '', commodityCode: row.commodity_code || '',
     averageRating: 0, ratingCount: 0, source: 'postgresql'
   };
 }
+
+// ================================================================
+// CATEGORÍAS (público)
+// ================================================================
+app.get('/api/catalog/categories', (req, res) => {
+  const categoryMap: Record<number, { name: string; slug: string }> = {
+    1: { name: "Sistemas de Escape", slug: "escapes" },
+    2: { name: "Frenos de Competición", slug: "frenos" },
+    3: { name: "Parte ciclo & Chasis", slug: "suspensiones" },
+    4: { name: "Electrónica & ECU", slug: "electronica" },
+    5: { name: "Transmisión & Desarrollo", slug: "transmision" },
+    6: { name: "Mantenimiento & Fluidos", slug: "mantenimiento" },
+    7: { name: "Neumáticos & Paddock", slug: "neumaticos" },
+    8: { name: "Cascos", slug: "cascos" },
+    9: { name: "Equipación Piloto", slug: "equipacion" },
+    10: { name: "Accesorios & Maletas", slug: "accesorios" },
+
+    101: { name: "Línea Completa (Racing)", slug: "linea-completa" },
+    102: { name: "Slip-On (Silenciosos)", slug: "silenciadores" },
+    103: { name: "Colectores", slug: "colectores" },
+    104: { name: "Accesorios Escape", slug: "accesorios-escape" },
+
+    201: { name: "Pastillas Sinterizadas", slug: "pastillas-sinterizadas" },
+    202: { name: "Discos de Freno", slug: "discos-freno" },
+    203: { name: "Bombas Radiales", slug: "bombas-radiales" },
+    204: { name: "Latiguillos Metálicos", slug: "latiguillos-metalicos" },
+
+    301: { name: "Amortiguadores Traseros", slug: "amortiguadores-traseros" },
+    302: { name: "Cartuchos Horquilla", slug: "cartuchos-horquilla" },
+    303: { name: "Amortiguadores Dirección", slug: "amortiguadores-direccion" },
+    304: { name: "Estriberas", slug: "estriberas" },
+
+    401: { name: "Centralitas (ECU)", slug: "centralitas" },
+    402: { name: "Quickshifters", slug: "quickshifters" },
+    403: { name: "Módulos ABS/TC", slug: "modulos-abs-tc" },
+    404: { name: "Baterías Litio", slug: "baterias-litio" },
+
+    501: { name: "Kits Cadena Completos", slug: "kits-cadena" },
+    502: { name: "Cadenas X-Ring/Z-Ring", slug: "cadenas-arrastre" },
+    503: { name: "Piñones", slug: "pinones" },
+    504: { name: "Coronas Ergal", slug: "coronas" },
+
+    601: { name: "Filtros Aire Racing", slug: "filtros-aire" },
+    602: { name: "Filtros Aceite", slug: "filtros-aceite" },
+    603: { name: "Aceites Motor Pro", slug: "aceites-motor" },
+    604: { name: "Líquidos Hidráulicos", slug: "liquidos-hidraulicos" },
+
+    701: { name: "Neumáticos Slick/Sport", slug: "neumaticos-slick" },
+    702: { name: "Calentadores", slug: "calentadores" },
+    703: { name: "Caballetes", slug: "caballetes" },
+    704: { name: "Manómetros & Accesorios", slug: "manometros-accesorios" },
+
+    801: { name: "Cascos Integrales", slug: "cascos-integrales" },
+    802: { name: "Cascos Modulares", slug: "cascos-modulares" },
+    803: { name: "Cascos Jet", slug: "cascos-jet" },
+    804: { name: "Cascos Off-Road", slug: "cascos-off-road" },
+    805: { name: "Recambios Cascos", slug: "recambios-cascos" },
+
+    901: { name: "Chaquetas Moto", slug: "chaquetas-moto" },
+    902: { name: "Monos", slug: "monos" },
+    903: { name: "Guantes de Competición", slug: "guantes-competicion" },
+    904: { name: "Botas Racing", slug: "botas-racing" },
+
+    1001: { name: "Maletas & Baúles", slug: "maletas-baules" },
+    1002: { name: "Soportes Quad Lock", slug: "soportes-quad-lock" },
+    1003: { name: "Intercomunicadores", slug: "intercomunicadores" },
+    1004: { name: "Personalización & Espejos", slug: "personalizacion-espejos" },
+    1005: { name: "Promocional", slug: "promocional" }
+  };
+
+  const subcategories = Object.entries(categoryMap)
+    .filter(([id]) => parseInt(id) >= 100)
+    .map(([id, cat]) => {
+      const catId = parseInt(id);
+      const parentId = Math.floor(catId / 100);
+      const parent = categoryMap[parentId];
+      return {
+        id: catId,
+        name: cat.name,
+        slug: cat.slug,
+        parentId,
+        parentName: parent?.name || '',
+        parentSlug: parent?.slug || ''
+      };
+    });
+
+  res.json(subcategories);
+});
 
 // ================================================================
 // DROPSHIPPING STATUS & TRACKING DAEMON

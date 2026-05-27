@@ -1,0 +1,777 @@
+PartNumber,OldPartNumber,SupplierProductCode,Brand,ProductName,Designation,RetailPriceIncludingTax,RetailPriceExcludingTax,BaseDealerPriceExcludingTax,BarCode,StockValue,CommodityCode,OnDemand,DropShipping,HtmlDescription,Description,Category1,Category2,Category3,V-Cantidad de dientes,V-Color,Volume (cm³),Weight (g),Length (mm),Width (mm),Height (mm),BCD (Mm),Color,Composición,Desplazamiento (mm),Dientes,Espesor (mm),Linea de cadena (Mm),Material de plato,Número de dientes de la corona,Número de dientes del piñón,Paso de cadena,Tipo,Tipo de corona,Tipo de piñón,Uso recomendado,Velocidades,Versión de corona,Versión de piñón,Picture1,Picture2,Picture3,AllPicturesZIP,DeliveryPlant
+1077487003,41805,50-13013-13,ESJOT,"ESJOT FR SPROC 420 STEEL 13013, 13",Piñon ESJOT Acero 50-13013 13 dientes,5.99,4.95,1.49,4251516503240,1,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,13 dientes,,50,84,58,58,15,,,Acero,,,,,,,13,420,,,,,,,,https://api.mybihr.com/medias/800Wx800H-1077487003-1.jpg?context=bWFzdGVyfHJvb3R8MTA0NDg4fGltYWdlL2pwZWd8YURFMEwyZ3dNQzg0TVRFNU1EVTJPREF3TVRVMk5pODRNREJYZURnd01FaGZNVEEzTnpRNE56QXdNeTB4TG1wd1p3fDExMDNlODZjMGMxOGRmNmJiYTFhZjVjOWY2MjVlMTZiMjYwOWY1ZmYyZjVhOWRlN2U1MTcxNDExYmQzMmIyZWQ,https://api.mybihr.com/medias/800Wx800H-1077487003-2.jpg?context=bWFzdGVyfHJvb3R8ODczMjh8aW1hZ2UvanBlZ3xhRFk1TDJnd055ODRNVEU1TURVMk9ESTJNemN4TUM4NE1EQlhlRGd3TUVoZk1UQTNOelE0TnpBd015MHlMbXB3Wnd8MjViOTk4ZmZjY2JlZGVmZTFmN2FiNzk1OWUyODkzY2QwNjFkNjg3MDFkZDQzNDAzMDgwMWRmN2I2ZjQxNDViNA,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1077487002,41807,50-13013-12,ESJOT,"ESJOT FR SPROC 420 STEEL 13013, 12",Piñon ESJOT Acero 50-13013 12 dientes,5.99,4.95,0.52,8430525418073,1,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,12 dientes,,161,68,60,84,32,,,Acero,,,,,,,,420,,,,,,,,https://api.mybihr.com/medias/1077487002-1-800Wx800H?context=bWFzdGVyfHJvb3R8NjU0MTd8aW1hZ2UvanBlZ3xhR1UyTDJnek5TOHhOVFF5TnpJMk5qRXhOelkyTWk4eE1EYzNORGczTURBeUxURmZPREF3VjNnNE1EQkl8M2U1YzE3MGU2MTM0OGFhY2M2NjBkOTMwNDA2N2JmOTM5MTU4NjkyY2E0ZjcyY2RmMWMxZGRlOTdjMjQ0YWYyMQ,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1077487001,41806,50-13013-11,ESJOT,"ESJOT FR SPROC 420 STEEL 13013, 11",Piñon ESJOT Acero 50-13013 11 dientes,5.99,4.95,3.22,8430525418066,1,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,11 dientes,,89,60,48,74,25,,,Acero,,,,,,,,420,,,,,,,,https://api.mybihr.com/medias/1077487001-1-800Wx800H?context=bWFzdGVyfHJvb3R8NjM5Njd8aW1hZ2UvanBlZ3xhRFV5TDJneFppOHhOVFF5TnpJMk5UY3lORFEwTmk4eE1EYzNORGczTURBeExURmZPREF3VjNnNE1EQkl8M2FmMjBjZTE2NzYzOWZiMWNkNGMzYjAzOTllYWM1NjExOTQ1M2Q5ZDBiYzliNGNkN2FjNmY4MWEwMjk0MDE5OQ,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1077489002,41804,50-13024-13,ESJOT,"ESJOT FR SPROC 420 STEEL 13024, 13",Piñon ESJOT Acero 50-13024 13 dientes,5.99,4.95,1.49,4251516503868,1,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,13 dientes,,66,86,96,57,12,,,Acero,,,,,,,,420,,,,,,,,https://api.mybihr.com/medias/1077489002-1-800Wx800H?context=bWFzdGVyfHJvb3R8NDc2OTl8aW1hZ2UvanBlZ3xhRGxpTDJobFlpOHhOVFF5TnpJMk9EUTNOamsxT0M4eE1EYzNORGc1TURBeUxURmZPREF3VjNnNE1EQkl8MGFhNGVmMmVhNjljMDQ1NTI1OGJhZmQ4NzVlNDgzMzQ3Nzc1M2NlOGUzM2RiMjc2MWI5ZTEzOTg0N2JjMzg1Mg,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1077489001,41803,50-13024-12,ESJOT,"ESJOT FR SPROC 420 STEEL 13024, 12",Piñon ESJOT Acero 50-13024 12 dientes,5.99,4.95,1.49,4251516503851,2,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,12 dientes,,122,72,51,75,32,,,Acero,,,,,,,,420,,,,,,,,https://api.mybihr.com/medias/1077489001-1-800Wx800H?context=bWFzdGVyfHJvb3R8NDczNjR8aW1hZ2UvanBlZ3xhREk0TDJobU9TOHhOVFF5TnpJMk9EQTRNemMwTWk4eE1EYzNORGc1TURBeExURmZPREF3VjNnNE1EQkl8MTdiMTgwOTBmODhmMWU3M2U5YTcxMTE5NWNmZWU0YWUzY2U0ZDQ1OTBmM2I1NWRmZTAxYjhmNWU2NjQxNDUwZQ,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1077492002,48678,50-29018-16,ESJOT,"ESJOT FR SPROC 525 STEEL 29018, 16",Piñón ESJOT acero 50-29018 16 dientes,17.50,14.46,4.34,8430525486782,5,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,16 dientes,,121,250,88,86,16,,,Acero,,,,,,,16,525,,,,,,,Estándar,https://api.mybihr.com/medias/800Wx800H-1077492002-1.jpg?context=bWFzdGVyfHJvb3R8MjQ3Nzl8aW1hZ2UvanBlZ3xhREl5TDJnNE55ODJOalUwTXpFeE5qZzBOVEE0Tmk4NE1EQlhlRGd3TUVoZk1UQTNOelE1TWpBd01pMHhMbXB3Wnd8MWY1ZmUzYTI5NTI1ODhiOWZiMGU0ZmE3YTIzY2IyNWE5YjQ0Zjk5ZmY1Yzc4NjI5ODUwMzRmYjNlYjgxM2MwYQ,https://api.mybihr.com/medias/800Wx800H-1077492002-2.jpg?context=bWFzdGVyfHJvb3R8MjQ4NjF8aW1hZ2UvanBlZ3xhRFZrTDJoa09TODJOalUwTXpFeE56RTNNamMyTmk4NE1EQlhlRGd3TUVoZk1UQTNOelE1TWpBd01pMHlMbXB3Wnd8ZmIzMjcwY2MzMjE4MWMzMTE2ZTEzZWFjZjQ2MWFjNmNlYjNkODc3MzE0ZTZkZmJiOTAzMzg5YzZjNTljNWY3Zg,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1077510003,41875,50-32176-15,ESJOT,"ESJOT FR SPROC 520 STEEL 32176, 15",Piñon ESJOT Acero 50-32176 15 dientes,15.83,13.08,1.01,8430525418752,1,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,15 dientes,,163,174,107,80,19,,,Acero,,,,,,,,520,,,,,,,,https://api.mybihr.com/medias/1077510003-1-800Wx800H?context=bWFzdGVyfHJvb3R8NTEwODN8aW1hZ2UvanBlZ3xhR1l4TDJneU9TOHhOVFF5TnpJNE5qRTNNVFkzT0M4eE1EYzNOVEV3TURBekxURmZPREF3VjNnNE1EQkl8ZTc3M2NjNmM0MDkxNGNkNjg5NDY5YjFmZjJmZGQxNzU5Mzg5NmFhYjJmYWEyYjBhZGJkMzQ3ZmMzYTgzNmYwZg,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1075589012,41930,51-32065-44BP,ESJOT,"ESJOT RR SPROC 520 ALU 32065, 44, BLK",Corona ESJOT Aluminio negro 51-32065-44BP dientes,35.09,29.00,14.15,8430525419308,2,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,44 dientes,Negro,1180,314,226,227,23,,,Aluminio,,,,,,,,520,,,,,,,,https://api.mybihr.com/medias/1075589012-1-800Wx800H?context=bWFzdGVyfHJvb3R8NjI3OTd8aW1hZ2UvanBlZ3xhRGt4TDJobFlTOHhOVFF5TmpZeU5EVXlNREl5TWk4eE1EYzFOVGc1TURFeUxURmZPREF3VjNnNE1EQkl8YWZlNmE0MzUxNWUyZDAyZjEyNTc0YzY4YmM4MDZhY2VkMzA0MmQ4NTg0MTIyM2E3MzRjZDIwMTA4NjlmNDc5Yw,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1075589023,41931,51-32065-45BP,ESJOT,"ESJOT RR SPROC 520 ALU 32065, 45, BLK",Corona ESJOT Aluminio negro 51-32065-45BP dientes,35.09,29.00,18.85,8430525419315,2,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,45 dientes,Negro,1309,338,234,233,24,,,Aluminio,,,,,,45,,520,,,,,,,,https://api.mybihr.com/medias/1075589023-1-800Wx800H?context=bWFzdGVyfHJvb3R8NjI4NDJ8aW1hZ2UvanBlZ3xhRE5rTDJnNVl5OHhOVFF5TmpZeU9EZzBOVFU1T0M4eE1EYzFOVGc1TURJekxURmZPREF3VjNnNE1EQkl8MzgzMmJmMGY4M2I5MjMzMTA3MmE4NzIwNTM3YWM1MDkxZGIwZTg4Y2Q4MDBjZjQxMmNlODlmZGRhNDM4MDhjNw,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1075589011,41915,51-32065-38,ESJOT,"ESJOT RR SPROC 520 ALU 32065, 38, SIL",Corona ESJOT Aluminio 51-32065-38 dientes,34.29,28.34,18.42,8430525419155,1,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,38 dientes,Plata,760,214,204,196,19,,,Aluminio,,,,,,38,,520,,,,,,,,https://api.mybihr.com/medias/1075589011-1-800Wx800H?context=bWFzdGVyfHJvb3R8NjIwMjh8aW1hZ2UvanBlZ3xhR1l3TDJoa1l5OHhOVFF5TmpZeU5ERXlOekF3Tmk4eE1EYzFOVGc1TURFeExURmZPREF3VjNnNE1EQkl8Y2IxNjUxZDI2NmEzMTJmYjI5ZTdkZTZiNmY5ZTZiMDExZWZmNmMwMDM3MjY5OGNiN2Q5NmU5YjczNTAyNWUyYQ,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1077486001,41838,50-12010-09,ESJOT,"ESJOT FR SPROC 415 STEEL 12010, 9",Piñon ESJOT Acero 50-12010 9 dientes,8.70,7.19,2.16,4251516501901,2,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,9 dientes,,53,44,47,51,22,,,Acero,,,,,,,,415,,,,,,,,https://api.mybihr.com/medias/1077486001-1-800Wx800H?context=bWFzdGVyfHJvb3R8NDYxMTV8aW1hZ2UvanBlZ3xhR0k1TDJnNFppOHhOVFF5TnpJMk5EVTBORGM1T0M4eE1EYzNORGcyTURBeExURmZPREF3VjNnNE1EQkl8OTAxNDVlNDU0MTQzYjk2NGNhYWVkZjBhY2JiYzA1YTEzM2JmZjk1YmU3ODE0YWEyMDYyZWI1ZWUyNWVlNjRhNQ,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1077490003,41883,50-15013-15,ESJOT,"ESJOT FR SPROC 428 STEEL 15013, 15",Piñon ESJOT Acero 50-15013 15 dientes,5.99,4.95,3.22,8430525418837,3,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,15 dientes,,63,126,65,65,15,,,Acero,,,,,,,15,428,,,,,,,Estándar,https://api.mybihr.com/medias/1077490003-1-800Wx800H?context=bWFzdGVyfHJvb3R8NDczMjR8aW1hZ2UvanBlZ3xhRE16TDJnM1lpOHhOVFF5TnpJMk9UWTFOall3Tmk4eE1EYzNORGt3TURBekxURmZPREF3VjNnNE1EQkl8ZjU5MmQ2OTcyYmIyOGI0OGViMTA4OTExYTIxYmM2MGRmMmVjNWIzNmZhYTBmZmNmYTlmNDFmY2NjMDhhMGE3MA,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1075211004,41832,50-29039-41,ESJOT,"ESJOT RR SPROC 525 STEEL 29039, 41",Corona ESJOT Acero 50-29039 41 dientes,95.00,78.51,23.55,4251516511078,2,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,41 dientes,,366,1936,215,243,7,,,Acero,,,,,,41,,525,,,,,,,,https://api.mybihr.com/medias/1075211004-1-800Wx800H?context=bWFzdGVyfHJvb3R8ODQ3NzB8aW1hZ2UvanBlZ3xhR0prTDJnME9DOHhOVFF5TmpVek1qTXhNVEEzTUM4eE1EYzFNakV4TURBMExURmZPREF3VjNnNE1EQkl8M2UxZTIyYzJmMmJlZmNkYjViNTNjMzRhZGUyMjgwNmFlOGRiYjBmZmY0Y2YzNzA5Yzg0NWQ0ZDIzMDQwM2RiNA,https://api.mybihr.com/medias/1075211004-2-800Wx800H?context=bWFzdGVyfHJvb3R8MTA2NDQ2fGltYWdlL2pwZWd8YURKbUwyZ3pZaTh4TlRReU5qVXpNamN3TkRJNE5pOHhNRGMxTWpFeE1EQTBMVEpmT0RBd1YzZzRNREJJfDMyMjRmZGY3YTUwZGJlNDJjZTZjMDM5ZDBlNjViYzUyYWI4MWM1NDA5MzFlNGNiNDAzYjVkZWFmMzI5OTVhOTA,https://api.mybihr.com/medias/1075211004-3-800Wx800H?context=bWFzdGVyfHJvb3R8MTAwMzg2fGltYWdlL2pwZWd8YUdJNUwyZ3hOeTh4TlRReU5qVXpNekE1TnpVd01pOHhNRGMxTWpFeE1EQTBMVE5mT0RBd1YzZzRNREJJfDgyNmJmZGI4MzVhNDczOWY3OWU2NmJiYTZkYjFiMzYwMmQ2ZDEyNzQ5MjEyMzIwNDQ4NmU0Njg4NjlhYTg2YzY,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1077514001,67271,50-32181-14S,ESJOT,"ESJOT FR SPROC 520 STEEL 32181, 14",Piñón ESJOT 50-32181-14 dientes,16.49,13.63,4.09,4251516522838,2,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,14 dientes,,206,186,102,84,24,,,Acero,,,,,,,,520,,,,,,,,https://api.mybihr.com/medias/1077514001-1-800Wx800H?context=bWFzdGVyfHJvb3R8NDE0Mzl8aW1hZ2UvanBlZ3xhRFJrTDJoaFl5OHhOVFF5TnpJNE9ESXdNekk1TkM4eE1EYzNOVEUwTURBeExURmZPREF3VjNnNE1EQkl8ZTQ0Zjg3ZTY3MjI2ZjJlYzJmMjg5NWFiNjcwNGQxODMxMWJmM2Q4MDZlM2IwMThmNTAzOTQ2OWZmYmQ0MjhhNw,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1075598004,41896,51-32231-52,ESJOT,"ESJOT RR SPROC 520 ALU 32231, 52, SIL",Corona ESJOT Aluminio 51-32231 52 dientes,34.29,28.34,18.42,4251516536262,1,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,52 dientes,Plata,2276,480,324,281,25,,,Aluminio,,,,,,,,520,,,,,,,,https://api.mybihr.com/medias/1075598004-1-800Wx800H?context=bWFzdGVyfHJvb3R8NTk4Mzl8aW1hZ2UvanBlZ3xhRFEyTDJnM09TOHhOVFF5TmpZME5EQTBPVGsxTUM4eE1EYzFOVGs0TURBMExURmZPREF3VjNnNE1EQkl8YTZjNTRjYjQxNjg5NDczNGI1OWYwNzdjNmYwMTlkMzI5MDQ5NTQ5MDk5ZmI3ODRkOTZiZGJmODFiNjE4NWQ1NQ,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1075208004,41757,50-29022-43,ESJOT,"ESJOT RR SPROC 525 STEEL 29022, 43",Corona ESJOT Acero 50-29022 43 dientes,29.90,24.71,16.06,4251516510132,2,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,43 dientes,,369,778,229,230,7,,,Acero,,,,,,,,525,,,,,,,,https://api.mybihr.com/medias/1075208004-1-800Wx800H?context=bWFzdGVyfHJvb3R8NjYyODl8aW1hZ2UvanBlZ3xhRFF6TDJneVppOHhOVFF5TmpVeU5UWXlOak01T0M4eE1EYzFNakE0TURBMExURmZPREF3VjNnNE1EQkl8OWU5N2ZlZmY4MjgyZmEzYzQ4ZTAyYTYzZDhjNDhmNmRmYjFiNWUzYzM1MjBhZmUwNjVjM2ZlMWUyZTUyZjRhNQ,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1075204001,41870,50-15069-42,ESJOT,"ESJOT RR SPROC 428 STEEL 15069, 42",Corona ESJOT Acero 50-15069 42 dientes,17.29,14.29,4.29,4251516507774,4,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,42 dientes,,213,696,172,177,7,,,Acero,,,,,,42,,428,,,,,,,,https://api.mybihr.com/medias/1075204001-1-800Wx800H?context=bWFzdGVyfHJvb3R8NTc1MDh8aW1hZ2UvanBlZ3xhRFJpTDJneU9DOHhOVFF5TmpVeU1Ea3dOemd3Tmk4eE1EYzFNakEwTURBeExURmZPREF3VjNnNE1EQkl8MTY0NGJmMDk5ZjA1ZTVmZWZiZmVlMDJlYmM3MDhkN2EwOTI2MmJkNjlkOTI5NGIzMGY4M2YzNTJiY2YyZWNmMw,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1075217001,41862,50-29050-38,ESJOT,"ESJOT RR SPROC 525 STEEL 29050, 38",Corona ESJOT Acero 50-29050 38 dientes,95.00,78.51,23.55,4251516511429,1,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,38 dientes,,312,464,197,226,7,,,Acero,,,,,,38,,525,,,,,,,,https://api.mybihr.com/medias/1075217001-1-800Wx800H?context=bWFzdGVyfHJvb3R8NTI2MjR8aW1hZ2UvanBlZ3xhR0U1TDJneU5pOHhOVFF5TmpVek56Z3hOakE1TkM4eE1EYzFNakUzTURBeExURmZPREF3VjNnNE1EQkl8MjQ2M2NiMDJhYTI1MGY4NDAzMWFlNGNhMDJhYjFhM2MwNDQ1MjVkZWRhYmZlMDI1OTkzNzg2MWZjM2IyNTA0YQ,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1117771,48692,51-32065-52AO,ESJOT,ESJOT SPROCKET REAR 52 TEETH ORG,Corona ESJOT aluminio ultraligero 32065 - 520,76.48,63.21,41.09,4251516533940,1,8483409099,0,1,"<p>ESJOT aluminium sprockets have been specially developed for the tough conditions of motocross, enduro and road use. Compared to conventional steel sprockets, an ESJOT aluminium sprocket brings a weight saving of over 60%. The use of high-quality aluminium (7075 T6), which is also used in aviation, as well as the extremely low manufacturing tolerances ensure an exceptionally long service life.</p>
+<ul>
+	<li>Over 60% lighter than a conventional steel sprocket</li>
+	<li>Manufactured on precision CNC machines</li>
+	<li>Flatness and concentricity tolerances of less than 0.1mm</li>
+	<li>Made of high quality and high strength aluminium</li>
+	<li>Special surface treatment</li>
+	<li>100% Made in Germany</li>
+	<li>OEM quality</li>
+	<li>Available in silver, black (BP) and orange (AO) anodised finishes</li>
+</ul>
+
+<p>&nbsp;</p>","
+ESJOT aluminium sprockets have been specially developed for the tough conditions of motocross, enduro and road use. Compared to conventional steel sprockets, an ESJOT aluminium sprocket brings a weight saving of over 60%. The use of high-quality aluminium (7075 T6), which is also used in aviation, as well as the extremely low manufacturing tolerances ensure an exceptionally long service life.
+
+	Over 60% lighter than a conventional steel sprocket
+	Manufactured on precision CNC machines
+	Flatness and concentricity tolerances of less than 0.1mm
+	Made of high quality and high strength aluminium
+	Special surface treatment
+	100% Made in Germany
+	OEM quality
+	Available in silver, black (BP) and orange (AO) anodised finishes
+
+
+
+ ",VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,,,3672,394,340,270,40,,Naranja,Aluminio,,,,,,52,,520,,,,,,Ultraligero,,https://api.mybihr.com/medias/1117771-1-800Wx800H?context=bWFzdGVyfHJvb3R8ODE4ODJ8aW1hZ2UvanBlZ3xhRGczTDJneU9DOHhOek01T1RNeU5qZ3dNVGsxTUM4eE1URTNOemN4TFRGZk9EQXdWM2c0TURCSXw5YWE3MjViMjNlYzE0MjI5ZjU3OWI3ZWVjY2E0YzZiM2RmMjdhOTJmODA5MGY2MTJiNGY5MWVjNjI4YTkxMzEz,https://api.mybihr.com/medias/1117771-2-800Wx800H?context=bWFzdGVyfHJvb3R8NjIyNTB8aW1hZ2UvanBlZ3xhRFl5TDJneVlTOHhOek01T1RNeU56RTVOVEUyTmk4eE1URTNOemN4TFRKZk9EQXdWM2c0TURCSXwyYTFmYTE2Y2IwYjI1YzVhNzM1NjNlMGFiZDg3ODlkNjVmNzFjYjczZDY4MzdlOTY1YjcyNmYxZGQ3YzJiMjgx,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1075201001,41872,50-15065-28,ESJOT,"ESJOT RR SPROC 428 STEEL 15065, 28",Corona ESJOT Acero 50-15065 28 dientes,13.89,11.48,5.57,8430525418721,1,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,28 dientes,,124,400,149,119,7,,,Acero,,,,,,28,,428,,,,,,,,https://api.mybihr.com/medias/1075201001-1-800Wx800H?context=bWFzdGVyfHJvb3R8NjI0MTB8aW1hZ2UvanBlZ3xhRE13TDJnd1pDOHhOVFF5TmpVeU1ERXlNVE0zTkM4eE1EYzFNakF4TURBeExURmZPREF3VjNnNE1EQkl8MDM5Y2I3NjJkMjIwNzNhNGU1M2VlODJjMThkMjg2ZTExZTA1MTMyNjRlMzRmYWQ0YWVlMjQ5ZmMyZDNlODhiZA,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1075218001,41871,50-32008-36,ESJOT,"ESJOT RR SPROC 520 STEEL 32008, 36",Corona ESJOT Acero 50-32008 36 dientes,23.60,19.50,5.94,8430525418714,3,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,36 dientes,,683,668,215,187,17,,,Acero,,,,,,,,520,,,,,,,,https://api.mybihr.com/medias/1075218001-1-800Wx800H?context=bWFzdGVyfHJvb3R8NTkzNDl8aW1hZ2UvanBlZ3xhRGhtTDJneVpTOHhOVFF5TmpVek9ESXdPVE14TUM4eE1EYzFNakU0TURBeExURmZPREF3VjNnNE1EQkl8MDA5ZmQ0OTI4NTc2YjFjNGYwYTFiNTM5MzdhMTU2MWFiYThmMWIwM2U4ZjMyOGI4YTIxMzhkODBkY2EyMjMwNA,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1075220001,45963,50-32072-42,ESJOT,"ESJOT RR SPROC 520 STEEL 32072, 42",Corona ESJOT Acero 50-32072 42 dientes,31.50,26.03,16.92,50-32072-42,1,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,42 dientes,,1590,894,220,219,33,,,Acero,,,,,,42,,520,,,,,,Estándar,,https://api.mybihr.com/medias/800Wx800H-1075220001-1.jpg?context=bWFzdGVyfHJvb3R8NjQ2NjN8aW1hZ2UvanBlZ3xhR0V6TDJoak1TODRNVEU1TURVeU16VTJPREUxT0M4NE1EQlhlRGd3TUVoZk1UQTNOVEl5TURBd01TMHhMbXB3Wnd8NDc0YzFjZjE0MjdhMjFiZjBlMWUyM2JlMThkOWY1ZmIyM2Y1M2I2ZDI0MGNhYWM1ZjE0MWNhMDNhMjY1MWQ5Mg,https://api.mybihr.com/medias/800Wx800H-1075220001-2.jpg?context=bWFzdGVyfHJvb3R8ODczMjh8aW1hZ2UvanBlZ3xhRGcwTDJoallpODRNVEU1TURVeU16Z3pNRE13TWk4NE1EQlhlRGd3TUVoZk1UQTNOVEl5TURBd01TMHlMbXB3Wnd8YWZjNjc0NjFlMzQyN2E3M2U2NWRkMWI0NDA1YzU1NTFlMjYwMzliNjIxOTBlZmQzZWY2OWMxYzkwNDY3NmY1NQ,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1075597001,41953,51-32217-44,ESJOT,"ESJOT RR SPROC 520 ALU 32217, 44, SIL",Corona ESJOT Aluminio 51-32217-44 dientes,34.29,28.34,8.63,8430525419537,2,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,44 dientes,Plata,1828,350,228,243,33,,,Aluminio,,,,,,,,520,,,,,,,,https://api.mybihr.com/medias/1075597001-1-800Wx800H?context=bWFzdGVyfHJvb3R8NjQ3MDB8aW1hZ2UvanBlZ3xhRFU1TDJnMFl5OHhOVFF5TmpZME1qUTNOekE0Tmk4eE1EYzFOVGszTURBeExURmZPREF3VjNnNE1EQkl8MzAzZGIxM2U5Y2QxOTExODQwNmJlZTEwZTU0NmYxYzBkZTk4NTc4NGEyZjVhOTdkYjllZGY5ZWFkZGQ4OTVlNA,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1077509002,41898,50-32173-15S,ESJOT,"ESJOT FR SPROC 520 STEEL 32173, 15",Piñon ESJOT Acero 50-32173 15 dientes,18.69,15.45,2.40,8430525418981,9,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,15 dientes,,126,164,81,82,19,,,Acero,,,,,,,,520,,,,,,,,https://api.mybihr.com/medias/1077509002-1-800Wx800H?context=bWFzdGVyfHJvb3R8NTIwOTF8aW1hZ2UvanBlZ3xhREF6TDJobE1pOHhOVFF5TnpJNE5EazVNakF6TUM4eE1EYzNOVEE1TURBeUxURmZPREF3VjNnNE1EQkl8ODFiZjAzYjkxMzVkMmVlNzUzYjk0YTFjMDZkYzU1YzEwMmQyYzU0MGRlN2I4NWM2NzNiMzlhZjBhNWJlZjk4Mw,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1077491001,41889,50-15031-16,ESJOT,"ESJOT FR SPROC 428 STEEL 15031, 16",Piñon ESJOT Acero 50-15031 16 dientes,9.39,7.76,3.76,8430525418899,2,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,16 dientes,,129,138,70,92,20,,,Acero,,,,,,,,428,,,,,,,,https://api.mybihr.com/medias/1077491001-1-800Wx800H?context=bWFzdGVyfHJvb3R8NTQ1OTZ8aW1hZ2UvanBlZ3xhRFppTDJnNU5TOHhOVFF5TnpJM01EUTBNekF6T0M4eE1EYzNORGt4TURBeExURmZPREF3VjNnNE1EQkl8NDgwNTNlZDI3YmVlYTVkNDI4ZTNlYzg0NjM1YWYwYzFkODQ2NzU0NTg5MmY2YzUyNmZlNTRjYTY0ZGZkZDJhYw,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1077506002,48686,50-32153-16S,ESJOT,"ESJOT FR SPROC 520 STEEL 32153, 16",Piñón ESJOT acero 50-32153 16 dientes,22.00,18.18,11.82,8430525486867,8,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,16 dientes,,98,184,89,85,13,,,Acero,,,,,,,16,520,,,,,,,Estándar,https://api.mybihr.com/medias/1077506002-1-800Wx800H?context=bWFzdGVyfHJvb3R8NTI5MzN8aW1hZ2UvanBlZ3xhRFZpTDJneU15OHhOVFF5TnpJNE1UZzBOak13TWk4eE1EYzNOVEEyTURBeUxURmZPREF3VjNnNE1EQkl8ZTIzOGFmYmNiNzY4MjU4YjA4ZmI5ZDljMWEyMzFiZjJmY2NlYTViNjg4YWNmODYwMGQ1MzNjMzZlNTQ0ODZlNw,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1077506001,48685,50-32153-15S,ESJOT,"ESJOT FR SPROC 520 STEEL 32153, 15",Piñón ESJOT acero 50-32153 15 dientes,22.49,18.59,9.81,8430525486850,1,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,15 dientes,,197,178,116,100,17,,,Acero,,,,,,,,520,,,,,,,,https://api.mybihr.com/medias/1077506001-1-800Wx800H?context=bWFzdGVyfHJvb3R8NTI3Njl8aW1hZ2UvanBlZ3xhR1U1TDJnek1DOHhOVFF5TnpJNE1UUTFNekE0Tmk4eE1EYzNOVEEyTURBeExURmZPREF3VjNnNE1EQkl8Y2ZlZTFmMTFjNGZhZGU3MjQ3ZWYyNDIyMjM3ZmZmNjczOWJjMjY2ZGZhMDc0MmRjYWMxNDUxYWE2MzcwZDIwMQ,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1122398001,,50-15079-14,ESJOT,"ESJOT FR SPROC 428 STEEL 15079, 14",Piñón ESJOT acero 50-15079 - 428,8.62,7.12,4.63,,3,8483409099,0,1,"<p><strong>Los piñones ESJOT</strong> se desarrollaron especialmente para los elevados requisitos de los fabricantes de equipos originales y se encuentran entre los mejores piñones del mercado mundial. Un acero especial, una cementación de alta calidad y un dentado preciso garantizan una resistencia y durabilidad extraordinariamente altas, óptimamente adaptadas a las condiciones de desgaste intenso en todos los ámbitos.</p>
+<ul>
+	<li>Acero de alta resistencia</li>
+	<li>Mecanizado en tornos CNC</li>
+	<li>Las máquinas de brochado más modernas garantizan un ajuste exacto en el eje de transmisión</li>
+	<li>Las piezas se endurecen después del mecanizado</li>
+	<li>Tolerancias de excentricidad radial y axial inferiores a 0,1 mm</li>
+	<li>100% Fabricado en Alemania</li>
+	<li>Calidad OEM</li>
+</ul>
+","
+Los piñones ESJOT se desarrollaron especialmente para los elevados requisitos de los fabricantes de equipos originales y se encuentran entre los mejores piñones del mercado mundial. Un acero especial, una cementación de alta calidad y un dentado preciso garantizan una resistencia y durabilidad extraordinariamente altas, óptimamente adaptadas a las condiciones de desgaste intenso en todos los ámbitos.
+
+	Acero de alta resistencia
+	Mecanizado en tornos CNC
+	Las máquinas de brochado más modernas garantizan un ajuste exacto en el eje de transmisión
+	Las piezas se endurecen después del mecanizado
+	Tolerancias de excentricidad radial y axial inferiores a 0,1 mm
+	100% Fabricado en Alemania
+	Calidad OEM
+
+",VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,14 dientes,,155,148,148,95,11,,,Acero,,,,,,,14,428,,,,,,,Estándar,https://api.mybihr.com/medias/800Wx800H-1122398001-1.jpg?context=bWFzdGVyfHJvb3R8MTc4NDJ8aW1hZ2UvanBlZ3xhREV4TDJnM05DODBOek14TWpnM09UY3hORE16TkM4NE1EQlhlRGd3TUVoZk1URXlNak01T0RBd01TMHhMbXB3Wnd8MDMwYWM0Yzc5NTJiZDA0NzViYWZkZDcwZTFiZWY5MTU4NzdhMDBlNjFiMTkxM2RlNGI1NjNmODk3MmQxNTNjMQ,https://api.mybihr.com/medias/800Wx800H-1122398001-2.jpg?context=bWFzdGVyfHJvb3R8MTg5MTN8aW1hZ2UvanBlZ3xhR1ZqTDJnNFpTODBOek14TWpnNE1ERXdOelUxTUM4NE1EQlhlRGd3TUVoZk1URXlNak01T0RBd01TMHlMbXB3Wnd8MDdmZmZkNjNiYThjODViZjAyZThiZWFhYWMzMjUzNzU5M2E4NWY1ODVjMzZhNDE4MmJhMThlZGVlMGM5NTUwYw,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1075198005,41867,50-15001-41,ESJOT,"ESJOT RR SPROC 428 STEEL 15001, 41",Corona ESJOT Acero 50-15001 41 dientes,12.69,10.49,6.82,8430525418677,1,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,41 dientes,,731,694,173,169,25,,,Acero,,,,,,,,428,,,,,,,,https://api.mybihr.com/medias/1075198005-1-800Wx800H?context=bWFzdGVyfHJvb3R8NzExMDd8aW1hZ2UvanBlZ3xhRGsyTDJneVl5OHhOVFF5TmpVeE5qa3hNREV4TUM4eE1EYzFNVGs0TURBMUxURmZPREF3VjNnNE1EQkl8ZGU1NmE3OTJiNDc0OTk0YTc4NDA0MzhlNjQzNDdlODcxMDRhODU4MmQ2NjhkZDZmYWFkMmZhZDQyMTg0NmZlZg,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1075198001,41863,50-15001-36,ESJOT,"ESJOT RR SPROC 428 STEEL 15001, 36",Corona ESJOT Acero 50-15001 36 dientes,12.69,10.49,3.15,50-150001-36,1,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,36 dientes,,168,644,146,164,7,,,Acero,,,,,,,,428,,,,,,,,https://api.mybihr.com/medias/1075198001-1-800Wx800H?context=bWFzdGVyfHJvb3R8NzEyMDZ8aW1hZ2UvanBlZ3xhRGxsTDJoaFlTOHhOVFF5TmpVeE5UTXpOekkwTmk4eE1EYzFNVGs0TURBeExURmZPREF3VjNnNE1EQkl8ZDkyZWRiMjVhNjYzOGIyNTNiY2NiMmRhZWM4ZTlhNjlmYzUzNjI5MjE0MTVlNGZlMGJiMWNmYWE4ZTFlNTkwYQ,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1075200004,41815,50-15052-54,ESJOT,"ESJOT RR SPROC 428 STEEL 15052, 54",Corona ESJOT Acero 50-15052 54 dientes,31.50,26.03,13.73,8430525418158,1,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,54 dientes,,1167,1188,221,220,24,,,Acero,,,,,,,,428,,,,,,,,https://api.mybihr.com/medias/1075200004-1-800Wx800H?context=bWFzdGVyfHJvb3R8NjQ1NjJ8aW1hZ2UvanBlZ3xhR1V4TDJobU5TOHhOVFF5TmpVeE9UY3lPREUxT0M4eE1EYzFNakF3TURBMExURmZPREF3VjNnNE1EQkl8ZmMwMzMxOGRiYWJiZDI5YzMwYzIyMmFmZTY3ZjM3MWNkZGE2MDUwZDA0MWI2ZjBmMzdiMTI3NGY4N2NjZGU3Mg,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1075578003,41823,50-32075-40,ESJOT,"ESJOT RR SPROC 520 STEEL 32075, 40",Corona ESJOT Acero 50-32075 40 dientes,95.00,78.51,51.03,8430525418233,2,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,40 dientes,,319,1642,217,210,7,,,Acero,,,,,,,,520,,,,,,,,https://api.mybihr.com/medias/1075578003-1-800Wx800H?context=bWFzdGVyfHJvb3R8NzIyODd8aW1hZ2UvanBlZ3xhREF4TDJobFlTOHhOVFF5TmpVMU1USTFNRGszTkM4eE1EYzFOVGM0TURBekxURmZPREF3VjNnNE1EQkl8YjM4OTIyZTUzM2I5ZDM1MTU2Yjk0YjE4ODFjZDA3ZWY0NzI3ZTBmN2FjNTAyOGQwZDFiNjNkMWE4NThhYTdmOQ,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1075578002,41824,50-32075-39,ESJOT,"ESJOT RR SPROC 520 STEEL 32075, 39",Corona ESJOT Acero 50-32075 39 dientes,95.00,78.51,23.31,8430525418240,2,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,39 dientes,,1628,1548,204,210,38,,,Acero,,,,,,,,520,,,,,,,,https://api.mybihr.com/medias/1075578002-1-800Wx800H?context=bWFzdGVyfHJvb3R8NzIxMDR8aW1hZ2UvanBlZ3xhR0kxTDJnNU5DOHhOVFF5TmpVMU1EZzFOemMxT0M4eE1EYzFOVGM0TURBeUxURmZPREF3VjNnNE1EQkl8M2VmNDc1OWMzNzQzNWNhNGFjZTVmYWY5MTIwYWQ3MDVmOTI4M2Q5MjMyZDA1MzEwMDVmNjVmODBkODRkYzUxZg,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1075581001,41846,51-13025-46,ESJOT,"ESJOT RR SPROC 420 ALU 13025, 46, SIL",Corona ESJOT Aluminio 51-13025 46 dientes,34.29,28.34,18.42,8430525418462,4,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,46 dientes,Plata,1350,260,189,188,38,,,Aluminio,,,,,,46,,420,,,,,,,,https://api.mybihr.com/medias/1075581001-1-800Wx800H?context=bWFzdGVyfHJvb3R8NjM3MjN8aW1hZ2UvanBlZ3xhRGd6TDJnNE15OHhOVFF5TmpVMU56a3pOVFkwTmk4eE1EYzFOVGd4TURBeExURmZPREF3VjNnNE1EQkl8N2YzNzY3ZWYzMGRhODQzOTljNmU0OWQ3OGNjZWZiNWVhZGE2ZGFhNjc5NDUxZGU0Njg1YjA2MzFjNGE2ZDYwNg,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1075582002,41770,51-13044-53,ESJOT,"ESJOT RR SPROC 420 ALU 13044, 53, SIL",Corona ESJOT Aluminio 51-13044 53 dientes,44.95,37.15,11.15,8430525417700,1,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,53 dientes,Plata,1386,314,227,218,28,,,Aluminio,,,,,,,,420,,,,,,,,https://api.mybihr.com/medias/1075582002-1-800Wx800H?context=bWFzdGVyfHJvb3R8NjI3MTB8aW1hZ2UvanBlZ3xhR0prTDJnMFppOHhOVFF5TmpVMU9Ua3dNVGN5Tmk4eE1EYzFOVGd5TURBeUxURmZPREF3VjNnNE1EQkl8ZTU1ZTkzZGY0MzhjZWFmNDVmYjkxYTc5Y2ZjNGIyNTY5MTc3YjY5MzhhMzJlNThjYjE3ZGQzOTY2M2ZlMGQ3Yg,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1075586023,41992,51-32041-53BP,ESJOT,"ESJOT RR SPROC 520 ALU 32041, 53, BLK",Corona ESJOT Aluminio negro 51-32041-53BP dientes,35.09,29.00,8.84,8430525419926,1,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,53 dientes,Negro,3142,418,273,274,42,,,Aluminio,,,,,,,,520,,,,,,,,https://api.mybihr.com/medias/1075586023-1-800Wx800H?context=bWFzdGVyfHJvb3R8NjExNTl8aW1hZ2UvanBlZ3xhR1JpTDJoaE15OHhOVFF5TmpVNU56STFOekkwTmk4eE1EYzFOVGcyTURJekxURmZPREF3VjNnNE1EQkl8YWE2OTExMzYyOWMxMDk4MjE0MjY3NGIzNzc1NWI4ZmQ5MjljMmZiMjJjMWM4NzZhNjk4NDUwZDE5MzQ0NGNhNQ,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1075595007,43316,51-32206-46,ESJOT,"ESJOT RR SPROC 520 ALU 32206, 46, SIL",Corona ESJOT Aluminio 51-32206-46 dientes,13.31,11.00,7.15,8430525433168,2,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,46 dientes,Plata,58,344,240,240,1,,,Aluminio,,,,,,,,520,,,,,,,,https://api.mybihr.com/medias/1075595007-1-800Wx800H?context=bWFzdGVyfHJvb3R8NjY0MzB8aW1hZ2UvanBlZ3xhR000TDJobE1pOHhOVFF5TmpZME1EVXhNVEF3Tmk4eE1EYzFOVGsxTURBM0xURmZPREF3VjNnNE1EQkl8MWNjOWM3YjY2ZGYzYWZjYTg4MzM0ZmFkZWIxODczOGJlMTIxMzM4NmRkYjMxY2I5MWQ2NjljOWY3MTMyZDRmOQ,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1075595008,48694,51-32206-47,ESJOT,"ESJOT RR SPROC 520 ALU 32206, 47, SIL",Corona ESJOT aluminio 51-32206 47 dientes,36.00,29.75,10.50,8430525486942,3,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,47 dientes,Plata,1285,366,276,245,19,,,Aluminio,,,,,,,,520,,,,,,,,https://api.mybihr.com/medias/1075595008-1-800Wx800H?context=bWFzdGVyfHJvb3R8NjcwMTl8aW1hZ2UvanBlZ3xhRFUxTDJobU1DOHhOVFF5TmpZME1Ea3dOREl5TWk4eE1EYzFOVGsxTURBNExURmZPREF3VjNnNE1EQkl8NWE1OGNmNWMwNWVhNDIzYzE0ZWI5ZDQwYTNmZDMwNmQ2NTU0YzFjY2IwMGE1MzI2OTczZjQ2MWRlNmEwODQzZg,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1075595005,48691,51-32206-44,ESJOT,"ESJOT RR SPROC 520 ALU 32206, 44, SIL",Corona ESJOT aluminio 51-32206 44 dientes,45.00,37.19,11.16,8430525486911,1,8483409099,0,1,,,VEHICLE PARTS & ACCESSORIES,CHASSIS PARTS,CHAS. SPROCKET,44 dientes,Plata,1392,314,242,230,25,,,Aluminio,,,,,,,,520,,,,,,,,https://api.mybihr.com/medias/1075595005-1-800Wx800H?context=bWFzdGVyfHJvb3R8Njg0ODR8aW1hZ2UvanBlZ3xhR1EzTDJneVpDOHhOVFF5TmpZek9UY3lORFUzTkM4eE1EYzFOVGsxTURBMUxURmZPREF3VjNnNE1EQkl8MGYxYTI3ZTgwOGYwOWQ5MDZlNGZjNmEwMWNiNjJhOTEyMzNlOTZjNTE0YTNiYjkxMmU3NTRjNjgwZTZkMTJmZg,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115051,1115051,19-11105-19,ESJOT,ESJOT E-BIKE SPROCKET FLAT 19T BOSCH G.2,Piñón E-Bike ESJOT plano 19T Bosch G.2,8.00,6.61,2.99,4251516559209,8,8714930090,0,1,"<ul>
+<li>Paso 1/2"" x 1/8"" (1,27x0,31cm)</li>
+<li>Para motores Bosch, generaci&oacute;n 2 (Active Line, Performance Line)</li>
+<li>Acero negro con recubrimiento KTL (espesor del material 3,0mm)</li>
+</ul>","
+Paso 1/2"" x 1/8"" (1,27x0,31cm)
+Para motores Bosch, generación 2 (Active Line, Performance Line)
+Acero negro con recubrimiento KTL (espesor del material 3,0mm)
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,161,88,116,107,13,,Negro,,,,,,Acero,,,,,,,,,,,https://api.mybihr.com/medias/1115051-1-800Wx800H?context=bWFzdGVyfHJvb3R8MTg1ODkzfGltYWdlL2pwZWd8YUdFMEwyaGhPUzh4TlRreE9UQTRPRFF3TWpRMk1pOHhNVEUxTURVeExURmZPREF3VjNnNE1EQkl8NjIzMDYyZDk0ZTE1NTBhN2FiNzliMTYxN2RkN2JkODNjYmViNzZkZjUyYTU2YmE0OTZhZjQyN2JiYTllMjVhMQ,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115055,1115055,19-1700-18,ESJOT,ESJOT BIKE SPROCKET OFFSET 18T 1/2X3/32,Piñón de bicicleta Esjot Offset 18T 1/2X3/32,4.50,3.72,0.75,4251516500843,10,8714930090,0,1,"<ul>
+<li>Pi&ntilde;&oacute;n de bicicleta</li>
+<li>Paso 1/2"" x 3/32"" (1,27x2,54cm)</li>
+<li>Galvanizado (espesor del material 2mm)</li>
+<li>Adecuado para bujes de 3, 4, 5, 7 y 8 marchas, buje de pedalier / buje r&iacute;gido, SRAM, Shimano, Sturmey Archer</li>
+</ul>","
+Piñón de bicicleta
+Paso 1/2"" x 3/32"" (1,27x2,54cm)
+Galvanizado (espesor del material 2mm)
+Adecuado para bujes de 3, 4, 5, 7 y 8 marchas, buje de pedalier / buje rígido, SRAM, Shimano, Sturmey Archer
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,123,63,116,106,10,,Plata,,,,,,Acero,,,,,,,,8,,,https://api.mybihr.com/medias/1115055-1-800Wx800H?context=bWFzdGVyfHJvb3R8MTU2Nzc1fGltYWdlL2pwZWd8YUdabUwyZ3laQzh4TlRreE9UQTRPVGszTlRNeU5pOHhNVEUxTURVMUxURmZPREF3VjNnNE1EQkl8YWQxNDgyODVmYWIzODMwNTU0ODdhNTU0MzlkODMzNGJiZmMwZWZjMWIyY2VhMjc4MDNjYmMxZmJjNGM0OGRjZg,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115029,1115029,19-17116-40,ESJOT,ESJOT CHAINRING 40T BOSCH GEN4/3/1 104MM,Plato ESJOT 40T Bosch Gen4/3/1 104mm,12.00,9.92,3.18,19-17116-40,6,8714930090,0,1,"<p>Plato universal para:</p>
+<ul>
+<li>Generaci&oacute;n de motores Bosch:
+<ul>
+<li>4 ( Performance Line CX ),</li>
+<li>3 ( Active Line Plus )</li>
+<li>1 (Classic Line )</li>
+</ul>
+</li>
+<li>Yamaha</li>
+<li>Bafang</li>
+<li>Brose</li>
+</ul>
+<ul>
+<li>Acero negro con recubrimiento KTL,</li>
+<li>C&iacute;rculo de agujeros 104mm</li>
+<li>Acero 3mm/Dentado estrecho</li>
+</ul>","
+Plato universal para:
+
+Generación de motores Bosch:
+
+4 ( Performance Line CX ),
+3 ( Active Line Plus )
+1 (Classic Line )
+
+
+Yamaha
+Bafang
+Brose
+
+
+Acero negro con recubrimiento KTL,
+Círculo de agujeros 104mm
+Acero 3mm/Dentado estrecho
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,382,152,199,192,10,,Negro,,,,,,Acero,,,,,,,,12,,,https://api.mybihr.com/medias/1115029-1-800Wx800H?context=bWFzdGVyfHJvb3R8MTcyMzIwfGltYWdlL2pwZWd8YURKbEwyaG1ZaTh4TlRreE9UQTNPVGMxTVRjeE1DOHhNVEUxTURJNUxURmZPREF3VjNnNE1EQkl8ODFkMjExZjBjY2E1Zjc1OWZlNTQzMmZiNjY5MTNlY2M1MzNkMjE1MGRlZjI4NTgxMWM5MjE2MDE1MzhmOWM1NQ,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115048,1115048,19-1100-19,ESJOT,ESJOT BICYCLE SPROCKET FLAT 19T 1/2X1/8,Piñón de bicicleta Esjot plano 19T 1/2X1/8,5.51,4.55,1.99,4251516500164,9,8714930090,0,1,"<ul>
+<li>Pi&ntilde;&oacute;n de bicicleta</li>
+<li>Paso 1/2"" x 1/8"" (1,27x0,31cm)</li>
+<li>Galvanizado (espesor del material 3mm)</li>
+<li>Adecuado para bujes de 3, 4, 5, 7 y 8 marchas, buje de pedal trasero / buje r&iacute;gido, SRAM, Shimano, Sturmey Archer</li>
+</ul>","
+Piñón de bicicleta
+Paso 1/2"" x 1/8"" (1,27x0,31cm)
+Galvanizado (espesor del material 3mm)
+Adecuado para bujes de 3, 4, 5, 7 y 8 marchas, buje de pedal trasero / buje rígido, SRAM, Shimano, Sturmey Archer
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,120,90,115,104,10,,Plata,,,,,,Acero,,,,,,,Ciudad,8,,,https://api.mybihr.com/medias/1115048-1-800Wx800H?context=bWFzdGVyfHJvb3R8MTg2MTEwfGltYWdlL2pwZWd8YUdZekwyaGxOUzh4TlRreE9UQTROekl5TWpneE5DOHhNVEUxTURRNExURmZPREF3VjNnNE1EQkl8Y2QxN2I0YTdkZjgwOWViYmI1ZGMyNzU5YWQxNWFkMGQ1ZWM1NGE4ZGQxY2MzYmY3MjQ3ZTI4MmMyOGM2NzcwYg,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115057,1115057,19-1700-20,ESJOT,ESJOT BIKE SPROCKET OFFSET 20T 1/2X3/32,Piñón de bicicleta Esjot Offset 20T 1/2X3/32,4.50,3.72,1.14,4251516500867,4,8714930090,0,1,"<ul>
+<li>Pi&ntilde;&oacute;n de bicicleta</li>
+<li>Paso 1/2"" x 3/32"" (1,27x2,54cm)</li>
+<li>Galvanizado (espesor del material 2mm)</li>
+<li>Adecuado para bujes de 3, 4, 5, 7 y 8 marchas, buje de pedalier / buje r&iacute;gido, SRAM, Shimano, Sturmey Archer</li>
+</ul>","
+Piñón de bicicleta
+Paso 1/2"" x 3/32"" (1,27x2,54cm)
+Galvanizado (espesor del material 2mm)
+Adecuado para bujes de 3, 4, 5, 7 y 8 marchas, buje de pedalier / buje rígido, SRAM, Shimano, Sturmey Archer
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,122,78,116,105,10,,Plata,,,,,,Acero,,,,,,,,8,,,https://api.mybihr.com/medias/1115057-1-800Wx800H?context=bWFzdGVyfHJvb3R8MTU2Nzc1fGltYWdlL2pwZWd8YURsbUwyaGxNaTh4TlRreE9UQTVNRGMyTVRjMU9DOHhNVEUxTURVM0xURmZPREF3VjNnNE1EQkl8ZmI3MWQxMGUxY2I3YWNlNDg1MzlhZGRkZmJmYjA4MzJlYjE5Njc4M2E4MzVmZmE2OGMzNzU1OWIzMWI1OTUwMQ,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115056,1115056,19-1700-19,ESJOT,ESJOT BIKE SPROCKET OFFSET 19T 1/2X3/32,Piñón de bicicleta Esjot Offset 19T 1/2X3/32,4.50,3.72,1.62,4251516500850,6,8714930090,0,1,"<ul>
+<li>Pi&ntilde;&oacute;n de bicicleta</li>
+<li>Paso 1/2"" x 3/32"" (1,27x2,54cm)</li>
+<li>Galvanizado (espesor del material 2mm)</li>
+<li>Adecuado para bujes de 3, 4, 5, 7 y 8 marchas, buje de pedalier / buje r&iacute;gido, SRAM, Shimano, Sturmey Archer</li>
+</ul>","
+Piñón de bicicleta
+Paso 1/2"" x 3/32"" (1,27x2,54cm)
+Galvanizado (espesor del material 2mm)
+Adecuado para bujes de 3, 4, 5, 7 y 8 marchas, buje de pedalier / buje rígido, SRAM, Shimano, Sturmey Archer
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,122,75,117,104,10,,Plata,,,,,,Acero,,,,,,,,8,,,https://api.mybihr.com/medias/1115056-1-800Wx800H?context=bWFzdGVyfHJvb3R8MTU2NzgzfGltYWdlL2pwZWd8YUdabEwyaGtOQzh4TlRreE9UQTVNRE0yT0RVME1pOHhNVEUxTURVMkxURmZPREF3VjNnNE1EQkl8YWFhZTg5NWZkNjAxNTE4ZTczYmI0ODhhMTM5NjJlNWM5OWNmODIwN2QxN2MwODQyZWRjODllZTY3OTAzZDRlZA,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115018,1115018,85-0292,ESJOT,ESJOT E-BIKE/DOWNHILL BRAKE DISC 220MM,Disco de freno ESJOT E-Bike/Descenso Ø220mm,39.49,32.64,8.04,85-0292,8,8714930090,0,1,"<p>Disco de freno para bicicletas y e-bikes con montaje de 6 agujeros (no para S-Pedelecs)</p>
+<ul>
+<li>Material de acero inoxidable de la m&aacute;s alta calidad (2mm), endurecimiento extra particularmente bajo desgaste, sin distorsi&oacute;n incluso bajo cargas pesadas</li>
+<li>Desarrollado y probado seg&uacute;n la norma DIN EN 15 194</li>
+<li>Sin grado residual: bajo desgaste del disco y de las pastillas de freno, reducci&oacute;n del ruido</li>
+<li>Absolutamente plano: para un comportamiento de frenado tranquilo y constante</li>
+<li>Compatible con todas las pastillas de freno habituales (sinterizadas, semimet&aacute;licas, org&aacute;nicas, cer&aacute;micas)</li>
+</ul>","
+Disco de freno para bicicletas y e-bikes con montaje de 6 agujeros (no para S-Pedelecs)
+
+Material de acero inoxidable de la más alta calidad (2mm), endurecimiento extra particularmente bajo desgaste, sin distorsión incluso bajo cargas pesadas
+Desarrollado y probado según la norma DIN EN 15 194
+Sin grado residual: bajo desgaste del disco y de las pastillas de freno, reducción del ruido
+Absolutamente plano: para un comportamiento de frenado tranquilo y constante
+Compatible con todas las pastillas de freno habituales (sinterizadas, semimetálicas, orgánicas, cerámicas)
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,922,312,255,241,15,,,,,,,,,,,,,,,E-Bike,,,,https://api.mybihr.com/medias/1115018-1-800Wx800H?context=bWFzdGVyfHJvb3R8MTg5NjE0fGltYWdlL2pwZWd8YUdReEwyaGlNaTh4TlRreE9UQTNOVFUxTnpRd05pOHhNVEUxTURFNExURmZPREF3VjNnNE1EQkl8NWJiMWM5ZDcyY2Y3NDdiNTc3OWJhOWQxNjRjNjM0MjE5MjdiZDJjOTBhNjEwM2VkOWZjM2IwOGE3NWMzYzRkYQ,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115037,1115037,19-17120-42,ESJOT,ESJOT CHAINRING 42T BOSCH GEN3 DIRECT M.,Plato ESJOT 42T Bosch Gen3 Direct Mount,15.50,12.81,5.00,19-17120-42,8,8714930090,0,1,"<p>Plato para:</p>
+<ul>
+<li>Motores Bosch de generaci&oacute;n 3 (Active Line Plus)</li>
+<li>Montaje directo</li>
+<li>Paso 1/2"" x 3/32"" (1,27x2,54cm)</li>
+<li>Acero negro con recubrimiento KTL (espesor del material 2,0mm)</li>
+<li>Hasta 12 velocidades</li>
+<li>L&iacute;nea de cadena 47,5mm y 50,5mm</li>
+<li>Distanciador incluido</li>
+</ul>","
+Plato para:
+
+Motores Bosch de generación 3 (Active Line Plus)
+Montaje directo
+Paso 1/2"" x 3/32"" (1,27x2,54cm)
+Acero negro con recubrimiento KTL (espesor del material 2,0mm)
+Hasta 12 velocidades
+Línea de cadena 47,5mm y 50,5mm
+Distanciador incluido
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,499,247,200,192,13,,Negro,,,,,,Acero,,,,,,,,12,,,https://api.mybihr.com/medias/1115037-1-800Wx800H?context=bWFzdGVyfHJvb3R8MjU5NDk0fGltYWdlL2pwZWd8YURNNUwyaGxZUzh4TlRreE9UQTRNamc1TnpRek9DOHhNVEUxTURNM0xURmZPREF3VjNnNE1EQkl8MDFjNDAyMThjMjYyMzdjZjY5MmVkNzc3Y2ExZjIxNzg3MjM2NTY5MWYyNDg0ODYxMmZmMGViZjUyZDAyNjQ0ZQ,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115038,1115038,19-17123-38NW,ESJOT,"ESJOT CHAINRING 38T BOSCH GEN4 DM 47,5","Plato ESJOT 38T Bosch Gen4 Direct Mount linea de cadena 47,5",39.00,32.23,15.92,4251516565590,1,8714930090,0,1,"<p>Pi&ntilde;ones</p>
+<ul>
+<li>Para motores Bosch generaci&oacute;n 4 (Performance Line CX)</li>
+<li>Montaje directo</li>
+<li>Paso 1/2"" x 3/32"" (1,27x2,54cm) y 1/2"" x 11/128""(1,27x0,22cm)</li>
+<li>Acero negro con recubrimiento KTL (espesor del material 3,0mm)</li>
+<li>Hasta 12 velocidades o peque&ntilde;o buje</li>
+<li>L&iacute;nea de cadena 47,5mm</li>
+<li>Dentado estrecho-anchoDistancia</li>
+<li>dor incluido</li>
+</ul>","
+Piñones
+
+Para motores Bosch generación 4 (Performance Line CX)
+Montaje directo
+Paso 1/2"" x 3/32"" (1,27x2,54cm) y 1/2"" x 11/128""(1,27x0,22cm)
+Acero negro con recubrimiento KTL (espesor del material 3,0mm)
+Hasta 12 velocidades o pequeño buje
+Línea de cadena 47,5mm
+Dentado estrecho-anchoDistancia
+dor incluido
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,486,329,199,188,13,,Negro,,,,,,Acero,,,,,,,,12,,,https://api.mybihr.com/medias/1115038-1-800Wx800H?context=bWFzdGVyfHJvb3R8MTczOTAzfGltYWdlL2pwZWd8YURkaEwyaGpNQzh4TlRreE9UQTRNekk1TURZMU5DOHhNVEUxTURNNExURmZPREF3VjNnNE1EQkl8ZWMwZmEwY2JmY2E5OWUwMWZmNjllMjA4OGQ4ODVlNmY5MWZhMWExNTFmNTkxNmM5MDQ2OGMyNjkzMWE2NWEzNg,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115046,1115046,19-1720-30,ESJOT,ESJOT CHAINRING 30T SHIMANO NEXUS INTER,Plato ESJOT 30T Shimano Nexus Inter,9.00,7.44,3.00,4251516560144,1,8714930090,0,1,"<ul>
+<li>Plato para buje Shimano Nexus Inter 5E e-bike</li>
+<li>Paso 1/2"" x 3/32"" (1,27x2,38cm)</li>
+<li>Acero negro (espesor del material 2,0mm)</li>
+</ul>","
+Plato para buje Shimano Nexus Inter 5E e-bike
+Paso 1/2"" x 3/32"" (1,27x2,38cm)
+Acero negro (espesor del material 2,0mm)
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,307,155,201,191,8,,Negro,,,,,,Acero,,,,,,,Ciudad,,,,https://api.mybihr.com/medias/1115046-1-800Wx800H?context=bWFzdGVyfHJvb3R8MTM5NDA3fGltYWdlL2pwZWd8YURGaEwyZzRNeTh4TlRreE9UQTROalF6TmpNNE1pOHhNVEUxTURRMkxURmZPREF3VjNnNE1EQkl8YTM0M2NiMjEzNzdkNzlmMjg1ZDRkYmM2ZjY5ZDc4YjZhODljOTE3NmQ5NDhkOTVmZjQ0NThkMzFhMzgzYmFkOA,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115044,1115044,19-1720-24,ESJOT,ESJOT CHAINRING 24T SHIMANO NEXUS INTER,Plato ESJOT 24T Shimano Nexus Inter,7.50,6.20,1.90,4251516565620,8,8714930090,0,1,"<ul>
+<li>Plato para buje Shimano Nexus Inter 5E e-bike</li>
+<li>Paso 1/2"" x 3/32"" (1,27x2,38cm)</li>
+<li>Acero negro (espesor del material 2,0mm)</li>
+</ul>","
+Plato para buje Shimano Nexus Inter 5E e-bike
+Paso 1/2"" x 3/32"" (1,27x2,38cm)
+Acero negro (espesor del material 2,0mm)
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,384,107,201,191,10,,Negro,,,,,,Acero,,,,,,,Ciudad,,,,https://api.mybihr.com/medias/1115044-1-800Wx800H?context=bWFzdGVyfHJvb3R8MTM5Mzk5fGltYWdlL2pwZWd8YURRd0wyZ3lNQzh4TlRreE9UQTROVFkwT1RrMU1DOHhNVEUxTURRMExURmZPREF3VjNnNE1EQkl8MWNjYTg5Zjg3YThkZTY4ZjNjODJhODQxOTZmYWQ5YTdiNWM2NGVmMGU2MjQxNjM4NDUzOTA1OTViMWIyZDI1Ng,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115035,1115035,19-17120-38,ESJOT,ESJOT CHAINRING 38T BOSCH GEN3 DIRECT M.,Plato ESJOT 38T Bosch Gen3 Direct Mount,17.50,14.46,9.40,4251516559261,2,8714930090,0,1,"<p>Plato para:</p>
+<ul>
+<li>Motores Bosch de generaci&oacute;n 3 (Active Line Plus)</li>
+<li>Montaje directo</li>
+<li>Paso 1/2"" x 3/32"" (1,27x2,54cm)</li>
+<li>Acero negro con recubrimiento KTL (espesor del material 2,0mm)</li>
+<li>Hasta 12 velocidades</li>
+<li>L&iacute;nea de cadena 47,5mm y 50,5mm</li>
+<li>Distanciador incluido</li>
+</ul>","
+Plato para:
+
+Motores Bosch de generación 3 (Active Line Plus)
+Montaje directo
+Paso 1/2"" x 3/32"" (1,27x2,54cm)
+Acero negro con recubrimiento KTL (espesor del material 2,0mm)
+Hasta 12 velocidades
+Línea de cadena 47,5mm y 50,5mm
+Distanciador incluido
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,499,218,201,191,13,,Negro,,,,,,Acero,,,,,,,,12,,,https://api.mybihr.com/medias/1115035-1-800Wx800H?context=bWFzdGVyfHJvb3R8MjU5NDk0fGltYWdlL2pwZWd8YURabEwyaGtNUzh4TlRreE9UQTRNakV4TVRBd05pOHhNVEUxTURNMUxURmZPREF3VjNnNE1EQkl8NjExMDE0MDFjM2NmZjAwZGJkMjMyZmNhMzI1YmJjMDE5YWVhZjg0NGU1NDQxZjdlOGE4NWY3ZDJjNDJiZDFmNw,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115053,1115053,19-11105-21,ESJOT,ESJOT E-BIKE SPROCKET FLAT 21T BOSCH G.2,Piñón E-Bike ESJOT plano 21T Bosch G.2,8.00,6.61,1.00,4251516559223,4,8714930090,0,1,"<ul>
+<li>Pitch 1/2&ldquo; x 1/8&ldquo; (1,27x0,31cm)</li>
+<li>For Bosch motors, generation 2 (Active Line, Performance Line)</li>
+<li>Steel black KTL-coated (material thickness 3,0mm)</li>
+</ul>","
+Pitch 1/2“ x 1/8“ (1,27x0,31cm)
+For Bosch motors, generation 2 (Active Line, Performance Line)
+Steel black KTL-coated (material thickness 3,0mm)
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,123,110,117,105,10,,Negro,,,,,,Acero,,,,,,,,,,,https://api.mybihr.com/medias/1115053-1-800Wx800H?context=bWFzdGVyfHJvb3R8MTg1ODg1fGltYWdlL2pwZWd8YURKbEwyZzBPUzh4TlRreE9UQTRPVEU0T0RnNU5DOHhNVEUxTURVekxURmZPREF3VjNnNE1EQkl8ZmVlZmJjNTBhZDJjM2U2OWE1ZGZlODg2MWU0MGUyNDFlZGEzZmUwZjRiMmYxZWMzMmRiYmYyNjdmMjc5NWExZA,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115049,1115049,19-1100-20,ESJOT,ESJOT BICYCLE SPROCKET FLAT 20T 1/2X1/8,Piñón de bicicleta Esjot plano 20T 1/2X1/8,5.51,4.55,1.46,19-1100-20,5,8714930090,0,1,"<ul>
+<li>Pi&ntilde;&oacute;n de bicicleta</li>
+<li>Paso 1/2"" x 1/8"" (1,27x0,31cm)</li>
+<li>Galvanizado (espesor del material 3mm)</li>
+<li>Adecuado para bujes de 3, 4, 5, 7 y 8 marchas, buje de pedal trasero / buje r&iacute;gido, SRAM, Shimano, Sturmey Archer</li>
+</ul>","
+Piñón de bicicleta
+Paso 1/2"" x 1/8"" (1,27x0,31cm)
+Galvanizado (espesor del material 3mm)
+Adecuado para bujes de 3, 4, 5, 7 y 8 marchas, buje de pedal trasero / buje rígido, SRAM, Shimano, Sturmey Archer
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,123,99,116,106,10,,Plata,,,,,,Acero,,,,,,,Ciudad,8,,,https://api.mybihr.com/medias/1115049-1-800Wx800H?context=bWFzdGVyfHJvb3R8MTg2MTEwfGltYWdlL2pwZWd8YURneEwyaG1NeTh4TlRreE9UQTROell4TmpBek1DOHhNVEUxTURRNUxURmZPREF3VjNnNE1EQkl8MTRjYzgyYzIyM2Q5NWMyNWE3MzcxZmI1NDNjYzc2ZTk5NmRkNmRjZWQ1MGNhZDMwYzQzNTZmZjc3OTkyNWM4OQ,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115033,1115033,19-17116-44,ESJOT,ESJOT CHAINRING 44T BOSCH GEN4/3/1 104MM,Plato ESJOT 44T Bosch Gen4/3/1 104mm,13.99,11.56,4.38,4251516558769,5,8714930090,0,1,"<p>Plato universal para:</p>
+<ul>
+<li>Generaci&oacute;n de motores Bosch:
+<ul>
+<li>4 ( Performance Line CX ),</li>
+<li>3 ( Active Line Plus )</li>
+<li>1 (Classic Line )</li>
+</ul>
+</li>
+<li>Yamaha</li>
+<li>Bafang</li>
+<li>Brose</li>
+</ul>
+<ul>
+<li>Acero negro con recubrimiento KTL,</li>
+<li>C&iacute;rculo de agujeros 104mm</li>
+<li>Acero 3mm/Dentado estrecho</li>
+</ul>","
+Plato universal para:
+
+Generación de motores Bosch:
+
+4 ( Performance Line CX ),
+3 ( Active Line Plus )
+1 (Classic Line )
+
+
+Yamaha
+Bafang
+Brose
+
+
+Acero negro con recubrimiento KTL,
+Círculo de agujeros 104mm
+Acero 3mm/Dentado estrecho
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,382,210,201,190,10,,Negro,,,,,,Acero,,,,,,,,12,,,https://api.mybihr.com/medias/1115033-1-800Wx800H?context=bWFzdGVyfHJvb3R8MTcyMzIwfGltYWdlL2pwZWd8YURrMEwyZzJaUzh4TlRreE9UQTRNVE15TkRVM05DOHhNVEUxTURNekxURmZPREF3VjNnNE1EQkl8ODFiM2EwOTgwNmYxMTk3ZmU4MjA1YmY3ZWY3OWFkZWM5ODVkNzNlNzE3MjU5ZTEyMjBlYjUwMGEwZWJjMzNjYg,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115043,1115043,19-17200-40BP,ESJOT,ESJOT CHAINRING 40T BOSCH GEN4/3/1 104MM,Plato ESJOT 40T Bosch Gen4/3/1 104mm,31.50,26.03,8.00,19-17200-40BP,7,8714930090,0,1,"<p>Pi&ntilde;ones</p>
+<ul>
+<li>Para motores Bosch de la generaci&oacute;n 4 (Performance Line CX),n 3 (Active Line Plus) y 1 (Classic Line), as&iacute; como Yamaha, Bafang y Brose</li>
+<li>Montaje directo</li>
+<li>Paso 1/2"" x 3/32"" (1,27x2,54cm) y 1/2"" x 11/128""(1,27x0,22cm)</li>
+<li>Aluminio anodizado (espesor del material 3,0mm)</li>
+<li>Hasta 12 velocidades</li>
+<li>C&iacute;rculo de agujeros 104mm</li>
+<li>anodizado negro</li>
+</ul>","
+Piñones
+
+Para motores Bosch de la generación 4 (Performance Line CX),n 3 (Active Line Plus) y 1 (Classic Line), así como Yamaha, Bafang y Brose
+Montaje directo
+Paso 1/2"" x 3/32"" (1,27x2,54cm) y 1/2"" x 11/128""(1,27x0,22cm)
+Aluminio anodizado (espesor del material 3,0mm)
+Hasta 12 velocidades
+Círculo de agujeros 104mm
+anodizado negro
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,304,109,201,189,8,,Negro,,,,,,,,,,,,,,12,,,https://api.mybihr.com/medias/1115043-1-800Wx800H?context=bWFzdGVyfHJvb3R8MTkwNjE1fGltYWdlL2pwZWd8YUdJekwyZ3hNaTh4TlRreE9UQTROVEkxTmpjek5DOHhNVEUxTURRekxURmZPREF3VjNnNE1EQkl8YjgxNDZkYjA5NmI2MWNlMjY1YzlhODJlMGVhNWI0NDY2NWQ5NGU1MmE3MGZjZDk2NTE3ZDY2NzRkMTVkMTc2OQ,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115036,1115036,19-17120-40,ESJOT,ESJOT CHAINRING 40T BOSCH GEN3 DIRECT M.,Plato ESJOT 40T Bosch Gen3 Direct Mount,15.50,12.81,4.00,19-17120-40,8,8714930090,0,1,"<p>Plato para:</p>
+<ul>
+<li>Motores Bosch de generaci&oacute;n 3 (Active Line Plus)</li>
+<li>Montaje directo</li>
+<li>Paso 1/2"" x 3/32"" (1,27x2,54cm)</li>
+<li>Acero negro con recubrimiento KTL (espesor del material 2,0mm)</li>
+<li>Hasta 12 velocidades</li>
+<li>L&iacute;nea de cadena 47,5mm y 50,5mm</li>
+<li>Distanciador incluido</li>
+</ul>","
+Plato para:
+
+Motores Bosch de generación 3 (Active Line Plus)
+Montaje directo
+Paso 1/2"" x 3/32"" (1,27x2,54cm)
+Acero negro con recubrimiento KTL (espesor del material 2,0mm)
+Hasta 12 velocidades
+Línea de cadena 47,5mm y 50,5mm
+Distanciador incluido
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,384,232,200,192,10,,Negro,,,,,,Acero,,,,,,,,12,,,https://api.mybihr.com/medias/1115036-1-800Wx800H?context=bWFzdGVyfHJvb3R8MjU5NDk0fGltYWdlL2pwZWd8YUdaakwyaGtaUzh4TlRreE9UQTRNalV3TkRJeU1pOHhNVEUxTURNMkxURmZPREF3VjNnNE1EQkl8OTQwNjQxNTUwMTM1NTJjOWFiZjUxZWU0YWFiMjE2Yzg3OGIyNTFiNjVjZjQwZjE5MjNiNGNhZDZmNDAwYzc0Yg,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115045,1115045,19-1720-26,ESJOT,ESJOT CHAINRING 26T SHIMANO NEXUS INTER,Plato ESJOT 26T Shimano Nexus Inter,7.50,6.20,2.90,4251516565194,9,8714930090,0,1,"<ul>
+<li>Plato para buje Shimano Nexus Inter 5E e-bike</li>
+<li>Paso 1/2"" x 3/32"" (1,27x2,38cm)</li>
+<li>Acero negro (espesor del material 2,0mm)</li>
+</ul>","
+Plato para buje Shimano Nexus Inter 5E e-bike
+Paso 1/2"" x 3/32"" (1,27x2,38cm)
+Acero negro (espesor del material 2,0mm)
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,384,126,202,190,10,,Negro,,,,,,Acero,,,,,,,Ciudad,,,,https://api.mybihr.com/medias/1115045-1-800Wx800H?context=bWFzdGVyfHJvb3R8MTM5NDA3fGltYWdlL2pwZWd8YURoa0wyZzNOUzh4TlRreE9UQTROakEwTXpFMk5pOHhNVEUxTURRMUxURmZPREF3VjNnNE1EQkl8NjVkMTI0NGRmMTAwZGViOWUwMDQ3ZDc5YzUwYmNiYWVlNzZjYzM0NTQ5NTQwY2FjNTFiNDAwZGFiOWUzZWNkZA,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115040,1115040,19-17125-34NW,ESJOT,ESJOT CHAINRING 34T BOSCH GEN4 DM 53,Plato ESJOT 34T Bosch Gen4 Direct Mount linea de cadena 53,36.51,30.17,13.00,4251516567488,6,8714930090,0,1,"<p>Pi&ntilde;ones</p>
+<ul>
+<li>Para motores Bosch generaci&oacute;n 4 (Performance Line CX)</li>
+<li>Montaje directo</li>
+<li>Paso 1/2"" x 3/32"" (1,27x2,54cm) y 1/2"" x 11/128""(1,27x0,22cm)</li>
+<li>Acero negro con recubrimiento KTL (espesor del material 3,0mm)</li>
+<li>Hasta 12 velocidades o peque&ntilde;o buje</li>
+<li>L&iacute;nea de cadena 47,5mm</li>
+<li>Dentado estrecho-anchoDistancia</li>
+<li>dor incluido</li>
+</ul>","
+Piñones
+
+Para motores Bosch generación 4 (Performance Line CX)
+Montaje directo
+Paso 1/2"" x 3/32"" (1,27x2,54cm) y 1/2"" x 11/128""(1,27x0,22cm)
+Acero negro con recubrimiento KTL (espesor del material 3,0mm)
+Hasta 12 velocidades o pequeño buje
+Línea de cadena 47,5mm
+Dentado estrecho-anchoDistancia
+dor incluido
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,1,1,10,10,10,,Negro,,,,,,Acero,,,,,,,,12,,,https://api.mybihr.com/medias/1115040-1-800Wx800H?context=bWFzdGVyfHJvb3R8MjExNDAyfGltYWdlL2pwZWd8YUdJekwyZzFaQzh4TlRreE9UQTROREEzTnpBNE5pOHhNVEUxTURRd0xURmZPREF3VjNnNE1EQkl8ZDE0ZTVhY2ZlZDA2NTE1MGQ4YmQ2MTVjZWM0MDRmNGJhMjAzODhmYjQ1YTkzMDQzMzg3NDc4YjZhMDcxODQ4Mw,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115047,1115047,19-1100-18,ESJOT,ESJOT BICYCLE SPROCKET FLAT 18T 1/2X1/8,Piñón de bicicleta Esjot plano 18T 1/2X1/8,5.51,4.55,1.99,4251516500157,6,8714930090,0,1,"<ul>
+<li>Pi&ntilde;&oacute;n de bicicleta</li>
+<li>Paso 1/2"" x 1/8"" (1,27x0,31cm)</li>
+<li>Galvanizado (espesor del material 3mm)</li>
+<li>Adecuado para bujes de 3, 4, 5, 7 y 8 marchas, buje de pedal trasero / buje r&iacute;gido, SRAM, Shimano, Sturmey Archer</li>
+</ul>","
+Piñón de bicicleta
+Paso 1/2"" x 1/8"" (1,27x0,31cm)
+Galvanizado (espesor del material 3mm)
+Adecuado para bujes de 3, 4, 5, 7 y 8 marchas, buje de pedal trasero / buje rígido, SRAM, Shimano, Sturmey Archer
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,119,78,113,105,10,,Plata,,,,,,Acero,,,,,,,Ciudad,8,,,https://api.mybihr.com/medias/1115047-1-800Wx800H?context=bWFzdGVyfHJvb3R8MTg2MTEwfGltYWdlL2pwZWd8YUdFM0wyZzVNQzh4TlRreE9UQTROamd5T1RVNU9DOHhNVEUxTURRM0xURmZPREF3VjNnNE1EQkl8ZjJiOTNhNjM5ZGFmYzg5ZjE0MTQxMDM1OTIxOTk0N2YxNzFmZTY2YzRmZDBiMWNmMDE2YWU5ZTViOWQzNzQwZg,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115041,1115041,19-17200-36BP,ESJOT,ESJOT CHAINRING 36T BOSCH GEN4/3/1 104MM,Plato ESJOT 36T Bosch Gen4/3/1 104mm,30.00,24.79,4.99,4251516566597,4,8714930090,0,1,"<p>Pi&ntilde;ones</p>
+<ul>
+<li>Para motores Bosch generaci&oacute;n 4 (Performance Line CX)</li>
+<li>Montaje directo</li>
+<li>Paso 1/2"" x 3/32"" (1,27x2,54cm) y 1/2"" x 11/128""(1,27x0,22cm)</li>
+<li>Acero negro con recubrimiento KTL (espesor del material 3,0mm)</li>
+<li>Hasta 12 velocidades o peque&ntilde;o buje</li>
+<li>L&iacute;nea de cadena 47,5mm</li>
+<li>Dentado estrecho-anchoDistancia</li>
+<li>dor incluido</li>
+</ul>","
+Piñones
+
+Para motores Bosch generación 4 (Performance Line CX)
+Montaje directo
+Paso 1/2"" x 3/32"" (1,27x2,54cm) y 1/2"" x 11/128""(1,27x0,22cm)
+Acero negro con recubrimiento KTL (espesor del material 3,0mm)
+Hasta 12 velocidades o pequeño buje
+Línea de cadena 47,5mm
+Dentado estrecho-anchoDistancia
+dor incluido
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,309,89,202,191,8,,Negro,,,,,,,,,,,,,,12,,,https://api.mybihr.com/medias/1115041-1-800Wx800H?context=bWFzdGVyfHJvb3R8MTkwNjIzfGltYWdlL2pwZWd8YURFekwyZzFNQzh4TlRreE9UQTRORFEzTURNd01pOHhNVEUxTURReExURmZPREF3VjNnNE1EQkl8MmM2NjQ0NTIyMzQ1MDFlOTk2M2NiMjliZTMwNDYwMDI2ZTY4MmNhZTM5OWU4YjIwN2NkY2FjNmM2MmY5OWE5Mw,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115062,1115062,19-17121-22,ESJOT,ESJOT E-BIKE SPROCKET 22T BOSCH GEN2,Piñón E-Bike ESJOT 22T Bosch Gen2,17.00,14.05,3.06,4251516559421,23,8714930090,0,1,"<p>Pi&ntilde;ones para E-Bike</p>
+<ul>
+<li>Desplazamiento para motores Bosch generaci&oacute;n 2 (Active Line y Performance Line)</li>
+<li>Paso 1/2"" x 3/32"" (1,27x2,54cm) y 1/2"" x 11/128"" (1,27x0,22cm)</li>
+<li>Acero negro con recubrimiento KTL (espesor del material 1,8mm)</li>
+<li>Es posible utilizar dos pi&ntilde;ones juntos</li>
+<li>Evita el roce de la cadena en el alojamiento</li>
+</ul>","
+Piñones para E-Bike
+
+Desplazamiento para motores Bosch generación 2 (Active Line y Performance Line)
+Paso 1/2"" x 3/32"" (1,27x2,54cm) y 1/2"" x 11/128"" (1,27x0,22cm)
+Acero negro con recubrimiento KTL (espesor del material 1,8mm)
+Es posible utilizar dos piñones juntos
+Evita el roce de la cadena en el alojamiento
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,120,89,114,105,10,,Negro,,,,,,Acero,,,,,,,,,,,https://api.mybihr.com/medias/1115062-1-800Wx800H?context=bWFzdGVyfHJvb3R8NzgxMDF8aW1hZ2UvanBlZ3xhRE15TDJnMFlTOHhOVGt4T1RBNU1qY3lOemd6T0M4eE1URTFNRFl5TFRGZk9EQXdWM2c0TURCSXwxODhjMTBmYzRmYWIwNGRiYzQ4Nzg5M2VkYzA3ZWU3NzFmMjZhMzRjMzg5NTljMTMyNWNjNDRlMmJlNGU0M2Vi,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115022,1115022,19-17109-44,ESJOT,ESJOT CHAINRING 44T SHIMANO STEPS E6000,Plato ESJOT 44T Shimano Steps E6000,32.50,26.86,8.00,4251516501390,3,8714930090,0,1,"<p>Plato para:</p>
+<ul>
+<li>Motores de pasos Shimano E6000 (E6002 u. E6012)</li>
+<li>Paso 1/2"" x 3/32"" (1,27x2,54cm)</li>
+<li>Hasta 9 velocidades</li>
+<li>Acero negro con recubrimiento KTL (espesor del material 2,0mm)</li>
+</ul>","
+Plato para:
+
+Motores de pasos Shimano E6000 (E6002 u. E6012)
+Paso 1/2"" x 3/32"" (1,27x2,54cm)
+Hasta 9 velocidades
+Acero negro con recubrimiento KTL (espesor del material 2,0mm)
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,502,359,201,192,13,,Negro,,,,,,Acero,,,,,,,,9,,,https://api.mybihr.com/medias/1115022-1-800Wx800H?context=bWFzdGVyfHJvb3R8MjEzMjkxfGltYWdlL2pwZWd8YUdWaUwyZ3pZUzh4TlRreE9UQTNOams1T1RFNU9DOHhNVEUxTURJeUxURmZPREF3VjNnNE1EQkl8MmU1ODZiNWVmNTc5YjQ1N2YzZDI3YTU5NzM3YzRlZGYzZjdkNDEzNjNlMTgxNDU1YmIyODQ2MDczNjUzYjZmOA,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115054,1115054,19-1700-17,ESJOT,ESJOT BIKE SPROCKET OFFSET 17T 1/2X3/32,Piñón de bicicleta Esjot Offset 17T 1/2X3/32,4.50,3.72,1.62,4251516500836,5,8714930090,0,1,"<ul>
+<li>Pi&ntilde;&oacute;n de bicicleta</li>
+<li>Paso 1/2"" x 3/32"" (1,27x2,54cm)</li>
+<li>Galvanizado (espesor del material 2mm)</li>
+<li>Adecuado para bujes de 3, 4, 5, 7 y 8 marchas, buje de pedalier / buje r&iacute;gido, SRAM, Shimano, Sturmey Archer</li>
+</ul>","
+Piñón de bicicleta
+Paso 1/2"" x 3/32"" (1,27x2,54cm)
+Galvanizado (espesor del material 2mm)
+Adecuado para bujes de 3, 4, 5, 7 y 8 marchas, buje de pedalier / buje rígido, SRAM, Shimano, Sturmey Archer
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,160,58,116,106,13,,Plata,,,,,,Acero,,,,,,,,8,,,https://api.mybihr.com/medias/1115054-1-800Wx800H?context=bWFzdGVyfHJvb3R8MTU2NzgzfGltYWdlL2pwZWd8YURoa0wyZ3pZaTh4TlRreE9UQTRPVFU0TWpFeE1DOHhNVEUxTURVMExURmZPREF3VjNnNE1EQkl8ZWViMWE2ZThiZjUyZGRhYmRiMDM1OTk0MTkzMzNhNmIxZTE1NTZmYThjMTZhZWFiZDVkNDViMzc2MzAzY2MyMQ,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115060,1115060,19-17121-18,ESJOT,ESJOT E-BIKE SPROCKET 18T BOSCH GEN2,Piñón E-Bike ESJOT 18T Bosch Gen2,17.50,14.46,9.40,4251516559407,6,8714930090,0,1,"<p>Pi&ntilde;ones para E-Bike</p>
+<ul>
+<li>Desplazamiento para motores Bosch generaci&oacute;n 2 (Active Line y Performance Line)</li>
+<li>Paso 1/2"" x 3/32"" (1,27x2,54cm) y 1/2"" x 11/128"" (1,27x0,22cm)</li>
+<li>Acero negro con recubrimiento KTL (espesor del material 1,8mm)</li>
+<li>Es posible utilizar dos pi&ntilde;ones juntos</li>
+<li>Evita el roce de la cadena en el alojamiento</li>
+</ul>","
+Piñones para E-Bike
+
+Desplazamiento para motores Bosch generación 2 (Active Line y Performance Line)
+Paso 1/2"" x 3/32"" (1,27x2,54cm) y 1/2"" x 11/128"" (1,27x0,22cm)
+Acero negro con recubrimiento KTL (espesor del material 1,8mm)
+Es posible utilizar dos piñones juntos
+Evita el roce de la cadena en el alojamiento
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,117,58,111,105,10,,Negro,,,,,,Acero,,,,,,,,,,,https://api.mybihr.com/medias/1115060-1-800Wx800H?context=bWFzdGVyfHJvb3R8NzgxMTd8aW1hZ2UvanBlZ3xhR1k1TDJoaFl5OHhOVGt4T1RBNU1UazBNVFF3Tmk4eE1URTFNRFl3TFRGZk9EQXdWM2c0TURCSXw2NjRiYTA5MTM5ZTdlM2Q4ZDQ1YTdmZjBjMzkyYjZiOWFlNDIxN2NmN2UxZDU4NTA1MjViNGI4Y2ZkMmJkNTM0,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115061,1115061,19-17121-20,ESJOT,ESJOT E-BIKE SPROCKET 20T BOSCH GEN2,Piñón E-Bike ESJOT 20T Bosch Gen2,15.00,12.40,3.00,4251516559414,19,8714930090,0,1,"<p>Pi&ntilde;ones para E-Bike</p>
+<ul>
+<li>Desplazamiento para motores Bosch generaci&oacute;n 2 (Active Line y Performance Line)</li>
+<li>Paso 1/2"" x 3/32"" (1,27x2,54cm) y 1/2"" x 11/128"" (1,27x0,22cm)</li>
+<li>Acero negro con recubrimiento KTL (espesor del material 1,8mm)</li>
+<li>Es posible utilizar dos pi&ntilde;ones juntos</li>
+<li>Evita el roce de la cadena en el alojamiento</li>
+</ul>","
+Piñones para E-Bike
+
+Desplazamiento para motores Bosch generación 2 (Active Line y Performance Line)
+Paso 1/2"" x 3/32"" (1,27x2,54cm) y 1/2"" x 11/128"" (1,27x0,22cm)
+Acero negro con recubrimiento KTL (espesor del material 1,8mm)
+Es posible utilizar dos piñones juntos
+Evita el roce de la cadena en el alojamiento
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,97,72,114,106,8,,Negro,,,,,,Acero,,,,,,,,,,,https://api.mybihr.com/medias/1115061-1-800Wx800H?context=bWFzdGVyfHJvb3R8NzgxMDl8aW1hZ2UvanBlZ3xhR013TDJnMU55OHhOVGt4T1RBNU1qTXpORFl5TWk4eE1URTFNRFl4TFRGZk9EQXdWM2c0TURCSXw1MDE2MmU3YTY1ZmJhMzU0MDRmMzk3N2ZhMzBjNmE5MmNhMWY0ZTRmMWI4NjVlYTljM2I3NWZjNjdjMDU3OWQ4,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115031,1115031,19-17116-42,ESJOT,ESJOT CHAINRING 42T BOSCH GEN4/3/1 104MM,Plato ESJOT 42T Bosch Gen4/3/1 104mm,13.99,11.56,3.99,4251516558752,5,8714930090,0,1,"<p>Plato universal para:</p>
+<ul>
+<li>Generaci&oacute;n de motores Bosch:
+<ul>
+<li>4 ( Performance Line CX ),</li>
+<li>3 ( Active Line Plus )</li>
+<li>1 (Classic Line )</li>
+</ul>
+</li>
+<li>Yamaha</li>
+<li>Bafang</li>
+<li>Brose</li>
+</ul>
+<ul>
+<li>Acero negro con recubrimiento KTL,</li>
+<li>C&iacute;rculo de agujeros 104mm</li>
+<li>Acero 3mm/Dentado estrecho</li>
+</ul>","
+Plato universal para:
+
+Generación de motores Bosch:
+
+4 ( Performance Line CX ),
+3 ( Active Line Plus )
+1 (Classic Line )
+
+
+Yamaha
+Bafang
+Brose
+
+
+Acero negro con recubrimiento KTL,
+Círculo de agujeros 104mm
+Acero 3mm/Dentado estrecho
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,307,211,200,192,8,,Negro,,,,,,Acero,,,,,,,,12,,,https://api.mybihr.com/medias/1115031-1-800Wx800H?context=bWFzdGVyfHJvb3R8MTcyMzIwfGltYWdlL2pwZWd8YUdKaUwyZ3dZaTh4TlRreE9UQTRNRFV6T0RFME1pOHhNVEUxTURNeExURmZPREF3VjNnNE1EQkl8NjhlOWRiNTM4Yzc3Yjk0NmI0YWVmNDM5ODM3ZTE0YjYyZjA1ZjM5MTgxODFkMzAzMTY0NjNlYjljYTU4MDM2OA,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115028,1115028,19-17116-38NW,ESJOT,ESJOT CHAINRING 38T BOSCH GEN4/3/1 104MM,Plato ESJOT 38T Bosch Gen4/3/1 104mm,37.50,30.99,6.25,4251516566474,4,8714930090,0,1,"<p>Plato universal para:</p>
+<ul>
+<li>Generaci&oacute;n de motores Bosch:
+<ul>
+<li>4 ( Performance Line CX ),</li>
+<li>3 ( Active Line Plus )</li>
+<li>1 (Classic Line )</li>
+</ul>
+</li>
+<li>Yamaha</li>
+<li>Bafang</li>
+<li>Brose</li>
+</ul>
+<ul>
+<li>Acero negro con recubrimiento KTL,</li>
+<li>C&iacute;rculo de agujeros 104mm</li>
+<li>Acero 2mm/dentado est&aacute;ndar</li>
+</ul>","
+Plato universal para:
+
+Generación de motores Bosch:
+
+4 ( Performance Line CX ),
+3 ( Active Line Plus )
+1 (Classic Line )
+
+
+Yamaha
+Bafang
+Brose
+
+
+Acero negro con recubrimiento KTL,
+Círculo de agujeros 104mm
+Acero 2mm/dentado estándar
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,307,222,201,191,8,,Negro,,,,,,Acero,,,,,,,,12,,,https://api.mybihr.com/medias/1115028-1-800Wx800H?context=bWFzdGVyfHJvb3R8MjAwNjY2fGltYWdlL2pwZWd8YURobEwyaGxaQzh4TlRreE9UQTNPVE0xT0RRNU5DOHhNVEUxTURJNExURmZPREF3VjNnNE1EQkl8YTBjYTU3ZDFiZGJiMjkzZTZlZjJjMjMxOWEzYTk4NmIzYjM3MDRhYmVmNTNmYmM3ODE4ZGQyMTNhODk2YjMzNA,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115039,1115039,19-17124-34NW,ESJOT,"ESJOT CHAINRING 34T BOSCH GEN4 DM 50,5","Plato ESJOT 34T Bosch Gen4 Direct Mount linea de cadena 50,5",38.99,32.22,6.50,4251516567471,7,8714930090,0,1,"<p>Pi&ntilde;ones</p>
+<ul>
+<li>Para motores Bosch generaci&oacute;n 4 (Performance Line CX)</li>
+<li>Montaje directo</li>
+<li>Paso 1/2"" x 3/32"" (1,27x2,54cm) y 1/2"" x 11/128""(1,27x0,22cm)</li>
+<li>Acero negro con recubrimiento KTL (espesor del material 3,0mm)</li>
+<li>Hasta 12 velocidades o peque&ntilde;o buje</li>
+<li>L&iacute;nea de cadena 47,5mm</li>
+<li>Dentado estrecho-anchoDistancia</li>
+<li>dor incluido</li>
+</ul>","
+Piñones
+
+Para motores Bosch generación 4 (Performance Line CX)
+Montaje directo
+Paso 1/2"" x 3/32"" (1,27x2,54cm) y 1/2"" x 11/128""(1,27x0,22cm)
+Acero negro con recubrimiento KTL (espesor del material 3,0mm)
+Hasta 12 velocidades o pequeño buje
+Línea de cadena 47,5mm
+Dentado estrecho-anchoDistancia
+dor incluido
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,382,292,201,190,10,,Negro,,,,,,Acero,,,,,,,,12,,,https://api.mybihr.com/medias/1115039-1-800Wx800H?context=bWFzdGVyfHJvb3R8MjAzMDkwfGltYWdlL2pwZWd8YUdWa0wyaGlNaTh4TlRreE9UQTRNelk0TXpnM01DOHhNVEUxTURNNUxURmZPREF3VjNnNE1EQkl8ZTc0YTNhNjBiMDZjMDc3MGI0NTc2ODY3MmNhNTUwZmQzZDNhZTk5MjY2ZTM0MDQ2ZDlmMzMyMGQyMmFhMWNiMw,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115030,1115030,19-17116-40NW,ESJOT,ESJOT CHAINRING 40T BOSCH GEN4/3/1 104MM,Plato ESJOT 40T Bosch Gen4/3/1 104mm,35.01,28.93,10.47,4251516566498,7,8714930090,0,1,"<p>Plato universal para:</p>
+<ul>
+<li>Generaci&oacute;n de motores Bosch:
+<ul>
+<li>4 ( Performance Line CX ),</li>
+<li>3 ( Active Line Plus )</li>
+<li>1 (Classic Line )</li>
+</ul>
+</li>
+<li>Yamaha</li>
+<li>Bafang</li>
+<li>Brose</li>
+</ul>
+<ul>
+<li>Acero negro con recubrimiento KTL,</li>
+<li>C&iacute;rculo de agujeros 104mm</li>
+<li>Acero 3mm/Dentado estrecho</li>
+</ul>","
+Plato universal para:
+
+Generación de motores Bosch:
+
+4 ( Performance Line CX ),
+3 ( Active Line Plus )
+1 (Classic Line )
+
+
+Yamaha
+Bafang
+Brose
+
+
+Acero negro con recubrimiento KTL,
+Círculo de agujeros 104mm
+Acero 3mm/Dentado estrecho
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,380,253,199,191,10,,Negro,,,,,,Acero,,,,,,,,12,,,https://api.mybihr.com/medias/1115030-1-800Wx800H?context=bWFzdGVyfHJvb3R8MTgyMzkyfGltYWdlL2pwZWd8YUdReUwyZ3dNUzh4TlRreE9UQTRNREUwTkRreU5pOHhNVEUxTURNd0xURmZPREF3VjNnNE1EQkl8ODU2ODhhNGJmOTg1NjI2NWYzMTY2ZTliODQzZmI0Y2Q5Yzk0NmM2MDlmZjBlMDc5M2ZmODUyM2IxYWY5MWM5Zg,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115042,1115042,19-17200-38BP,ESJOT,ESJOT CHAINRING 38T BOSCH GEN4/3/1 104MM,Plato ESJOT 38T Bosch Gen4/3/1 104mm,32.50,26.86,12.09,19-17200-38BP,4,8714930090,0,1,"<p>Pi&ntilde;ones</p>
+<ul>
+<li>Para motores Bosch de la generaci&oacute;n 4 (Performance Line CX),n 3 (Active Line Plus) y 1 (Classic Line), as&iacute; como Yamaha, Bafang y Brose</li>
+<li>Montaje directo</li>
+<li>Paso 1/2"" x 3/32"" (1,27x2,54cm) y 1/2"" x 11/128""(1,27x0,22cm)</li>
+<li>Aluminio anodizado (espesor del material 3,0mm)</li>
+<li>Hasta 12 velocidades</li>
+<li>C&iacute;rculo de agujeros 104mm</li>
+<li>anodizado negro</li>
+</ul>","
+Piñones
+
+Para motores Bosch de la generación 4 (Performance Line CX),n 3 (Active Line Plus) y 1 (Classic Line), así como Yamaha, Bafang y Brose
+Montaje directo
+Paso 1/2"" x 3/32"" (1,27x2,54cm) y 1/2"" x 11/128""(1,27x0,22cm)
+Aluminio anodizado (espesor del material 3,0mm)
+Hasta 12 velocidades
+Círculo de agujeros 104mm
+anodizado negro
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,305,100,202,189,8,,Negro,,,,,,,,,,,,,,12,,,https://api.mybihr.com/medias/1115042-1-800Wx800H?context=bWFzdGVyfHJvb3R8MTkwNjIzfGltYWdlL2pwZWd8YURnMUwyZzBNaTh4TlRreE9UQTRORGcyTXpVeE9DOHhNVEUxTURReUxURmZPREF3VjNnNE1EQkl8MWE0NjUwYmIyNmQ3ZmE2MWFjMDRhY2UyYTgzODY1YzE3Y2YxZmMwNmY0ZDAwMWIxZjM4OGFiYjVlZDA3NzQxNg,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115034,1115034,19-17116-44NW,ESJOT,ESJOT CHAINRING 44T BOSCH GEN4/3/1 104MM,Plato ESJOT 44T Bosch Gen4/3/1 104mm,36.51,30.17,11.00,4251516566511,9,8714930090,0,1,"<p>Plato universal para:</p>
+<ul>
+<li>Generaci&oacute;n de motores Bosch:
+<ul>
+<li>4 ( Performance Line CX ),</li>
+<li>3 ( Active Line Plus )</li>
+<li>1 (Classic Line )</li>
+</ul>
+</li>
+<li>Yamaha</li>
+<li>Bafang</li>
+<li>Brose</li>
+</ul>
+<ul>
+<li>Acero negro con recubrimiento KTL,</li>
+<li>C&iacute;rculo de agujeros 104mm</li>
+<li>Acero 3mm/Dentado estrecho</li>
+</ul>","
+Plato universal para:
+
+Generación de motores Bosch:
+
+4 ( Performance Line CX ),
+3 ( Active Line Plus )
+1 (Classic Line )
+
+
+Yamaha
+Bafang
+Brose
+
+
+Acero negro con recubrimiento KTL,
+Círculo de agujeros 104mm
+Acero 3mm/Dentado estrecho
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,301,275,200,188,8,,Negro,,,,,,Acero,,,,,,,,12,,,https://api.mybihr.com/medias/1115034-1-800Wx800H?context=bWFzdGVyfHJvb3R8MTgyNTg5fGltYWdlL2pwZWd8YURJeUwyZzNZeTh4TlRreE9UQTRNVGN4TnpjNU1DOHhNVEUxTURNMExURmZPREF3VjNnNE1EQkl8NTY3YzNiOGU5ZmI0ZDA4YWY1NjhmZjliZjc3OWQ4NTlkOTM1MjFmYmNkOWQ2MjQxZWY5ZGU3MjZmMTcwNjU2OQ,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115026,1115026,19-17116-36NW,ESJOT,ESJOT CHAINRING 36T BOSCH GEN4/3/1 104MM,Plato ESJOT 36T Bosch Gen4/3/1 104mm,37.50,30.99,6.25,4251516565545,3,8714930090,0,1,"<p>Plato universal para:</p>
+<ul>
+<li>Generaci&oacute;n de motores Bosch:
+<ul>
+<li>4 ( Performance Line CX ),</li>
+<li>3 ( Active Line Plus )</li>
+<li>1 (Classic Line )</li>
+</ul>
+</li>
+<li>Yamaha</li>
+<li>Bafang</li>
+<li>Brose</li>
+</ul>
+<ul>
+<li>&nbsp;Acero negro con recubrimiento KTL,</li>
+<li>C&iacute;rculo de agujeros 104mm</li>
+<li>Acero 3mm/Dentado estrecho</li>
+</ul>","
+Plato universal para:
+
+Generación de motores Bosch:
+
+4 ( Performance Line CX ),
+3 ( Active Line Plus )
+1 (Classic Line )
+
+
+Yamaha
+Bafang
+Brose
+
+
+ Acero negro con recubrimiento KTL,
+Círculo de agujeros 104mm
+Acero 3mm/Dentado estrecho
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,307,198,200,192,8,,Negro,,,,,,Acero,,,,,,,,12,,,https://api.mybihr.com/medias/1115026-1-800Wx800H?context=bWFzdGVyfHJvb3R8MTgyMzkyfGltYWdlL2pwZWd8YUdNM0wyZzRZUzh4TlRreE9UQTNPRFUzTWpBMk1pOHhNVEUxTURJMkxURmZPREF3VjNnNE1EQkl8MTJjOGFlNGI2ZDI2N2M4MzdhZGMzOTEwMjNlNzhmOWJjY2JmNTNiYmEzN2U3MTI4ZTI1ZDlkZDc0MDM4ODVkYg,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115021,1115021,19-17109-38,ESJOT,ESJOT CHAINRING 38T SHIMANO STEPS E6000,Plato ESJOT 38T Shimano Steps E6000,30.00,24.79,4.00,4251516501383,15,8714930090,0,1,"<p>Plato para:</p>
+<ul>
+<li>Motores de pasos Shimano E6000 (E6002 u. E6012)</li>
+<li>Paso 1/2"" x 3/32"" (1,27x2,54cm)</li>
+<li>Hasta 9 velocidades</li>
+<li>Acero negro con recubrimiento KTL (espesor del material 2,0mm)</li>
+</ul>","
+Plato para:
+
+Motores de pasos Shimano E6000 (E6002 u. E6012)
+Paso 1/2"" x 3/32"" (1,27x2,54cm)
+Hasta 9 velocidades
+Acero negro con recubrimiento KTL (espesor del material 2,0mm)
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,476,227,197,186,13,,Negro,,,,,,Acero,,,,,,,,9,,,https://api.mybihr.com/medias/1115021-1-800Wx800H?context=bWFzdGVyfHJvb3R8MjEzMjkxfGltYWdlL2pwZWd8YURJNUwyZzBOaTh4TlRreE9UQTNOall3TlRrNE1pOHhNVEUxTURJeExURmZPREF3VjNnNE1EQkl8ODQ0ZmM2YmM4Y2ZhNDc4Zjg0NzY4NDJlZTE3MTU0MjhiOWQzM2I3ZGViOWRlZDlhMmEwNjgxYjc1OGUxMGViOQ,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)
+1115032,1115032,19-17116-42NW,ESJOT,ESJOT CHAINRING 42T BOSCH GEN4/3/1 104MM,Plato ESJOT 42T Bosch Gen4/3/1 104mm,37.00,30.58,9.29,4251516566504,9,8714930090,0,1,"<p>Plato universal para:</p>
+<ul>
+<li>Generaci&oacute;n de motores Bosch:
+<ul>
+<li>4 ( Performance Line CX ),</li>
+<li>3 ( Active Line Plus )</li>
+<li>1 (Classic Line )</li>
+</ul>
+</li>
+<li>Yamaha</li>
+<li>Bafang</li>
+<li>Brose</li>
+</ul>
+<ul>
+<li>Acero negro con recubrimiento KTL,</li>
+<li>C&iacute;rculo de agujeros 104mm</li>
+<li>Acero 3mm/Dentado estrecho</li>
+</ul>","
+Plato universal para:
+
+Generación de motores Bosch:
+
+4 ( Performance Line CX ),
+3 ( Active Line Plus )
+1 (Classic Line )
+
+
+Yamaha
+Bafang
+Brose
+
+
+Acero negro con recubrimiento KTL,
+Círculo de agujeros 104mm
+Acero 3mm/Dentado estrecho
+",VEHICLE PARTS & ACCESSORIES,BICYCLE PARTS & ACCESSORIES,BICYCLE PARTS,,,299,245,199,188,8,,Negro,,,,,,Acero,,,,,,,,12,,,https://api.mybihr.com/medias/1115032-1-800Wx800H?context=bWFzdGVyfHJvb3R8MjAwNjY2fGltYWdlL2pwZWd8YURWaUwyZ3hPUzh4TlRreE9UQTRNRGt6TVRNMU9DOHhNVEUxTURNeUxURmZPREF3VjNnNE1EQkl8YWI5Yzc4MzNhNjMzZGM1YmE4ZTdjNjI3ZGVkOWRkZDgzYjA1MzFhMWJjNzdmY2Q1YjMzZGFmMDhmZDhlNjM3Nw,,,https://static.bihr.pro/eBihr/Pictures/ESJOT-pictures.zip,Spain Warehouse (Parts)

@@ -1,3 +1,0 @@
-Arai,Arai_Helmet_company_logo.svg
-Quadlock,quadlock.svg
-Ixil,ixil.svg

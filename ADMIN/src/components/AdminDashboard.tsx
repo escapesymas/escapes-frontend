@@ -64,10 +64,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ session, onLogou
   const adminEmail = session.user_email;
   const adminWpId = session.wpId || 0;
 
-  const fetchProductsList = async (searchVal = '', pageVal = 1, append = false, isSilent = false) => {
+  const fetchProductsList = async (searchVal = '', pageVal = 1, append = false, isSilent = false, filters: Record<string, string> = {}) => {
     if (!isSilent) setProductsLoading(true);
     try {
-      const res = await fetch(`/api/admin?action=products-list&userId=${adminWpId}&email=${adminEmail}&search=${encodeURIComponent(searchVal)}&page=${pageVal}&limit=50`);
+      let url = `/api/admin?action=products-list&userId=${adminWpId}&email=${adminEmail}&search=${encodeURIComponent(searchVal)}&page=${pageVal}&limit=50`;
+      for (const [key, val] of Object.entries(filters)) {
+        if (val !== '' && val !== undefined && val !== null) {
+          url += `&${encodeURIComponent(key)}=${encodeURIComponent(val)}`;
+        }
+      }
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         const list = Array.isArray(data) ? data : [];
@@ -107,18 +113,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ session, onLogou
         setOrders(Array.isArray(ordersData) ? ordersData : (ordersData.orders || []));
       }
 
-      // 3. Fetch Products List (First Page)
-      setProductPage(1);
-      await fetchProductsList(productSearch, 1, false, isSilent);
-
-      // 4. Fetch Users List
+      // 3. Fetch Users List
       const usersRes = await fetch(`/api/admin?action=users-list&userId=${adminWpId}&email=${adminEmail}`);
       if (usersRes.ok) {
         const usersData = await usersRes.json();
         setUsers(Array.isArray(usersData) ? usersData : []);
       }
 
-      // 5. Fetch Carts List
+      // 4. Fetch Carts List
       const cartsRes = await fetch(`/api/admin?action=carts-list&userId=${adminWpId}&email=${adminEmail}`);
       if (cartsRes.ok) {
         const cartsData = await cartsRes.json();
@@ -134,27 +136,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ session, onLogou
   };
 
   useEffect(() => {
-    // Primera carga inicial
     fetchData();
 
-    // Polling en tiempo real cada 2 segundos
     const interval = setInterval(() => {
-      // Solo refresca si no hay modales de gestion o edicion abiertos para no entorpecer al usuario
       if (!selectedOrder && !showProductForm && !editingProduct && !showModalDeleteConfirm) {
         fetchData(true);
       }
-    }, 2000);
+    }, 15000);
 
     return () => clearInterval(interval);
   }, [adminWpId, adminEmail, selectedOrder, showProductForm, editingProduct, showModalDeleteConfirm]);
 
-  // Fetch products when search term changes
   useEffect(() => {
     if (activeTab === 'products') {
       setProductPage(1);
       fetchProductsList(productSearch, 1, false);
     }
-  }, [productSearch, activeTab]);
+  }, [activeTab]);
+
+  // Also load products on initial mount (when stats tab is default, products might not load until user clicks tab)
+  useEffect(() => {
+    fetchProductsList('', 1, false, true);
+  }, []);
 
   const handleUpdateOrderStatus = async (orderId: number, status: string) => {
     try {
@@ -1490,6 +1493,21 @@ const ProductFormModal = ({ mode, product, onClose, onSubmit }: any) => {
   const [image, setImage] = useState('');
   const [compatibility, setCompatibility] = useState<any[]>([]);
 
+  // New fields
+  const [brand, setBrand] = useState('');
+  const [barcode, setBarcode] = useState('');
+  const [supplierCode, setSupplierCode] = useState('');
+  const [cost, setCost] = useState('');
+  const [weightG, setWeightG] = useState('');
+  const [lengthMm, setLengthMm] = useState('');
+  const [widthMm, setWidthMm] = useState('');
+  const [heightMm, setHeightMm] = useState('');
+  const [dropshipping, setDropshipping] = useState(false);
+  const [ondemand, setOndemand] = useState(false);
+  const [deliveryPlant, setDeliveryPlant] = useState('');
+  const [category2Id, setCategory2Id] = useState('');
+  const [category3Id, setCategory3Id] = useState('');
+
   // Compat form temp state
   const [tempBrand, setTempBrand] = useState('');
   const [tempModel, setTempModel] = useState('');
@@ -1503,7 +1521,7 @@ const ProductFormModal = ({ mode, product, onClose, onSubmit }: any) => {
       setSalePrice(product.sale_price ? ((product.sale_price || 0) / 100).toString() : '');
       setStock((product.stock || 0).toString());
       setDescription(product.description || '');
-      
+
       let imgs: any[] = [];
       try { imgs = product.images ? JSON.parse(product.images) : []; } catch { }
       setImage(imgs[0]?.src || imgs[0] || '');
@@ -1511,6 +1529,21 @@ const ProductFormModal = ({ mode, product, onClose, onSubmit }: any) => {
       let compat: any[] = [];
       try { compat = product.compatibility ? JSON.parse(product.compatibility) : []; } catch { }
       setCompatibility(compat);
+
+      // New fields
+      setBrand(product.brand || '');
+      setBarcode(product.barcode || '');
+      setSupplierCode(product.supplier_code || '');
+      setCost(product.cost ? (product.cost / 100).toString() : '');
+      setWeightG(product.weight_g ? product.weight_g.toString() : '');
+      setLengthMm(product.length_mm ? product.length_mm.toString() : '');
+      setWidthMm(product.width_mm ? product.width_mm.toString() : '');
+      setHeightMm(product.height_mm ? product.height_mm.toString() : '');
+      setDropshipping(product.dropshipping === true);
+      setOndemand(product.ondemand === true);
+      setDeliveryPlant(product.delivery_plant || '');
+      setCategory2Id(product.category2_id ? product.category2_id.toString() : '');
+      setCategory3Id(product.category3_id ? product.category3_id.toString() : '');
     }
   }, [mode, product]);
 
@@ -1526,7 +1559,20 @@ const ProductFormModal = ({ mode, product, onClose, onSubmit }: any) => {
       description,
       images: image ? [{ src: image }] : [],
       compatibility,
-      status: 'published'
+      status: 'published',
+      brand,
+      barcode,
+      supplierCode,
+      cost: cost || null,
+      weight_g: weightG || null,
+      length_mm: lengthMm || null,
+      width_mm: widthMm || null,
+      height_mm: heightMm || null,
+      dropshipping,
+      ondemand,
+      deliveryPlant,
+      category2Id: category2Id || null,
+      category3Id: category3Id || null
     };
     onSubmit(payload);
   };
@@ -1546,9 +1592,13 @@ const ProductFormModal = ({ mode, product, onClose, onSubmit }: any) => {
     setCompatibility(compatibility.filter((_, i) => i !== idx));
   };
 
+  const inputClass = "w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-racing-orange transition-all";
+  const labelClass = "block text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-2";
+  const monoInputClass = inputClass + " font-mono";
+
   return (
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-8 shadow-2xl">
+      <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-8 shadow-2xl">
         <div className="flex justify-between items-start mb-6">
           <h3 className="text-xl font-black italic uppercase tracking-wider text-white">
             {mode === 'edit' ? 'Editar Producto' : 'Nuevo Producto'}
@@ -1561,161 +1611,143 @@ const ProductFormModal = ({ mode, product, onClose, onSubmit }: any) => {
         <form onSubmit={handleSubmit} className="space-y-5 text-xs text-left">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-2">Nombre Recambio</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ej. Escape Yoshimura R-11"
-                required
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-racing-orange transition-all"
-              />
+              <label className={labelClass}>Nombre Recambio</label>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej. Escape Yoshimura R-11" required className={inputClass} />
             </div>
             <div>
-              <label className="block text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-2">SKU de Almacén</label>
-              <input
-                type="text"
-                value={sku}
-                onChange={(e) => setSku(e.target.value)}
-                placeholder="Ej. ESC-YOSH-R11"
-                required
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-racing-orange transition-all"
-              />
+              <label className={labelClass}>SKU de Almacén</label>
+              <input type="text" value={sku} onChange={(e) => setSku(e.target.value)} placeholder="Ej. ESC-YOSH-R11" required className={inputClass} />
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-2">Precio Base (€)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder=" Ej. 599.99"
-                required
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-racing-orange transition-all font-mono"
-              />
+              <label className={labelClass}>Precio Base (€)</label>
+              <input type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Ej. 599.99" required className={monoInputClass} />
             </div>
             <div>
-              <label className="block text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-2">Precio Oferta (€)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={salePrice}
-                onChange={(e) => setSalePrice(e.target.value)}
-                placeholder="Opcional"
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-racing-orange transition-all font-mono"
-              />
+              <label className={labelClass}>Precio Oferta (€)</label>
+              <input type="number" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="Opcional" className={monoInputClass} />
             </div>
             <div>
-              <label className="block text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-2">Stock Inicial (Uds)</label>
-              <input
-                type="number"
-                value={stock}
-                onChange={(e) => setStock(e.target.value)}
-                placeholder="Ej. 10"
-                required
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-racing-orange transition-all font-mono"
-              />
+              <label className={labelClass}>Stock (Uds)</label>
+              <input type="number" value={stock} onChange={(e) => setStock(e.target.value)} placeholder="Ej. 10" required className={monoInputClass} />
+            </div>
+          </div>
+
+          {/* Fabricante y Códigos */}
+          <div className="border border-zinc-900 rounded-xl p-4 bg-zinc-900/10">
+            <h4 className={labelClass + " mb-4 flex items-center gap-1.5"}>
+              <Icons.Tag size={12} /> Fabricante y Códigos
+            </h4>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className={labelClass}>Marca</label>
+                <input type="text" value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="Ej. Yoshimura" className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Código de Barras</label>
+                <input type="text" value={barcode} onChange={(e) => setBarcode(e.target.value)} placeholder="Ej. 843123456789" className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Código Proveedor</label>
+                <input type="text" value={supplierCode} onChange={(e) => setSupplierCode(e.target.value)} placeholder="Ej. BIH-12345" className={inputClass} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <div>
+                <label className={labelClass}>Coste (€)</label>
+                <input type="number" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="Ej. 350.00" className={monoInputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Planta de Entrega</label>
+                <input type="text" value={deliveryPlant} onChange={(e) => setDeliveryPlant(e.target.value)} placeholder="Ej. BCN-01" className={inputClass} />
+              </div>
+            </div>
+          </div>
+
+          {/* Dimensiones y Peso */}
+          <div className="border border-zinc-900 rounded-xl p-4 bg-zinc-900/10">
+            <h4 className={labelClass + " mb-4 flex items-center gap-1.5"}>
+              <Icons.Ruler size={12} /> Dimensiones y Peso
+            </h4>
+            <div className="grid grid-cols-4 gap-3">
+              <div>
+                <label className={labelClass}>Peso (g)</label>
+                <input type="number" value={weightG} onChange={(e) => setWeightG(e.target.value)} placeholder="Ej. 1500" className={monoInputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Largo (mm)</label>
+                <input type="number" value={lengthMm} onChange={(e) => setLengthMm(e.target.value)} placeholder="Ej. 300" className={monoInputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Ancho (mm)</label>
+                <input type="number" value={widthMm} onChange={(e) => setWidthMm(e.target.value)} placeholder="Ej. 200" className={monoInputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Alto (mm)</label>
+                <input type="number" value={heightMm} onChange={(e) => setHeightMm(e.target.value)} placeholder="Ej. 100" className={monoInputClass} />
+              </div>
+            </div>
+          </div>
+
+          {/* Logística */}
+          <div className="border border-zinc-900 rounded-xl p-4 bg-zinc-900/10">
+            <h4 className={labelClass + " mb-4 flex items-center gap-1.5"}>
+              <Icons.Truck size={12} /> Logística y Envío
+            </h4>
+            <div className="flex items-center gap-6">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={dropshipping} onChange={(e) => setDropshipping(e.target.checked)} className="accent-racing-orange" />
+                <span className="text-zinc-400 text-[11px] font-bold uppercase tracking-wider">Dropshipping</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={ondemand} onChange={(e) => setOndemand(e.target.checked)} className="accent-racing-orange" />
+                <span className="text-zinc-400 text-[11px] font-bold uppercase tracking-wider">Bajo Demanda</span>
+              </label>
             </div>
           </div>
 
           <div>
-            <label className="block text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-2">URL Imagen del Producto</label>
-            <input
-              type="url"
-              value={image}
-              onChange={(e) => setImage(e.target.value)}
-              placeholder="Ej. https://tu-dominio.com/imagen.jpg"
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-racing-orange transition-all"
-            />
+            <label className={labelClass}>URL Imagen del Producto</label>
+            <input type="url" value={image} onChange={(e) => setImage(e.target.value)} placeholder="Ej. https://tu-dominio.com/imagen.jpg" className={inputClass} />
           </div>
 
           <div>
-            <label className="block text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-2">Descripción del Producto</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Detalles y ficha técnica..."
-              rows={3}
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-racing-orange transition-all"
-            />
+            <label className={labelClass}>Descripción del Producto</label>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Detalles y ficha técnica..." rows={3} className={inputClass} />
           </div>
 
           {/* Compatibility Engine */}
           <div className="border border-zinc-900 rounded-xl p-4 bg-zinc-900/10">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-4 flex items-center gap-1.5">
+            <h4 className={labelClass + " mb-4 flex items-center gap-1.5"}>
               <Icons.Wrench size={12} /> Compatibilidad de Motos
             </h4>
-            
             <div className="grid grid-cols-3 gap-2 mb-4">
-              <input
-                type="text"
-                value={tempBrand}
-                onChange={(e) => setTempBrand(e.target.value)}
-                placeholder="Marca (Yamaha)"
-                className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-[11px] text-white"
-              />
-              <input
-                type="text"
-                value={tempModel}
-                onChange={(e) => setTempModel(e.target.value)}
-                placeholder="Modelo (T-Max)"
-                className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-[11px] text-white"
-              />
+              <input type="text" value={tempBrand} onChange={(e) => setTempBrand(e.target.value)} placeholder="Marca (Yamaha)" className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-[11px] text-white" />
+              <input type="text" value={tempModel} onChange={(e) => setTempModel(e.target.value)} placeholder="Modelo (T-Max)" className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-[11px] text-white" />
               <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={tempYear}
-                  onChange={(e) => setTempYear(e.target.value)}
-                  placeholder="Año (2024)"
-                  className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-[11px] text-white w-full"
-                />
-                <button
-                  type="button"
-                  onClick={addCompatibility}
-                  className="bg-zinc-800 hover:bg-racing-orange hover:text-white text-zinc-400 px-3.5 rounded-lg font-bold"
-                >
-                  +
-                </button>
+                <input type="text" value={tempYear} onChange={(e) => setTempYear(e.target.value)} placeholder="Año (2024)" className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-[11px] text-white w-full" />
+                <button type="button" onClick={addCompatibility} className="bg-zinc-800 hover:bg-racing-orange hover:text-white text-zinc-400 px-3.5 rounded-lg font-bold">+</button>
               </div>
             </div>
-
-            {/* List of Compatible vehicles */}
             <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
               {compatibility.length === 0 ? (
-                <span className="text-zinc-600 italic text-[10px]">Sin compatibilidades registradas. Apto para todas.</span>
+                <span className="text-zinc-600 italic text-[10px]">Sin compatibilidades registradas.</span>
               ) : compatibility.map((comp, idx) => (
-                <span
-                  key={idx}
-                  className="bg-zinc-900 border border-zinc-800 text-zinc-400 px-2.5 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1.5"
-                >
+                <span key={idx} className="bg-zinc-900 border border-zinc-800 text-zinc-400 px-2.5 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1.5">
                   {comp.brand} {comp.model} {comp.year ? `(${comp.year})` : ''}
-                  <button
-                    type="button"
-                    onClick={() => removeCompatibility(idx)}
-                    className="text-red-500 hover:text-white"
-                  >
-                    ×
-                  </button>
+                  <button type="button" onClick={() => removeCompatibility(idx)} className="text-red-500 hover:text-white">×</button>
                 </span>
               ))}
             </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-zinc-900">
-            <button
-              type="button"
-              onClick={onClose}
-              className="bg-zinc-900 border border-zinc-800 text-zinc-500 px-5 py-3 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all"
-            >
+            <button type="button" onClick={onClose} className="bg-zinc-900 border border-zinc-800 text-zinc-500 px-5 py-3 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all">
               Cancelar
             </button>
-            <button
-              type="submit"
-              className="bg-racing-orange hover:bg-orange-600 text-white px-6 py-3 rounded-xl font-black uppercase italic tracking-wider text-[10px] transition-all shadow-lg shadow-orange-950/10"
-            >
+            <button type="submit" className="bg-racing-orange hover:bg-orange-600 text-white px-6 py-3 rounded-xl font-black uppercase italic tracking-wider text-[10px] transition-all shadow-lg shadow-orange-950/10">
               {mode === 'edit' ? 'Guardar Cambios' : 'Crear Producto'}
             </button>
           </div>

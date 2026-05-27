@@ -8,7 +8,7 @@ import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
 import CategoryList from '../components/CategoryList';
 import CompatibleProducts from '../components/CompatibleProducts';
-import PaddockFeed from '../components/PaddockFeed';
+// import PaddockFeed from '../components/PaddockFeed';
 import SearchBar from '../components/SearchBar';
 import ProductImage from '../components/ProductImage';
 import { fetchProducts } from '../lib/api';
@@ -18,7 +18,7 @@ import { useCart } from '../context/CartContext';
 const BikeSelectorModal = dynamic(() => import('../components/BikeSelectorModal'), { ssr: false });
 const GarageView = dynamic(() => import('../components/GarageView'), { ssr: false });
 const AdvisorView = dynamic(() => import('../components/AdvisorView'), { ssr: false });
-const PaddockView = dynamic(() => import('../components/PaddockView'), { ssr: false });
+// const PaddockView = dynamic(() => import('../components/PaddockView'), { ssr: false });
 const ProfileView = dynamic(() => import('../components/ProfileView'), { ssr: false });
 const CartView = dynamic(() => import('../components/CartView'), { ssr: false });
 
@@ -32,6 +32,8 @@ export default function Home() {
 
   // Estados de búsqueda
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchCategoryId, setSearchCategoryId] = useState<number | undefined>(undefined);
+  const [searchCategoryName, setSearchCategoryName] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearchLoading, setIsSearchLoading] = useState(false);
   const [searchPage, setSearchPage] = useState(1);
@@ -126,19 +128,21 @@ export default function Home() {
     localStorage.setItem('tg_selected_bike', bike);
   };
 
-  const handleSearch = async (query: string, pageNum = 1) => {
+  const handleSearch = async (query: string, pageNum = 1, categoryId?: number) => {
     setSearchQuery(query);
     setSearchPage(pageNum);
-    if (!query.trim()) {
+    if (!query.trim() && !categoryId) {
       setSearchResults([]);
       setSearchTotal(0);
       setSearchTotalPages(0);
+      setSearchCategoryId(undefined);
+      setSearchCategoryName('');
       return;
     }
 
     setIsSearchLoading(true);
     try {
-      const data = await fetchProducts({ search: query, page: pageNum, per_page: 12 });
+      const data = await fetchProducts({ search: query || undefined, category_id: categoryId, page: pageNum, per_page: 12 });
       setSearchResults(data.products || []);
       setSearchTotal(data.total || 0);
       setSearchTotalPages(data.totalPages || 0);
@@ -244,7 +248,9 @@ export default function Home() {
                     Selecciona tu moto
                   </button>
                   <button
-                    onClick={() => setActiveTab('catalog')}
+                    onClick={() => {
+                      document.getElementById('buscador-inicio')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
                     className="px-5 py-2.5 text-xs font-mono font-bold rounded-sm border border-card-border text-foreground hover:border-accent/50 hover:bg-select-bg transition-all cursor-pointer"
                   >
                     Ver catálogo
@@ -254,23 +260,30 @@ export default function Home() {
             </section>
 
             {/* Buscador de referencias */}
-            <section className="px-4 md:px-0 -mt-4">
+            <section id="buscador-inicio" className="px-4 md:px-0 -mt-4">
               <SearchBar onSearch={(q) => handleSearch(q, 1)} isLoading={isSearchLoading} initialValue={searchQuery} />
             </section>
 
-            {searchQuery ? (
+            {searchQuery || searchCategoryId ? (
               <section className="flex flex-col gap-6">
                 <div className="flex items-center justify-between border-b border-card-border/60 pb-4 px-4 md:px-0">
                   <div>
                     <h3 className="text-sm font-mono font-bold uppercase text-foreground">
-                      Resultados de búsqueda para: <span className="text-accent-text">"{searchQuery}"</span>
+                      {searchCategoryName
+                        ? <>Categoría: <span className="text-accent-text">{searchCategoryName}</span></>
+                        : <>Resultados para: <span className="text-accent-text">"{searchQuery}"</span></>
+                      }
                     </h3>
                     <p className="text-[10px] text-text-muted font-mono mt-1">
                       Encontrados {searchTotal} productos {selectedBike && `• Ordenados por compatibilidad con ${selectedBike}`}
                     </p>
                   </div>
                   <button
-                    onClick={() => handleSearch('', 1)}
+                    onClick={() => {
+                      handleSearch('', 1, undefined);
+                      setSearchCategoryId(undefined);
+                      setSearchCategoryName('');
+                    }}
                     className="px-3 py-1.5 border border-card-border rounded hover:bg-icon-box/40 text-xs font-mono font-bold uppercase text-text-muted hover:text-foreground cursor-pointer transition-all"
                   >
                     Limpiar
@@ -383,7 +396,13 @@ export default function Home() {
             ) : (
               <>
                 <section>
-                  <CategoryList onSelectCategory={(cat) => console.log('Categoría seleccionada:', cat)} />
+                  <CategoryList onSelectCategory={(id, name) => {
+                    setSearchCategoryId(id);
+                    setSearchCategoryName(name);
+                    setSearchQuery('');
+                    handleSearch('', 1, id);
+                    document.getElementById('buscador-inicio')?.scrollIntoView({ behavior: 'smooth' });
+                  }} />
                 </section>
 
                 <section>
@@ -393,9 +412,9 @@ export default function Home() {
                   />
                 </section>
 
-                <section className="mb-6">
+                {/* <section className="mb-6">
                   <PaddockFeed selectedBike={selectedBike} />
-                </section>
+                </section> */}
               </>
             )}
 
@@ -414,9 +433,9 @@ export default function Home() {
         )}
 
 
-        {activeTab === 'paddock' && (
+        {/* {activeTab === 'paddock' && (
           <PaddockView selectedBike={selectedBike} />
-        )}
+        )} */}
 
         {activeTab === 'profile' && (
           <ProfileView />
