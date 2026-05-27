@@ -40,32 +40,26 @@ El logo principal (`/logo-cabecera.svg`) es blanco por defecto.
   - *Usuario:* `postgres`
   - *Contraseña:* `EscapesPostgres2026Vercel`
   - *Backup/Dump:* Ubicado en `local_db/escapes_db_dump.sql` (restaurable con `./setup-local-db.sh`).
-- **Frontend (Next.js):** Ejecutándose en `frontend-next/` (puerto `3000`).
-  - *Inicio:* `pnpm run dev` (desde `frontend-next/`).
-  - **⚠️ El frontend ahora conecta DIRECTAMENTE a PostgreSQL (no requiere Express).**
+- **Frontend de Producción (Next.js):** Ejecutándose en la carpeta `FRONTEND/` (puerto `3000`).
+  - *Inicio local:* `pnpm run dev` (desde `FRONTEND/`).
+  - **⚠️ El frontend conecta DIRECTAMENTE a PostgreSQL (no requiere Express).**
     - Pool de conexión en `src/lib/db.ts` con `pg`.
     - Los datos se sirven mediante Next.js Route Handlers (`src/app/api/.../route.ts`).
-    - No necesita el backend Express en `localhost:3001` para funcionar.
   - **Imágenes servidas desde `public/uploads/`** (Next.js static, sin rewrites).
-    - Sincronizar con: `rsync -avz VPS:/var/www/vhosts/backendescapes.com/server/uploads/ frontend-next/public/uploads/`
-  - **Categorías nivel 3** obtenidas de PostgreSQL vía Route Handler en `src/app/api/catalog/categories/route.ts`.
   - **Config optimizada** en `next.config.ts`:
     - `experimental.inlineCss: true` — CSS inline, elimina render-blocking
     - `compiler.removeConsole: { exclude: ['error'] }` — elimina console.log en prod
-    - Rewrite `/api/:path*` → `localhost:3001` solo para endpoints NO migrados aún
-- **Servidor Backend (Express):** Opcional, en `server/` (puerto `3001`).
-  - *Inicio:* `pnpm run dev` (utiliza `tsx watch index.ts`).
-  - *Compilación:* `tsc` → `dist/index.js`, ejecutar con `node dist/index.js` desde `server/`.
-  - Se usa solo para endpoints legacy no migrados a Route Handlers.
-  - *CORS:* Configurado para admitir `http://localhost:3000` y `http://localhost:3002`.
+- **Frontend de Pruebas (Next.js):** Ejecutándose en la carpeta `frontend-next/` (puerto `3002`).
+- **Servidor Backend (Express):** En `server/` (puerto `3001`).
+  - *CORS:* Configurado para admitir `http://localhost:3000`, `http://localhost:3002` y los dominios de producción.
 
 ---
 
-## 📦 Optimizaciones de Build Aplicadas
+## 📦 Optimizaciones de Build y UI
 - **Code splitting:** `BikeSelectorModal`, `GarageView`, `AdvisorView`, `PaddockView`, `ProfileView` son `dynamic(() => import(...), { ssr: false })`.
-- **Lazy loading** de tabs: cada pestaña (garage, advisor, paddock, profile) es un chunk aparte.
-- **Iconos:** Solo se importan los iconos de `lucide-react` que se usan (eliminados 16 imports muertos).
-- **`turbopackTreeShaking: true`** NO funciona con Next.js 16.2.6 (rompe el build).
+- **Sección Paddock (Desactivada):** Las vistas, feeds y links del Paddock se encuentran desactivados de manera temporal.
+- **Categorías en Inicio (Ocultas):** Se ha ocultado `CategoryList` del inicio.
+- **Fallback en Compatibles:** `CompatibleProducts.tsx` carga repuestos generales/destacados si no hay específicos compatibles con la moto seleccionada.
 
 ---
 
@@ -73,25 +67,25 @@ El logo principal (`/logo-cabecera.svg`) es blanco por defecto.
 - `src/app/api/catalog/categories/route.ts` — Route Handler de categorías (conexión directa a PG)
 - `src/lib/db.ts` — Pool de PostgreSQL (`pg`)
 - `src/lib/api.ts` — Helpers de fetch (productos, compatibilidad, etc.)
-- `src/types.ts` — Tipos compartidos (`Product`, `Category3`, etc.)
-- `src/components/CategoryList.tsx` — Lista dinámica de categorías desde DB
-- `src/components/GarageView.tsx` — Tab "Mi Moto" (lazy)
-- `src/components/AdvisorView.tsx` — Tab "Asesor IA" (lazy)
-- `src/components/PaddockView.tsx` — Tab "Foro Paddock" (lazy)
-- `src/components/ProfileView.tsx` — Tab "Perfil" (lazy)
-- `src/components/ProductImage.tsx` — Imagen con fallback (para tarjetas)
-- `src/app/producto/[id]/page.tsx` — Página detalle con fetchpriority="high" y responsive images
-- `public/uploads/optimized/` — 8,116 imágenes de productos servidas estáticamente
+- `src/components/CompatibleProducts.tsx` — Lista de compatibles con lógica de fallback
+- `src/components/Header.tsx` — Cabecera con banner de aviso para derivar consultas a `info@escapesymas.com`
 
 ---
 
 ## 🚀 Restricciones y Reglas del Servidor (VPS)
 - El directorio de despliegue `/var/www/vhosts/` tiene activado el flag `noexec`.
-- **No se pueden ejecutar scripts directamente desde `./node_modules/.bin/`**.
-- **Construcción:** Usar `node node_modules/next/dist/bin/next build` para compilar.
-- **Ejecución en producción:** Usar PM2 llamando directamente al script de node:
-  ```bash
-  pm2 start node_modules/next/dist/bin/next --name "escapes-frontend-next" -- start -p 3002
-  ```
-- Usa siempre el script `./deploy-next.sh` para realizar los despliegues.
-- **Backend Express se desplegó manualmente:** rsync de `server/dist/` + copiar a `server/index.js` + `pm2 restart escapes-backend`.
+- **Frontend de Producción (escapesymas.com):**
+  - Ubicado en `/var/www/vhosts/escapesymas.com/app`.
+  - PM2: `escapes-frontend-prod` en puerto `3000`.
+  - Nginx: Configurado en `/etc/nginx/conf.d/escapesymas.com.conf` (proxy `/` → `localhost:3000`).
+  - Despliegue con: `./deploy-frontend.sh`.
+- **Frontend de Pruebas (test.escapesymas.com):**
+  - Ubicado en `/var/www/vhosts/test.escapesymas.com/app`.
+  - PM2: `escapes-frontend-next` en puerto `3002`.
+  - Nginx: Configurado en `/etc/nginx/conf.d/test.escapesymas.com.conf`.
+  - Despliegue con: `./deploy-next.sh`.
+- **Backend Express (backendescapes.com):**
+  - Ubicado en `/var/www/vhosts/backendescapes.com/server`.
+  - PM2: `escapes-backend` en puerto `3001`.
+  - **⚠️ IMPORTANTE:** El archivo `moto_catalog.json` debe estar sincronizado en este directorio del VPS para que funcione el selector de marcas/modelos del garaje.
+  - Despliegue con: `./deploy.sh`.
