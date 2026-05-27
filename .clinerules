@@ -1,0 +1,97 @@
+# 🛠️ Reglas del Proyecto y Sistema de Diseño (Technical Garage)
+
+Este archivo sirve como contexto y guía de estilo tanto para desarrolladores como para asistentes de IA que trabajen en este repositorio.
+
+---
+
+## 📐 Estilo Visual: **Technical Garage**
+Inspirado en consolas de telemetría de Moto GP y cajas de herramientas industriales de alta precisión.
+
+- **Tipografía Primaria (`font-mono`):** Encabezados, códigos de pieza, medidas, badges, telemetría y elementos de compatibilidad.
+- **Tipografía Secundaria (`font-sans`):** Textos largos (descripciones de productos, posts del foro) para máxima legibilidad.
+- **Bordes y Diseño:** Bordes ligeramente redondeados (`rounded-md`, aprox. 6px), cuadrículas técnicas, líneas finas y limpias.
+
+---
+
+## 🎨 Paleta de Colores Dinámica (Sin clases `dark:`)
+El tema cambia de forma automática y nativa mediante `prefers-color-scheme` en `globals.css`.
+**⚠️ IMPORTANTE:** Evitar el uso de modificadores `dark:` en las clases de Tailwind de forma arbitraria para colores. En su lugar, usa las variables CSS semánticas ya definidas. **Nunca usar colores hardcodeados como `text-amber-500`** — siempre usar variables CSS (`text-accent`, `bg-accent/10`, etc.) que se adaptan a light/dark mode.
+
+| Elemento | Tema Claro | Tema Oscuro | Variable CSS / Clase Tailwind |
+| :--- | :--- | :--- | :--- |
+| **Fondo General** | `#f8fafc` | `#0a0a0b` | `bg-background` (`--background`) |
+| **Tarjetas/Contenedores** | `#ffffff` | `#121315` | `bg-card` con `border-card-border` |
+| **Bordes de Tarjeta** | `#e2e8f0` | `#1e293b` | `border-card-border` (`--card-border`) |
+| **Color de Acento** | `#eab308` | `#facc15` | `bg-accent` / `text-accent-text` |
+| **Texto Principal** | `#0f172a` | `#f1f5f9` | `text-foreground` (`--foreground`) |
+| **Texto Secundario** | `#475569` | `#94a3b8` | `text-text-muted` (`--text-muted`) |
+| **Badges de Éxito** | Verde claro | Verde translúcido | `bg-badge` `text-badge-text` |
+
+### Inversión del Logotipo
+El logo principal (`/logo-cabecera.svg`) es blanco por defecto.
+- En **Tema Claro**: aplicar clase `invert` para renderizarlo en negro.
+- En **Tema Oscuro**: aplicar clase `dark:invert-0` para mantenerlo blanco.
+
+---
+
+## 🖥️ Entorno de Desarrollo Local (Localhost)
+- **Base de datos local (PostgreSQL):** Activa en `localhost:5432`.
+  - *Base de datos:* `escapes_db`
+  - *Usuario:* `postgres`
+  - *Contraseña:* `EscapesPostgres2026Vercel`
+  - *Backup/Dump:* Ubicado en `local_db/escapes_db_dump.sql` (restaurable con `./setup-local-db.sh`).
+- **Frontend (Next.js):** Ejecutándose en `frontend-next/` (puerto `3000`).
+  - *Inicio:* `pnpm run dev` (desde `frontend-next/`).
+  - **⚠️ El frontend ahora conecta DIRECTAMENTE a PostgreSQL (no requiere Express).**
+    - Pool de conexión en `src/lib/db.ts` con `pg`.
+    - Los datos se sirven mediante Next.js Route Handlers (`src/app/api/.../route.ts`).
+    - No necesita el backend Express en `localhost:3001` para funcionar.
+  - **Imágenes servidas desde `public/uploads/`** (Next.js static, sin rewrites).
+    - Sincronizar con: `rsync -avz VPS:/var/www/vhosts/backendescapes.com/server/uploads/ frontend-next/public/uploads/`
+  - **Categorías nivel 3** obtenidas de PostgreSQL vía Route Handler en `src/app/api/catalog/categories/route.ts`.
+  - **Config optimizada** en `next.config.ts`:
+    - `experimental.inlineCss: true` — CSS inline, elimina render-blocking
+    - `compiler.removeConsole: { exclude: ['error'] }` — elimina console.log en prod
+    - Rewrite `/api/:path*` → `localhost:3001` solo para endpoints NO migrados aún
+- **Servidor Backend (Express):** Opcional, en `server/` (puerto `3001`).
+  - *Inicio:* `pnpm run dev` (utiliza `tsx watch index.ts`).
+  - *Compilación:* `tsc` → `dist/index.js`, ejecutar con `node dist/index.js` desde `server/`.
+  - Se usa solo para endpoints legacy no migrados a Route Handlers.
+  - *CORS:* Configurado para admitir `http://localhost:3000` y `http://localhost:3002`.
+
+---
+
+## 📦 Optimizaciones de Build Aplicadas
+- **Code splitting:** `BikeSelectorModal`, `GarageView`, `AdvisorView`, `PaddockView`, `ProfileView` son `dynamic(() => import(...), { ssr: false })`.
+- **Lazy loading** de tabs: cada pestaña (garage, advisor, paddock, profile) es un chunk aparte.
+- **Iconos:** Solo se importan los iconos de `lucide-react` que se usan (eliminados 16 imports muertos).
+- **`turbopackTreeShaking: true`** NO funciona con Next.js 16.2.6 (rompe el build).
+
+---
+
+## 🗂️ Estructura de Archivos Relevante
+- `src/app/api/catalog/categories/route.ts` — Route Handler de categorías (conexión directa a PG)
+- `src/lib/db.ts` — Pool de PostgreSQL (`pg`)
+- `src/lib/api.ts` — Helpers de fetch (productos, compatibilidad, etc.)
+- `src/types.ts` — Tipos compartidos (`Product`, `Category3`, etc.)
+- `src/components/CategoryList.tsx` — Lista dinámica de categorías desde DB
+- `src/components/GarageView.tsx` — Tab "Mi Moto" (lazy)
+- `src/components/AdvisorView.tsx` — Tab "Asesor IA" (lazy)
+- `src/components/PaddockView.tsx` — Tab "Foro Paddock" (lazy)
+- `src/components/ProfileView.tsx` — Tab "Perfil" (lazy)
+- `src/components/ProductImage.tsx` — Imagen con fallback (para tarjetas)
+- `src/app/producto/[id]/page.tsx` — Página detalle con fetchpriority="high" y responsive images
+- `public/uploads/optimized/` — 8,116 imágenes de productos servidas estáticamente
+
+---
+
+## 🚀 Restricciones y Reglas del Servidor (VPS)
+- El directorio de despliegue `/var/www/vhosts/` tiene activado el flag `noexec`.
+- **No se pueden ejecutar scripts directamente desde `./node_modules/.bin/`**.
+- **Construcción:** Usar `node node_modules/next/dist/bin/next build` para compilar.
+- **Ejecución en producción:** Usar PM2 llamando directamente al script de node:
+  ```bash
+  pm2 start node_modules/next/dist/bin/next --name "escapes-frontend-next" -- start -p 3002
+  ```
+- Usa siempre el script `./deploy-next.sh` para realizar los despliegues.
+- **Backend Express se desplegó manualmente:** rsync de `server/dist/` + copiar a `server/index.js` + `pm2 restart escapes-backend`.

@@ -7,7 +7,7 @@
 VPS_USER="root"
 VPS_HOST="212.227.134.161"
 VPS_DIR="/var/www/vhosts/backendescapes.com/httpdocs"
-SSH_KEY="${SSH_KEY:-$HOME/.ssh/id_ed25519}"
+SSH_KEY="${SSH_KEY:-$HOME/.gemini/antigravity/ssh/id_ed25519}"
 
 echo "🛡️  Desplegando Admin Dashboard a backendescapes.com..."
 
