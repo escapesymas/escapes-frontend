@@ -3328,6 +3328,21 @@ app.post('/api/orders/finalize', async (req: any, res: any) => {
     const { orderId, paymentId, status } = req.body;
     if (!orderId) return res.status(400).json({ error: 'Falta orderId' });
 
+    // Verificar el estado del pago con Stripe si hay un paymentId
+    if (paymentId) {
+      try {
+        const client = getStripeClient(req);
+        const paymentIntent = await client.paymentIntents.retrieve(paymentId);
+        if (paymentIntent.status !== 'succeeded') {
+          console.warn(`[ORDER FINALIZE WARNING]: PaymentIntent ${paymentId} is in status ${paymentIntent.status}. Rejecting order finalization.`);
+          return res.status(400).json({ error: `El pago no está confirmado en Stripe (Estado: ${paymentIntent.status})` });
+        }
+      } catch (stripeErr: any) {
+        console.error('[ORDER FINALIZE STRIPE VERIFY ERROR]:', stripeErr);
+        return res.status(400).json({ error: 'No se pudo verificar el estado del pago con Stripe.' });
+      }
+    }
+
     // Actualizar el estado y el payment_id en la base de datos
     await db.execute(sql`
       UPDATE orders
