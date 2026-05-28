@@ -21,6 +21,23 @@ import PDFDocument from 'pdfkit';
 import { 
   getLiveStockLevel, getLiveStockValue, checkProductsInfo, createBihrOrder, syncBihrCatalog 
 } from './bihrService.js';
+import Stripe from 'stripe';
+
+const stripeLive = new Stripe(process.env.STRIPE_SECRET_KEY || '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', {
+  apiVersion: '2026-05-27.dahlia' as any,
+});
+
+const stripeTest = new Stripe(process.env.STRIPE_TEST_SECRET_KEY || 'sk_test_51TXr6bPhkRo6LHVF56RZeONSqwNNY37oRjmXs2PiLnpOkfHddHhwDiKOjxSC0tbOgTbZeOygPWO7uPEJSHCJ34Bt009j0UTRey', {
+  apiVersion: '2026-05-27.dahlia' as any,
+});
+
+function getStripeClient(req: any): any {
+  const origin = req.headers.origin || req.headers.referer || '';
+  if (origin.includes('localhost') || origin.includes('test.escapesymas.com')) {
+    return stripeTest;
+  }
+  return stripeLive;
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -3452,37 +3469,28 @@ app.get('/api/cart', async (req: any, res: any) => {
 });
 
 // ================================================================
-// COMPLEMENTARY ENDPOINTS (Checkout, Contact, Warranty)
+// COMPLEMENTARY ENDPOINTS (Checkout, Stripe, Contact, Warranty)
 // ================================================================
-const SUMUP_API_KEY = process.env.SUMUP_SECRET_KEY || 'sup_sk_s1ekP4mYZVZvgbU52Df6AdjxEwbC98wmT';
 
-app.post('/api/checkout', async (req: any, res: any) => {
-  const { amount, orderRef, currency, merchantEmail } = req.body;
-  if (!SUMUP_API_KEY) return res.status(500).json({ message: "Configuración incompleta: Falta SUMUP_SECRET_KEY" });
+app.post('/api/create-payment-intent', async (req: any, res: any) => {
+  const { orderId, amount, currency, customerEmail } = req.body;
+  if (!amount || amount <= 0) return res.status(400).json({ error: 'Importe inválido' });
 
   try {
-    const finalMerchantEmail = merchantEmail || 'info@escapesymas.com';
-    const response = await fetch('https://api.sumup.com/v0.1/checkouts', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${SUMUP_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        checkout_reference: orderRef,
-        amount,
-        currency: currency || 'EUR',
-        pay_to_email: finalMerchantEmail,
-        description: `Pedido ${orderRef}`,
-        return_url: `https://${req.get('host')}/?payment_success=true&order=${orderRef}`
-      })
+    const client = getStripeClient(req);
+    const paymentIntent = await client.paymentIntents.create({
+      amount: Math.round(amount * 100),
+      currency: (currency || 'eur').toLowerCase(),
+      metadata: { orderId: String(orderId) },
+      receipt_email: customerEmail || undefined,
+      payment_method_types: ['card', 'bizum', 'klarna'],
     });
-    const data = await response.json();
-    if (!response.ok) return res.status(response.status).json(data);
-    return res.json(data);
+
+    console.log(`[STRIPE] PaymentIntent created: ${paymentIntent.id} for order ${orderId} (${amount} EUR)`);
+    return res.json({ clientSecret: paymentIntent.client_secret, paymentIntentId: paymentIntent.id });
   } catch (error: any) {
-    console.error('[CHECKOUT ERROR]:', error);
-    return res.status(500).json({ message: "Error interno en la pasarela de pagos" });
+    console.error('[STRIPE CREATE PAYMENT INTENT ERROR]:', error);
+    return res.status(500).json({ error: 'Error al crear la intención de pago' });
   }
 });
 
@@ -3966,6 +3974,97 @@ async function checkPendingDropshippingOrders() {
     console.error('[DROPSHIPPING CRON]: Error running periodic dropshipping status update:', error);
   }
 }
+
+// ================================================================
+// STRIPE WEBHOOK
+// ================================================================
+app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async (req: any, res: any) => {
+  const sig = req.headers['stripe-signature'];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const testWebhookSecret = process.env.STRIPE_TEST_WEBHOOK_SECRET;
+
+  let event: any;
+  try {
+    if (sig) {
+      if (testWebhookSecret) {
+        try {
+          event = stripeTest.webhooks.constructEvent(req.body, sig, testWebhookSecret);
+        } catch (e) {
+          // Ignore and check live secret
+        }
+      }
+      if (!event && webhookSecret) {
+        try {
+          event = stripeLive.webhooks.constructEvent(req.body, sig, webhookSecret);
+        } catch (e) {
+          // Ignore
+        }
+      }
+      if (!event && (webhookSecret || testWebhookSecret)) {
+        throw new Error('Signature verification failed for both test and live webhook secrets');
+      }
+    }
+    if (!event) {
+      event = JSON.parse(req.body.toString());
+    }
+  } catch (err: any) {
+    console.error('[STRIPE WEBHOOK] Signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  console.log(`[STRIPE WEBHOOK] Received event: ${event.type}`);
+
+  if (event.type === 'payment_intent.succeeded') {
+    const paymentIntent = event.data.object as any;
+    const orderId = paymentIntent.metadata?.orderId;
+
+    if (orderId) {
+      try {
+        await db.execute(sql`
+          UPDATE orders
+          SET status = 'processing', payment_id = ${paymentIntent.id}
+          WHERE id = ${parseInt(orderId)} AND status = 'pending'
+        `);
+
+        const itemsRes = await db.execute(sql`
+          SELECT product_id, quantity FROM order_items WHERE order_id = ${parseInt(orderId)}
+        `);
+        for (const rawItem of itemsRes.rows) {
+          const item = rawItem as any;
+          await db.execute(sql`
+            UPDATE products
+            SET stock = GREATEST(0, stock - ${parseInt(item.quantity as string)})
+            WHERE id = ${parseInt(item.product_id as string)}
+          `);
+        }
+
+        try {
+          await createInvoiceForOrder(parseInt(orderId));
+          console.log(`[STRIPE WEBHOOK] Invoice auto-generated for Order ${orderId}`);
+        } catch (e: any) {
+          console.error(`[STRIPE WEBHOOK] Invoice error for Order ${orderId}:`, e);
+        }
+
+        console.log(`[STRIPE WEBHOOK] Order ${orderId} finalized via payment_intent.succeeded`);
+      } catch (err: any) {
+        console.error(`[STRIPE WEBHOOK] Error finalizing order ${orderId}:`, err);
+      }
+    }
+  }
+
+  if (event.type === 'payment_intent.payment_failed' || event.type === 'payment_intent.canceled') {
+    const paymentIntent = event.data.object as any;
+    const orderId = paymentIntent.metadata?.orderId;
+    if (orderId) {
+      await db.execute(sql`
+        UPDATE orders SET status = 'cancelled' WHERE id = ${parseInt(orderId)} AND status = 'pending'
+      `);
+      console.log(`[STRIPE WEBHOOK] Order ${orderId} marked as cancelled (${event.type})`);
+    }
+  }
+
+  res.json({ received: true });
+});
 
 // Daemon de Tracking (cada 15 minutos)
 setInterval(() => {

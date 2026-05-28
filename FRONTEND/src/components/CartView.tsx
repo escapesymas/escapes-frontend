@@ -7,20 +7,14 @@ import { useAuth } from '../context/AuthContext';
 import Link from 'next/link';
 import { MARKETING_TIERS } from '../lib/constants';
 import CartProgressBar from './CartProgressBar';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
 
-const loadSumUpSdk = (): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    if (typeof window !== 'undefined' && (window as any).SumUpCard) {
-      resolve();
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = 'https://gateway.sumup.com/gateway/ecom/card/v2/sdk.js';
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('No se pudo cargar el SDK de SumUp'));
-    document.head.appendChild(script);
-  });
-};
+const stripePromise = loadStripe(
+  typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === 'test.escapesymas.com')
+    ? 'pk_test_51TXr6bPhkRo6LHVFGeGCCW4n0yLOagJow07UFrhMhcZMxkc0ensC9E4YwkjWzFkLLuQCzwSunE9Tce8WEevmcxAM00wXyFiagW'
+    : (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_live_51TXr6bPhkRo6LHVF9zMat1q9ooZBYw5xOApZbAvKG0B7jIu01t3PhgqRnGIx1kcdtgZckZVM6jRXgDVGnv4HqZ5W00otz3AKYd')
+);
 
 interface CartViewProps {
   onContinueShopping: () => void;
@@ -55,18 +49,12 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
   const [orderError, setOrderError] = useState<string | null>(null);
   const [completedOrder, setCompletedOrder] = useState<any>(null);
 
-  // SumUp custom payment state
-  const [checkoutSessionId, setCheckoutSessionId] = useState<string | null>(null);
-  const [checkoutOrderId, setCheckoutOrderId] = useState<string | null>(null);
-  const [checkoutAmount, setCheckoutAmount] = useState<number | null>(null);
+  // Stripe payment state
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [stripePaymentOrderId, setStripePaymentOrderId] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
-
-  // Preload SumUp SDK script on component mount for instant widget load
-  useEffect(() => {
-    loadSumUpSdk().catch((err) => console.error('Error preloading SumUp SDK:', err));
-  }, []);
 
   // Sync profile details and saved address selector if they load later
   useEffect(() => {
@@ -99,97 +87,52 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
     }
   }, [user]);
 
+  // Procesar resultado de pago al montar el carrito (redirect de Klarna/Bizum)
   useEffect(() => {
-    if (!showPaymentModal || !checkoutSessionId) return;
+    if (typeof window === 'undefined') return;
+    const redirectResult = sessionStorage.getItem('stripe_redirect_result');
+    if (!redirectResult) return;
+    sessionStorage.removeItem('stripe_redirect_result');
 
-    let active = true;
-
-    const mountWidget = async () => {
-      try {
-        setPaymentLoading(true);
-        setPaymentError(null);
-        await loadSumUpSdk();
-        
-        if (!active) return;
-
-        const container = document.getElementById('sumup-card');
-        if (!container) {
-          throw new Error('No se encontró el contenedor de pago');
-        }
-
-        container.innerHTML = '';
-
-        const SumUpCard = (window as any).SumUpCard;
-        if (!SumUpCard) {
-          throw new Error('El SDK de SumUp no está disponible');
-        }
-
-        SumUpCard.mount({
-          id: 'sumup-card',
-          checkoutId: checkoutSessionId,
-          showFooter: false,
-          locale: 'es-ES',
-          onResponse: async (type: string, body: any) => {
-            console.log('[SumUp Response]:', type, body);
-            if (type === 'success' || (body && body.status === 'PAID')) {
-              try {
-                const finalizeRes = await fetch('/api/orders/finalize', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    orderId: checkoutOrderId,
-                    paymentId: body.id || checkoutSessionId,
-                    status: 'processing'
-                  })
-                });
-
-                if (finalizeRes.ok) {
-                  setCompletedOrder({
-                    orderId: checkoutOrderId,
-                    total: checkoutAmount
-                  });
-                  clearCart();
-                  setShowPaymentModal(false);
-                } else {
-                  const errData = await finalizeRes.json();
-                  setPaymentError(errData.error || 'Error al confirmar el pago en el servidor.');
-                }
-              } catch (err: any) {
-                setPaymentError('Error de red al confirmar el pago.');
-              }
-            } else if (type === 'error' || (body && body.status === 'FAILED')) {
-              setPaymentError(body.message || 'El pago ha sido rechazado o ha fallado.');
-            }
-          }
-        });
-
-        const iframe = container.querySelector('iframe');
-        if (iframe) {
-          iframe.onload = () => {
-            setPaymentLoading(false);
-          };
-          setTimeout(() => {
-            setPaymentLoading(false);
-          }, 3500);
-        } else {
-          setPaymentLoading(false);
-        }
-      } catch (err: any) {
-        console.error('Error mounting SumUp widget:', err);
-        setPaymentError(err.message || 'Error al iniciar la pasarela de pago');
-        setPaymentLoading(false);
+    try {
+      const { paymentIntentId, redirectStatus, orderId } = JSON.parse(redirectResult);
+      if (redirectStatus === 'succeeded' && orderId) {
+        finalizeStripeOrder(orderId, paymentIntentId);
+      } else {
+        setOrderError('El pago no se completó. Ha sido cancelado o rechazado por el banco.');
+        setShowPaymentModal(false);
       }
-    };
+    } catch (e) {}
+  }, []);
 
-    const timer = setTimeout(() => {
-      mountWidget();
-    }, 100);
+  const finalizeStripeOrder = async (orderId: string, paymentIntentId: string) => {
+    try {
+      const finalizeRes = await fetch('/api/orders/finalize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId,
+          paymentId: paymentIntentId,
+          status: 'processing'
+        })
+      });
+      if (finalizeRes.ok) {
+        setCompletedOrder({ orderId, total: 0 });
+        clearCart();
+        setShowPaymentModal(false);
+      } else {
+        const errData = await finalizeRes.json();
+        setPaymentError(errData.error || 'Error al confirmar el pago en el servidor.');
+      }
+    } catch (err: any) {
+      setPaymentError('Error de red al confirmar el pago.');
+    }
+  };
 
-    return () => {
-      active = false;
-      clearTimeout(timer);
-    };
-  }, [showPaymentModal, checkoutSessionId]);
+  const stripePaymentOnSuccess = async (paymentIntentId: string) => {
+    if (!stripePaymentOrderId) return;
+    await finalizeStripeOrder(stripePaymentOrderId, paymentIntentId);
+  };
 
   // Load recommended products
   useEffect(() => {
@@ -281,7 +224,7 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
           userEmail: user?.email || 'guest@escapesymas.com',
           cart: cart.map((item) => ({ id: item.id, quantity: item.quantity })),
           shippingData,
-          paymentMethod: 'credit_card',
+          paymentMethod: 'stripe',
           promoCode: appliedPromo,
         }),
       });
@@ -291,25 +234,25 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
         throw new Error(orderData.error || 'Error al procesar el pedido');
       }
 
-      const checkoutRes = await fetch('/api/checkout', {
+      const piRes = await fetch('/api/create-payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          orderId: orderData.orderId,
           amount: orderData.total,
-          orderRef: `ORD-${orderData.orderId}-${Date.now()}`,
           currency: 'EUR',
-          merchantEmail: 'info@escapesymas.com'
+          customerEmail: user?.email || undefined,
         })
       });
 
-      const checkoutData = await checkoutRes.json();
-      if (!checkoutRes.ok) {
-        throw new Error(checkoutData.message || 'Error al iniciar la sesión de SumUp');
+      const piData = await piRes.json();
+      if (!piRes.ok) {
+        throw new Error(piData.error || 'Error al iniciar la pasarela de pago');
       }
 
-      setCheckoutSessionId(checkoutData.id);
-      setCheckoutOrderId(orderData.orderId);
-      setCheckoutAmount(orderData.total);
+      setClientSecret(piData.clientSecret);
+      setStripePaymentOrderId(String(orderData.orderId));
+      sessionStorage.removeItem('stripe_pending_order');
       setShowPaymentModal(true);
     } catch (err: any) {
       setOrderError(err.message || 'Error de conexión');
@@ -330,7 +273,7 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
         </p>
         <div className="bg-card border border-card-border p-4 rounded text-left w-full max-w-md mb-8 font-mono text-xs text-text-muted space-y-1">
           <p><span className="font-bold text-foreground">Importe total:</span> {formatPrice(total)}</p>
-          <p><span className="font-bold text-foreground">Método de pago:</span> Simulación SumUp/Tarjeta</p>
+          <p><span className="font-bold text-foreground">Método de pago:</span> Stripe/Tarjeta</p>
           <p><span className="font-bold text-foreground">Dirección:</span> {shippingData.address1}, {shippingData.city}</p>
         </div>
         <button
@@ -872,8 +815,8 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
         </>
       )}
 
-      {/* SumUp Payment Modal Backdrop */}
-      {showPaymentModal && (
+      {/* Stripe Payment Modal */}
+      {showPaymentModal && clientSecret && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-card border border-card-border p-6 rounded shadow-xl max-w-md w-full relative overflow-hidden backdrop-blur-md">
             {/* Header */}
@@ -884,21 +827,13 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
                 </div>
                 <div>
                   <h3 className="font-mono font-bold text-sm uppercase tracking-wide text-foreground">Pago Seguro</h3>
-                  <p className="text-[10px] text-text-muted font-sans">Pasarela encriptada SSL (SumUp)</p>
+                  <p className="text-[10px] text-text-muted font-sans">Stripe • Tarjeta, Google Pay, Apple Pay, Klarna, Bizum</p>
                 </div>
               </div>
               <span className="font-mono text-xs font-bold text-accent-text bg-accent/5 px-2.5 py-1 rounded border border-accent/10">
-                #{checkoutOrderId}
+                #{stripePaymentOrderId}
               </span>
             </div>
-
-            {/* Loader */}
-            {paymentLoading && (
-              <div className="absolute inset-0 bg-card/90 backdrop-blur-xs flex flex-col items-center justify-center z-10 transition-opacity">
-                <Loader2 className="w-10 h-10 text-accent animate-spin mb-3" />
-                <p className="font-mono text-xs text-text-muted uppercase tracking-wider">Cargando pasarela de pago...</p>
-              </div>
-            )}
 
             {/* Error Alert */}
             {paymentError && (
@@ -911,23 +846,107 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
               </div>
             )}
 
-            {/* Widget container */}
-            <div className="min-h-[280px] flex items-center justify-center bg-background border border-card-border/60 rounded p-4 mb-6 shadow-inner relative">
-              <div id="sumup-card" className="w-full"></div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center justify-between gap-3">
-              <button
-                onClick={() => setShowPaymentModal(false)}
-                className="flex-1 bg-transparent hover:bg-card-border/25 border border-card-border text-text-muted hover:text-foreground font-mono text-xs font-bold uppercase tracking-wider py-3 rounded transition-colors cursor-pointer text-center"
-              >
-                Cancelar
-              </button>
-            </div>
+            {/* Stripe Elements */}
+            <Elements stripe={stripePromise} options={{ clientSecret }}>
+              <StripePaymentForm
+                orderId={stripePaymentOrderId}
+                clientSecret={clientSecret}
+                onSuccess={stripePaymentOnSuccess}
+                onError={setPaymentError}
+                onCancel={() => setShowPaymentModal(false)}
+              />
+            </Elements>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+function StripePaymentForm({ orderId, clientSecret, onSuccess, onError, onCancel }: {
+  orderId: string | null;
+  clientSecret: string;
+  onSuccess: (paymentIntentId: string) => void;
+  onError: (error: string) => void;
+  onCancel: () => void;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+
+    setLoading(true);
+    setError(null);
+
+    sessionStorage.setItem('stripe_pending_order', JSON.stringify({
+      orderId,
+      clientSecret,
+    }));
+
+    const { error: confirmError } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: window.location.origin + window.location.pathname,
+      },
+    });
+
+    if (confirmError) {
+      sessionStorage.removeItem('stripe_pending_order');
+      setError(confirmError.message || 'Error al procesar el pago');
+      onError(confirmError.message || 'Error al procesar el pago');
+    }
+
+    setLoading(false);
+  };
+
+  const handleCancel = () => {
+    if (!loading) {
+      sessionStorage.removeItem('stripe_pending_order');
+      onCancel();
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="bg-background border border-card-border/60 rounded p-4 mb-2 shadow-inner">
+        <PaymentElement />
+      </div>
+
+      {error && (
+        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded text-red-500 text-xs font-mono flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold">Error en el pago</p>
+            <p className="text-[10px] text-red-400/90">{error}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between gap-3 pt-2">
+        <button
+          type="button"
+          onClick={handleCancel}
+          disabled={loading}
+          className="flex-1 bg-transparent hover:bg-card-border/25 border border-card-border text-text-muted hover:text-foreground font-mono text-xs font-bold uppercase tracking-wider py-3 rounded transition-colors cursor-pointer text-center disabled:opacity-50"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          disabled={!stripe || !elements || loading}
+          className="flex-1 bg-accent text-slate-950 font-mono font-bold uppercase tracking-wider py-3 rounded hover:bg-accent-hover transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+        >
+          {loading ? (
+            <><Loader2 className="w-4 h-4 animate-spin" /> Procesando...</>
+          ) : (
+            'Pagar Ahora'
+          )}
+        </button>
+      </div>
+    </form>
   );
 }
