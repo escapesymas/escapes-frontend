@@ -23,7 +23,7 @@ import {
 } from './bihrService.js';
 import Stripe from 'stripe';
 
-const stripeLive = new Stripe(process.env.STRIPE_SECRET_KEY || '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', {
+const stripeLive = new Stripe(process.env.STRIPE_SECRET_KEY || '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', {
   apiVersion: '2026-05-27.dahlia' as any,
 });
 
