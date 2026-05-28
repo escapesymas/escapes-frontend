@@ -123,9 +123,11 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
       } else {
         const errData = await finalizeRes.json();
         setPaymentError(errData.error || 'Error al confirmar el pago en el servidor.');
+        setOrderError(errData.error || 'Error al confirmar el pago en el servidor.');
       }
     } catch (err: any) {
       setPaymentError('Error de red al confirmar el pago.');
+      setOrderError('Error de red al confirmar el pago.');
     }
   };
 
@@ -594,6 +596,16 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
           </div>
 
           <CartProgressBar subtotal={subtotal} />
+
+          {orderError && (
+            <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-sm mb-6 flex items-start gap-3 font-sans">
+              <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-red-500 font-mono font-bold text-xs uppercase tracking-wide">Error en el Pago</h4>
+                <p className="text-text-muted text-xs mt-1 leading-normal">{orderError}</p>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Cart Items List */}
