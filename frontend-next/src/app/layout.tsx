@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://escapesymas.com'),
   title: "Escapes y Más — Escapes de Moto de Alto Rendimiento",
   description: "Encuentra escapes homologados y recambios oficiales para tu moto. Compatible con las marcas más exigentes del mercado.",
 };
