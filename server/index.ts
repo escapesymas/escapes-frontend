@@ -32,15 +32,40 @@ const stripeTest = new Stripe(process.env.STRIPE_TEST_SECRET_KEY || 'sk_test_51T
 });
 
 function getStripeClient(req: any): any {
-  const origin = req.headers.origin || req.headers.referer || '';
-  if (origin.includes('localhost') || origin.includes('test.escapesymas.com')) {
-    return stripeTest;
-  }
+  // Always use live mode in production.
   return stripeLive;
 }
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+async function sendMail(to: string, subject: string, text: string, html?: string) {
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || "smtp.buzondecorreo.com",
+      port: parseInt(process.env.SMTP_PORT || "465"),
+      secure: true,
+      auth: {
+        user: process.env.SMTP_USER || "web@escapesymas.com",
+        pass: process.env.SMTP_PASSWORD || "Pedrito2011P!"
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
+    });
+    
+    await transporter.sendMail({
+      from: '"Escapes y Más" <web@escapesymas.com>',
+      to,
+      subject,
+      text,
+      html
+    });
+    console.log(`[EMAIL] Sent to ${to}: ${subject}`);
+  } catch (err) {
+    console.error(`[EMAIL ERROR] Failed to send email to ${to}`, err);
+  }
+}
 
 // ================================================================
 // CONFIGURACIÓN
@@ -128,6 +153,36 @@ const db = drizzle(pool);
         current_sku VARCHAR(255) DEFAULT '',
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+      CREATE TABLE IF NOT EXISTS product_attributes (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL UNIQUE
+      );
+
+      CREATE TABLE IF NOT EXISTS product_attribute_terms (
+        id SERIAL PRIMARY KEY,
+        attribute_id INTEGER REFERENCES product_attributes(id) ON DELETE CASCADE,
+        name VARCHAR(100) NOT NULL,
+        UNIQUE(attribute_id, name)
+      );
+
+      CREATE TABLE IF NOT EXISTS product_variations (
+        id SERIAL PRIMARY KEY,
+        parent_product_id INTEGER NOT NULL,
+        sku VARCHAR(255) UNIQUE,
+        price INTEGER NOT NULL,
+        stock_status VARCHAR(50) DEFAULT 'instock',
+        stock_quantity INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS product_variation_attributes (
+        id SERIAL PRIMARY KEY,
+        variation_id INTEGER REFERENCES product_variations(id) ON DELETE CASCADE,
+        attribute_id INTEGER REFERENCES product_attributes(id) ON DELETE CASCADE,
+        term_id INTEGER REFERENCES product_attribute_terms(id) ON DELETE CASCADE,
+        UNIQUE(variation_id, attribute_id)
+      );
+      
       INSERT INTO image_regen_state (id, status) VALUES (1, 'idle') ON CONFLICT (id) DO NOTHING;
     `);
     console.log('✅ Database schema aligned successfully!');
@@ -259,7 +314,7 @@ const app: any = express();
 app.set('trust proxy', 1);
 
 app.use(cors({
-  origin: ['https://escapesymas.com', 'https://www.escapesymas.com', 'https://test.escapesymas.com', 'http://localhost:5173', 'http://localhost:3000', 'http://localhost:3002'],
+  origin: ['https://escapesymas.com', 'https://www.escapesymas.com', 'https://test.escapesymas.com', 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:3000', 'http://localhost:3002'],
   credentials: true,
   exposedHeaders: ['X-WP-Total', 'X-WP-TotalPages']
 }));
@@ -871,18 +926,44 @@ app.get('/api/vehicles', async (req, res) => {
 // ================================================================
 // CATÁLOGO PÚBLICO (sin autenticación)
 // ================================================================
+
+// ── SITEMAP ENDPOINT ──────────────────────────────────────────────────────────
+app.get('/api/catalog/sitemap-skus', async (req, res) => {
+  try {
+    const page = parseInt((req.query.page as string) || '1', 10);
+    const limit = parseInt((req.query.limit as string) || '10000', 10);
+    const offset = (page - 1) * limit;
+
+    const result = await db.execute(sql`
+      SELECT id, slug, updated_at 
+      FROM products 
+      WHERE status = 'published'
+      ORDER BY id ASC
+      LIMIT ${limit} OFFSET ${offset}
+    `);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('[SITEMAP SKUS ERROR]:', error);
+    res.status(500).json({ error: 'Failed to fetch sitemap SKUs' });
+  }
+});
 app.get('/api/catalog/products', async (req, res) => {
   try {
-    const { search, category_id, page = '1', per_page = '20' } = req.query as any;
+    const { search, category_id, page = '1', per_page = '20', universal } = req.query as any;
     const pageNum = parseInt(page);
     const perPage = parseInt(per_page);
     const offset = (pageNum - 1) * perPage;
 
-    const cacheKey = `/api/catalog/products?search=${search || ''}&category_id=${category_id || ''}&page=${page}&per_page=${per_page}`;
+    const cacheKey = `/api/catalog/products?search=${search || ''}&category_id=${category_id || ''}&page=${page}&per_page=${per_page}&universal=${universal || ''}`;
 
     // Catálogo público: 1 min de datos frescos, 10 min de gracia SWR
     const result = await executeSWR(cacheKey, async () => {
       let baseWhereClause = "WHERE status = 'published' AND name NOT LIKE 'Aplicaciones:%' AND name NOT LIKE 'Applications:%' AND sku NOT LIKE 'Aplicaciones:%' AND sku NOT LIKE 'Applications:%'";
+
+      if (universal === 'true') {
+        baseWhereClause += " AND (compatibility IS NULL OR compatibility = '[]'::jsonb OR compatibility::text = '[]')";
+      }
 
       if (search) {
         const s = sanitizeLike(search);
@@ -1056,7 +1137,9 @@ app.get('/api/catalog/product-compatibility/:id', async (req, res) => {
     const row = productRes.rows[0];
     let compatibility: any[] = [];
     try {
-      compatibility = row.compatibility ? JSON.parse(row.compatibility as string) : [];
+      if (row.compatibility) {
+        compatibility = typeof row.compatibility === 'string' ? JSON.parse(row.compatibility) : row.compatibility;
+      }
     } catch (e) {}
     
     return res.json(compatibility);
@@ -1507,37 +1590,57 @@ app.all('/api/admin', async (req, res) => {
           regenPercent: 0
         };
         
-        // Leer estado del script de regeneración de imágenes desde PostgreSQL
+        // Leer estado del script de regeneración de imágenes
         try {
+          let usedFallback = false;
           const stateResult = await pool.query('SELECT * FROM image_regen_state WHERE id = 1');
           if (stateResult.rows.length > 0) {
             const state = stateResult.rows[0];
-            imageStats.regenerating = state.status === 'running';
-            imageStats.regenProcessed = state.processed || 0;
-            imageStats.regenSuccess = state.success || 0;
-            imageStats.regenFailed = state.failed || 0;
-            imageStats.regenSkipped = state.skipped || 0;
-            imageStats.regenCurrentSku = state.current_sku || '';
-            if (state.total > 0) {
-              imageStats.regenPercent = Math.round((state.processed / state.total) * 100);
-            }
-            if (state.status === 'completed') {
-              imageStats.status = "Finalizado";
-            } else if (state.status === 'running') {
-              imageStats.status = `Regenerando imágenes (${imageStats.regenPercent}%)`;
+            if (state.status !== 'idle') {
+              imageStats.regenerating = state.status === 'running';
+              imageStats.regenProcessed = state.processed || 0;
+              imageStats.regenSuccess = state.success || 0;
+              imageStats.regenFailed = state.failed || 0;
+              imageStats.regenSkipped = state.skipped || 0;
+              imageStats.regenCurrentSku = state.current_sku || '';
+              if (state.total > 0) {
+                imageStats.regenPercent = Math.round((state.processed / state.total) * 100);
+              }
+              if (state.status === 'completed') {
+                imageStats.status = "Finalizado";
+              } else if (state.status === 'running') {
+                imageStats.status = `Regenerando imágenes (${imageStats.regenPercent}%)`;
+              }
+            } else {
+              usedFallback = true;
             }
           } else {
-            // Fallback: intentar leer fichero legacy si tabla vacía
+            usedFallback = true;
+          }
+
+          if (usedFallback) {
+            // Fallback: leer fichero de /tmp/image_regen_state.json generado por python script
             const stateFile = '/tmp/image_regen_state.json';
             if (fs.existsSync(stateFile)) {
               const state = JSON.parse(fs.readFileSync(stateFile, 'utf-8'));
               imageStats.regenerating = state.status === 'running';
               imageStats.regenProcessed = state.processed || 0;
               imageStats.regenSuccess = state.success || 0;
+              imageStats.regenFailed = state.failed || 0;
+              imageStats.regenSkipped = state.skipped || 0;
+              imageStats.regenCurrentSku = state.current_sku || '';
+              if (state.total > 0) {
+                imageStats.regenPercent = Math.round((state.processed / state.total) * 100);
+              }
+              if (state.status === 'completed') {
+                imageStats.status = "Finalizado";
+              } else if (state.status === 'running') {
+                imageStats.status = `Regenerando imágenes (${imageStats.regenPercent}%)`;
+              }
             }
           }
         } catch (e) {
-          console.error('Error reading regen state from DB:', e);
+          console.error('Error reading regen state from DB or FS:', e);
         }
 
         // Stats de la base de datos
@@ -1592,6 +1695,101 @@ app.all('/api/admin', async (req, res) => {
             imageStats
           }
         });
+      }
+
+      
+      case 'get-attributes': {
+        const attrsRes = await pool.query('SELECT * FROM product_attributes ORDER BY id ASC');
+        const termsRes = await pool.query('SELECT * FROM product_attribute_terms ORDER BY id ASC');
+        
+        // Group terms by attribute_id
+        const attributes = attrsRes.rows.map(a => {
+          return {
+            ...a,
+            terms: termsRes.rows.filter(t => t.attribute_id === a.id)
+          };
+        });
+        
+        return res.json(attributes);
+      }
+
+      case 'add-attribute': {
+        const { name } = req.body;
+        if (!name) return res.status(400).json({ error: 'Nombre requerido' });
+        const r = await pool.query('INSERT INTO product_attributes (name) VALUES ($1) RETURNING *', [name]);
+        return res.json(r.rows[0]);
+      }
+
+      case 'add-attribute-term': {
+        const { attribute_id, name } = req.body;
+        if (!attribute_id || !name) return res.status(400).json({ error: 'Faltan datos' });
+        const r = await pool.query('INSERT INTO product_attribute_terms (attribute_id, name) VALUES ($1, $2) RETURNING *', [attribute_id, name]);
+        return res.json(r.rows[0]);
+      }
+
+      case 'get-product-variations': {
+        const { product_id } = req.query;
+        if (!product_id) return res.status(400).json({ error: 'Falta product_id' });
+        
+        const variationsRes = await pool.query('SELECT * FROM product_variations WHERE parent_product_id = $1', [product_id]);
+        const variations = variationsRes.rows;
+        
+        if (variations.length > 0) {
+          const varIds = variations.map(v => v.id);
+          const varTermsRes = await pool.query(`
+            SELECT pva.variation_id, pva.attribute_id, pva.term_id, pa.name as attribute_name, pat.name as term_name
+            FROM product_variation_attributes pva
+            JOIN product_attributes pa ON pva.attribute_id = pa.id
+            JOIN product_attribute_terms pat ON pva.term_id = pat.id
+            WHERE pva.variation_id = ANY($1)
+          `, [varIds]);
+          
+          variations.forEach(v => {
+            v.attributes = varTermsRes.rows.filter(t => t.variation_id === v.id);
+          });
+        }
+        
+        return res.json(variations);
+      }
+
+      case 'save-product-variations': {
+        const { product_id, variations } = req.body;
+        if (!product_id || !Array.isArray(variations)) return res.status(400).json({ error: 'Datos inválidos' });
+        
+        // Empezamos una transacción
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          // Por simplicidad, borramos todas las variaciones anteriores y las recreamos (o se podría hacer un UPSERT)
+          await client.query('DELETE FROM product_variations WHERE parent_product_id = $1', [product_id]);
+          
+          for (const v of variations) {
+            const resVar = await client.query(`
+              INSERT INTO product_variations (parent_product_id, sku, price, stock_status, stock_quantity)
+              VALUES ($1, $2, $3, $4, $5) RETURNING id
+            `, [product_id, v.sku || null, v.price || 0, v.stock_status || 'instock', v.stock_quantity || 0]);
+            
+            const newVarId = resVar.rows[0].id;
+            
+            if (v.attributes && Array.isArray(v.attributes)) {
+              for (const attr of v.attributes) {
+                if (attr.attribute_id && attr.term_id) {
+                  await client.query(`
+                    INSERT INTO product_variation_attributes (variation_id, attribute_id, term_id)
+                    VALUES ($1, $2, $3)
+                  `, [newVarId, attr.attribute_id, attr.term_id]);
+                }
+              }
+            }
+          }
+          await client.query('COMMIT');
+          return res.json({ success: true });
+        } catch (e) {
+          await client.query('ROLLBACK');
+          throw e;
+        } finally {
+          client.release();
+        }
       }
 
       case 'products-list': {
@@ -1675,7 +1873,29 @@ app.all('/api/admin', async (req, res) => {
 
         const query = `SELECT * FROM products ${whereClause} ORDER BY ${safeSort} ${safeOrder} LIMIT ${lim} OFFSET ${offset}`;
         const products = await db.execute(sql.raw(query));
-        return res.json(products.rows);
+        const rows = products.rows;
+        
+        if (rows.length > 0) {
+          try {
+            const productIds = rows.map(r => r.id);
+            const linksRes = await pool.query(`
+              SELECT pl.id as link_id, pl.linked_product_id as id, pl.product_id, pl.link_type, p.name, p.sku 
+              FROM product_links pl 
+              JOIN products p ON pl.linked_product_id = p.id 
+              WHERE pl.product_id = ANY($1)
+            `, [productIds]);
+            
+            rows.forEach(r => {
+              const productLinks = linksRes.rows.filter(l => l.product_id === r.id);
+              r.upsells = productLinks.filter(l => l.link_type === 'upsell');
+              r.cross_sells = productLinks.filter(l => l.link_type === 'cross_sell');
+            });
+          } catch (e) {
+            console.error('Error fetching product links:', e);
+          }
+        }
+
+        return res.json(rows);
       }
 
       case 'create-product': {
@@ -1697,11 +1917,51 @@ app.all('/api/admin', async (req, res) => {
         const category2Id = b.category2Id ? parseInt(b.category2Id) : null;
         const category3Id = b.category3Id ? parseInt(b.category3Id) : null;
 
-        await db.execute(sql`
-          INSERT INTO products (name, sku, price, sale_price, stock, description, images, compatibility, status, brand, cost, category2_id, category3_id)
-          VALUES (${safeName}, ${safeSku}, ${priceInCents}, ${saleCents}, ${stock}, ${desc}, ${imgs}, ${compat}, ${status}, ${brand}, ${cost}, ${category2Id}, ${category3Id})
-        `);
-        return res.json({ success: true });
+        const stockStatus = b.stock_status || 'in_stock';
+        const lowStockThreshold = b.low_stock_threshold ? parseInt(b.low_stock_threshold) : null;
+
+        const insertRes = await pool.query(`
+          INSERT INTO products (name, sku, price, sale_price, stock, description, images, compatibility, status, brand, cost, category2_id, category3_id, type, stock_status, low_stock_threshold)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id
+        `, [safeName, safeSku, priceInCents, saleCents, stock, desc, imgs, compat, status, brand, cost, category2Id, category3Id, b.type || 'simple', stockStatus, lowStockThreshold]);
+        
+        const newId = insertRes.rows[0].id;
+        
+        // Save variations if variable
+        if (b.type === 'variable' && b.variations) {
+          for (const v of b.variations) {
+            const resVar = await pool.query(`
+              INSERT INTO product_variations (parent_product_id, sku, price, stock_status, stock_quantity)
+              VALUES ($1, $2, $3, $4, $5) RETURNING id
+            `, [newId, v.sku || null, v.price ? Math.round(parseFloat(v.price) * 100) : 0, v.stock_status || 'instock', v.stock_quantity || 0]);
+            
+            const newVarId = resVar.rows[0].id;
+            
+            if (v.attributes && Array.isArray(v.attributes)) {
+              for (const attr of v.attributes) {
+                if (attr.attribute_id && attr.term_id) {
+                  await pool.query(`
+                    INSERT INTO product_variation_attributes (variation_id, attribute_id, term_id)
+                    VALUES ($1, $2, $3)
+                  `, [newVarId, attr.attribute_id, attr.term_id]);
+                }
+              }
+            }
+          }
+        }
+        
+        if (b.upsells && Array.isArray(b.upsells)) {
+          for (const u of b.upsells) {
+            await pool.query('INSERT INTO product_links (product_id, linked_product_id, link_type) VALUES ($1, $2, $3)', [newId, u.id, 'upsell']);
+          }
+        }
+        if (b.crossSells && Array.isArray(b.crossSells)) {
+          for (const c of b.crossSells) {
+            await pool.query('INSERT INTO product_links (product_id, linked_product_id, link_type) VALUES ($1, $2, $3)', [newId, c.id, 'cross_sell']);
+          }
+        }
+
+        return res.json({ success: true, id: newId });
       }
 
       case 'orders-list': {
@@ -1731,6 +1991,7 @@ app.all('/api/admin', async (req, res) => {
             LEFT JOIN products p ON oi.product_id = p.id
             WHERE oi.order_id = ${order.id}
           `);
+          const notesRes = await db.execute(sql`SELECT * FROM order_notes WHERE order_id = ${order.id} ORDER BY created_at DESC`);
           // Check if invoice exists
           const invCheck = await db.execute(sql`SELECT invoice_number FROM invoices WHERE order_id = ${order.id}`);
           result.push({
@@ -1750,6 +2011,7 @@ app.all('/api/admin', async (req, res) => {
             trackingNumber: order.tracking_number,
             trackingUrl: order.tracking_url,
             costTotal: order.cost_total || 0,
+            notes: notesRes.rows,
             invoiceNumber: invCheck.rows.length > 0 ? (invCheck.rows[0] as any).invoice_number : null,
           });
         }
@@ -1784,6 +2046,255 @@ app.all('/api/admin', async (req, res) => {
           }
         }
         return res.json({ success: true });
+      }
+
+      case 'bulk-update-orders': {
+        if (req.method !== 'POST') return res.status(405).end();
+        const { orderIds, status } = req.body;
+        if (!orderIds || !Array.isArray(orderIds) || !status) return res.status(400).json({ error: 'Faltan datos' });
+        
+        await db.execute(sql`
+          UPDATE orders
+          SET status = ${status}
+          WHERE id = ANY(${orderIds})
+        `);
+
+        if (status === 'processing' || status === 'completed') {
+          for (const id of orderIds) {
+            try {
+              await createInvoiceForOrder(parseInt(id));
+            } catch (e: any) {
+              console.error(`[AUTO-INVOICE ERROR] Failed for Order ${id}:`, e);
+            }
+          }
+        }
+        return res.json({ success: true });
+      }
+
+      case 'get-order-notes': {
+        const { orderId } = req.query as any;
+        if (!orderId) return res.status(400).json({ error: 'Falta orderId' });
+        const notesRes = await pool.query('SELECT * FROM order_notes WHERE order_id = $1 ORDER BY created_at DESC', [orderId]);
+        return res.json(notesRes.rows);
+      }
+
+      case 'add-order-note': {
+        if (req.method !== 'POST') return res.status(405).end();
+        const { orderId, note, isCustomerNote } = req.body;
+        if (!orderId || !note) return res.status(400).json({ error: 'Faltan datos' });
+        
+        const noteRes = await pool.query(
+          'INSERT INTO order_notes (order_id, note, is_customer_note, created_by) VALUES ($1, $2, $3, $4) RETURNING *',
+          [orderId, note, isCustomerNote ? true : false, email || 'Admin']
+        );
+        
+        if (isCustomerNote) {
+          try {
+            const orderRes = await pool.query('SELECT user_id, shipping_data FROM orders WHERE id = $1', [orderId]);
+            let toEmail = '';
+            if (orderRes.rows.length > 0) {
+              const order = orderRes.rows[0];
+              if (order.shipping_data) {
+                const sdata = JSON.parse(order.shipping_data);
+                toEmail = sdata.email || '';
+              }
+            }
+            if (toEmail) {
+              await sendMail(toEmail, `Actualización de tu pedido #${orderId}`, `Hola,\n\nHemos añadido una actualización a tu pedido #${orderId}:\n\n"${note}"\n\nSaludos,\nEl equipo de Escapes y Más.`);
+            }
+          } catch(e) {
+            console.error('Error sending note email:', e);
+          }
+        }
+        return res.json(noteRes.rows[0]);
+      }
+
+      case 'refund-order': {
+        if (req.method !== 'POST') return res.status(405).end();
+        const { orderId, amount, reason } = req.body;
+        if (!orderId || !amount) return res.status(400).json({ error: 'Faltan datos' });
+        
+        const orderRes = await db.execute(sql`SELECT stripe_charge_id, payment_id FROM orders WHERE id = ${parseInt(orderId)}`);
+        const order = orderRes.rows[0] as any;
+        if (!order || (!order.stripe_charge_id && !order.payment_id)) {
+          return res.status(400).json({ error: 'El pedido no tiene un ID de pago válido de Stripe.' });
+        }
+
+        const chargeId = order.stripe_charge_id || order.payment_id;
+
+        try {
+          const client = getStripeClient(req);
+          const refund = await client.refunds.create({
+            payment_intent: chargeId.startsWith('pi_') ? chargeId : undefined,
+            charge: chargeId.startsWith('ch_') ? chargeId : undefined,
+            amount: Math.round(parseFloat(amount) * 100), // convert to cents
+            reason: reason || 'requested_by_customer'
+          });
+
+          await db.execute(sql`
+            UPDATE orders 
+            SET refunded_amount = COALESCE(refunded_amount, 0) + ${amount},
+                status = 'refunded'
+            WHERE id = ${parseInt(orderId)}
+          `);
+
+          return res.json({ success: true, refund });
+        } catch (error: any) {
+          console.error('[STRIPE REFUND ERROR]', error);
+          return res.status(400).json({ error: error.message });
+        }
+      }
+
+      case 'create-manual-order': {
+        if (req.method !== 'POST') return res.status(405).end();
+        const { customerData, items, shippingCost, generatePaymentLink } = req.body;
+        if (!customerData || !items || items.length === 0) return res.status(400).json({ error: 'Faltan datos' });
+
+        // calculate totals
+        let subtotal = 0;
+        let costTotal = 0;
+        for (const it of items) {
+           subtotal += (it.price * it.quantity);
+           // get original cost
+           const pRes = await db.execute(sql`SELECT cost FROM products WHERE id = ${it.id}`);
+           if (pRes.rows[0] && (pRes.rows[0] as any).cost) {
+             costTotal += (parseFloat((pRes.rows[0] as any).cost as string) * it.quantity);
+           }
+        }
+        
+        const total = subtotal + parseFloat(shippingCost || 0);
+
+        try {
+          // create order
+          const oRes = await db.execute(sql`
+            INSERT INTO orders (
+              user_id, total, subtotal, shipping_cost, status, shipping_data, cost_total
+            ) VALUES (
+              ${customerData.userId || null}, ${total}, ${subtotal}, ${parseFloat(shippingCost || 0)}, 
+              ${generatePaymentLink ? 'pending_payment' : 'processing'}, 
+              ${JSON.stringify(customerData)}, ${costTotal}
+            ) RETURNING id
+          `);
+          const orderId = oRes.rows[0].id;
+
+          for (const it of items) {
+             await db.execute(sql`
+               INSERT INTO order_items (order_id, product_id, quantity, price)
+               VALUES (${orderId}, ${it.id}, ${it.quantity}, ${it.price})
+             `);
+          }
+
+          let paymentLinkUrl = null;
+          if (generatePaymentLink) {
+             const client = getStripeClient(req);
+             
+             const lineItems = items.map((it: any) => ({
+               price_data: {
+                 currency: 'eur',
+                 product_data: { name: it.name },
+                 unit_amount: Math.round(it.price)
+               },
+               quantity: it.quantity
+             }));
+
+             if (parseFloat(shippingCost) > 0) {
+               lineItems.push({
+                 price_data: {
+                   currency: 'eur',
+                   product_data: { name: 'Gastos de envío' },
+                   unit_amount: Math.round(parseFloat(shippingCost) * 100)
+                 },
+                 quantity: 1
+               });
+             }
+
+             const storeUrl = process.env.STORE_URL || 'https://escapesymas.com'; // Default to production domain
+             const returnUrl = `${storeUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`;
+             const paymentLinkUrl = `${storeUrl}/pagar/${orderId}`;
+
+             const sessionParams = {
+               payment_method_types: ['card', 'klarna', 'bizum'],
+               line_items: lineItems,
+               mode: 'payment',
+               ui_mode: 'embedded_page',
+               return_url: returnUrl,
+               client_reference_id: `manual_${orderId}`,
+               metadata: { orderId: orderId.toString() }
+             } as any;
+             if (customerData.email) sessionParams.customer_email = customerData.email;
+             
+             const stripeSession = await client.checkout.sessions.create(sessionParams);
+             
+             await db.execute(sql`UPDATE orders SET payment_id = ${stripeSession.id} WHERE id = ${orderId}`);
+
+             if (customerData.email) {
+                 const nameText = customerData.name ? ` ${customerData.name}` : '';
+                 const emailHtml = `
+                    <div style="font-family: 'Inter', system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #f8fafc; border-radius: 6px; color: #0f172a; border: 1px solid #e2e8f0;">
+                      <div style="text-align: center; margin-bottom: 30px;">
+                        <img src="https://www.escapesymas.com/logo-cabecera-negro.svg" alt="Escapes y Más" style="max-width: 250px;">
+                      </div>
+                      <h2 style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; color: #0f172a; text-align: center; font-size: 24px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">¡Hola${nameText}!</h2>
+                      <div style="background-color: #ffffff; padding: 25px; border-radius: 6px; border-left: 4px solid #eab308; margin: 20px 0; border-top: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;">
+                        <p style="color: #475569; font-size: 16px; line-height: 1.6; margin-top: 0;">
+                          Hemos preparado tu pedido <strong>#${orderId}</strong>.
+                        </p>
+                        <p style="color: #475569; font-size: 16px; line-height: 1.6; margin-bottom: 0;">
+                          Para finalizar la compra y que podamos procesar tu envío de inmediato, por favor accede a nuestra plataforma segura para completar el pago.
+                        </p>
+                      </div>
+                      <div style="text-align: center; margin: 40px 0;">
+                        <a href="${paymentLinkUrl}" style="background-color: #eab308; color: #000000; padding: 16px 32px; text-decoration: none; font-size: 16px; border-radius: 6px; font-weight: 700; display: inline-block; text-transform: uppercase; letter-spacing: 0.5px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;">Finalizar Pago Ahora</a>
+                      </div>
+                      <p style="color: #64748b; font-size: 14px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 20px; margin-bottom: 0;">
+                        ¿Tienes dudas? Responde a este correo o escríbenos a <a href="mailto:info@escapesymas.com" style="color: #0f172a; font-weight: 600;">info@escapesymas.com</a>.<br><br>
+                        <strong>Escapes y Más</strong>
+                      </p>
+                    </div>
+                 `;
+                 
+                 // Run asynchronously so frontend doesn't hang if SMTP is slow
+                 sendMail(
+                   customerData.email, 
+                   `Finaliza tu pedido #${orderId} en Escapes y Más`, 
+                   `Hola ${customerData.name || ''},\nHemos preparado tu pedido manualmente. Por favor, págala en este enlace: ${paymentLinkUrl}`,
+                   emailHtml
+                 ).catch(e => console.error('[EMAIL BACKGROUND ERROR]', e));
+             }
+          }
+
+          return res.json({ success: true, orderId });
+
+        } catch(e: any) {
+          console.error('[MANUAL ORDER ERROR]', e);
+          return res.status(400).json({ error: e.message });
+        }
+      }
+
+      case 'search-customer': {
+        const query = req.query.q as string;
+        if (!query || query.length < 4) return res.json(null);
+        
+        try {
+          const s = sanitizeString(query);
+          const sqlQuery = `
+            SELECT shipping_data FROM orders 
+            WHERE shipping_data::text ILIKE '%${s}%'
+            ORDER BY created_at DESC 
+            LIMIT 1
+          `;
+          const result = await db.execute(sql.raw(sqlQuery));
+          if (result.rows.length > 0 && result.rows[0].shipping_data) {
+            let data = typeof result.rows[0].shipping_data === 'string' ? JSON.parse(result.rows[0].shipping_data) : result.rows[0].shipping_data;
+            if (data && (data.email?.includes(query) || data.phone?.includes(query))) {
+              return res.json(data);
+            }
+          }
+          return res.json(null);
+        } catch(e) {
+          console.error('[SEARCH CUSTOMER ERROR]', e);
+          return res.status(500).json({ error: 'Error searching customer' });
+        }
       }
 
       case 'delete-order': {
@@ -2306,7 +2817,7 @@ app.all('/api/admin', async (req, res) => {
             port: 465,
             secure: true,
             auth: {
-              user: process.env.SMTP_USER || "web@backendescapes.com",
+              user: process.env.SMTP_USER || "web@escapesymas.com",
               pass: process.env.SMTP_PASSWORD || "Pedrito2011P!"
             },
             tls: {
@@ -2340,7 +2851,7 @@ app.all('/api/admin', async (req, res) => {
           }
 
           const mailOptions = {
-            from: '"Escapes y Más" <web@backendescapes.com>',
+            from: '"Escapes y Más" <web@escapesymas.com>',
             to: email,
             subject: `🏍️ ¡Te guardamos tu carrito en Escapes y Más!`,
             html: `
@@ -2390,7 +2901,7 @@ app.all('/api/admin', async (req, res) => {
 
       case 'users-list': {
         const usersRes = await db.execute(sql`
-          SELECT id, email, first_name as "firstName", last_name as "lastName", role, rank_level as "rankLevel", rank_xp as "rankXp", created_at as "createdAt" FROM users ORDER BY id ASC
+          SELECT id, email, first_name as "firstName", last_name as "lastName", role, rank_level as "rankLevel", rank_xp as "rankXp", created_at as "createdAt", billing FROM users ORDER BY id ASC
         `);
         return res.json(usersRes.rows);
       }
@@ -2495,20 +3006,63 @@ app.all('/api/admin', async (req, res) => {
         const heightMm = b.height_mm ? parseInt(b.height_mm) : null;
         const deliveryPlant = b.deliveryPlant || '';
 
+        const stockStatus = b.stock_status || 'in_stock';
+        const lowStockThreshold = b.low_stock_threshold ? parseInt(b.low_stock_threshold) : null;
+
         await db.execute(sql`
           UPDATE products
           SET name = ${safeName}, sku = ${safeSku}, price = ${priceInCents}, sale_price = ${saleCents},
-              stock = ${stock}, description = ${desc}, images = ${imgs}, compatibility = ${compat},
+              stock = ${stock}, stock_status = ${stockStatus}, low_stock_threshold = ${lowStockThreshold}, description = ${desc}, images = ${imgs}, compatibility = ${compat},
               status = ${status}, brand = ${brand}, cost = ${cost},
               category2_id = ${category2Id}, category3_id = ${category3Id},
               dropshipping = ${dropshipping}, ondemand = ${ondemand},
               barcode = ${barcode}, supplier_code = ${supplierCode},
               weight_g = ${weightG}, length_mm = ${lengthMm},
               width_mm = ${widthMm}, height_mm = ${heightMm},
-              delivery_plant = ${deliveryPlant}
+              delivery_plant = ${deliveryPlant}, type = ${b.type || 'simple'}
           WHERE id = ${productId}
         `);
-        return res.json({ success: true });
+
+        // Save variations if variable
+        if (b.type === 'variable' && b.variations) {
+          await pool.query('DELETE FROM product_variations WHERE parent_product_id = $1', [productId]);
+          for (const v of b.variations) {
+            const resVar = await pool.query(`
+              INSERT INTO product_variations (parent_product_id, sku, price, stock_status, stock_quantity)
+              VALUES ($1, $2, $3, $4, $5) RETURNING id
+            `, [productId, v.sku || null, v.price ? Math.round(parseFloat(v.price) * 100) : 0, v.stock_status || 'instock', v.stock_quantity || 0]);
+            
+            const newVarId = resVar.rows[0].id;
+            
+            if (v.attributes && Array.isArray(v.attributes)) {
+              for (const attr of v.attributes) {
+                if (attr.attribute_id && attr.term_id) {
+                  await pool.query(`
+                    INSERT INTO product_variation_attributes (variation_id, attribute_id, term_id)
+                    VALUES ($1, $2, $3)
+                  `, [newVarId, attr.attribute_id, attr.term_id]);
+                }
+              }
+            }
+          }
+        } else {
+          // If changed to simple, delete any existing variations
+          await pool.query('DELETE FROM product_variations WHERE parent_product_id = $1', [productId]);
+        }
+
+        await pool.query('DELETE FROM product_links WHERE product_id = $1', [productId]);
+        if (b.upsells && Array.isArray(b.upsells)) {
+          for (const u of b.upsells) {
+            await pool.query('INSERT INTO product_links (product_id, linked_product_id, link_type) VALUES ($1, $2, $3)', [productId, u.id, 'upsell']);
+          }
+        }
+        if (b.crossSells && Array.isArray(b.crossSells)) {
+          for (const c of b.crossSells) {
+            await pool.query('INSERT INTO product_links (product_id, linked_product_id, link_type) VALUES ($1, $2, $3)', [productId, c.id, 'cross_sell']);
+          }
+        }
+
+        return res.json({ success: true, id: productId });
       }
 
       case 'coupons-list': {
@@ -2517,6 +3071,7 @@ app.all('/api/admin', async (req, res) => {
         `);
         return res.json(couponsRes.rows);
       }
+
 
       case 'create-coupon': {
         if (req.method !== 'POST') return res.status(405).end();
@@ -2531,6 +3086,114 @@ app.all('/api/admin', async (req, res) => {
           INSERT INTO coupons (code, type, value, active, expires_at, max_uses, times_used)
           VALUES (${codeUpper}, ${type}, ${parseInt(value)}, ${active !== undefined ? parseInt(active) : 1}, ${expiresVal}, ${maxUses !== undefined ? parseInt(maxUses) : 999999}, 0)
         `);
+        return res.json({ success: true });
+      }
+
+      // --- TAXONOMÍAS: CATEGORÍAS ---
+      case 'get-categories': {
+        const catRes = await pool.query('SELECT * FROM categories ORDER BY name ASC');
+        return res.json(catRes.rows);
+      }
+      case 'save-category': {
+        if (req.method !== 'POST') return res.status(405).end();
+        const { id, name, slug, parent_id, description } = req.body;
+        if (!name || !slug) return res.status(400).json({ error: 'Faltan datos obligatorios' });
+        
+        if (id) {
+          await pool.query(
+            'UPDATE categories SET name = $1, slug = $2, parent_id = $3, description = $4, updated_at = NOW() WHERE id = $5',
+            [name, slug, parent_id || null, description || null, id]
+          );
+        } else {
+          await pool.query(
+            'INSERT INTO categories (name, slug, parent_id, description, created_at, updated_at) VALUES ($1, $2, $3, $4, NOW(), NOW())',
+            [name, slug, parent_id || null, description || null]
+          );
+        }
+        return res.json({ success: true });
+      }
+      case 'delete-category': {
+        if (req.method !== 'POST') return res.status(405).end();
+        const { id } = req.body;
+        await pool.query('DELETE FROM categories WHERE id = $1', [id]);
+        return res.json({ success: true });
+      }
+
+      // --- TAXONOMÍAS: ETIQUETAS ---
+      case 'get-tags': {
+        const tagRes = await pool.query('SELECT * FROM tags ORDER BY name ASC');
+        return res.json(tagRes.rows);
+      }
+      case 'save-tag': {
+        if (req.method !== 'POST') return res.status(405).end();
+        const { id, name, slug } = req.body;
+        if (!name || !slug) return res.status(400).json({ error: 'Faltan datos obligatorios' });
+        
+        if (id) {
+          await pool.query('UPDATE tags SET name = $1, slug = $2 WHERE id = $3', [name, slug, id]);
+        } else {
+          await pool.query('INSERT INTO tags (name, slug) VALUES ($1, $2)', [name, slug]);
+        }
+        return res.json({ success: true });
+      }
+      case 'delete-tag': {
+        if (req.method !== 'POST') return res.status(405).end();
+        const { id } = req.body;
+        await pool.query('DELETE FROM tags WHERE id = $1', [id]);
+        return res.json({ success: true });
+      }
+
+      // --- TAXONOMÍAS: VEHÍCULOS (MARCAS Y MODELOS) ---
+      case 'get-vehicle-brands': {
+        const brRes = await pool.query('SELECT * FROM vehicle_brands ORDER BY name ASC');
+        return res.json(brRes.rows);
+      }
+      case 'save-vehicle-brand': {
+        if (req.method !== 'POST') return res.status(405).end();
+        const { id, name } = req.body;
+        if (!name) return res.status(400).json({ error: 'Faltan datos obligatorios' });
+        
+        if (id) {
+          await pool.query('UPDATE vehicle_brands SET name = $1 WHERE id = $2', [name, id]);
+        } else {
+          await pool.query('INSERT INTO vehicle_brands (name) VALUES ($1)', [name]);
+        }
+        return res.json({ success: true });
+      }
+      case 'delete-vehicle-brand': {
+        if (req.method !== 'POST') return res.status(405).end();
+        const { id } = req.body;
+        await pool.query('DELETE FROM vehicle_brands WHERE id = $1', [id]);
+        return res.json({ success: true });
+      }
+      
+      case 'get-vehicle-models': {
+        const { brand_id } = req.query;
+        let query = 'SELECT m.*, b.name as brand_name FROM vehicle_models m JOIN vehicle_brands b ON m.brand_id = b.id ORDER BY b.name ASC, m.name ASC';
+        let params: any[] = [];
+        if (brand_id) {
+          query = 'SELECT m.*, b.name as brand_name FROM vehicle_models m JOIN vehicle_brands b ON m.brand_id = b.id WHERE m.brand_id = $1 ORDER BY m.name ASC';
+          params = [brand_id];
+        }
+        const modRes = await pool.query(query, params);
+        return res.json(modRes.rows);
+      }
+      case 'save-vehicle-model': {
+        if (req.method !== 'POST') return res.status(405).end();
+        const { id, brand_id, name } = req.body;
+        if (!name || !brand_id) return res.status(400).json({ error: 'Faltan datos obligatorios' });
+        
+        if (id) {
+          await pool.query('UPDATE vehicle_models SET brand_id = $1, name = $2 WHERE id = $3', [brand_id, name, id]);
+        } else {
+          await pool.query('INSERT INTO vehicle_models (brand_id, name) VALUES ($1, $2)', [brand_id, name]);
+        }
+        return res.json({ success: true });
+      }
+      case 'delete-vehicle-model': {
+        if (req.method !== 'POST') return res.status(405).end();
+        const { id } = req.body;
+        await pool.query('DELETE FROM vehicle_models WHERE id = $1', [id]);
         return res.json({ success: true });
       }
 
@@ -2571,6 +3234,86 @@ app.all('/api/admin', async (req, res) => {
         if (!linkId) return res.status(400).json({ error: 'Falta linkId' });
         await db.execute(sql`
           DELETE FROM seo_autolinks WHERE id = ${parseInt(linkId)}
+        `);
+        return res.json({ success: true });
+      }
+
+      case 'shipping-zones-list': {
+        const zonesRes = await db.execute(sql`SELECT * FROM shipping_zones ORDER BY id ASC`);
+        const methodsRes = await db.execute(sql`SELECT * FROM shipping_methods ORDER BY id ASC`);
+        
+        const result = zonesRes.rows.map((z: any) => {
+          return {
+            ...z,
+            methods: methodsRes.rows.filter((m: any) => m.zone_id === z.id)
+          };
+        });
+        
+        return res.json(result);
+      }
+
+      case 'save-shipping-zone': {
+        if (req.method !== 'POST') return res.status(405).end();
+        const { id, name, regions } = req.body;
+        if (!name || !regions) return res.status(400).json({ error: 'Faltan datos' });
+        
+        if (id) {
+          await db.execute(sql`UPDATE shipping_zones SET name = ${sanitizeString(name)}, regions = ${JSON.stringify(regions)} WHERE id = ${parseIntSafe(id)}`);
+        } else {
+          await db.execute(sql`INSERT INTO shipping_zones (name, regions) VALUES (${sanitizeString(name)}, ${JSON.stringify(regions)})`);
+        }
+        return res.json({ success: true });
+      }
+
+      case 'delete-shipping-zone': {
+        if (req.method !== 'POST') return res.status(405).end();
+        const { zoneId } = req.body;
+        if (!zoneId) return res.status(400).json({ error: 'Falta zoneId' });
+        await db.execute(sql`DELETE FROM shipping_zones WHERE id = ${parseIntSafe(zoneId)}`);
+        return res.json({ success: true });
+      }
+
+      case 'save-shipping-method': {
+        if (req.method !== 'POST') return res.status(405).end();
+        const { id, zoneId, name, cost, active, freeShippingThreshold } = req.body;
+        if (!zoneId || !name || cost === undefined) return res.status(400).json({ error: 'Faltan datos' });
+        
+        if (id) {
+          await db.execute(sql`UPDATE shipping_methods SET name = ${sanitizeString(name)}, cost = ${Number(cost)}, active = ${Number(active || 1)}, free_shipping_threshold = ${freeShippingThreshold === null ? null : Number(freeShippingThreshold)} WHERE id = ${parseIntSafe(id)}`);
+        } else {
+          await db.execute(sql`INSERT INTO shipping_methods (zone_id, name, cost, active, free_shipping_threshold) VALUES (${parseIntSafe(zoneId)}, ${sanitizeString(name)}, ${Number(cost)}, ${Number(active || 1)}, ${freeShippingThreshold === null ? null : Number(freeShippingThreshold)})`);
+        }
+        return res.json({ success: true });
+      }
+
+      case 'delete-shipping-method': {
+        if (req.method !== 'POST') return res.status(405).end();
+        const { methodId } = req.body;
+        if (!methodId) return res.status(400).json({ error: 'Falta methodId' });
+        await db.execute(sql`DELETE FROM shipping_methods WHERE id = ${parseIntSafe(methodId)}`);
+        return res.json({ success: true });
+      }
+
+      case 'save-user': {
+        if (req.method !== 'POST') return res.status(405).end();
+        const { id, firstName, lastName, email, role, phone, address, city, postcode } = req.body;
+        if (!id) return res.status(400).json({ error: 'Falta id de usuario' });
+        
+        const billingData = JSON.stringify({ 
+          address_1: address || '', 
+          city: city || '', 
+          postcode: postcode || '', 
+          phone: phone || '' 
+        });
+
+        await db.execute(sql`
+          UPDATE users 
+          SET first_name = ${sanitizeString(firstName || '')}, 
+              last_name = ${sanitizeString(lastName || '')}, 
+              email = ${sanitizeString(email || '')}, 
+              role = ${sanitizeString(role || 'customer')},
+              billing = ${billingData}
+          WHERE id = ${parseIntSafe(id)}
         `);
         return res.json({ success: true });
       }
@@ -3120,6 +3863,60 @@ app.get('/api/seo/autolinks', async (req, res) => {
 });
 
 // ================================================================
+// ENVÍOS PUBLIC (Cálculo dinámico en el Checkout)
+// ================================================================
+app.post('/api/shipping-estimate', async (req: any, res: any) => {
+  try {
+    const { country, zipCode, subtotalEur } = req.body;
+    let shippingCents = 1500; // Fallback
+
+    const reqCountry = country || 'ES';
+    const reqZip = zipCode || '';
+    const prefix2 = reqZip.substring(0, 2);
+
+    const zonesRes = await db.execute(sql`SELECT * FROM shipping_zones`);
+    const methodsRes = await db.execute(sql`SELECT * FROM shipping_methods WHERE active = 1`);
+
+    let matchedZoneId = null;
+    let exactMatch = false;
+
+    for (const z of zonesRes.rows) {
+      const regions = z.regions as string[];
+      if (regions && regions.includes(`${reqCountry}-${prefix2}`)) {
+        matchedZoneId = z.id;
+        exactMatch = true;
+        break;
+      }
+    }
+
+    if (!exactMatch) {
+      for (const z of zonesRes.rows) {
+        const regions = z.regions as string[];
+        if (regions && regions.includes(reqCountry)) {
+          matchedZoneId = z.id;
+          break;
+        }
+      }
+    }
+
+    if (matchedZoneId) {
+      const zoneMethods = methodsRes.rows.filter((m: any) => m.zone_id === matchedZoneId);
+      if (zoneMethods.length > 0) {
+        const method = zoneMethods[0] as any;
+        shippingCents = method.cost;
+        if (method.free_shipping_threshold && subtotalEur >= method.free_shipping_threshold) {
+          shippingCents = 0;
+        }
+      }
+    }
+
+    return res.json({ shippingCents, shippingCost: shippingCents / 100 });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ================================================================
 // PEDIDOS & CHECKOUT CUSTOM (PostgreSQL)
 // ================================================================
 app.post('/api/orders/create', async (req: any, res: any) => {
@@ -3155,9 +3952,59 @@ app.post('/api/orders/create', async (req: any, res: any) => {
 
     // Aplicar lógica de Tiers
     let discountPercent = 0;
-    let shippingCents = 1500; // 15.00€ por defecto
-
+    
+    // ================================================================
+    // LOGICA AVANZADA DE ENVÍOS (ZONAS Y TARIFAS)
+    // ================================================================
+    let shippingCents = 1500; // Fallback 15.00€
     const subtotalEur = subtotalCents / 100;
+    
+    // Obtener zona y método
+    const reqCountry = shippingData.country || 'ES';
+    const reqZip = shippingData.postcode || shippingData.zipCode || '';
+    const prefix2 = reqZip.substring(0, 2);
+    
+    // Buscar la zona adecuada (intentar match exacto de país+prefijo, luego match de país, luego usar fallback)
+    const zonesRes = await db.execute(sql`SELECT * FROM shipping_zones`);
+    const methodsRes = await db.execute(sql`SELECT * FROM shipping_methods WHERE active = 1`);
+    
+    let matchedZoneId = null;
+    let exactMatch = false;
+    
+    // 1. Match exacto (ej. "ES-07")
+    for (const z of zonesRes.rows) {
+      const regions = z.regions as string[];
+      if (regions && regions.includes(`${reqCountry}-${prefix2}`)) {
+        matchedZoneId = z.id;
+        exactMatch = true;
+        break;
+      }
+    }
+    
+    // 2. Match general de país (ej. "ES" sin más sufijos) si no hubo match exacto
+    if (!exactMatch) {
+      for (const z of zonesRes.rows) {
+        const regions = z.regions as string[];
+        if (regions && regions.includes(reqCountry)) {
+          matchedZoneId = z.id;
+          break;
+        }
+      }
+    }
+    
+    if (matchedZoneId) {
+      // Buscar método de envío asociado
+      const zoneMethods = methodsRes.rows.filter((m: any) => m.zone_id === matchedZoneId);
+      if (zoneMethods.length > 0) {
+        const method = zoneMethods[0] as any;
+        shippingCents = method.cost;
+        if (method.free_shipping_threshold && subtotalEur >= method.free_shipping_threshold) {
+          shippingCents = 0;
+        }
+      }
+    }
+    // ================================================================
+
     if (subtotalEur >= 500) {
       discountPercent = 15;
       shippingCents = 0;
@@ -3335,7 +4182,7 @@ app.post('/api/orders/finalize', async (req: any, res: any) => {
         const paymentIntent = await client.paymentIntents.retrieve(paymentId);
         if (paymentIntent.status !== 'succeeded') {
           console.warn(`[ORDER FINALIZE WARNING]: PaymentIntent ${paymentId} is in status ${paymentIntent.status}. Rejecting order finalization.`);
-          return res.status(400).json({ error: `El pago no está confirmado en Stripe (Estado: ${paymentIntent.status})` });
+          return res.status(400).json({ error: 'El pago ha sido rechazado o cancelado. Por favor, inténtalo de nuevo o prueba con otro método de pago.' });
         }
       } catch (stripeErr: any) {
         console.error('[ORDER FINALIZE STRIPE VERIFY ERROR]:', stripeErr);
@@ -3526,7 +4373,7 @@ app.post('/api/contact', async (req: any, res: any) => {
       port: 465,
       secure: true,
       auth: {
-        user: process.env.SMTP_USER || "web@backendescapes.com",
+        user: process.env.SMTP_USER || "web@escapesymas.com",
         pass: process.env.SMTP_PASSWORD || "Pedrito2011P!"
       },
       tls: {
@@ -3539,7 +4386,7 @@ app.post('/api/contact', async (req: any, res: any) => {
     console.log("[CONTACT] Transporter verified successfully");
 
     const mailOptions = {
-      from: '"Escapes y Más Web" <web@backendescapes.com>',
+      from: '"Escapes y Más Web" <web@escapesymas.com>',
       to: "info@escapesymas.com",
       replyTo: email,
       subject: `Consulta de ${subject || 'General'}`,
@@ -3581,7 +4428,7 @@ app.post('/api/warranty', async (req: any, res: any) => {
       port: 465,
       secure: true,
       auth: {
-        user: process.env.SMTP_USER || 'web@backendescapes.com',
+        user: process.env.SMTP_USER || 'web@escapesymas.com',
         pass: process.env.SMTP_PASSWORD || 'Pedrito2011P!'
       },
       tls: {
@@ -3635,7 +4482,7 @@ app.post('/api/warranty', async (req: any, res: any) => {
 
     try {
       await transporter.sendMail({
-        from: '"Portal Garantías" <web@backendescapes.com>',
+        from: '"Portal Garantías" <web@escapesymas.com>',
         to: 'garantiasydevoluciones@escapesymas.com',
         replyTo: email,
         subject: `[GARANTÍA] ${invoiceNumber} - ${buyerName}`,
@@ -3644,7 +4491,7 @@ app.post('/api/warranty', async (req: any, res: any) => {
       });
 
       await transporter.sendMail({
-        from: '"Escapes y Más" <web@backendescapes.com>',
+        from: '"Escapes y Más" <web@escapesymas.com>',
         to: email,
         replyTo: 'garantiasydevoluciones@escapesymas.com',
         subject: 'Hemos recibido tu solicitud de garantía',
@@ -3680,7 +4527,14 @@ function mapProductToFrontend(row: any) {
   const priceEur = (row.price || 0) / 100;
   const salePriceEur = row.sale_price ? row.sale_price / 100 : null;
   let images: any[] = [];
-  try { images = row.images ? JSON.parse(row.images) : []; } catch { }
+  if (row.images) {
+    if (typeof row.images === 'string') {
+      try { images = JSON.parse(row.images); } catch { images = []; }
+    } else {
+      images = row.images;
+    }
+  }
+  
   images = (Array.isArray(images) ? images : []).map((img: any) => {
     if (typeof img === 'string') return { src: img, alt: row.name };
     if (img.srcSet && typeof img.srcSet === 'object') {
@@ -3692,10 +4546,22 @@ function mapProductToFrontend(row: any) {
         alt: img.alt || row.name
       };
     }
+    // Map URL to SRC for legacy data or API data
+    if (img.url && !img.src) {
+      img.src = img.url;
+    }
     return img;
   });
+  if (row.sku === '1124335') {
+    console.log('[DEBUG] 1124335 raw images:', row.images);
+    console.log('[DEBUG] 1124335 mapped images:', JSON.stringify(images));
+  }
   let compatibility: any[] = [];
-  try { compatibility = row.compatibility ? JSON.parse(row.compatibility) : []; } catch { }
+  try {
+    if (row.compatibility) {
+      compatibility = typeof row.compatibility === 'string' ? JSON.parse(row.compatibility) : row.compatibility;
+    }
+  } catch { }
 
   const categoryMap: Record<number, { name: string; slug: string }> = {
     1: { name: "Sistemas de Escape", slug: "escapes" },
@@ -3750,14 +4616,32 @@ function mapProductToFrontend(row: any) {
     804: { name: "Cascos Off-Road", slug: "cascos-off-road" },
 
     901: { name: "Chaquetas Moto", slug: "chaquetas-moto" },
-    902: { name: "Monos", slug: "monos" },
-    903: { name: "Guantes de Competición", slug: "guantes-competicion" },
-    904: { name: "Botas Racing", slug: "botas-racing" },
+    902: { name: "Monos & Pantalones", slug: "monos-pantalones" },
+    903: { name: "Guantes", slug: "guantes" },
+    904: { name: "Botas", slug: "botas" },
+    905: { name: "Ropa Térmica & Interior", slug: "ropa-termica-interior" },
+    906: { name: "Gafas & Lentes", slug: "gafas-lentes" },
+    907: { name: "Protecciones", slug: "protecciones" },
+    908: { name: "Ropa Deportiva & Merch", slug: "ropa-deportiva" },
+    909: { name: "Otros Accesorios Piloto", slug: "otros-accesorios-piloto" },
 
     1001: { name: "Maletas & Baúles", slug: "maletas-baules" },
     1002: { name: "Soportes Quad Lock", slug: "soportes-quad-lock" },
     1003: { name: "Intercomunicadores", slug: "intercomunicadores" },
-    1004: { name: "Personalización & Espejos", slug: "personalizacion-espejos" }
+    1004: { name: "Personalización & Espejos", slug: "personalizacion-espejos" },
+    1006: { name: "Accesorios Genéricos", slug: "accesorios-genericos" },
+    1007: { name: "Confort y Conveniencia", slug: "confort-conveniencia" },
+    1008: { name: "Piezas de Diseño/Estética", slug: "piezas-diseno" },
+    1009: { name: "Accesorios Eléctricos", slug: "accesorios-electricos" },
+    1010: { name: "Accesorios Electrónicos", slug: "accesorios-electronicos" },
+    1011: { name: "Plásticos y Protecciones", slug: "plasticos-protecciones" },
+    1012: { name: "Componentes de Bicicleta", slug: "componentes-bicicleta" },
+    1013: { name: "Accesorios Moto", slug: "accesorios-moto" },
+    1014: { name: "Accesorios Scooter", slug: "accesorios-scooter" },
+    1017: { name: "Herramientas & Taller", slug: "herramientas-taller" },
+    1018: { name: "Accesorios ATV / Quad", slug: "accesorios-atv-quad" },
+    1019: { name: "Lubricantes & Químicos", slug: "lubricantes-quimicos" },
+    1020: { name: "Consumibles Taller", slug: "consumibles-taller" }
   };
   const catInfo = categoryMap[row.category_id] || { name: "General", slug: "general" };
 
@@ -3853,15 +4737,33 @@ app.get('/api/catalog/categories', (req, res) => {
     805: { name: "Recambios Cascos", slug: "recambios-cascos" },
 
     901: { name: "Chaquetas Moto", slug: "chaquetas-moto" },
-    902: { name: "Monos", slug: "monos" },
-    903: { name: "Guantes de Competición", slug: "guantes-competicion" },
-    904: { name: "Botas Racing", slug: "botas-racing" },
+    902: { name: "Monos & Pantalones", slug: "monos-pantalones" },
+    903: { name: "Guantes", slug: "guantes" },
+    904: { name: "Botas", slug: "botas" },
+    905: { name: "Ropa Térmica & Interior", slug: "ropa-termica-interior" },
+    906: { name: "Gafas & Lentes", slug: "gafas-lentes" },
+    907: { name: "Protecciones", slug: "protecciones" },
+    908: { name: "Ropa Deportiva & Merch", slug: "ropa-deportiva" },
+    909: { name: "Otros Accesorios Piloto", slug: "otros-accesorios-piloto" },
 
     1001: { name: "Maletas & Baúles", slug: "maletas-baules" },
     1002: { name: "Soportes Quad Lock", slug: "soportes-quad-lock" },
     1003: { name: "Intercomunicadores", slug: "intercomunicadores" },
     1004: { name: "Personalización & Espejos", slug: "personalizacion-espejos" },
-    1005: { name: "Promocional", slug: "promocional" }
+    1005: { name: "Promocional", slug: "promocional" },
+    1006: { name: "Accesorios Genéricos", slug: "accesorios-genericos" },
+    1007: { name: "Confort y Conveniencia", slug: "confort-conveniencia" },
+    1008: { name: "Piezas de Diseño/Estética", slug: "piezas-diseno" },
+    1009: { name: "Accesorios Eléctricos", slug: "accesorios-electricos" },
+    1010: { name: "Accesorios Electrónicos", slug: "accesorios-electronicos" },
+    1011: { name: "Plásticos y Protecciones", slug: "plasticos-protecciones" },
+    1012: { name: "Componentes de Bicicleta", slug: "componentes-bicicleta" },
+    1013: { name: "Accesorios Moto", slug: "accesorios-moto" },
+    1014: { name: "Accesorios Scooter", slug: "accesorios-scooter" },
+    1017: { name: "Herramientas & Taller", slug: "herramientas-taller" },
+    1018: { name: "Accesorios ATV / Quad", slug: "accesorios-atv-quad" },
+    1019: { name: "Lubricantes & Químicos", slug: "lubricantes-quimicos" },
+    1020: { name: "Consumibles Taller", slug: "consumibles-taller" }
   };
 
   const subcategories = Object.entries(categoryMap)
@@ -3894,7 +4796,7 @@ async function sendShipmentNotificationEmail(orderId: number, email: string, fir
       port: 465,
       secure: true,
       auth: {
-        user: process.env.SMTP_USER || "web@backendescapes.com",
+        user: process.env.SMTP_USER || "web@escapesymas.com",
         pass: process.env.SMTP_PASSWORD || "Pedrito2011P!"
       },
       tls: {
@@ -3906,7 +4808,7 @@ async function sendShipmentNotificationEmail(orderId: number, email: string, fir
     const trackLink = trackingUrl || `https://www.google.com/search?q=tracking+${trackingNumber}`;
 
     const mailOptions = {
-      from: '"Escapes y Más" <web@backendescapes.com>',
+      from: '"Escapes y Más" <web@escapesymas.com>',
       to: email,
       subject: `🏍️ ¡Tu pedido #${orderId} ha sido enviado!`,
       html: `
@@ -4088,6 +4990,30 @@ setInterval(() => {
 
 // Ejecución al iniciar
 checkPendingDropshippingOrders().catch(e => console.error('[DROPSHIPPING DAEMON INITIAL RUN ERROR]:', e));
+
+// ================================================================
+// CHECKOUT SESSION
+// ================================================================
+app.get('/api/checkout-session', async (req: any, res: any) => {
+  const { orderId } = req.query;
+  if (!orderId) return res.status(400).json({ error: 'Missing orderId' });
+
+  try {
+    const oRes = await db.execute(sql`SELECT payment_id FROM orders WHERE id = ${parseInt(orderId)}`);
+    if (oRes.rows.length === 0) return res.status(404).json({ error: 'Order not found' });
+    
+    const paymentId = oRes.rows[0].payment_id;
+    if (!paymentId) return res.status(400).json({ error: 'No payment session for this order' });
+
+    const client = getStripeClient(req);
+    const session = await client.checkout.sessions.retrieve(paymentId);
+    
+    return res.json({ clientSecret: session.client_secret });
+  } catch(e: any) {
+    console.error('[CHECKOUT SESSION ERROR]', e);
+    return res.status(500).json({ error: e.message });
+  }
+});
 
 // ================================================================
 // ARRANQUE
