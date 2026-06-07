@@ -22,7 +22,7 @@ function updateCatalogSyncState(state: any) {
 // ================================================================
 const BIHR_API_BASE = process.env.BIHR_API_BASE || 'https://api.bihr.net';
 const BIHR_USERNAME = process.env.BIHR_USERNAME || 'info@escapesymas.com';
-const BIHR_MACKEY = process.env.BIHR_MACKEY || '3799B392-3934-4514-ABF0-9EF7F544A117';
+const BIHR_MACKEY = process.env.BIHR_MACKEY;
 
 // Estado de caché del token
 let cachedToken: string | null = null;
@@ -495,7 +495,7 @@ async function processCatalogJson(filePath: string, catalogType: string, startTi
   });
 
   const pool = new Pool({
-    connectionString: process.env.DATABASE_URL || "postgresql://postgres:EscapesPostgres2026Vercel@localhost:5432/escapes_db",
+    connectionString: process.env.DATABASE_URL,
     ssl: false,
     max: 5
   });
@@ -637,6 +637,22 @@ async function processCatalogJson(filePath: string, catalogType: string, startTi
         const deliveryPlant = ref.DeliveryPlant || '';
         const commodityCode = ref.CommodityCode || '';
 
+        // Atributos para filtros
+        const FILTER_ATTR_KEYS = [
+          'Talla', 'Color', 'V-Color', 'V-Talla', 'V-Tamaño',
+          'Estilo de casco', 'Tipo de cierre', 'Modelo de casco',
+          'Estilo de pintura', 'Acabado de la pintura',
+          'Composición', 'Homologación', 'Colección',
+          'Tipo de pieza de repuesto'
+        ];
+        const attrs: Record<string, string> = {};
+        for (const key of FILTER_ATTR_KEYS) {
+          if (ref[key] !== undefined && ref[key] !== null && ref[key] !== '') {
+            attrs[key] = String(ref[key]);
+          }
+        }
+        const attributesJson = JSON.stringify(attrs);
+
         const result = await client.query(`
           INSERT INTO products (
             sku, name, brand, supplier_code, old_part_number,
@@ -644,14 +660,14 @@ async function processCatalogJson(filePath: string, catalogType: string, startTi
             category_id, category2, category3, category2_id,
             weight_g, length_mm, width_mm, height_mm, volume_cm3,
             dropshipping, ondemand, delivery_plant, commodity_code,
-            status, created_at, updated_at
+            attributes, status, created_at, updated_at
           ) VALUES (
             $1, $2, $3, $4, $5,
             $6, $7, $8, $9, $10,
             $11, $12, $13, $14,
             $15, $16, $17, $18, $19,
             $20, $21, $22, $23,
-            'published', NOW(), NOW()
+            $24::jsonb, 'published', NOW(), NOW()
           )
           ON CONFLICT (sku) DO UPDATE SET
             name = EXCLUDED.name,
@@ -676,6 +692,7 @@ async function processCatalogJson(filePath: string, catalogType: string, startTi
             ondemand = EXCLUDED.ondemand,
             delivery_plant = EXCLUDED.delivery_plant,
             commodity_code = EXCLUDED.commodity_code,
+            attributes = EXCLUDED.attributes,
             updated_at = NOW()
           RETURNING id, (xmax = 0) AS inserted
         `, [
@@ -683,7 +700,8 @@ async function processCatalogJson(filePath: string, catalogType: string, startTi
           cost, price, stockVal, barcode, description,
           categoryId, ref.Category2 || '', ref.Category3 || '', category2Id,
           weightG, lengthMm, widthMm, heightMm, volumeCm3,
-          dropshipping, ondemand, deliveryPlant, commodityCode
+          dropshipping, ondemand, deliveryPlant, commodityCode,
+          attributesJson
         ]);
 
         if (result.rows[0]?.inserted) {

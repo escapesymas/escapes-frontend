@@ -22,14 +22,21 @@ import {
   getLiveStockLevel, getLiveStockValue, checkProductsInfo, createBihrOrder, syncBihrCatalog 
 } from './bihrService.js';
 import Stripe from 'stripe';
+import rateLimit from 'express-rate-limit';
 
-const stripeLive = new Stripe(process.env.STRIPE_SECRET_KEY || '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', {
+const stripeLiveKey = process.env.STRIPE_SECRET_KEY;
+if (!stripeLiveKey) {
+  console.warn('[WARNING] STRIPE_SECRET_KEY not set — Stripe payments will fail. Set it in .env');
+}
+
+const stripeLive = new Stripe(stripeLiveKey || 'sk_missing_set_env', {
   apiVersion: '2026-05-27.dahlia' as any,
 });
 
-const stripeTest = new Stripe(process.env.STRIPE_TEST_SECRET_KEY || 'sk_test_51TXr6bPhkRo6LHVF56RZeONSqwNNY37oRjmXs2PiLnpOkfHddHhwDiKOjxSC0tbOgTbZeOygPWO7uPEJSHCJ34Bt009j0UTRey', {
-  apiVersion: '2026-05-27.dahlia' as any,
-});
+const stripeTestKey = process.env.STRIPE_TEST_SECRET_KEY;
+const stripeTest = stripeTestKey
+  ? new Stripe(stripeTestKey, { apiVersion: '2026-05-27.dahlia' as any })
+  : stripeLive;
 
 function getStripeClient(req: any): any {
   // Always use live mode in production.
@@ -47,7 +54,7 @@ async function sendMail(to: string, subject: string, text: string, html?: string
       secure: true,
       auth: {
         user: process.env.SMTP_USER || "web@escapesymas.com",
-        pass: process.env.SMTP_PASSWORD || "Pedrito2011P!"
+        pass: process.env.SMTP_PASSWORD
       },
       tls: {
         rejectUnauthorized: false
@@ -72,17 +79,21 @@ async function sendMail(to: string, subject: string, text: string, html?: string
 // ================================================================
 const PORT = process.env.PORT || 3001;
 const WP_URL = process.env.WP_URL || 'https://backendescapes.com';
-const WOO_KEY = process.env.WOO_KEY || 'ck_1525ca6e68eadc50cd7b69ae408ebb05b93c78e9';
-const WOO_SECRET = process.env.WOO_SECRET || 'cs_42b5d60e45d4f6e710fa0fa0b35f1ae21964981a';
+const WOO_KEY = process.env.WOO_KEY;
+const WOO_SECRET = process.env.WOO_SECRET;
 
-// Bypass SSL para WordPress legacy
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+// Startup validation: warn if production credentials are missing
+if (!process.env.DATABASE_URL) console.warn('[WARNING] DATABASE_URL not set');
+if (!process.env.STRIPE_SECRET_KEY) console.warn('[WARNING] STRIPE_SECRET_KEY not set');
+if (!process.env.SMTP_PASSWORD) console.warn('[WARNING] SMTP_PASSWORD not set');
+if (!process.env.JWT_ADMIN_SECRET) console.warn('[WARNING] JWT_ADMIN_SECRET not set — using insecure default');
+if (!process.env.BIHR_MACKEY) console.warn('[WARNING] BIHR_MACKEY not set — Bihr sync will fail');
 
 // ================================================================
 // BASE DE DATOS (PostgreSQL localhost en VPS)
 // ================================================================
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || "postgresql://postgres:EscapesPostgres2026Vercel@localhost:5432/escapes_db",
+  connectionString: process.env.DATABASE_URL,
   ssl: false
 });
 
@@ -184,9 +195,19 @@ const db = drizzle(pool);
       );
       
       INSERT INTO image_regen_state (id, status) VALUES (1, 'idle') ON CONFLICT (id) DO NOTHING;
+
+      CREATE TABLE IF NOT EXISTS stock_notifications (
+        id SERIAL PRIMARY KEY,
+        product_id INTEGER NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        notified BOOLEAN DEFAULT FALSE,
+        UNIQUE(product_id, email)
+      );
     `);
     console.log('✅ Database schema aligned successfully!');
-    // Cargar índice de compatibilidades en segundo plano
+    // Cargar mapa de categorías e índice de compatibilidades en segundo plano
+    initCategoryMap().catch(e => console.error('[CATEGORY MAP INITIAL LOAD ERROR]:', e));
     initCompatIndex().catch(e => console.error('[COMPAT INDEX INITIAL LOAD ERROR]:', e));
   } catch (err) {
     console.error('❌ Failed to align database schema:', err);
@@ -497,7 +518,7 @@ function sanitizeString(str: string): string {
 }
 
 function sanitizeLike(str: string): string {
-  return sanitizeString(str).replace(/%/g, '\\%').replace(/_/g, '\\_');
+  return sanitizeString(str).replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
 }
 
 function parseIntSafe(value: any): number | null {
@@ -693,6 +714,28 @@ app.post('/api/bihr/sync-images/control', async (req: any, res: any) => {
     res.status(500).json({ error: `Fallo al ejecutar acción ${action} de imágenes`, details: error.message });
   }
 });
+
+let categoryMap: Record<number, { name: string; slug: string }> = {};
+let categoryMapLoading = false;
+
+async function initCategoryMap() {
+  if (categoryMapLoading) return;
+  categoryMapLoading = true;
+  try {
+    const res = await pool.query(
+      `SELECT id, name, slug FROM categories WHERE status = 'active'`
+    );
+    const map: Record<number, { name: string; slug: string }> = {};
+    for (const row of res.rows) {
+      map[row.id] = { name: row.name, slug: row.slug };
+    }
+    categoryMap = map;
+  } catch (err) {
+    console.error('❌ Failed to load category map:', err);
+  } finally {
+    categoryMapLoading = false;
+  }
+}
 
 let compatIndex: Map<string, Map<number, Array<{ sku: string, model: string }>>> | null = null;
 let isIndexLoading = false;
@@ -927,7 +970,28 @@ app.get('/api/vehicles', async (req, res) => {
 // CATÁLOGO PÚBLICO (sin autenticación)
 // ================================================================
 
-// ── SITEMAP ENDPOINT ──────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// RATE LIMITING
+// ═══════════════════════════════════════════════════════════════════════════════
+const adminLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas peticiones. Inténtalo de nuevo en un minuto.' }
+});
+
+const catalogLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas peticiones al catálogo. Inténtalo de nuevo.' }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SITEMAP ENDPOINT
+// ═══════════════════════════════════════════════════════════════════════════════
 app.get('/api/catalog/sitemap-skus', async (req, res) => {
   try {
     const page = parseInt((req.query.page as string) || '1', 10);
@@ -948,14 +1012,14 @@ app.get('/api/catalog/sitemap-skus', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch sitemap SKUs' });
   }
 });
-app.get('/api/catalog/products', async (req, res) => {
+app.get('/api/catalog/products', catalogLimiter, async (req, res) => {
   try {
-    const { search, category_id, page = '1', per_page = '20', universal } = req.query as any;
+    const { search, category_id, page = '1', per_page = '20', universal, brand, min_price, max_price, in_stock, attrs } = req.query as any;
     const pageNum = parseInt(page);
     const perPage = parseInt(per_page);
     const offset = (pageNum - 1) * perPage;
 
-    const cacheKey = `/api/catalog/products?search=${search || ''}&category_id=${category_id || ''}&page=${page}&per_page=${per_page}&universal=${universal || ''}`;
+    const cacheKey = `/api/catalog/products?search=${search || ''}&category_id=${category_id || ''}&page=${page}&per_page=${per_page}&universal=${universal || ''}&brand=${brand || ''}&min_price=${min_price || ''}&max_price=${max_price || ''}&in_stock=${in_stock || ''}&attrs=${attrs || ''}`;
 
     // Catálogo público: 1 min de datos frescos, 10 min de gracia SWR
     const result = await executeSWR(cacheKey, async () => {
@@ -977,63 +1041,101 @@ app.get('/api/catalog/products', async (req, res) => {
         )`;
       }
 
+      // Filter params
+      if (brand) {
+        const b = sanitizeLike(brand);
+        baseWhereClause += ` AND LOWER(brand) = LOWER('${b}')`;
+      }
+      if (min_price) {
+        const mp = parseInt(min_price);
+        if (!isNaN(mp)) baseWhereClause += ` AND price >= ${mp * 100}`;
+      }
+      if (max_price) {
+        const mp = parseInt(max_price);
+        if (!isNaN(mp)) baseWhereClause += ` AND price <= ${mp * 100}`;
+      }
+      if (in_stock === 'true') {
+        baseWhereClause += ` AND stock > 0`;
+      }
+      if (attrs) {
+        try {
+          const attrsObj = JSON.parse(attrs);
+          if (typeof attrsObj === 'object' && !Array.isArray(attrsObj)) {
+            baseWhereClause += ` AND attributes @> '${JSON.stringify(attrsObj)}'::jsonb`;
+          }
+        } catch {}
+      }
+
       if (category_id) {
         const catId = parseInt(category_id);
         if (!isNaN(catId)) {
-          if (catId >= 100) {
+          const categoryRules: Record<number, string> = {
+            101: "(LOWER(name) LIKE '%racing%' OR LOWER(name) LIKE '%completo%')",
+            102: "(LOWER(name) LIKE '%silenciador%' OR LOWER(name) LIKE '%silencioso%' OR LOWER(name) LIKE '%slip-on%' OR LOWER(name) LIKE '%escape%')",
+            103: "(LOWER(name) LIKE '%colector%' OR LOWER(name) LIKE '%header%')",
+            104: "(LOWER(name) LIKE '%accesorio%')",
+            201: "(LOWER(name) LIKE '%pastilla%' OR LOWER(name) LIKE '%pad%')",
+            202: "(LOWER(name) LIKE '%disco%' OR LOWER(name) LIKE '%disc%')",
+            203: "(LOWER(name) LIKE '%bomba%' OR LOWER(name) LIKE '%pump%')",
+            204: "(LOWER(name) LIKE '%latiguillo%' OR LOWER(name) LIKE '%line%')",
+            301: "(LOWER(name) LIKE '%amortiguador%' OR LOWER(name) LIKE '%shock%')",
+            302: "(LOWER(name) LIKE '%horquilla%' OR LOWER(name) LIKE '%fork%')",
+            303: "(LOWER(name) LIKE '%direccion%' OR LOWER(name) LIKE '%steering%')",
+            304: "(LOWER(name) LIKE '%estribera%' OR LOWER(name) LIKE '%peg%')",
+            401: "(LOWER(name) LIKE '%centralita%' OR LOWER(name) LIKE '%ecu%')",
+            402: "(LOWER(name) LIKE '%quickshifter%' OR LOWER(name) LIKE '%shifter%')",
+            403: "(LOWER(name) LIKE '%abs%' OR LOWER(name) LIKE '%tc%')",
+            404: "(LOWER(name) LIKE '%litio%' OR LOWER(name) LIKE '%lithium%')",
+            501: "(LOWER(name) LIKE '%kit%')",
+            502: "(LOWER(name) LIKE '%cadena%' OR LOWER(name) LIKE '%chain%')",
+            503: "(LOWER(name) LIKE '%piñon%' OR LOWER(name) LIKE '%sprocket%')",
+            504: "(LOWER(name) LIKE '%corona%')",
+            601: "(LOWER(name) LIKE '%filtro%' OR LOWER(name) LIKE '%filter%')",
+            602: "(LOWER(name) LIKE '%filtro aceite%')",
+            603: "(LOWER(name) LIKE '%aceite%' OR LOWER(name) LIKE '%oil%')",
+            604: "(LOWER(name) LIKE '%liquido%' OR LOWER(name) LIKE '%fluid%')",
+            701: "(LOWER(name) LIKE '%neumatico%' OR LOWER(name) LIKE '%tire%' OR LOWER(name) LIKE '%slick%')",
+            702: "(LOWER(name) LIKE '%calentador%' OR LOWER(name) LIKE '%warmer%')",
+            703: "(LOWER(name) LIKE '%caballete%' OR LOWER(name) LIKE '%stand%')",
+            704: "(LOWER(name) LIKE '%manometro%' OR LOWER(name) LIKE '%gauge%')",
+            801: "(LOWER(name) NOT LIKE '%modular%' AND LOWER(name) NOT LIKE '%flip-up%' AND LOWER(name) NOT LIKE '%system%' AND LOWER(name) NOT LIKE '%jet%' AND LOWER(name) NOT LIKE '%open face%' AND LOWER(name) NOT LIKE '%open-face%' AND LOWER(name) NOT LIKE '%off-road%' AND LOWER(name) NOT LIKE '%offroad%' AND LOWER(name) NOT LIKE '%cross%' AND LOWER(name) NOT LIKE '%enduro%' AND LOWER(name) NOT LIKE '%trial%' AND LOWER(name) NOT LIKE '%dual-sport%' AND LOWER(name) NOT LIKE '%dualsport%')",
+            802: "(LOWER(name) LIKE '%modular%' OR LOWER(name) LIKE '%flip-up%' OR LOWER(name) LIKE '%system%')",
+            803: "(LOWER(name) LIKE '%jet%' OR LOWER(name) LIKE '%open face%' OR LOWER(name) LIKE '%open-face%')",
+            804: "(LOWER(name) LIKE '%off-road%' OR LOWER(name) LIKE '%offroad%' OR LOWER(name) LIKE '%cross%' OR LOWER(name) LIKE '%enduro%' OR LOWER(name) LIKE '%trial%' OR LOWER(name) LIKE '%dual-sport%' OR LOWER(name) LIKE '%dualsport%')",
+            901: "(LOWER(name) LIKE '%chaqueta%' OR LOWER(name) LIKE '%jacket%')",
+            902: "(LOWER(name) LIKE '%mono%' AND LOWER(name) NOT LIKE '%glove%' AND LOWER(name) NOT LIKE '%guante%' AND LOWER(name) NOT LIKE '%pants%' AND LOWER(name) NOT LIKE '%pantalón%' AND LOWER(name) NOT LIKE '%jersey%' AND LOWER(name) NOT LIKE '%camiseta%' AND LOWER(name) NOT LIKE '%chaqueta%' AND LOWER(name) NOT LIKE '%bota%')",
+            903: "(LOWER(name) LIKE '%guante%' OR LOWER(name) LIKE '%glove%')",
+            904: "(LOWER(name) LIKE '%bota%' OR LOWER(name) LIKE '%boot%')",
+            1001: "(LOWER(name) LIKE '%baul%' OR LOWER(name) LIKE '%maleta%' OR LOWER(name) LIKE '%case%')",
+            1002: "(LOWER(name) LIKE '%quad lock%')",
+            1003: "(LOWER(name) LIKE '%intercom%')",
+            1004: "(LOWER(name) LIKE '%retrovisor%' OR LOWER(name) LIKE '%espejo%' OR LOWER(name) LIKE '%mirror%')",
+            805: "(LOWER(name) LIKE '%recambio%' OR LOWER(name) LIKE '%accesorio%' OR LOWER(name) LIKE '%pieza%' OR LOWER(name) LIKE '%almohadilla%' OR LOWER(name) LIKE '%visera%' OR LOWER(name) LIKE '%pantalla%' OR LOWER(name) LIKE '%pinlock%')",
+            1005: "(LOWER(name) LIKE '%promocional%' OR LOWER(name) LIKE '%goodie%' OR LOWER(name) LIKE '%display%')"
+          };
+          const clause = categoryRules[catId];
+          if (clause) {
             const parentId = Math.floor(catId / 100);
-            const categoryRules: Record<number, string> = {
-              101: "(LOWER(name) LIKE '%racing%' OR LOWER(name) LIKE '%completo%')",
-              102: "(LOWER(name) LIKE '%silenciador%' OR LOWER(name) LIKE '%silencioso%' OR LOWER(name) LIKE '%slip-on%' OR LOWER(name) LIKE '%escape%')",
-              103: "(LOWER(name) LIKE '%colector%' OR LOWER(name) LIKE '%header%')",
-              104: "(LOWER(name) LIKE '%accesorio%')",
-              201: "(LOWER(name) LIKE '%pastilla%' OR LOWER(name) LIKE '%pad%')",
-              202: "(LOWER(name) LIKE '%disco%' OR LOWER(name) LIKE '%disc%')",
-              203: "(LOWER(name) LIKE '%bomba%' OR LOWER(name) LIKE '%pump%')",
-              204: "(LOWER(name) LIKE '%latiguillo%' OR LOWER(name) LIKE '%line%')",
-              301: "(LOWER(name) LIKE '%amortiguador%' OR LOWER(name) LIKE '%shock%')",
-              302: "(LOWER(name) LIKE '%horquilla%' OR LOWER(name) LIKE '%fork%')",
-              303: "(LOWER(name) LIKE '%direccion%' OR LOWER(name) LIKE '%steering%')",
-              304: "(LOWER(name) LIKE '%estribera%' OR LOWER(name) LIKE '%peg%')",
-              401: "(LOWER(name) LIKE '%centralita%' OR LOWER(name) LIKE '%ecu%')",
-              402: "(LOWER(name) LIKE '%quickshifter%' OR LOWER(name) LIKE '%shifter%')",
-              403: "(LOWER(name) LIKE '%abs%' OR LOWER(name) LIKE '%tc%')",
-              404: "(LOWER(name) LIKE '%litio%' OR LOWER(name) LIKE '%lithium%')",
-              501: "(LOWER(name) LIKE '%kit%')",
-              502: "(LOWER(name) LIKE '%cadena%' OR LOWER(name) LIKE '%chain%')",
-              503: "(LOWER(name) LIKE '%piñon%' OR LOWER(name) LIKE '%sprocket%')",
-              504: "(LOWER(name) LIKE '%corona%')",
-              601: "(LOWER(name) LIKE '%filtro%' OR LOWER(name) LIKE '%filter%')",
-              602: "(LOWER(name) LIKE '%filtro aceite%')",
-              603: "(LOWER(name) LIKE '%aceite%' OR LOWER(name) LIKE '%oil%')",
-              604: "(LOWER(name) LIKE '%liquido%' OR LOWER(name) LIKE '%fluid%')",
-              701: "(LOWER(name) LIKE '%neumatico%' OR LOWER(name) LIKE '%tire%' OR LOWER(name) LIKE '%slick%')",
-              702: "(LOWER(name) LIKE '%calentador%' OR LOWER(name) LIKE '%warmer%')",
-              703: "(LOWER(name) LIKE '%caballete%' OR LOWER(name) LIKE '%stand%')",
-              704: "(LOWER(name) LIKE '%manometro%' OR LOWER(name) LIKE '%gauge%')",
-              801: "(LOWER(name) NOT LIKE '%modular%' AND LOWER(name) NOT LIKE '%flip-up%' AND LOWER(name) NOT LIKE '%system%' AND LOWER(name) NOT LIKE '%jet%' AND LOWER(name) NOT LIKE '%open face%' AND LOWER(name) NOT LIKE '%open-face%' AND LOWER(name) NOT LIKE '%off-road%' AND LOWER(name) NOT LIKE '%offroad%' AND LOWER(name) NOT LIKE '%cross%' AND LOWER(name) NOT LIKE '%enduro%' AND LOWER(name) NOT LIKE '%trial%' AND LOWER(name) NOT LIKE '%dual-sport%' AND LOWER(name) NOT LIKE '%dualsport%')",
-              802: "(LOWER(name) LIKE '%modular%' OR LOWER(name) LIKE '%flip-up%' OR LOWER(name) LIKE '%system%')",
-              803: "(LOWER(name) LIKE '%jet%' OR LOWER(name) LIKE '%open face%' OR LOWER(name) LIKE '%open-face%')",
-              804: "(LOWER(name) LIKE '%off-road%' OR LOWER(name) LIKE '%offroad%' OR LOWER(name) LIKE '%cross%' OR LOWER(name) LIKE '%enduro%' OR LOWER(name) LIKE '%trial%' OR LOWER(name) LIKE '%dual-sport%' OR LOWER(name) LIKE '%dualsport%')",
-              901: "(LOWER(name) LIKE '%chaqueta%' OR LOWER(name) LIKE '%jacket%')",
-              902: "(LOWER(name) LIKE '%mono%' AND LOWER(name) NOT LIKE '%glove%' AND LOWER(name) NOT LIKE '%guante%' AND LOWER(name) NOT LIKE '%pants%' AND LOWER(name) NOT LIKE '%pantalón%' AND LOWER(name) NOT LIKE '%jersey%' AND LOWER(name) NOT LIKE '%camiseta%' AND LOWER(name) NOT LIKE '%chaqueta%' AND LOWER(name) NOT LIKE '%bota%')",
-              903: "(LOWER(name) LIKE '%guante%' OR LOWER(name) LIKE '%glove%')",
-              904: "(LOWER(name) LIKE '%bota%' OR LOWER(name) LIKE '%boot%')",
-              1001: "(LOWER(name) LIKE '%baul%' OR LOWER(name) LIKE '%maleta%' OR LOWER(name) LIKE '%case%')",
-              1002: "(LOWER(name) LIKE '%quad lock%')",
-              1003: "(LOWER(name) LIKE '%intercom%')",
-              1004: "(LOWER(name) LIKE '%retrovisor%' OR LOWER(name) LIKE '%espejo%' OR LOWER(name) LIKE '%mirror%')",
-              805: "(LOWER(name) LIKE '%recambio%' OR LOWER(name) LIKE '%accesorio%' OR LOWER(name) LIKE '%pieza%' OR LOWER(name) LIKE '%almohadilla%' OR LOWER(name) LIKE '%visera%' OR LOWER(name) LIKE '%pantalla%' OR LOWER(name) LIKE '%pinlock%')",
-              1005: "(LOWER(name) LIKE '%promocional%' OR LOWER(name) LIKE '%goodie%' OR LOWER(name) LIKE '%display%')"
-            };
-            const clause = categoryRules[catId];
-            if (clause) {
-              baseWhereClause += ` AND (category_id = ${catId} OR category2_id = ${catId} OR category3_id = ${catId} OR (category_id = ${parentId} AND ${clause}))`;
-            } else {
-              baseWhereClause += ` AND (category_id = ${catId} OR category2_id = ${catId} OR category3_id = ${catId})`;
-            }
+            baseWhereClause += ` AND (
+              category_id IN (
+                WITH RECURSIVE descendants AS (
+                  SELECT id FROM categories WHERE id = ${catId}
+                  UNION ALL
+                  SELECT c.id FROM categories c JOIN descendants d ON c.parent_id = d.id
+                )
+                SELECT id FROM descendants
+              )
+              OR (category_id = ${parentId} AND ${clause})
+            )`;
           } else {
-            baseWhereClause += ` AND (category_id = ${catId} OR category_id BETWEEN ${catId * 100} AND ${(catId + 1) * 100 - 1})`;
+            baseWhereClause += ` AND category_id IN (
+              WITH RECURSIVE descendants AS (
+                SELECT id FROM categories WHERE id = ${catId}
+                UNION ALL
+                SELECT c.id FROM categories c JOIN descendants d ON c.parent_id = d.id
+              )
+              SELECT id FROM descendants
+            )`;
           }
         }
       }
@@ -1066,6 +1168,87 @@ app.get('/api/catalog/products', async (req, res) => {
     res.json(result.products);
   } catch (err: any) {
     console.error('[CATALOG ERROR]:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ================================================================
+// FILTER OPTIONS
+// ================================================================
+const FILTER_ATTR_KEYS = new Set([
+  'Talla', 'Color',
+  'Estilo de casco', 'Tipo de cierre', 'Modelo de casco',
+  'Estilo de pintura', 'Acabado de la pintura',
+  'Composición', 'Homologación', 'Colección',
+  'Tipo de pieza de repuesto'
+]);
+
+app.get('/api/catalog/filters', async (req, res) => {
+  try {
+    const { category_id, search, universal } = req.query as any;
+
+    const cacheKey = `/api/catalog/filters?category_id=${category_id || ''}&search=${search || ''}&universal=${universal || ''}`;
+
+    const result = await executeSWR(cacheKey, async () => {
+      let whereClause = "WHERE status = 'published'";
+
+      if (universal === 'true') {
+        whereClause += " AND (compatibility IS NULL OR compatibility = '[]'::jsonb OR compatibility::text = '[]')";
+      }
+
+      if (search) {
+        const s = sanitizeLike(search);
+        whereClause += ` AND (LOWER(name) LIKE LOWER('%${s}%') ESCAPE '\\' OR LOWER(sku) LIKE LOWER('%${s}%') ESCAPE '\\')`;
+      }
+
+      if (category_id) {
+        const catId = parseInt(category_id);
+        if (!isNaN(catId)) {
+          whereClause += ` AND category_id IN (
+            WITH RECURSIVE descendants AS (
+              SELECT id FROM categories WHERE id = ${catId}
+              UNION ALL
+              SELECT c.id FROM categories c JOIN descendants d ON c.parent_id = d.id
+            )
+            SELECT id FROM descendants
+          )`;
+        }
+      }
+
+      const attrKeysArr = Array.from(FILTER_ATTR_KEYS);
+      const attrKeysSql = attrKeysArr.map(k => `'${k.replace(/'/g, "''")}'`).join(', ');
+
+      const [brandsRes, priceRes, attrsRes] = await Promise.all([
+        db.execute(sql.raw(`SELECT DISTINCT brand FROM products ${whereClause} AND brand IS NOT NULL AND brand != '' ORDER BY brand`)),
+        db.execute(sql.raw(`SELECT MIN(price) as min_p, MAX(price) as max_p FROM products ${whereClause}`)),
+        db.execute(sql.raw(`
+          SELECT att.key, JSON_AGG(DISTINCT att.value) AS values
+          FROM products p, jsonb_each_text(p.attributes) AS att(key, value)
+          ${whereClause}
+            AND att.value IS NOT NULL AND att.value != ''
+            AND att.key IN (${attrKeysSql})
+          GROUP BY att.key
+          ORDER BY att.key
+        `))
+      ]);
+
+      const brands = brandsRes.rows.map((r: any) => r.brand).filter(Boolean);
+      const priceMinRow: any = priceRes.rows[0] || {};
+      const priceMin = priceMinRow.min_p ? Math.round(Number(priceMinRow.min_p) / 100) : 0;
+      const priceMax = priceMinRow.max_p ? Math.round(Number(priceMinRow.max_p) / 100) : 1000;
+
+      const attributes: Record<string, string[]> = {};
+      for (const row of attrsRes.rows) {
+        const r: any = row;
+        attributes[r.key] = r.values;
+      }
+
+      return { brands, price_min: priceMin, price_max: priceMax, attributes };
+    }, 300, 1800);
+
+    res.json(result);
+  } catch (err: any) {
+    console.error('[FILTERS ERROR]:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -1171,63 +1354,73 @@ app.get('/api/catalog/products-by-skus', async (req, res) => {
     if (category_id) {
       const catId = parseInt(category_id);
       if (!isNaN(catId)) {
-        if (catId >= 100) {
+        const categoryRules: Record<number, string> = {
+          101: "(LOWER(name) LIKE '%racing%' OR LOWER(name) LIKE '%completo%')",
+          102: "(LOWER(name) LIKE '%silenciador%' OR LOWER(name) LIKE '%silencioso%' OR LOWER(name) LIKE '%slip-on%' OR LOWER(name) LIKE '%escape%')",
+          103: "(LOWER(name) LIKE '%colector%' OR LOWER(name) LIKE '%header%')",
+          104: "(LOWER(name) LIKE '%accesorio%')",
+          201: "(LOWER(name) LIKE '%pastilla%' OR LOWER(name) LIKE '%pad%')",
+          202: "(LOWER(name) LIKE '%disco%' OR LOWER(name) LIKE '%disc%')",
+          203: "(LOWER(name) LIKE '%bomba%' OR LOWER(name) LIKE '%pump%')",
+          204: "(LOWER(name) LIKE '%latiguillo%' OR LOWER(name) LIKE '%line%')",
+          301: "(LOWER(name) LIKE '%amortiguador%' OR LOWER(name) LIKE '%shock%')",
+          302: "(LOWER(name) LIKE '%horquilla%' OR LOWER(name) LIKE '%fork%')",
+          303: "(LOWER(name) LIKE '%direccion%' OR LOWER(name) LIKE '%steering%')",
+          304: "(LOWER(name) LIKE '%estribera%' OR LOWER(name) LIKE '%peg%')",
+          401: "(LOWER(name) LIKE '%centralita%' OR LOWER(name) LIKE '%ecu%')",
+          402: "(LOWER(name) LIKE '%quickshifter%' OR LOWER(name) LIKE '%shifter%')",
+          403: "(LOWER(name) LIKE '%abs%' OR LOWER(name) LIKE '%tc%')",
+          404: "(LOWER(name) LIKE '%litio%' OR LOWER(name) LIKE '%lithium%')",
+          501: "(LOWER(name) LIKE '%kit%')",
+          502: "(LOWER(name) LIKE '%cadena%' OR LOWER(name) LIKE '%chain%')",
+          503: "(LOWER(name) LIKE '%piñon%' OR LOWER(name) LIKE '%sprocket%')",
+          504: "(LOWER(name) LIKE '%corona%')",
+          601: "(LOWER(name) LIKE '%filtro%' OR LOWER(name) LIKE '%filter%')",
+          602: "(LOWER(name) LIKE '%filtro aceite%')",
+          603: "(LOWER(name) LIKE '%aceite%' OR LOWER(name) LIKE '%oil%')",
+          604: "(LOWER(name) LIKE '%liquido%' OR LOWER(name) LIKE '%fluid%')",
+          701: "(LOWER(name) LIKE '%neumatico%' OR LOWER(name) LIKE '%tire%' OR LOWER(name) LIKE '%slick%')",
+          702: "(LOWER(name) LIKE '%calentador%' OR LOWER(name) LIKE '%warmer%')",
+          703: "(LOWER(name) LIKE '%caballete%' OR LOWER(name) LIKE '%stand%')",
+          704: "(LOWER(name) LIKE '%manometro%' OR LOWER(name) LIKE '%gauge%')",
+          801: "(LOWER(name) NOT LIKE '%modular%' AND LOWER(name) NOT LIKE '%flip-up%' AND LOWER(name) NOT LIKE '%system%' AND LOWER(name) NOT LIKE '%jet%' AND LOWER(name) NOT LIKE '%open face%' AND LOWER(name) NOT LIKE '%open-face%' AND LOWER(name) NOT LIKE '%off-road%' AND LOWER(name) NOT LIKE '%offroad%' AND LOWER(name) NOT LIKE '%cross%' AND LOWER(name) NOT LIKE '%enduro%' AND LOWER(name) NOT LIKE '%trial%' AND LOWER(name) NOT LIKE '%dual-sport%' AND LOWER(name) NOT LIKE '%dualsport%')",
+          802: "(LOWER(name) LIKE '%modular%' OR LOWER(name) LIKE '%flip-up%' OR LOWER(name) LIKE '%system%')",
+          803: "(LOWER(name) LIKE '%jet%' OR LOWER(name) LIKE '%open face%' OR LOWER(name) LIKE '%open-face%')",
+          804: "(LOWER(name) LIKE '%off-road%' OR LOWER(name) LIKE '%offroad%' OR LOWER(name) LIKE '%cross%' OR LOWER(name) LIKE '%enduro%' OR LOWER(name) LIKE '%trial%' OR LOWER(name) LIKE '%dual-sport%' OR LOWER(name) LIKE '%dualsport%')",
+          901: "(LOWER(name) LIKE '%chaqueta%' OR LOWER(name) LIKE '%jacket%')",
+          902: "(LOWER(name) LIKE '%mono%' AND LOWER(name) NOT LIKE '%glove%' AND LOWER(name) NOT LIKE '%guante%' AND LOWER(name) NOT LIKE '%pants%' AND LOWER(name) NOT LIKE '%pantalón%' AND LOWER(name) NOT LIKE '%jersey%' AND LOWER(name) NOT LIKE '%camiseta%' AND LOWER(name) NOT LIKE '%chaqueta%' AND LOWER(name) NOT LIKE '%bota%')",
+          903: "(LOWER(name) LIKE '%guante%' OR LOWER(name) LIKE '%glove%')",
+          904: "(LOWER(name) LIKE '%bota%' OR LOWER(name) LIKE '%boot%')",
+          1001: "(LOWER(name) LIKE '%baul%' OR LOWER(name) LIKE '%maleta%' OR LOWER(name) LIKE '%case%')",
+          1002: "(LOWER(name) LIKE '%quad lock%')",
+          1003: "(LOWER(name) LIKE '%intercom%')",
+          1004: "(LOWER(name) LIKE '%retrovisor%' OR LOWER(name) LIKE '%espejo%' OR LOWER(name) LIKE '%mirror%')",
+          805: "(LOWER(name) LIKE '%recambio%' OR LOWER(name) LIKE '%accesorio%' OR LOWER(name) LIKE '%pieza%' OR LOWER(name) LIKE '%almohadilla%' OR LOWER(name) LIKE '%visera%' OR LOWER(name) LIKE '%pantalla%' OR LOWER(name) LIKE '%pinlock%')",
+          1005: "(LOWER(name) LIKE '%promocional%' OR LOWER(name) LIKE '%goodie%' OR LOWER(name) LIKE '%display%')"
+        };
+        const clause = categoryRules[catId];
+        if (clause) {
           const parentId = Math.floor(catId / 100);
-          // Custom category matching expressions
-          const categoryRules: Record<number, string> = {
-            101: "(LOWER(name) LIKE '%racing%' OR LOWER(name) LIKE '%completo%')",
-            102: "(LOWER(name) LIKE '%silenciador%' OR LOWER(name) LIKE '%silencioso%' OR LOWER(name) LIKE '%slip-on%' OR LOWER(name) LIKE '%escape%')",
-            103: "(LOWER(name) LIKE '%colector%' OR LOWER(name) LIKE '%header%')",
-            104: "(LOWER(name) LIKE '%accesorio%')",
-            201: "(LOWER(name) LIKE '%pastilla%' OR LOWER(name) LIKE '%pad%')",
-            202: "(LOWER(name) LIKE '%disco%' OR LOWER(name) LIKE '%disc%')",
-            203: "(LOWER(name) LIKE '%bomba%' OR LOWER(name) LIKE '%pump%')",
-            204: "(LOWER(name) LIKE '%latiguillo%' OR LOWER(name) LIKE '%line%')",
-            301: "(LOWER(name) LIKE '%amortiguador%' OR LOWER(name) LIKE '%shock%')",
-            302: "(LOWER(name) LIKE '%horquilla%' OR LOWER(name) LIKE '%fork%')",
-            303: "(LOWER(name) LIKE '%direccion%' OR LOWER(name) LIKE '%steering%')",
-            304: "(LOWER(name) LIKE '%estribera%' OR LOWER(name) LIKE '%peg%')",
-            401: "(LOWER(name) LIKE '%centralita%' OR LOWER(name) LIKE '%ecu%')",
-            402: "(LOWER(name) LIKE '%quickshifter%' OR LOWER(name) LIKE '%shifter%')",
-            403: "(LOWER(name) LIKE '%abs%' OR LOWER(name) LIKE '%tc%')",
-            404: "(LOWER(name) LIKE '%litio%' OR LOWER(name) LIKE '%lithium%')",
-            501: "(LOWER(name) LIKE '%kit%')",
-            502: "(LOWER(name) LIKE '%cadena%' OR LOWER(name) LIKE '%chain%')",
-            503: "(LOWER(name) LIKE '%piñon%' OR LOWER(name) LIKE '%sprocket%')",
-            504: "(LOWER(name) LIKE '%corona%')",
-            601: "(LOWER(name) LIKE '%filtro%' OR LOWER(name) LIKE '%filter%')",
-            602: "(LOWER(name) LIKE '%filtro aceite%')",
-            603: "(LOWER(name) LIKE '%aceite%' OR LOWER(name) LIKE '%oil%')",
-            604: "(LOWER(name) LIKE '%liquido%' OR LOWER(name) LIKE '%fluid%')",
-            701: "(LOWER(name) LIKE '%neumatico%' OR LOWER(name) LIKE '%tire%' OR LOWER(name) LIKE '%slick%')",
-            702: "(LOWER(name) LIKE '%calentador%' OR LOWER(name) LIKE '%warmer%')",
-            703: "(LOWER(name) LIKE '%caballete%' OR LOWER(name) LIKE '%stand%')",
-            704: "(LOWER(name) LIKE '%manometro%' OR LOWER(name) LIKE '%gauge%')",
-            // Casco Integral (Full-Face) is a standard helmet in category 8 that is not modular, jet, or off-road/cross
-            801: "(LOWER(name) NOT LIKE '%modular%' AND LOWER(name) NOT LIKE '%flip-up%' AND LOWER(name) NOT LIKE '%system%' AND LOWER(name) NOT LIKE '%jet%' AND LOWER(name) NOT LIKE '%open face%' AND LOWER(name) NOT LIKE '%open-face%' AND LOWER(name) NOT LIKE '%off-road%' AND LOWER(name) NOT LIKE '%offroad%' AND LOWER(name) NOT LIKE '%cross%' AND LOWER(name) NOT LIKE '%enduro%' AND LOWER(name) NOT LIKE '%trial%' AND LOWER(name) NOT LIKE '%dual-sport%' AND LOWER(name) NOT LIKE '%dualsport%')",
-            802: "(LOWER(name) LIKE '%modular%' OR LOWER(name) LIKE '%flip-up%' OR LOWER(name) LIKE '%system%')",
-            803: "(LOWER(name) LIKE '%jet%' OR LOWER(name) LIKE '%open face%' OR LOWER(name) LIKE '%open-face%')",
-            804: "(LOWER(name) LIKE '%off-road%' OR LOWER(name) LIKE '%offroad%' OR LOWER(name) LIKE '%cross%' OR LOWER(name) LIKE '%enduro%' OR LOWER(name) LIKE '%trial%' OR LOWER(name) LIKE '%dual-sport%' OR LOWER(name) LIKE '%dualsport%')",
-            901: "(LOWER(name) LIKE '%chaqueta%' OR LOWER(name) LIKE '%jacket%')",
-            // Mono (Suit) must exclude gloves, pants, and jerseys that happen to have "mono" in their model names
-            902: "(LOWER(name) LIKE '%mono%' AND LOWER(name) NOT LIKE '%glove%' AND LOWER(name) NOT LIKE '%guante%' AND LOWER(name) NOT LIKE '%pants%' AND LOWER(name) NOT LIKE '%pantalón%' AND LOWER(name) NOT LIKE '%jersey%' AND LOWER(name) NOT LIKE '%camiseta%' AND LOWER(name) NOT LIKE '%chaqueta%' AND LOWER(name) NOT LIKE '%bota%')",
-            903: "(LOWER(name) LIKE '%guante%' OR LOWER(name) LIKE '%glove%')",
-            904: "(LOWER(name) LIKE '%bota%' OR LOWER(name) LIKE '%boot%')",
-            1001: "(LOWER(name) LIKE '%baul%' OR LOWER(name) LIKE '%maleta%' OR LOWER(name) LIKE '%case%')",
-            1002: "(LOWER(name) LIKE '%quad lock%')",
-            1003: "(LOWER(name) LIKE '%intercom%')",
-              1004: "(LOWER(name) LIKE '%retrovisor%' OR LOWER(name) LIKE '%espejo%' OR LOWER(name) LIKE '%mirror%')",
-              805: "(LOWER(name) LIKE '%recambio%' OR LOWER(name) LIKE '%accesorio%' OR LOWER(name) LIKE '%pieza%' OR LOWER(name) LIKE '%almohadilla%' OR LOWER(name) LIKE '%visera%' OR LOWER(name) LIKE '%pantalla%' OR LOWER(name) LIKE '%pinlock%')",
-              1005: "(LOWER(name) LIKE '%promocional%' OR LOWER(name) LIKE '%goodie%' OR LOWER(name) LIKE '%display%')"
-          };
-          const clause = categoryRules[catId];
-          if (clause) {
-            baseWhereClause += ` AND (category_id = ${catId} OR category2_id = ${catId} OR category3_id = ${catId} OR (category_id = ${parentId} AND ${clause}))`;
-          } else {
-            baseWhereClause += ` AND (category_id = ${catId} OR category2_id = ${catId} OR category3_id = ${catId})`;
-          }
+          baseWhereClause += ` AND (
+            category_id IN (
+              WITH RECURSIVE descendants AS (
+                SELECT id FROM categories WHERE id = ${catId}
+                UNION ALL
+                SELECT c.id FROM categories c JOIN descendants d ON c.parent_id = d.id
+              )
+              SELECT id FROM descendants
+            )
+            OR (category_id = ${parentId} AND ${clause})
+          )`;
         } else {
-          baseWhereClause += ` AND (category_id = ${catId} OR category_id BETWEEN ${catId * 100} AND ${(catId + 1) * 100 - 1})`;
+          baseWhereClause += ` AND category_id IN (
+            WITH RECURSIVE descendants AS (
+              SELECT id FROM categories WHERE id = ${catId}
+              UNION ALL
+              SELECT c.id FROM categories c JOIN descendants d ON c.parent_id = d.id
+            )
+            SELECT id FROM descendants
+          )`;
         }
       }
     }
@@ -1253,23 +1446,24 @@ app.get('/api/catalog/products-by-skus', async (req, res) => {
 
 app.get('/api/orders', async (req, res) => {
   try {
-    const { userId, email, status = 'pending' } = req.query as any;
+    const { userId, email, status } = req.query as any;
     if (!userId && !email) return res.status(400).json({ error: 'Falta userId o email' });
 
-    const safeStatus = sanitizeString(status || 'pending');
-    let query = `SELECT * FROM orders WHERE status = '${safeStatus}'`;
+    const conditions = sql`WHERE 1=1`;
+    if (status && status !== 'all') {
+      conditions.append(sql` AND status = ${status}`);
+    }
     if (userId) {
       const safeUserId = parseIntSafe(userId);
       if (!safeUserId) return res.status(400).json({ error: 'userId inválido' });
-      query += ` AND user_id = ${safeUserId}`;
+      conditions.append(sql` AND user_id = ${safeUserId}`);
     } else if (email) {
-      const safeEmail = sanitizeString(email);
-      query += ` AND shipping_data->>'email' = '${safeEmail}'`;
+      conditions.append(sql` AND shipping_data->>'email' = ${email}`);
     }
 
-    query += ` ORDER BY created_at DESC LIMIT 5`;
+    conditions.append(sql` ORDER BY created_at DESC LIMIT 5`);
 
-    const ordersRes = await db.execute(sql.raw(query));
+    const ordersRes = await db.execute(sql`SELECT * FROM orders ${conditions}`);
     const result = ordersRes.rows.map((row: any) => {
       let shippingDataObj = {};
       try {
@@ -1507,15 +1701,14 @@ app.get('/api/orders/download-invoice', async (req: any, res: any) => {
   }
 });
 
-// ================================================================
+// ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN (requiere autenticación)
 // ================================================================
-app.all('/api/admin', async (req, res) => {
+app.all('/api/admin', adminLimiter, async (req, res) => {
   const { action, userId, email } = req.query as any;
 
   let isAdmin = false;
-  if (email?.toLowerCase() === 'info@escapesymas.com') isAdmin = true;
-  else if (userId && userId !== 'undefined') {
+  if (userId && userId !== 'undefined') {
     const r = await db.execute(sql`SELECT role FROM users WHERE wp_id = ${parseInt(userId)}`);
     if (r.rows[0]?.role === 'admin') isAdmin = true;
   }
@@ -1804,75 +1997,89 @@ app.all('/api/admin', async (req, res) => {
         const p = parseIntSafe(page) || 1;
         const offset = (p - 1) * lim;
 
-        const conditions: string[] = [];
+        const conditions = sql``;
+        let hasConditions = false;
 
-        if (search) {
-          const s = sanitizeLike(search);
-          conditions.push(`(
-            LOWER(name) LIKE LOWER('%${s}%') ESCAPE '\\' 
-            OR LOWER(sku) LIKE LOWER('%${s}%') ESCAPE '\\' 
-            OR LOWER(description) LIKE LOWER('%${s}%') ESCAPE '\\'
-            OR LOWER(supplier_code) LIKE LOWER('%${s}%') ESCAPE '\\'
-            OR LOWER(barcode) LIKE LOWER('%${s}%') ESCAPE '\\'
-            OR LOWER(old_part_number) LIKE LOWER('%${s}%') ESCAPE '\\'
+      if (search) {
+        if (!/^[a-zA-Z0-9áéíóúüñÁÉÍÓÚÜÑ\s\-_,.]+$/.test(search)) {
+          return res.status(400).json({ error: 'Búsqueda inválida' });
+        }
+          const s = `%${search}%`;
+          if (!hasConditions) { conditions.append(sql` WHERE `); hasConditions = true; }
+          conditions.append(sql`(
+            LOWER(name) LIKE LOWER(${s})
+            OR LOWER(sku) LIKE LOWER(${s})
+            OR LOWER(description) LIKE LOWER(${s})
+            OR LOWER(supplier_code) LIKE LOWER(${s})
+            OR LOWER(barcode) LIKE LOWER(${s})
+            OR LOWER(old_part_number) LIKE LOWER(${s})
           )`);
         }
         if (brand) {
-          const b = sanitizeString(brand);
-          conditions.push(`LOWER(brand) = LOWER('${b}')`);
+          if (!hasConditions) { conditions.append(sql` WHERE `); hasConditions = true; } else { conditions.append(sql` AND `); }
+          conditions.append(sql`LOWER(brand) = LOWER(${brand})`);
         }
-        if (category_id) {
-          conditions.push(`category_id = ${parseInt(category_id)}`);
-        }
-        if (category2_id) {
-          conditions.push(`category2_id = ${parseInt(category2_id)}`);
-        }
-        if (category3_id) {
-          conditions.push(`category3_id = ${parseInt(category3_id)}`);
+        const selectedCatId = category3_id ? parseInt(category3_id) : (category2_id ? parseInt(category2_id) : (category_id ? parseInt(category_id) : null));
+        if (selectedCatId && !isNaN(selectedCatId)) {
+          if (!hasConditions) { conditions.append(sql` WHERE `); hasConditions = true; } else { conditions.append(sql` AND `); }
+          conditions.append(sql`category_id IN (
+            WITH RECURSIVE descendants AS (
+              SELECT id FROM categories WHERE id = ${selectedCatId}
+              UNION ALL
+              SELECT c.id FROM categories c JOIN descendants d ON c.parent_id = d.id
+            )
+            SELECT id FROM descendants
+          )`);
         }
         if (stock_min) {
-          conditions.push(`stock >= ${parseInt(stock_min)}`);
+          if (!hasConditions) { conditions.append(sql` WHERE `); hasConditions = true; } else { conditions.append(sql` AND `); }
+          conditions.append(sql`stock >= ${parseInt(stock_min)}`);
         }
         if (stock_max) {
-          conditions.push(`stock <= ${parseInt(stock_max)}`);
+          if (!hasConditions) { conditions.append(sql` WHERE `); hasConditions = true; } else { conditions.append(sql` AND `); }
+          conditions.append(sql`stock <= ${parseInt(stock_max)}`);
         }
         if (price_min) {
-          conditions.push(`price >= ${Math.round(parseFloat(price_min) * 100)}`);
+          if (!hasConditions) { conditions.append(sql` WHERE `); hasConditions = true; } else { conditions.append(sql` AND `); }
+          conditions.append(sql`price >= ${Math.round(parseFloat(price_min) * 100)}`);
         }
         if (price_max) {
-          conditions.push(`price <= ${Math.round(parseFloat(price_max) * 100)}`);
+          if (!hasConditions) { conditions.append(sql` WHERE `); hasConditions = true; } else { conditions.append(sql` AND `); }
+          conditions.append(sql`price <= ${Math.round(parseFloat(price_max) * 100)}`);
         }
         if (dropshipping === 'true' || dropshipping === '1') {
-          conditions.push('dropshipping = true');
+          if (!hasConditions) { conditions.append(sql` WHERE `); hasConditions = true; } else { conditions.append(sql` AND `); }
+          conditions.append(sql`dropshipping = true`);
         } else if (dropshipping === 'false' || dropshipping === '0') {
-          conditions.push('dropshipping = false');
+          if (!hasConditions) { conditions.append(sql` WHERE `); hasConditions = true; } else { conditions.append(sql` AND `); }
+          conditions.append(sql`dropshipping = false`);
         }
         if (ondemand === 'true' || ondemand === '1') {
-          conditions.push('ondemand = true');
+          if (!hasConditions) { conditions.append(sql` WHERE `); hasConditions = true; } else { conditions.append(sql` AND `); }
+          conditions.append(sql`ondemand = true`);
         } else if (ondemand === 'false' || ondemand === '0') {
-          conditions.push('ondemand = false');
+          if (!hasConditions) { conditions.append(sql` WHERE `); hasConditions = true; } else { conditions.append(sql` AND `); }
+          conditions.append(sql`ondemand = false`);
         }
         if (status) {
-          const st = sanitizeString(status);
-          conditions.push(`status = '${st}'`);
+          if (!hasConditions) { conditions.append(sql` WHERE `); hasConditions = true; } else { conditions.append(sql` AND `); }
+          conditions.append(sql`status = ${status}`);
         }
         if (barcode) {
-          const bc = sanitizeLike(barcode);
-          conditions.push(`barcode LIKE '%${bc}%'`);
+          if (!hasConditions) { conditions.append(sql` WHERE `); hasConditions = true; } else { conditions.append(sql` AND `); }
+          conditions.append(sql`barcode LIKE ${'%' + barcode + '%'}`);
         }
         if (supplier_code) {
-          const sc = sanitizeLike(supplier_code);
-          conditions.push(`supplier_code LIKE '%${sc}%'`);
+          if (!hasConditions) { conditions.append(sql` WHERE `); hasConditions = true; } else { conditions.append(sql` AND `); }
+          conditions.append(sql`supplier_code LIKE ${'%' + supplier_code + '%'}`);
         }
-
-        const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
         const allowedSorts = ['created_at', 'name', 'sku', 'price', 'stock', 'brand', 'barcode', 'supplier_code'];
         const safeSort = allowedSorts.includes(sort) ? sort : 'created_at';
         const safeOrder = order === 'ASC' ? 'ASC' : 'DESC';
 
-        const query = `SELECT * FROM products ${whereClause} ORDER BY ${safeSort} ${safeOrder} LIMIT ${lim} OFFSET ${offset}`;
-        const products = await db.execute(sql.raw(query));
+        const query = sql`SELECT * FROM products ${conditions} ORDER BY ${sql.raw(safeSort)} ${sql.raw(safeOrder)} LIMIT ${lim} OFFSET ${offset}`;
+        const products = await db.execute(query);
         const rows = products.rows;
         
         if (rows.length > 0) {
@@ -1914,6 +2121,7 @@ app.all('/api/admin', async (req, res) => {
         const status = b.status || 'published';
         const brand = b.brand || '';
         const cost = b.cost ? Math.round(parseFloat(b.cost) * 100) : null;
+        const categoryId = b.categoryId ? parseInt(b.categoryId) : null;
         const category2Id = b.category2Id ? parseInt(b.category2Id) : null;
         const category3Id = b.category3Id ? parseInt(b.category3Id) : null;
 
@@ -1921,9 +2129,9 @@ app.all('/api/admin', async (req, res) => {
         const lowStockThreshold = b.low_stock_threshold ? parseInt(b.low_stock_threshold) : null;
 
         const insertRes = await pool.query(`
-          INSERT INTO products (name, sku, price, sale_price, stock, description, images, compatibility, status, brand, cost, category2_id, category3_id, type, stock_status, low_stock_threshold)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id
-        `, [safeName, safeSku, priceInCents, saleCents, stock, desc, imgs, compat, status, brand, cost, category2Id, category3Id, b.type || 'simple', stockStatus, lowStockThreshold]);
+          INSERT INTO products (name, sku, price, sale_price, stock, description, images, compatibility, status, brand, cost, category_id, category2_id, category3_id, type, stock_status, low_stock_threshold)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING id
+        `, [safeName, safeSku, priceInCents, saleCents, stock, desc, imgs, compat, status, brand, cost, categoryId, category2Id, category3Id, b.type || 'simple', stockStatus, lowStockThreshold]);
         
         const newId = insertRes.rows[0].id;
         
@@ -1970,18 +2178,18 @@ app.all('/api/admin', async (req, res) => {
         const p = parseIntSafe(page) || 1;
         const offset = (p - 1) * lim;
 
-        let whereClause = '';
+        let statusFilter = sql``;
         if (status && status !== 'all') {
-          whereClause = ` WHERE status = '${sanitizeString(status)}'`;
+          statusFilter = sql` WHERE status = ${status}`;
         }
 
-        const countRes = await db.execute(sql.raw(`SELECT count(*) as total FROM orders${whereClause}`));
+        const countRes = await db.execute(sql`SELECT count(*) as total FROM orders${statusFilter}`);
         const total = Number(countRes.rows[0]?.total || 0);
         const totalPages = Math.ceil(total / lim);
 
-        const ordersRes = await db.execute(sql.raw(`
-          SELECT * FROM orders${whereClause} ORDER BY created_at DESC LIMIT ${lim} OFFSET ${offset}
-        `));
+        const ordersRes = await db.execute(sql`
+          SELECT * FROM orders${statusFilter} ORDER BY created_at DESC LIMIT ${lim} OFFSET ${offset}
+        `);
         const result = [];
         for (const rawOrder of ordersRes.rows) {
           const order = rawOrder as any;
@@ -2100,7 +2308,27 @@ app.all('/api/admin', async (req, res) => {
               }
             }
             if (toEmail) {
-              await sendMail(toEmail, `Actualización de tu pedido #${orderId}`, `Hola,\n\nHemos añadido una actualización a tu pedido #${orderId}:\n\n"${note}"\n\nSaludos,\nEl equipo de Escapes y Más.`);
+              const htmlContent = `
+                <div style="font-family: 'Inter', system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #f8fafc; border-radius: 6px; color: #0f172a; border: 1px solid #e2e8f0;">
+                  <div style="text-align: center; margin-bottom: 30px;">
+                    <img src="https://www.escapesymas.com/logo-cabecera-negro.svg" alt="Escapes y Más" style="max-width: 250px;">
+                  </div>
+                  <h2 style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; color: #0f172a; text-align: center; font-size: 24px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">¡HOLA!</h2>
+                  <div style="background-color: #ffffff; padding: 25px; border-radius: 6px; border-left: 4px solid #eab308; margin: 20px 0; border-top: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;">
+                    <p style="color: #475569; font-size: 16px; line-height: 1.6; margin-top: 0;">
+                      Hemos añadido una actualización a tu pedido <strong>#${orderId}</strong>:
+                    </p>
+                    <div style="background-color: #f1f5f9; padding: 15px; border-radius: 4px; margin-top: 15px; font-style: italic; color: #334155;">
+                      "${note}"
+                    </div>
+                  </div>
+                  <p style="color: #64748b; font-size: 14px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 20px; margin-bottom: 0;">
+                    ¿Tienes dudas? Responde a este correo o escríbenos a <a href="mailto:info@escapesymas.com" style="color: #0f172a; font-weight: 600;">info@escapesymas.com</a>.<br><br>
+                    <strong>Escapes y Más</strong>
+                  </p>
+                </div>
+              `;
+              await sendMail(toEmail, `Actualización de tu pedido #${orderId}`, `Hola,\n\nHemos añadido una actualización a tu pedido #${orderId}:\n\n"${note}"\n\nSaludos,\nEl equipo de Escapes y Más.`, htmlContent);
             }
           } catch(e) {
             console.error('Error sending note email:', e);
@@ -2276,14 +2504,13 @@ app.all('/api/admin', async (req, res) => {
         if (!query || query.length < 4) return res.json(null);
         
         try {
-          const s = sanitizeString(query);
-          const sqlQuery = `
+          const sqlQuery = sql`
             SELECT shipping_data FROM orders 
-            WHERE shipping_data::text ILIKE '%${s}%'
+            WHERE shipping_data::text ILIKE ${'%' + query + '%'}
             ORDER BY created_at DESC 
             LIMIT 1
           `;
-          const result = await db.execute(sql.raw(sqlQuery));
+          const result = await db.execute(sqlQuery);
           if (result.rows.length > 0 && result.rows[0].shipping_data) {
             let data = typeof result.rows[0].shipping_data === 'string' ? JSON.parse(result.rows[0].shipping_data) : result.rows[0].shipping_data;
             if (data && (data.email?.includes(query) || data.phone?.includes(query))) {
@@ -2812,13 +3039,18 @@ app.all('/api/admin', async (req, res) => {
         if (!cartId || !email) return res.status(400).json({ error: 'Faltan datos' });
 
         try {
+          const cartDb = await db.execute(sql`
+            SELECT session_token FROM carts WHERE id = ${parseInt(cartId)}
+          `);
+          const sessionToken = cartDb.rows[0] ? (cartDb.rows[0] as any).session_token : '';
+
           const transporter = nodemailer.createTransport({
             host: "smtp.buzondecorreo.com",
             port: 465,
             secure: true,
             auth: {
               user: process.env.SMTP_USER || "web@escapesymas.com",
-              pass: process.env.SMTP_PASSWORD || "Pedrito2011P!"
+              pass: process.env.SMTP_PASSWORD
             },
             tls: {
               rejectUnauthorized: false
@@ -2830,6 +3062,7 @@ app.all('/api/admin', async (req, res) => {
           const clientName = firstName || 'Motero';
           const itemsList = Array.isArray(items) ? items : [];
 
+          const nameText = clientName ? ` ${clientName}` : '';
           let itemsHtml = '';
           let total = 0;
           for (const item of itemsList) {
@@ -2839,11 +3072,11 @@ app.all('/api/admin', async (req, res) => {
             total += subtotal;
             itemsHtml += `
               <tr>
-                <td style="padding: 12px 10px; border-bottom: 1px solid #eeeeee;">
-                  <strong style="color: #111111; font-size: 13px;">${item.name || 'Producto'}</strong><br/>
-                  <span style="color: #666666; font-size: 11px;">Cantidad: ${qty} x ${price.toFixed(2)}€</span>
+                <td style="padding: 12px 10px; border-bottom: 1px solid #f1f5f9;">
+                  <a href="https://escapesymas.com/producto/${item.id}" style="color: #0f172a; text-decoration: none; font-weight: 700; font-size: 14px; border-bottom: 1.5px solid #eab308;" target="_blank">${item.title || item.name || 'Producto'}</a><br/>
+                  <span style="color: #64748b; font-size: 12px;">Cantidad: ${qty} x ${price.toFixed(2)}€</span>
                 </td>
-                <td style="padding: 12px 10px; border-bottom: 1px solid #eeeeee; text-align: right; font-weight: bold; color: #ff5500; font-size: 13px;">
+                <td style="padding: 12px 10px; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: 700; color: #eab308; font-size: 14px;">
                   ${subtotal.toFixed(2)}€
                 </td>
               </tr>
@@ -2855,38 +3088,33 @@ app.all('/api/admin', async (req, res) => {
             to: email,
             subject: `🏍️ ¡Te guardamos tu carrito en Escapes y Más!`,
             html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #dddddd; border-radius: 12px; overflow: hidden; background-color: #ffffff; color: #333333;">
-                <div style="background-color: #0c0c0c; padding: 25px; text-align: center; border-bottom: 4px solid #ff5500;">
-                  <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; font-style: italic; text-transform: uppercase; letter-spacing: 1px;">ESCAPES Y MÁS</h1>
+              <div style="font-family: 'Inter', system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #f8fafc; border-radius: 6px; color: #0f172a; border: 1px solid #e2e8f0;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                  <img src="https://www.escapesymas.com/logo-cabecera-negro.svg" alt="Escapes y Más" style="max-width: 250px;">
                 </div>
-                <div style="padding: 30px;">
-                  <h2 style="margin-top: 0; color: #111111; font-size: 18px;">¡Hola, ${clientName}!</h2>
-                  <p style="font-size: 13px; line-height: 1.6; color: #555555; margin-bottom: 20px;">
+                <h2 style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; color: #0f172a; text-align: center; font-size: 24px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">¡HOLA${nameText}!</h2>
+                <div style="background-color: #ffffff; padding: 25px; border-radius: 6px; border-left: 4px solid #eab308; margin: 20px 0; border-top: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;">
+                  <p style="color: #475569; font-size: 16px; line-height: 1.6; margin-top: 0;">
                     Vemos que has dejado algunos artículos espectaculares en tu carrito de compra. ¡No te preocupes! Los hemos guardado de forma segura para ti para que no pierdas tus selecciones.
                   </p>
                   
-                  <h3 style="margin-top: 25px; border-bottom: 2px solid #f0f0f0; padding-bottom: 8px; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; color: #ff5500; font-weight: 800;">Tu Carrito Seleccionado</h3>
-                  <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                  <h3 style="margin-top: 25px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; text-transform: uppercase; font-size: 14px; letter-spacing: 0.5px; color: #0f172a; font-weight: 700;">Tu Carrito Seleccionado</h3>
+                  <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #475569;">
                     ${itemsHtml}
                     <tr>
-                      <td style="padding: 15px 10px; font-weight: bold; font-size: 13px; color: #111111;">TOTAL ESTIMADO</td>
-                      <td style="padding: 15px 10px; text-align: right; font-weight: 900; font-size: 15px; color: #ff5500;">${total.toFixed(2)}€</td>
+                      <td style="padding: 15px 10px; font-weight: bold; font-size: 14px; color: #0f172a; border-top: 2px solid #f1f5f9;">TOTAL ESTIMADO</td>
+                      <td style="padding: 15px 10px; text-align: right; font-weight: 700; font-size: 16px; color: #eab308; border-top: 2px solid #f1f5f9;">${total.toFixed(2)}€</td>
                     </tr>
                   </table>
-
-                  <div style="text-align: center; margin: 35px 0 20px 0;">
-                    <a href="https://escapesymas.com/cart" style="background-color: #ff5500; color: #ffffff; text-decoration: none; padding: 13px 25px; border-radius: 8px; font-weight: bold; font-size: 13px; display: inline-block; text-transform: uppercase; letter-spacing: 0.5px;">
-                      Completar mi Compra Ahora
-                    </a>
-                  </div>
-                  
-                  <p style="font-size: 11px; line-height: 1.5; color: #888888; text-align: center; margin-top: 30px; border-top: 1px solid #f0f0f0; padding-top: 20px;">
-                    Si tienes alguna duda o necesitas ayuda para finalizar tu compra, ponte en contacto con nosotros respondiendo directamente a este email o escribiéndonos a <a href="mailto:info@escapesymas.com" style="color: #ff5500; text-decoration: none;">info@escapesymas.com</a>.
-                  </p>
                 </div>
-                <div style="background-color: #f9f9f9; padding: 15px; text-align: center; font-size: 10px; color: #aaaaaa; border-top: 1px solid #eeeeee;">
-                  &copy; 2026 Escapes y Más. Todos los derechos reservados.
+                <div style="text-align: center; margin: 40px 0;">
+                  <a href="https://escapesymas.com/?tab=cart${sessionToken ? `&sessionToken=${sessionToken}` : ''}" style="background-color: #eab308; color: #000000; padding: 16px 32px; text-decoration: none; font-size: 16px; border-radius: 6px; font-weight: 700; display: inline-block; text-transform: uppercase; letter-spacing: 0.5px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;">Completar mi Compra Ahora</a>
                 </div>
+                
+                <p style="color: #64748b; font-size: 14px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 20px; margin-bottom: 0;">
+                  ¿Tienes dudas? Responde a este correo o escríbenos a <a href="mailto:info@escapesymas.com" style="color: #0f172a; font-weight: 600;">info@escapesymas.com</a>.<br><br>
+                  <strong>Escapes y Más</strong>
+                </p>
               </div>
             `
           };
@@ -2989,11 +3217,25 @@ app.all('/api/admin', async (req, res) => {
         const saleCents = isNaN(rawSale) ? null : Math.round(rawSale * 100);
         const stock = parseInt(b.stock) || 0;
         const desc = b.description || null;
-        const imgs = b.images?.length > 0 ? JSON.stringify(b.images) : null;
+        // Handle images: only update when content is provided; preserve existing if empty array sent
+        let imgsToSet: string | undefined | null = undefined;
+        if (b.images !== undefined) {
+          if (Array.isArray(b.images) && b.images.length > 0) {
+            imgsToSet = JSON.stringify(b.images);
+          } else {
+            const existing = await db.execute(sql`SELECT images FROM products WHERE id = ${productId}`);
+            if (existing.rows.length > 0 && existing.rows[0].images) {
+              imgsToSet = undefined;
+            } else {
+              imgsToSet = null;
+            }
+          }
+        }
         const compat = b.compatibility?.length > 0 ? JSON.stringify(b.compatibility) : null;
         const status = b.status || 'published';
         const brand = b.brand || '';
         const cost = b.cost ? Math.round(parseFloat(b.cost) * 100) : null;
+        const categoryId = b.categoryId ? parseInt(b.categoryId) : null;
         const category2Id = b.category2Id ? parseInt(b.category2Id) : null;
         const category3Id = b.category3Id ? parseInt(b.category3Id) : null;
         const dropshipping = b.dropshipping === true || b.dropshipping === 'true';
@@ -3009,17 +3251,40 @@ app.all('/api/admin', async (req, res) => {
         const stockStatus = b.stock_status || 'in_stock';
         const lowStockThreshold = b.low_stock_threshold ? parseInt(b.low_stock_threshold) : null;
 
+        const setClauses = [
+          sql`name = ${safeName}`,
+          sql`sku = ${safeSku}`,
+          sql`price = ${priceInCents}`,
+          sql`sale_price = ${saleCents}`,
+          sql`stock = ${stock}`,
+          sql`stock_status = ${stockStatus}`,
+          sql`low_stock_threshold = ${lowStockThreshold}`,
+          sql`description = ${desc}`,
+          sql`compatibility = ${compat}`,
+          sql`status = ${status}`,
+          sql`brand = ${brand}`,
+          sql`cost = ${cost}`,
+          sql`category_id = ${categoryId}`,
+          sql`category2_id = ${category2Id}`,
+          sql`category3_id = ${category3Id}`,
+          sql`dropshipping = ${dropshipping}`,
+          sql`ondemand = ${ondemand}`,
+          sql`barcode = ${barcode}`,
+          sql`supplier_code = ${supplierCode}`,
+          sql`weight_g = ${weightG}`,
+          sql`length_mm = ${lengthMm}`,
+          sql`width_mm = ${widthMm}`,
+          sql`height_mm = ${heightMm}`,
+          sql`delivery_plant = ${deliveryPlant}`,
+          sql`type = ${b.type || 'simple'}`,
+        ];
+        if (imgsToSet !== undefined) {
+          setClauses.push(sql`images = ${imgsToSet}`);
+        }
+
         await db.execute(sql`
           UPDATE products
-          SET name = ${safeName}, sku = ${safeSku}, price = ${priceInCents}, sale_price = ${saleCents},
-              stock = ${stock}, stock_status = ${stockStatus}, low_stock_threshold = ${lowStockThreshold}, description = ${desc}, images = ${imgs}, compatibility = ${compat},
-              status = ${status}, brand = ${brand}, cost = ${cost},
-              category2_id = ${category2Id}, category3_id = ${category3Id},
-              dropshipping = ${dropshipping}, ondemand = ${ondemand},
-              barcode = ${barcode}, supplier_code = ${supplierCode},
-              weight_g = ${weightG}, length_mm = ${lengthMm},
-              width_mm = ${widthMm}, height_mm = ${heightMm},
-              delivery_plant = ${deliveryPlant}, type = ${b.type || 'simple'}
+          SET ${sql.join(setClauses, sql`, `)}
           WHERE id = ${productId}
         `);
 
@@ -3091,7 +3356,37 @@ app.all('/api/admin', async (req, res) => {
 
       // --- TAXONOMÍAS: CATEGORÍAS ---
       case 'get-categories': {
-        const catRes = await pool.query('SELECT * FROM categories ORDER BY name ASC');
+        const catRes = await pool.query(`
+          WITH RECURSIVE category_tree AS (
+            -- Base case: L1 categories (parent_id IS NULL)
+            SELECT 
+              c.*, 
+              1 as depth,
+              ARRAY[c.name]::text[] AS path_names
+            FROM categories c
+            WHERE c.parent_id IS NULL
+            
+            UNION ALL
+            
+            -- Recursive step
+            SELECT 
+              c.*, 
+              t.depth + 1 as depth,
+              t.path_names || c.name AS path_names
+            FROM categories c
+            JOIN category_tree t ON c.parent_id = t.id
+          )
+          SELECT 
+            ct.*,
+            COALESCE(pc.cnt, 0) as product_count
+          FROM category_tree ct
+          LEFT JOIN (
+            SELECT category_id, COUNT(*) as cnt
+            FROM products
+            GROUP BY category_id
+          ) pc ON ct.id = pc.category_id
+          ORDER BY ct.path_names ASC
+        `);
         return res.json(catRes.rows);
       }
       case 'save-category': {
@@ -3337,17 +3632,16 @@ app.get('/api/auth', async (req, res) => {
     if (action === 'get-profile') {
       if (!email && !id) return res.status(400).json({ error: 'Falta email o id' });
 
-      let query = `SELECT * FROM users WHERE 1=1`;
+      let conditions = sql`WHERE 1=1`;
       if (email) {
-        const safeEmail = sanitizeString(email);
-        query += ` AND LOWER(email) = LOWER('${safeEmail}')`;
+        conditions.append(sql` AND LOWER(email) = LOWER(${email})`);
       } else if (id) {
         const safeId = parseIntSafe(id);
         if (!safeId) return res.status(400).json({ error: 'ID inválido' });
-        query += ` AND id = ${safeId}`;
+        conditions.append(sql` AND id = ${safeId}`);
       }
 
-      const userRes = await db.execute(sql.raw(query));
+      const userRes = await db.execute(sql`SELECT * FROM users ${conditions}`);
       if (userRes.rows.length === 0) {
         return res.status(404).json({ error: 'Usuario no encontrado' });
       }
@@ -3469,6 +3763,62 @@ app.post('/api/auth', async (req, res) => {
       };
 
       return res.json(session);
+
+    } else if (action === 'get-profile') {
+      const { email, id } = body;
+      if (!email && !id) return res.status(400).json({ error: 'Falta email o id' });
+
+      let conditions = sql`WHERE 1=1`;
+      if (email) {
+        conditions.append(sql` AND LOWER(email) = LOWER(${email})`);
+      } else if (id) {
+        const safeId = parseIntSafe(id);
+        if (!safeId) return res.status(400).json({ error: 'ID inválido' });
+        conditions.append(sql` AND id = ${safeId}`);
+      }
+
+      const userRes = await db.execute(sql`SELECT * FROM users ${conditions}`);
+      if (userRes.rows.length === 0) {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+      }
+
+      const user = userRes.rows[0] as any;
+
+      let billing = { address_1: '', city: '', postcode: '', phone: '' };
+      try {
+        if (user.billing) {
+          billing = typeof user.billing === 'string' ? JSON.parse(user.billing) : user.billing;
+        }
+      } catch (e) {}
+
+      let garage: any[] = [];
+      try {
+        if (user.garage) {
+          garage = typeof user.garage === 'string' ? JSON.parse(user.garage) : user.garage;
+        }
+      } catch (e) {}
+
+      let cart: any[] = [];
+      try {
+        if (user.cart) {
+          cart = typeof user.cart === 'string' ? JSON.parse(user.cart) : user.cart;
+        }
+      } catch (e) {}
+
+      return res.json({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        firstName: user.first_name || '',
+        lastName: user.last_name || '',
+        avatarUrl: user.avatar_url || '',
+        role: user.role || 'customer',
+        rank: user.rank || 'Novato',
+        xp: user.xp || 0,
+        billing,
+        garage,
+        cart
+      });
 
     } else if (action === 'register') {
       const { username, email, password, firstName, lastName, phone } = body;
@@ -3844,6 +4194,33 @@ app.post('/api/coupons/validate', async (req: any, res: any) => {
     }
   } catch (err: any) {
     return res.status(500).json({ valid: false, error: err.message });
+  }
+});
+
+app.post('/api/stock-notify', async (req: any, res: any) => {
+  const { email, productId } = req.body;
+  if (!email || !productId) {
+    return res.status(400).json({ success: false, error: 'Email y productId son requeridos' });
+  }
+
+  try {
+    const productRes = await db.execute(sql`
+      SELECT id FROM products WHERE id = ${productId}
+    `);
+    if (productRes.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Producto no encontrado' });
+    }
+
+    await db.execute(sql`
+      INSERT INTO stock_notifications (product_id, email)
+      VALUES (${productId}, ${email.trim().toLowerCase()})
+      ON CONFLICT (product_id, email) DO NOTHING
+    `);
+
+    console.log(`[STOCK-NOTIFY] ${email} quiere que le avisen cuando el producto ${productId} vuelva a estar disponible`);
+    return res.json({ success: true });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -4374,7 +4751,7 @@ app.post('/api/contact', async (req: any, res: any) => {
       secure: true,
       auth: {
         user: process.env.SMTP_USER || "web@escapesymas.com",
-        pass: process.env.SMTP_PASSWORD || "Pedrito2011P!"
+        pass: process.env.SMTP_PASSWORD
       },
       tls: {
         rejectUnauthorized: false
@@ -4395,7 +4772,7 @@ app.post('/api/contact', async (req: any, res: any) => {
         <p><strong>De:</strong> ${name} (${email})</p>
         <p><strong>Asunto:</strong> ${subject || 'General'}</p>
         <div style="background-color: #f5f5f5; padding: 15px; border-left: 5px solid #ff4500;">
-          <p>${message.replace(/\n/g, '<br>')}</p>
+          <p>${message.replace(/\n/g, '<br>').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
         </div>
       `
     };
@@ -4429,7 +4806,7 @@ app.post('/api/warranty', async (req: any, res: any) => {
       secure: true,
       auth: {
         user: process.env.SMTP_USER || 'web@escapesymas.com',
-        pass: process.env.SMTP_PASSWORD || 'Pedrito2011P!'
+        pass: process.env.SMTP_PASSWORD
       },
       tls: {
         rejectUnauthorized: false
@@ -4496,10 +4873,24 @@ app.post('/api/warranty', async (req: any, res: any) => {
         replyTo: 'garantiasydevoluciones@escapesymas.com',
         subject: 'Hemos recibido tu solicitud de garantía',
         html: `
-          <h3>Hola ${buyerName},</h3>
-          <p>Hemos recibido tu solicitud de garantía asociada a la factura <strong>${invoiceNumber}</strong>.</p>
-          <p>Nuestro equipo revisará la información y te contactará en breve.</p>
-          <p>Gracias por confiar en Escapes y Más.</p>
+          <div style="font-family: 'Inter', system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #f8fafc; border-radius: 6px; color: #0f172a; border: 1px solid #e2e8f0;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <img src="https://www.escapesymas.com/logo-cabecera-negro.svg" alt="Escapes y Más" style="max-width: 250px;">
+            </div>
+            <h2 style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; color: #0f172a; text-align: center; font-size: 24px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">¡HOLA ${buyerName}!</h2>
+            <div style="background-color: #ffffff; padding: 25px; border-radius: 6px; border-left: 4px solid #eab308; margin: 20px 0; border-top: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;">
+              <p style="color: #475569; font-size: 16px; line-height: 1.6; margin-top: 0;">
+                Hemos recibido tu solicitud de garantía asociada a la factura <strong>${invoiceNumber}</strong>.
+              </p>
+              <p style="color: #475569; font-size: 16px; line-height: 1.6; margin-bottom: 0;">
+                Nuestro equipo revisará la información y te contactará en breve. Gracias por confiar en Escapes y Más.
+              </p>
+            </div>
+            <p style="color: #64748b; font-size: 14px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 20px; margin-bottom: 0;">
+              ¿Tienes dudas? Responde a este correo o escríbenos a <a href="mailto:info@escapesymas.com" style="color: #0f172a; font-weight: 600;">info@escapesymas.com</a>.<br><br>
+              <strong>Escapes y Más</strong>
+            </p>
+          </div>
         `
       });
 
@@ -4523,6 +4914,29 @@ app.post('/api/warranty', async (req: any, res: any) => {
 // ================================================================
 // UTILIDADES
 // ================================================================
+const PUBLIC_ATTR_KEYS = new Set([
+  'Talla', 'Color',
+  'Estilo de casco', 'Tipo de cierre', 'Modelo de casco',
+  'Estilo de pintura', 'Acabado de la pintura',
+  'Composición', 'Homologación', 'Colección',
+  'Tipo de pieza de repuesto'
+]);
+
+function parseAttributes(raw: any): { name: string; value: string }[] {
+  if (!raw) return [];
+  let obj: Record<string, any> = {};
+  if (typeof raw === 'string') {
+    try { obj = JSON.parse(raw); } catch { return []; }
+  } else if (typeof raw === 'object') {
+    obj = raw;
+  } else {
+    return [];
+  }
+  return Object.entries(obj)
+    .filter(([key, val]) => PUBLIC_ATTR_KEYS.has(key) && val !== null && val !== undefined && val !== '')
+    .map(([key, val]) => ({ name: key, value: String(val) }));
+}
+
 function mapProductToFrontend(row: any) {
   const priceEur = (row.price || 0) / 100;
   const salePriceEur = row.sale_price ? row.sale_price / 100 : null;
@@ -4563,86 +4977,6 @@ function mapProductToFrontend(row: any) {
     }
   } catch { }
 
-  const categoryMap: Record<number, { name: string; slug: string }> = {
-    1: { name: "Sistemas de Escape", slug: "escapes" },
-    2: { name: "Frenos de Competición", slug: "frenos" },
-    3: { name: "Parte ciclo & Chasis", slug: "suspensiones" },
-    4: { name: "Electrónica & ECU", slug: "electronica" },
-    5: { name: "Transmisión & Desarrollo", slug: "transmision" },
-    6: { name: "Mantenimiento & Fluidos", slug: "mantenimiento" },
-    7: { name: "Neumáticos & Paddock", slug: "neumaticos" },
-    8: { name: "Cascos", slug: "cascos" },
-    9: { name: "Equipación Piloto", slug: "equipacion" },
-    10: { name: "Accesorios & Maletas", slug: "accesorios" },
-
-    101: { name: "Línea Completa (Racing)", slug: "linea-completa" },
-    102: { name: "Slip-On (Silenciosos)", slug: "silenciadores" },
-    103: { name: "Colectores", slug: "colectores" },
-    104: { name: "Accesorios Escape", slug: "accesorios-escape" },
-
-    201: { name: "Pastillas Sinterizadas", slug: "pastillas-sinterizadas" },
-    202: { name: "Discos de Freno", slug: "discos-freno" },
-    203: { name: "Bombas Radiales", slug: "bombas-radiales" },
-    204: { name: "Latiguillos Metálicos", slug: "latiguillos-metalicos" },
-
-    301: { name: "Amortiguadores Traseros", slug: "amortiguadores-traseros" },
-    302: { name: "Cartuchos Horquilla", slug: "cartuchos-horquilla" },
-    303: { name: "Amortiguadores Dirección", slug: "amortiguadores-direccion" },
-    304: { name: "Estriberas", slug: "estriberas" },
-
-    401: { name: "Centralitas (ECU)", slug: "centralitas" },
-    402: { name: "Quickshifters", slug: "quickshifters" },
-    403: { name: "Módulos ABS/TC", slug: "modulos-abs-tc" },
-    404: { name: "Baterías Litio", slug: "baterias-litio" },
-
-    501: { name: "Kits Cadena Completos", slug: "kits-cadena" },
-    502: { name: "Cadenas X-Ring/Z-Ring", slug: "cadenas-arrastre" },
-    503: { name: "Piñones", slug: "pinones" },
-    504: { name: "Coronas Ergal", slug: "coronas" },
-
-    601: { name: "Filtros Aire Racing", slug: "filtros-aire" },
-    602: { name: "Filtros Aceite", slug: "filtros-aceite" },
-    603: { name: "Aceites Motor Pro", slug: "aceites-motor" },
-    604: { name: "Líquidos Hidráulicos", slug: "liquidos-hidraulicos" },
-
-    701: { name: "Neumáticos Slick/Sport", slug: "neumaticos-slick" },
-    702: { name: "Calentadores", slug: "calentadores" },
-    703: { name: "Caballetes", slug: "caballetes" },
-    704: { name: "Manómetros & Accesorios", slug: "manometros-accesorios" },
-
-    801: { name: "Cascos Integrales", slug: "cascos-integrales" },
-    802: { name: "Cascos Modulares", slug: "cascos-modulares" },
-    803: { name: "Cascos Jet", slug: "cascos-jet" },
-    804: { name: "Cascos Off-Road", slug: "cascos-off-road" },
-
-    901: { name: "Chaquetas Moto", slug: "chaquetas-moto" },
-    902: { name: "Monos & Pantalones", slug: "monos-pantalones" },
-    903: { name: "Guantes", slug: "guantes" },
-    904: { name: "Botas", slug: "botas" },
-    905: { name: "Ropa Térmica & Interior", slug: "ropa-termica-interior" },
-    906: { name: "Gafas & Lentes", slug: "gafas-lentes" },
-    907: { name: "Protecciones", slug: "protecciones" },
-    908: { name: "Ropa Deportiva & Merch", slug: "ropa-deportiva" },
-    909: { name: "Otros Accesorios Piloto", slug: "otros-accesorios-piloto" },
-
-    1001: { name: "Maletas & Baúles", slug: "maletas-baules" },
-    1002: { name: "Soportes Quad Lock", slug: "soportes-quad-lock" },
-    1003: { name: "Intercomunicadores", slug: "intercomunicadores" },
-    1004: { name: "Personalización & Espejos", slug: "personalizacion-espejos" },
-    1006: { name: "Accesorios Genéricos", slug: "accesorios-genericos" },
-    1007: { name: "Confort y Conveniencia", slug: "confort-conveniencia" },
-    1008: { name: "Piezas de Diseño/Estética", slug: "piezas-diseno" },
-    1009: { name: "Accesorios Eléctricos", slug: "accesorios-electricos" },
-    1010: { name: "Accesorios Electrónicos", slug: "accesorios-electronicos" },
-    1011: { name: "Plásticos y Protecciones", slug: "plasticos-protecciones" },
-    1012: { name: "Componentes de Bicicleta", slug: "componentes-bicicleta" },
-    1013: { name: "Accesorios Moto", slug: "accesorios-moto" },
-    1014: { name: "Accesorios Scooter", slug: "accesorios-scooter" },
-    1017: { name: "Herramientas & Taller", slug: "herramientas-taller" },
-    1018: { name: "Accesorios ATV / Quad", slug: "accesorios-atv-quad" },
-    1019: { name: "Lubricantes & Químicos", slug: "lubricantes-quimicos" },
-    1020: { name: "Consumibles Taller", slug: "consumibles-taller" }
-  };
   const catInfo = categoryMap[row.category_id] || { name: "General", slug: "general" };
 
   const productImage = images[0]?.src || '';
@@ -4667,7 +5001,7 @@ function mapProductToFrontend(row: any) {
     category3Name: cat3Info?.name || '', category3Slug: cat3Info?.slug || '',
     description: row.description || '',
     shortDescription: row.description ? row.description.substring(0, 150) + '...' : '',
-    status: row.status, compatibility, attributes: [],
+    status: row.status, compatibility, attributes: parseAttributes(row.attributes),
     brand: row.brand || '', barcode: row.barcode || '',
     supplierCode: row.supplier_code || '', oldPartNumber: row.old_part_number || '',
     weight_g: row.weight_g || null, length_mm: row.length_mm || null,
@@ -4682,107 +5016,32 @@ function mapProductToFrontend(row: any) {
 // ================================================================
 // CATEGORÍAS (público)
 // ================================================================
-app.get('/api/catalog/categories', (req, res) => {
-  const categoryMap: Record<number, { name: string; slug: string }> = {
-    1: { name: "Sistemas de Escape", slug: "escapes" },
-    2: { name: "Frenos de Competición", slug: "frenos" },
-    3: { name: "Parte ciclo & Chasis", slug: "suspensiones" },
-    4: { name: "Electrónica & ECU", slug: "electronica" },
-    5: { name: "Transmisión & Desarrollo", slug: "transmision" },
-    6: { name: "Mantenimiento & Fluidos", slug: "mantenimiento" },
-    7: { name: "Neumáticos & Paddock", slug: "neumaticos" },
-    8: { name: "Cascos", slug: "cascos" },
-    9: { name: "Equipación Piloto", slug: "equipacion" },
-    10: { name: "Accesorios & Maletas", slug: "accesorios" },
+app.get('/api/catalog/categories', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, name, slug, parent_id
+       FROM categories
+       WHERE status = 'active'
+       ORDER BY sort_order, id`
+    );
 
-    101: { name: "Línea Completa (Racing)", slug: "linea-completa" },
-    102: { name: "Slip-On (Silenciosos)", slug: "silenciadores" },
-    103: { name: "Colectores", slug: "colectores" },
-    104: { name: "Accesorios Escape", slug: "accesorios-escape" },
-
-    201: { name: "Pastillas Sinterizadas", slug: "pastillas-sinterizadas" },
-    202: { name: "Discos de Freno", slug: "discos-freno" },
-    203: { name: "Bombas Radiales", slug: "bombas-radiales" },
-    204: { name: "Latiguillos Metálicos", slug: "latiguillos-metalicos" },
-
-    301: { name: "Amortiguadores Traseros", slug: "amortiguadores-traseros" },
-    302: { name: "Cartuchos Horquilla", slug: "cartuchos-horquilla" },
-    303: { name: "Amortiguadores Dirección", slug: "amortiguadores-direccion" },
-    304: { name: "Estriberas", slug: "estriberas" },
-
-    401: { name: "Centralitas (ECU)", slug: "centralitas" },
-    402: { name: "Quickshifters", slug: "quickshifters" },
-    403: { name: "Módulos ABS/TC", slug: "modulos-abs-tc" },
-    404: { name: "Baterías Litio", slug: "baterias-litio" },
-
-    501: { name: "Kits Cadena Completos", slug: "kits-cadena" },
-    502: { name: "Cadenas X-Ring/Z-Ring", slug: "cadenas-arrastre" },
-    503: { name: "Piñones", slug: "pinones" },
-    504: { name: "Coronas Ergal", slug: "coronas" },
-
-    601: { name: "Filtros Aire Racing", slug: "filtros-aire" },
-    602: { name: "Filtros Aceite", slug: "filtros-aceite" },
-    603: { name: "Aceites Motor Pro", slug: "aceites-motor" },
-    604: { name: "Líquidos Hidráulicos", slug: "liquidos-hidraulicos" },
-
-    701: { name: "Neumáticos Slick/Sport", slug: "neumaticos-slick" },
-    702: { name: "Calentadores", slug: "calentadores" },
-    703: { name: "Caballetes", slug: "caballetes" },
-    704: { name: "Manómetros & Accesorios", slug: "manometros-accesorios" },
-
-    801: { name: "Cascos Integrales", slug: "cascos-integrales" },
-    802: { name: "Cascos Modulares", slug: "cascos-modulares" },
-    803: { name: "Cascos Jet", slug: "cascos-jet" },
-    804: { name: "Cascos Off-Road", slug: "cascos-off-road" },
-    805: { name: "Recambios Cascos", slug: "recambios-cascos" },
-
-    901: { name: "Chaquetas Moto", slug: "chaquetas-moto" },
-    902: { name: "Monos & Pantalones", slug: "monos-pantalones" },
-    903: { name: "Guantes", slug: "guantes" },
-    904: { name: "Botas", slug: "botas" },
-    905: { name: "Ropa Térmica & Interior", slug: "ropa-termica-interior" },
-    906: { name: "Gafas & Lentes", slug: "gafas-lentes" },
-    907: { name: "Protecciones", slug: "protecciones" },
-    908: { name: "Ropa Deportiva & Merch", slug: "ropa-deportiva" },
-    909: { name: "Otros Accesorios Piloto", slug: "otros-accesorios-piloto" },
-
-    1001: { name: "Maletas & Baúles", slug: "maletas-baules" },
-    1002: { name: "Soportes Quad Lock", slug: "soportes-quad-lock" },
-    1003: { name: "Intercomunicadores", slug: "intercomunicadores" },
-    1004: { name: "Personalización & Espejos", slug: "personalizacion-espejos" },
-    1005: { name: "Promocional", slug: "promocional" },
-    1006: { name: "Accesorios Genéricos", slug: "accesorios-genericos" },
-    1007: { name: "Confort y Conveniencia", slug: "confort-conveniencia" },
-    1008: { name: "Piezas de Diseño/Estética", slug: "piezas-diseno" },
-    1009: { name: "Accesorios Eléctricos", slug: "accesorios-electricos" },
-    1010: { name: "Accesorios Electrónicos", slug: "accesorios-electronicos" },
-    1011: { name: "Plásticos y Protecciones", slug: "plasticos-protecciones" },
-    1012: { name: "Componentes de Bicicleta", slug: "componentes-bicicleta" },
-    1013: { name: "Accesorios Moto", slug: "accesorios-moto" },
-    1014: { name: "Accesorios Scooter", slug: "accesorios-scooter" },
-    1017: { name: "Herramientas & Taller", slug: "herramientas-taller" },
-    1018: { name: "Accesorios ATV / Quad", slug: "accesorios-atv-quad" },
-    1019: { name: "Lubricantes & Químicos", slug: "lubricantes-quimicos" },
-    1020: { name: "Consumibles Taller", slug: "consumibles-taller" }
-  };
-
-  const subcategories = Object.entries(categoryMap)
-    .filter(([id]) => parseInt(id) >= 100)
-    .map(([id, cat]) => {
-      const catId = parseInt(id);
-      const parentId = Math.floor(catId / 100);
-      const parent = categoryMap[parentId];
+    const categories = result.rows.map((row: any) => {
+      if (row.parent_id === null) {
+        return { id: row.id, name: row.name, slug: row.slug, parentId: 0, parentName: '', parentSlug: '' };
+      }
+      const parent = result.rows.find((r: any) => r.id === row.parent_id);
       return {
-        id: catId,
-        name: cat.name,
-        slug: cat.slug,
-        parentId,
-        parentName: parent?.name || '',
-        parentSlug: parent?.slug || ''
+        id: row.id, name: row.name, slug: row.slug,
+        parentId: row.parent_id,
+        parentName: parent?.name || '', parentSlug: parent?.slug || ''
       };
     });
 
-  res.json(subcategories);
+    res.json(categories);
+  } catch (err) {
+    console.error('[CATEGORIES API ERROR]:', err);
+    res.status(500).json([]);
+  }
 });
 
 // ================================================================
@@ -4797,7 +5056,7 @@ async function sendShipmentNotificationEmail(orderId: number, email: string, fir
       secure: true,
       auth: {
         user: process.env.SMTP_USER || "web@escapesymas.com",
-        pass: process.env.SMTP_PASSWORD || "Pedrito2011P!"
+        pass: process.env.SMTP_PASSWORD
       },
       tls: {
         rejectUnauthorized: false
@@ -4812,23 +5071,29 @@ async function sendShipmentNotificationEmail(orderId: number, email: string, fir
       to: email,
       subject: `🏍️ ¡Tu pedido #${orderId} ha sido enviado!`,
       html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 12px; background-color: #000; color: #fff;">
-          <div style="text-align: center; margin-bottom: 20px;">
-            <h1 style="color: #ff5722; font-style: italic; text-transform: uppercase;">Escapes y Más</h1>
-            <p style="color: #888; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Confirmación de Envío</p>
+        <div style="font-family: 'Inter', system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #f8fafc; border-radius: 6px; color: #0f172a; border: 1px solid #e2e8f0;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <img src="https://www.escapesymas.com/logo-cabecera-negro.svg" alt="Escapes y Más" style="max-width: 250px;">
           </div>
-          <p>Hola <strong>${clientName}</strong>,</p>
-          <p>¡Buenas noticias! Tu pedido de escapes y recambios <strong>#${orderId}</strong> ha sido empaquetado y enviado a través de nuestro distribuidor (Bihr).</p>
+          <h2 style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; color: #0f172a; text-align: center; font-size: 24px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">¡HOLA ${clientName}!</h2>
+          <div style="background-color: #ffffff; padding: 25px; border-radius: 6px; border-left: 4px solid #eab308; margin: 20px 0; border-top: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;">
+            <p style="color: #475569; font-size: 16px; line-height: 1.6; margin-top: 0;">
+              ¡Buenas noticias! Tu pedido <strong>#${orderId}</strong> ha sido empaquetado y enviado.
+            </p>
+            
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 15px; margin: 20px 0; text-align: center;">
+              <p style="margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase; color: #64748b; letter-spacing: 1px; font-weight: 600;">NÚMERO DE SEGUIMIENTO (TRACKING)</p>
+              <div style="font-size: 20px; font-weight: 700; color: #eab308; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; letter-spacing: 1px;">${trackingNumber}</div>
+            </div>
+          </div>
           
-          <div style="background-color: #111; border: 1px solid #222; border-radius: 8px; padding: 15px; margin: 20px 0; text-align: center;">
-            <p style="margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase; color: #888; letter-spacing: 1px;">Número de Seguimiento (Tracking)</p>
-            <div style="font-size: 20px; font-weight: bold; color: #ff5722; font-family: monospace; letter-spacing: 1px;">${trackingNumber}</div>
-            <a href="${trackLink}" target="_blank" style="display: inline-block; margin-top: 15px; background-color: #ff5722; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; text-transform: uppercase; font-size: 12px;">Seguir mi Envío</a>
+          <div style="text-align: center; margin: 40px 0;">
+            <a href="${trackLink}" target="_blank" style="background-color: #eab308; color: #000000; padding: 16px 32px; text-decoration: none; font-size: 16px; border-radius: 6px; font-weight: 700; display: inline-block; text-transform: uppercase; letter-spacing: 0.5px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;">Seguir Mi Envío</a>
           </div>
 
-          <p style="font-size: 12px; color: #666; text-align: center; margin-top: 30px;">
-            Si tienes alguna duda con tu pedido, responde directamente a este correo.<br/>
-            ¡Gasss! 🏍️💨
+          <p style="color: #64748b; font-size: 14px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 20px; margin-bottom: 0;">
+            ¿Tienes dudas? Responde a este correo o escríbenos a <a href="mailto:info@escapesymas.com" style="color: #0f172a; font-weight: 600;">info@escapesymas.com</a>.<br><br>
+            <strong>Escapes y Más</strong>
           </p>
         </div>
       `
@@ -4902,27 +5167,26 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
 
   let event: any;
   try {
-    if (sig) {
-      if (testWebhookSecret) {
-        try {
-          event = stripeTest.webhooks.constructEvent(req.body, sig, testWebhookSecret);
-        } catch (e) {
-          // Ignore and check live secret
-        }
+    if (!sig) throw new Error('No Stripe signature header');
+    if (!webhookSecret && !testWebhookSecret) {
+      throw new Error('STRIPE_WEBHOOK_SECRET not configured');
+    }
+    if (testWebhookSecret) {
+      try {
+        event = stripeTest.webhooks.constructEvent(req.body, sig, testWebhookSecret);
+      } catch (e) {
+        // Ignore and check live secret
       }
-      if (!event && webhookSecret) {
-        try {
-          event = stripeLive.webhooks.constructEvent(req.body, sig, webhookSecret);
-        } catch (e) {
-          // Ignore
-        }
-      }
-      if (!event && (webhookSecret || testWebhookSecret)) {
-        throw new Error('Signature verification failed for both test and live webhook secrets');
+    }
+    if (!event && webhookSecret) {
+      try {
+        event = stripeLive.webhooks.constructEvent(req.body, sig, webhookSecret);
+      } catch (e) {
+        // Ignore
       }
     }
     if (!event) {
-      event = JSON.parse(req.body.toString());
+      throw new Error('Signature verification failed');
     }
   } catch (err: any) {
     console.error('[STRIPE WEBHOOK] Signature verification failed:', err.message);

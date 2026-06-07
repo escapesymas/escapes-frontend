@@ -6,11 +6,12 @@ module.exports = {
     instances: 1,
     autorestart: true,
     watch: false,
-    max_memory_restart: '768M',
+    max_memory_restart: '2G',
     env: {
       NODE_ENV: 'production',
       PORT: 3001,
       DATABASE_URL: 'postgresql://postgres:EscapesPostgres2026Vercel@localhost:5432/escapes_db',
+      STRIPE_SECRET_KEY: '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',
       WP_URL: 'https://backendescapes.com',
       BIHR_USERNAME: 'info@escapesymas.com',
       BIHR_MACKEY: '3799B392-3934-4514-ABF0-9EF7F544A117',
