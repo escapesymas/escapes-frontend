@@ -1,0 +1,15 @@
+- generic [active] [ref=e1]:
+  - link "Saltar al contenido principal" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - img "Escapes y Más" [ref=e6]
+      - 'heading "Finalizar Pedido #test-order-123" [level=1] [ref=e7]'
+      - paragraph [ref=e8]: Estás a un paso de recibir tu pedido. Por favor, completa el pago de forma segura a continuación.
+    - generic [ref=e10]: "la sintaxis de entrada no es válida para tipo integer: «NaN»"
+    - generic [ref=e11]:
+      - img [ref=e12]
+      - generic [ref=e14]: Los pagos son procesados de forma segura con cifrado TLS/SSL por Stripe.
+  - button "Open Next.js Dev Tools" [ref=e20] [cursor=pointer]:
+    - img [ref=e21]
+  - alert [ref=e24]

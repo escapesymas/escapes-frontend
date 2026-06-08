@@ -1,0 +1,15 @@
+- generic [ref=e6]:
+  - generic [ref=e7]:
+    - img [ref=e9]
+    - heading "Escapes Admin" [level=1] [ref=e11]
+    - paragraph [ref=e12]: Consola de Control del VPS
+  - generic [ref=e13]:
+    - generic [ref=e14]:
+      - generic [ref=e15]: Email Administrador
+      - textbox "admin@escapesymas.com" [ref=e17]
+    - generic [ref=e18]:
+      - generic [ref=e19]: Contraseña VPS
+      - textbox "••••••••" [ref=e21]
+    - button "Entrar al Panel" [ref=e22] [cursor=pointer]:
+      - img [ref=e23]
+      - generic [ref=e27]: Entrar al Panel

@@ -1,0 +1,286 @@
+- generic [active] [ref=e1]:
+  - link "Saltar al contenido principal" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - button "Mi Moto" [ref=e6]:
+          - img [ref=e7]
+          - generic [ref=e12]: Mi Moto
+        - link "Escapes y Más" [ref=e13] [cursor=pointer]:
+          - /url: /
+          - img "Escapes y Más" [ref=e14]
+        - generic [ref=e15]:
+          - button "Abrir carrito" [ref=e16] [cursor=pointer]:
+            - img [ref=e17]
+          - navigation [ref=e21]:
+            - link "Inicio" [ref=e22] [cursor=pointer]:
+              - /url: /
+            - link "Catálogo" [ref=e23] [cursor=pointer]:
+              - /url: /universales
+            - link "Acceder" [ref=e24] [cursor=pointer]:
+              - /url: /login
+    - main [ref=e25]:
+      - generic [ref=e27]:
+        - generic [ref=e29]:
+          - generic [ref=e30]: Uso general y accesorios
+          - heading "Productos Universales" [level=1] [ref=e31]
+          - paragraph [ref=e32]: Aquí encontrarás todo tipo de equipación, cascos y accesorios generales aptos para cualquier moto sin necesidad de compatibilidad específica.
+        - generic [ref=e35]:
+          - img [ref=e37]
+          - textbox "Buscar por referencia, SKU o nombre..." [ref=e40]: escape
+          - button "Buscar" [ref=e42] [cursor=pointer]
+        - generic [ref=e43]:
+          - link "Catálogo Universal" [ref=e44] [cursor=pointer]:
+            - /url: /universales
+          - img [ref=e45]
+          - generic [ref=e47]: "Búsqueda: “escape”"
+        - generic [ref=e48]:
+          - generic [ref=e49]:
+            - generic [ref=e50]:
+              - 'heading "Búsqueda Universal: “escape”" [level=3] [ref=e51]':
+                - text: "Búsqueda Universal:"
+                - generic [ref=e52]: “escape”
+              - paragraph [ref=e53]: 186 productos universales
+            - link "Cerrar" [ref=e55] [cursor=pointer]:
+              - /url: /universales
+          - generic [ref=e56]:
+            - complementary [ref=e57]:
+              - generic [ref=e58]:
+                - heading "Marcas" [level=4] [ref=e59]
+                - link "CONTINENTAL" [ref=e61] [cursor=pointer]:
+                  - /url: /universales/buscar/escape?brands=CONTINENTAL&page=1
+                  - checkbox
+                  - generic [ref=e62]: CONTINENTAL
+              - generic [ref=e63]:
+                - heading "Precio Máximo" [level=4] [ref=e64]
+                - generic [ref=e65]:
+                  - slider [ref=e66] [cursor=pointer]: "200"
+                  - generic [ref=e67]:
+                    - generic [ref=e68]: 0 €
+                    - generic [ref=e69]: 204 €
+              - link "Solo disponible" [ref=e71] [cursor=pointer]:
+                - /url: /universales/buscar/escape?inStock=1&page=1
+                - checkbox
+                - text: Solo disponible
+            - generic [ref=e72]:
+              - generic [ref=e73]:
+                - link "RST RST PANT ADVENTURE-X LADY, BLK, UK18 RST PANT ADVENTURE-X LADY, BLK, UK18 La chaqueta y el pantalón vaquero Adventure-X de la Serie Pro son la opción perfecta para la conducción de aventura. Equipada con un forro X-Liner des... Precio 299,95 € Añadir al carrito" [ref=e74] [cursor=pointer]:
+                  - /url: /producto/8001306011
+                  - generic [ref=e75]:
+                    - generic [ref=e77]: RST
+                    - img "RST PANT ADVENTURE-X LADY, BLK, UK18" [ref=e79]
+                    - generic [ref=e80]:
+                      - button [ref=e81]
+                      - button [ref=e82]
+                      - button [ref=e83]
+                      - button [ref=e84]
+                  - generic [ref=e85]:
+                    - generic [ref=e86]:
+                      - heading "RST PANT ADVENTURE-X LADY, BLK, UK18" [level=4] [ref=e87]
+                      - paragraph [ref=e88]: La chaqueta y el pantalón vaquero Adventure-X de la Serie Pro son la opción perfecta para la conducción de aventura. Equipada con un forro X-Liner des...
+                    - generic [ref=e89]:
+                      - generic [ref=e90]:
+                        - generic [ref=e91]: Precio
+                        - generic [ref=e92]: 299,95 €
+                      - button "Añadir al carrito" [ref=e93]:
+                        - img [ref=e94]
+                - link "RFX RFX RACE EXHAUST PACKAGING, WHT RFX RACE EXHAUST PACKAGING, WHT El aislamiento acústico RFX de la serie Race es la solución perfecta para sustituir el aislamiento perdido en los ruidosos tubos de escape de 2T y 4T.... Precio 18,98 € Añadir al carrito" [ref=e98] [cursor=pointer]:
+                  - /url: /producto/1128663
+                  - generic [ref=e99]:
+                    - generic [ref=e101]: RFX
+                    - img "RFX RACE EXHAUST PACKAGING, WHT" [ref=e103]
+                  - generic [ref=e104]:
+                    - generic [ref=e105]:
+                      - heading "RFX RACE EXHAUST PACKAGING, WHT" [level=4] [ref=e106]
+                      - paragraph [ref=e107]: El aislamiento acústico RFX de la serie Race es la solución perfecta para sustituir el aislamiento perdido en los ruidosos tubos de escape de 2T y 4T....
+                    - generic [ref=e108]:
+                      - generic [ref=e109]:
+                        - generic [ref=e110]: Precio
+                        - generic [ref=e111]: 18,98 €
+                      - button "Añadir al carrito" [ref=e112]:
+                        - img [ref=e113]
+                - link "RFX RFX SPORT STD EXHAUST SPRINGS, SIL RFX SPORT STD EXHAUST SPRINGS, SIL Los resortes de escape de la serie RFX Sport están hechos de acero de resorte de alta calidad y galvanizados para un acabado sin corrosión. Disponib... Precio 10,99 € Añadir al carrito" [ref=e117] [cursor=pointer]:
+                  - /url: /producto/1128567
+                  - generic [ref=e118]:
+                    - generic [ref=e120]: RFX
+                    - img "RFX SPORT STD EXHAUST SPRINGS, SIL" [ref=e122]
+                  - generic [ref=e123]:
+                    - generic [ref=e124]:
+                      - heading "RFX SPORT STD EXHAUST SPRINGS, SIL" [level=4] [ref=e125]
+                      - paragraph [ref=e126]: Los resortes de escape de la serie RFX Sport están hechos de acero de resorte de alta calidad y galvanizados para un acabado sin corrosión. Disponib...
+                    - generic [ref=e127]:
+                      - generic [ref=e128]:
+                        - generic [ref=e129]: Precio
+                        - generic [ref=e130]: 10,99 €
+                      - button "Añadir al carrito" [ref=e131]:
+                        - img [ref=e132]
+                - link "RFX RFX RACE STAINLESS STEEL SWIVEL EXHAUST RFX RACE STAINLESS STEEL SWIVEL EXHAUST Los muelles de escape de la serie RFX Race están fabricados en acero inoxidable para resistir la corrosión.Incluyen un extremo giratorio para mejorar ... Precio 13,99 € Añadir al carrito" [ref=e136] [cursor=pointer]:
+                  - /url: /producto/1128571
+                  - generic [ref=e137]:
+                    - generic [ref=e139]: RFX
+                    - img "RFX RACE STAINLESS STEEL SWIVEL EXHAUST" [ref=e141]
+                  - generic [ref=e142]:
+                    - generic [ref=e143]:
+                      - heading "RFX RACE STAINLESS STEEL SWIVEL EXHAUST" [level=4] [ref=e144]
+                      - paragraph [ref=e145]: Los muelles de escape de la serie RFX Race están fabricados en acero inoxidable para resistir la corrosión.Incluyen un extremo giratorio para mejorar ...
+                    - generic [ref=e146]:
+                      - generic [ref=e147]:
+                        - generic [ref=e148]: Precio
+                        - generic [ref=e149]: 13,99 €
+                      - button "Añadir al carrito" [ref=e150]:
+                        - img [ref=e151]
+                - link "RFX RFX RACE 2 STROKE EXHAUST BUNG, ORG RFX RACE 2 STROKE EXHAUST BUNG, ORG El tapón de escape RFX se suministra con una correa de cuello RFX para facilitar su instalación. Es la solución ideal para taponar el escape cuando ... Precio 7,99 € Añadir al carrito" [ref=e155] [cursor=pointer]:
+                  - /url: /producto/1128711
+                  - generic [ref=e156]:
+                    - generic [ref=e158]: RFX
+                    - img "RFX RACE 2 STROKE EXHAUST BUNG, ORG" [ref=e160]
+                  - generic [ref=e161]:
+                    - generic [ref=e162]:
+                      - heading "RFX RACE 2 STROKE EXHAUST BUNG, ORG" [level=4] [ref=e163]
+                      - paragraph [ref=e164]: El tapón de escape RFX se suministra con una correa de cuello RFX para facilitar su instalación. Es la solución ideal para taponar el escape cuando ...
+                    - generic [ref=e165]:
+                      - generic [ref=e166]:
+                        - generic [ref=e167]: Precio
+                        - generic [ref=e168]: 7,99 €
+                      - button "Añadir al carrito" [ref=e169]:
+                        - img [ref=e170]
+                - link "RFX RFX RACE SERIES PRO BOLT PACK, SIL RFX RACE SERIES PRO BOLT PACK, SIL Los packs RFX Race Series Pro son los principales packs de tornillos de repuesto OEM para mantenerte en marcha cuando estás en la pista o para ayudart... Precio 72,99 € Añadir al carrito" [ref=e174] [cursor=pointer]:
+                  - /url: /producto/1128553
+                  - generic [ref=e175]:
+                    - generic [ref=e177]: RFX
+                    - img "RFX RACE SERIES PRO BOLT PACK, SIL" [ref=e179]
+                  - generic [ref=e180]:
+                    - generic [ref=e181]:
+                      - heading "RFX RACE SERIES PRO BOLT PACK, SIL" [level=4] [ref=e182]
+                      - paragraph [ref=e183]: Los packs RFX Race Series Pro son los principales packs de tornillos de repuesto OEM para mantenerte en marcha cuando estás en la pista o para ayudart...
+                    - generic [ref=e184]:
+                      - generic [ref=e185]:
+                        - generic [ref=e186]: Precio
+                        - generic [ref=e187]: 72,99 €
+                      - button "Añadir al carrito" [ref=e188]:
+                        - img [ref=e189]
+                - link "RFX RFX RACE 4 STROKE EXHAUST BUNG, ORG RFX RACE 4 STROKE EXHAUST BUNG, ORG El tapón de escape RFX se suministra con una correa de cuello RFX para facilitar su instalación. Es la solución ideal para taponar el escape cuando ... Precio 8,99 € Añadir al carrito" [ref=e193] [cursor=pointer]:
+                  - /url: /producto/1128712
+                  - generic [ref=e194]:
+                    - generic [ref=e196]: RFX
+                    - img "RFX RACE 4 STROKE EXHAUST BUNG, ORG" [ref=e198]
+                  - generic [ref=e199]:
+                    - generic [ref=e200]:
+                      - heading "RFX RACE 4 STROKE EXHAUST BUNG, ORG" [level=4] [ref=e201]
+                      - paragraph [ref=e202]: El tapón de escape RFX se suministra con una correa de cuello RFX para facilitar su instalación. Es la solución ideal para taponar el escape cuando ...
+                    - generic [ref=e203]:
+                      - generic [ref=e204]:
+                        - generic [ref=e205]: Precio
+                        - generic [ref=e206]: 8,99 €
+                      - button "Añadir al carrito" [ref=e207]:
+                        - img [ref=e208]
+                - link "HIGHSIDER HIGHS MOUNTING KIT H-BAR MIRRORS RH+LH HIGHS MOUNTING KIT H-BAR MIRRORS RH+LH Kit de montaje HIGHSIDER smart inteligente para espejo de manillar. Elimine las etiquetas html y todo lo relacionado con el código html y css del text... Precio 9,95 € Añadir al carrito" [ref=e212] [cursor=pointer]:
+                  - /url: /producto/1139544
+                  - generic [ref=e213]:
+                    - generic [ref=e215]: HIGHSIDER
+                    - img "HIGHS MOUNTING KIT H-BAR MIRRORS RH+LH" [ref=e217]
+                    - generic [ref=e218]:
+                      - button [ref=e219]
+                      - button [ref=e220]
+                      - button [ref=e221]
+                      - button [ref=e222]
+                      - button [ref=e223]
+                  - generic [ref=e224]:
+                    - generic [ref=e225]:
+                      - heading "HIGHS MOUNTING KIT H-BAR MIRRORS RH+LH" [level=4] [ref=e226]
+                      - paragraph [ref=e227]: Kit de montaje HIGHSIDER smart inteligente para espejo de manillar. Elimine las etiquetas html y todo lo relacionado con el código html y css del text...
+                    - generic [ref=e228]:
+                      - generic [ref=e229]:
+                        - generic [ref=e230]: Precio
+                        - generic [ref=e231]: 9,95 €
+                      - button "Añadir al carrito" [ref=e232]:
+                        - img [ref=e233]
+                - link "FLY RACING FLY HELMT FORMULA CP MANIC´25, MGY, L FLY HELMT FORMULA CP MANIC´25, MGY, L Homologación Homologado ECE 22.06 / DOT Sistema de Impacto Adaptable (AIS) La construcción de la calota de aleación de policarbonato produce una ... Precio 249,95 € Añadir al carrito" [ref=e237] [cursor=pointer]:
+                  - /url: /producto/8009376003
+                  - generic [ref=e238]:
+                    - generic [ref=e240]: FLY RACING
+                    - img "FLY HELMT FORMULA CP MANIC´25, MGY, L" [ref=e242]
+                    - generic [ref=e243]:
+                      - button [ref=e244]
+                      - button [ref=e245]
+                      - button [ref=e246]
+                      - button [ref=e247]
+                  - generic [ref=e248]:
+                    - generic [ref=e249]:
+                      - heading "FLY HELMT FORMULA CP MANIC´25, MGY, L" [level=4] [ref=e250]
+                      - paragraph [ref=e251]: Homologación Homologado ECE 22.06 / DOT Sistema de Impacto Adaptable (AIS) La construcción de la calota de aleación de policarbonato produce una ...
+                    - generic [ref=e252]:
+                      - generic [ref=e253]:
+                        - generic [ref=e254]: Precio
+                        - generic [ref=e255]: 249,95 €
+                      - button "Añadir al carrito" [ref=e256]:
+                        - img [ref=e257]
+                - link "FLY RACING FLY HELMT FORMULA CC GLIDE´26, GRY, L FLY HELMT FORMULA CC GLIDE´26, GRY, L Homologación Homologado ECE 22.06 / DOT Sistema de Impacto Adaptable (AIS) Calota de composite trenzado de fibra de carbono, DuPont™ Kevlar® y fi... Precio 499,95 € Añadir al carrito" [ref=e261] [cursor=pointer]:
+                  - /url: /producto/8009741003
+                  - generic [ref=e262]:
+                    - generic [ref=e264]: FLY RACING
+                    - img "FLY HELMT FORMULA CC GLIDE´26, GRY, L" [ref=e266]
+                    - generic [ref=e267]:
+                      - button [ref=e268]
+                      - button [ref=e269]
+                      - button [ref=e270]
+                      - button [ref=e271]
+                  - generic [ref=e272]:
+                    - generic [ref=e273]:
+                      - heading "FLY HELMT FORMULA CC GLIDE´26, GRY, L" [level=4] [ref=e274]
+                      - paragraph [ref=e275]: Homologación Homologado ECE 22.06 / DOT Sistema de Impacto Adaptable (AIS) Calota de composite trenzado de fibra de carbono, DuPont™ Kevlar® y fi...
+                    - generic [ref=e276]:
+                      - generic [ref=e277]:
+                        - generic [ref=e278]: Precio
+                        - generic [ref=e279]: 499,95 €
+                      - button "Añadir al carrito" [ref=e280]:
+                        - img [ref=e281]
+                - link "FLY RACING FLY HELMT FORMULA CC SOLID , MBL, S FLY HELMT FORMULA CC SOLID , MBL, S Homologación Homologado ECE / DOT Sistema de Impacto Adaptable (AIS) Calota de composite trenzado de fibra de carbono, DuPont™ Kevlar® y fibra de... Precio 469,95 € Añadir al carrito" [ref=e285] [cursor=pointer]:
+                  - /url: /producto/8008101002
+                  - generic [ref=e286]:
+                    - generic [ref=e288]: FLY RACING
+                    - img "FLY HELMT FORMULA CC SOLID , MBL, S" [ref=e290]
+                    - generic [ref=e291]:
+                      - button [ref=e292]
+                      - button [ref=e293]
+                      - button [ref=e294]
+                      - button [ref=e295]
+                  - generic [ref=e296]:
+                    - generic [ref=e297]:
+                      - heading "FLY HELMT FORMULA CC SOLID , MBL, S" [level=4] [ref=e298]
+                      - paragraph [ref=e299]: Homologación Homologado ECE / DOT Sistema de Impacto Adaptable (AIS) Calota de composite trenzado de fibra de carbono, DuPont™ Kevlar® y fibra de...
+                    - generic [ref=e300]:
+                      - generic [ref=e301]:
+                        - generic [ref=e302]: Precio
+                        - generic [ref=e303]: 469,95 €
+                      - button "Añadir al carrito" [ref=e304]:
+                        - img [ref=e305]
+                - link "FLY RACING FLY HELMT FORMULA CP SEAL´26, RED, XL FLY HELMT FORMULA CP SEAL´26, RED, XL Homologación Homologado ECE 22.06 / DOT Sistema de Impacto Adaptable (AIS) La construcción de la calota de aleación de policarbonato produce una ... Precio 249,95 € Añadir al carrito" [ref=e309] [cursor=pointer]:
+                  - /url: /producto/8009752008
+                  - generic [ref=e310]:
+                    - generic [ref=e312]: FLY RACING
+                    - img "FLY HELMT FORMULA CP SEAL´26, RED, XL" [ref=e314]
+                    - generic [ref=e315]:
+                      - button [ref=e316]
+                      - button [ref=e317]
+                      - button [ref=e318]
+                      - button [ref=e319]
+                  - generic [ref=e320]:
+                    - generic [ref=e321]:
+                      - heading "FLY HELMT FORMULA CP SEAL´26, RED, XL" [level=4] [ref=e322]
+                      - paragraph [ref=e323]: Homologación Homologado ECE 22.06 / DOT Sistema de Impacto Adaptable (AIS) La construcción de la calota de aleación de policarbonato produce una ...
+                    - generic [ref=e324]:
+                      - generic [ref=e325]:
+                        - generic [ref=e326]: Precio
+                        - generic [ref=e327]: 249,95 €
+                      - button "Añadir al carrito" [ref=e328]:
+                        - img [ref=e329]
+              - generic [ref=e333]:
+                - img [ref=e335]
+                - generic [ref=e337]: Página 1 de 16
+                - link [ref=e338] [cursor=pointer]:
+                  - /url: "?page=2"
+                  - img [ref=e339]
+  - button "Open Next.js Dev Tools" [ref=e346] [cursor=pointer]:
+    - img [ref=e347]

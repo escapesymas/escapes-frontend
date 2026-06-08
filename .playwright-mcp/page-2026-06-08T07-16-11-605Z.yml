@@ -1,0 +1,107 @@
+- generic [active] [ref=e1]:
+  - link "Saltar al contenido principal" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - button "Mi Moto" [ref=e6]:
+          - img [ref=e7]
+          - generic [ref=e12]: Mi Moto
+        - link "Escapes y Más" [ref=e13] [cursor=pointer]:
+          - /url: /
+          - img "Escapes y Más" [ref=e14]
+        - generic [ref=e15]:
+          - button "Abrir carrito" [ref=e16] [cursor=pointer]:
+            - img [ref=e17]
+          - navigation [ref=e21]:
+            - link "Inicio" [ref=e22] [cursor=pointer]:
+              - /url: /
+            - link "Catálogo" [ref=e23] [cursor=pointer]:
+              - /url: /universales
+            - link "Acceder" [ref=e24] [cursor=pointer]:
+              - /url: /login
+    - main [ref=e25]:
+      - generic [ref=e27]:
+        - generic [ref=e29]:
+          - generic [ref=e30]: Uso general y accesorios
+          - heading "Productos Universales" [level=1] [ref=e31]
+          - paragraph [ref=e32]: Aquí encontrarás todo tipo de equipación, cascos y accesorios generales aptos para cualquier moto sin necesidad de compatibilidad específica.
+        - generic [ref=e35]:
+          - img [ref=e37]
+          - textbox "Buscar por referencia, SKU o nombre..." [ref=e40]
+          - button "Buscar" [ref=e42] [cursor=pointer]
+        - link "Catálogo Universal" [ref=e44] [cursor=pointer]:
+          - /url: /universales
+        - generic [ref=e45]:
+          - heading "Selecciona una categoría" [level=3] [ref=e46]
+          - generic [ref=e47]:
+            - link "Cascos" [ref=e48] [cursor=pointer]:
+              - /url: /universales/cascos
+              - img [ref=e50]
+              - generic [ref=e52]: Cascos
+            - link "Chasis" [ref=e53] [cursor=pointer]:
+              - /url: /universales/chasis
+              - img [ref=e55]
+              - generic [ref=e58]: Chasis
+            - link "Ciclismo" [ref=e59] [cursor=pointer]:
+              - /url: /universales/ciclismo
+              - img [ref=e61]
+              - generic [ref=e66]: Ciclismo
+            - link "Electricidad" [ref=e67] [cursor=pointer]:
+              - /url: /universales/electricidad
+              - img [ref=e69]
+              - generic [ref=e71]: Electricidad
+            - link "Equipamiento piloto" [ref=e72] [cursor=pointer]:
+              - /url: /universales/equipamiento-piloto
+              - img [ref=e74]
+              - generic [ref=e77]: Equipamiento piloto
+            - link "Equipamiento vehículo" [ref=e78] [cursor=pointer]:
+              - /url: /universales/equipamiento-vehiculo
+              - img [ref=e80]
+              - generic [ref=e84]: Equipamiento vehículo
+            - link "Escapes" [ref=e85] [cursor=pointer]:
+              - /url: /universales/escapes
+              - img [ref=e87]
+              - generic [ref=e91]: Escapes
+            - link "Frenos" [ref=e92] [cursor=pointer]:
+              - /url: /universales/frenos
+              - img [ref=e94]
+              - generic [ref=e99]: Frenos
+            - link "Herramientas" [ref=e100] [cursor=pointer]:
+              - /url: /universales/herramientas
+              - img [ref=e102]
+              - generic [ref=e104]: Herramientas
+            - link "Lubricantes y limpiadores" [ref=e105] [cursor=pointer]:
+              - /url: /universales/lubricantes-y-limpiadores
+              - img [ref=e107]
+              - generic [ref=e110]: Lubricantes y limpiadores
+            - link "Material promocional" [ref=e111] [cursor=pointer]:
+              - /url: /universales/material-promocional
+              - img [ref=e113]
+              - generic [ref=e115]: Material promocional
+            - link "Motor" [ref=e116] [cursor=pointer]:
+              - /url: /universales/motor
+              - img [ref=e118]
+              - generic [ref=e121]: Motor
+            - link "Movilidad Urbana" [ref=e122] [cursor=pointer]:
+              - /url: /universales/movilidad-urbana
+              - img [ref=e124]
+              - generic [ref=e129]: Movilidad Urbana
+            - link "Neumáticos" [ref=e130] [cursor=pointer]:
+              - /url: /universales/neumaticos
+              - img [ref=e132]
+              - generic [ref=e135]: Neumáticos
+            - link "Piezas postventa" [ref=e136] [cursor=pointer]:
+              - /url: /universales/piezas-postventa
+              - img [ref=e138]
+              - generic [ref=e141]: Piezas postventa
+            - link "Plástica" [ref=e142] [cursor=pointer]:
+              - /url: /universales/plastica
+              - img [ref=e144]
+              - generic [ref=e150]: Plástica
+            - link "Transporte - garaje - paddock" [ref=e151] [cursor=pointer]:
+              - /url: /universales/transporte-garaje-paddock
+              - img [ref=e153]
+              - generic [ref=e158]: Transporte - garaje - paddock
+  - button "Open Next.js Dev Tools" [ref=e164] [cursor=pointer]:
+    - img [ref=e165]

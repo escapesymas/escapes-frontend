@@ -1,0 +1,70 @@
+- generic [active] [ref=e1]:
+  - link "Saltar al contenido principal" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - button "Mi Moto" [ref=e6]:
+          - img [ref=e7]
+          - generic [ref=e12]: Mi Moto
+        - link "Escapes y Más" [ref=e13] [cursor=pointer]:
+          - /url: /
+          - img "Escapes y Más" [ref=e14]
+        - generic [ref=e15]:
+          - button "Abrir carrito" [ref=e16] [cursor=pointer]:
+            - img [ref=e17]
+            - generic [ref=e66]: "2"
+          - navigation [ref=e21]:
+            - link "Inicio" [ref=e22] [cursor=pointer]:
+              - /url: /
+            - link "Catálogo" [ref=e23] [cursor=pointer]:
+              - /url: /universales
+            - link "Acceder" [ref=e24] [cursor=pointer]:
+              - /url: /login
+    - main [ref=e25]:
+      - generic [ref=e341]:
+        - button "Volver al Carrito" [ref=e342] [cursor=pointer]:
+          - img [ref=e343]
+          - text: Volver al Carrito
+        - heading "Detalles de Facturación y Envío" [level=2] [ref=e345]
+        - generic [ref=e346]:
+          - generic [ref=e347]:
+            - generic [ref=e348]:
+              - generic [ref=e349]: Nombre
+              - textbox "Ej. Juan" [ref=e350]
+            - generic [ref=e351]:
+              - generic [ref=e352]: Apellidos
+              - textbox "Ej. García" [ref=e353]
+          - generic [ref=e354]:
+            - generic [ref=e355]: Dirección de Envío
+            - textbox "Calle, número, piso, puerta..." [ref=e356]
+          - generic [ref=e357]:
+            - generic [ref=e358]:
+              - generic [ref=e359]: Ciudad
+              - textbox "Ej. Madrid" [ref=e360]
+            - generic [ref=e361]:
+              - generic [ref=e362]: C.P.
+              - textbox "Ej. 28001" [ref=e363]
+          - generic [ref=e364]:
+            - generic [ref=e365]:
+              - generic [ref=e366]: Teléfono
+              - textbox "Ej. 600123456" [ref=e367]
+            - generic [ref=e368]:
+              - generic [ref=e369]: NIF / CIF (Factura)
+              - textbox "Ej. 12345678Z" [ref=e370]
+          - generic [ref=e371]:
+            - heading "Resumen de Pago" [level=3] [ref=e372]
+            - generic [ref=e373]:
+              - generic [ref=e374]:
+                - generic [ref=e375]: "Subtotal:"
+                - generic [ref=e376]: 179,90 €
+              - generic [ref=e377]:
+                - generic [ref=e378]: "Gastos de Envío:"
+                - generic [ref=e379]: GRATIS
+              - generic [ref=e380]:
+                - generic [ref=e381]: "Total a Pagar (IVA inc.):"
+                - generic [ref=e382]: 179,90 €
+          - button "Confirmar y Pagar 179,90 €" [ref=e383] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e62] [cursor=pointer]:
+    - img [ref=e63]
+  - alert [ref=e223]

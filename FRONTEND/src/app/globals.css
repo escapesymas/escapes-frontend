@@ -113,15 +113,19 @@ body {
   scrollbar-width: none;
 }
 
-/* SumUp Card Iframe Styling */
-#sumup-card iframe {
-  background-color: transparent !important;
+/* Stripe Elements Styling */
+.StripeElement {
+  padding: 12px;
+  border: 1px solid var(--card-border, #334155);
   border-radius: 4px;
+  background: var(--background, #0f172a);
 }
 
-@media (prefers-color-scheme: dark) {
-  #sumup-card iframe {
-    filter: invert(0.93) hue-rotate(180deg);
-  }
+.StripeElement--focus {
+  border-color: var(--accent, #ff4500);
+}
+
+.StripeElement--invalid {
+  border-color: #ef4444;
 }
 

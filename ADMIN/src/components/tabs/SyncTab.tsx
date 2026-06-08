@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as Icons from 'lucide-react';
+import { useToast } from '../ToastContext';
 
 /**
  * SyncTab — Consola de Sincronización del Catálogo Bihr
@@ -9,6 +10,7 @@ import * as Icons from 'lucide-react';
  * El estado de descarga de imágenes se lee desde la tabla `image_regen_state` en PostgreSQL.
  */
 const SyncTab = () => {
+  const { showToast } = useToast();
   const [status, setStatus] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [triggeringCatalog, setTriggeringCatalog] = useState<string | null>(null);
@@ -43,13 +45,13 @@ const SyncTab = () => {
         body: JSON.stringify({ catalogType: type })
       });
       if (res.ok) {
-        alert('Sincronización de catálogo iniciada correctamente en segundo plano.');
+        showToast('Sincronización de catálogo iniciada correctamente en segundo plano.');
       } else {
-        alert('Error al iniciar la sincronización.');
+        showToast('Error al iniciar la sincronización.', 'error');
       }
     } catch (e) {
       console.error(e);
-      alert('Error de conexión.');
+      showToast('Error de conexión.', 'error');
     } finally {
       setTriggeringCatalog(null);
       fetchSyncStatus();
@@ -65,13 +67,13 @@ const SyncTab = () => {
         body: JSON.stringify({ action })
       });
       if (res.ok) {
-        alert(`Acción "${action}" enviada correctamente al descargador de imágenes.`);
+        showToast(`Acción "${action}" enviada correctamente al descargador de imágenes.`);
       } else {
-        alert(`Error al enviar acción "${action}"`);
+        showToast(`Error al enviar acción "${action}"`, 'error');
       }
     } catch (e) {
       console.error(e);
-      alert('Error de conexión.');
+      showToast('Error de conexión.', 'error');
     } finally {
       setControllingImages(null);
       fetchSyncStatus();
@@ -80,8 +82,8 @@ const SyncTab = () => {
 
   if (loading && !status) {
     return (
-      <div className="text-zinc-500 italic py-12 text-center animate-pulse flex flex-col items-center justify-center gap-3">
-        <Icons.Loader2 className="w-8 h-8 text-racing-orange animate-spin" />
+      <div className="text-tech-muted italic py-12 text-center animate-pulse flex flex-col items-center justify-center gap-3">
+        <Icons.Loader2 className="w-8 h-8 text-tech-yellow animate-spin" />
         <span>Cargando consola de sincronización...</span>
       </div>
     );
@@ -107,13 +109,13 @@ const SyncTab = () => {
   return (
     <div className="space-y-8">
       {/* Catalog status section */}
-      <div className="bg-zinc-950 border border-zinc-900 rounded-2xl p-6 shadow-lg shadow-black/40 space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-zinc-900 pb-4 gap-4">
+      <div className="bg-tech-card border border-tech-border rounded-2xl p-6 shadow-lg shadow-black/40 space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-tech-border pb-4 gap-4">
           <div>
             <h3 className="text-md font-black uppercase tracking-tighter italic text-zinc-200 flex items-center gap-2">
-              <Icons.Database className="w-5 h-5 text-racing-orange" /> Sincronización del Catálogo
+              <Icons.Database className="w-5 h-5 text-tech-yellow" /> Sincronización del Catálogo
             </h3>
-            <p className="text-[10px] text-zinc-500 mt-1 leading-relaxed">
+            <p className="text-[10px] text-tech-muted mt-1 leading-relaxed">
               Descarga, extrae y actualiza la base de datos de productos de Bihr en PostgreSQL de forma asíncrona.
             </p>
           </div>
@@ -125,7 +127,7 @@ const SyncTab = () => {
                 ? 'bg-green-950/20 text-green-400 border-green-900/30'
                 : catalog.status === 'failed'
                 ? 'bg-red-950/20 text-red-400 border-red-900/30'
-                : 'bg-zinc-900 text-zinc-500 border-zinc-800'
+                : 'bg-[#1a1b1e] text-tech-muted border-tech-border'
             }`}
           >
             Estado: {catalog.status === 'idle' && 'Inactivo'}
@@ -141,25 +143,25 @@ const SyncTab = () => {
 
         {/* Catalog Progress bar and info */}
         {isCatalogSyncing && (
-          <div className="space-y-3 bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/40">
-            <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-zinc-400">
+          <div className="space-y-3 bg-[#1a1b1e]/40 p-4 rounded-xl border border-tech-border/40">
+            <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-[#cbd5e1]">
               <span>Progreso de Importación</span>
-              <span className="text-racing-orange">{catalogProgress}%</span>
+              <span className="text-tech-yellow">{catalogProgress}%</span>
             </div>
-            <div className="w-full bg-zinc-900 h-2 rounded-full overflow-hidden border border-zinc-800">
+            <div className="w-full bg-[#1a1b1e] h-2 rounded-full overflow-hidden border border-tech-border">
               <div 
-                className="bg-gradient-to-r from-orange-600 to-racing-orange h-full rounded-full transition-all duration-300"
+                className="bg-gradient-to-r from-orange-600 to-tech-yellow h-full rounded-full transition-all duration-300"
                 style={{ width: `${catalogProgress}%` }}
               />
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2 text-[10px] uppercase font-bold text-zinc-500">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2 text-[10px] uppercase font-bold text-tech-muted">
               <div>
                 <span>Tipo Catálogo:</span>
-                <span className="block text-white mt-0.5">{catalog.catalogType}</span>
+                <span className="block text-tech-text mt-0.5">{catalog.catalogType}</span>
               </div>
               <div>
                 <span>Lotes Procesados:</span>
-                <span className="block text-white mt-0.5">{catalog.currentBatch} / {catalog.totalBatches}</span>
+                <span className="block text-tech-text mt-0.5">{catalog.currentBatch} / {catalog.totalBatches}</span>
               </div>
               <div>
                 <span>Nuevos Productos:</span>
@@ -177,11 +179,11 @@ const SyncTab = () => {
           <div className="bg-green-950/10 border border-green-900/20 rounded-xl p-4 text-green-400 text-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
               <p className="font-bold uppercase tracking-wider">¡Importación Exitosa!</p>
-              <p className="text-[10px] text-zinc-400 mt-0.5">
+              <p className="text-[10px] text-[#cbd5e1] mt-0.5">
                 Último catálogo procesado: <strong className="text-zinc-300">{catalog.catalogType}</strong> el {new Date(catalog.endTime).toLocaleString('es-ES')}.
               </p>
             </div>
-            <div className="flex gap-4 text-[10px] font-black uppercase text-zinc-400 shrink-0">
+            <div className="flex gap-4 text-[10px] font-black uppercase text-[#cbd5e1] shrink-0">
               <div>Nuevos: <span className="text-green-400">+{catalog.inserted}</span></div>
               <div>Actualizados: <span className="text-blue-400">~{catalog.updated}</span></div>
             </div>
@@ -191,7 +193,7 @@ const SyncTab = () => {
         {catalog.status === 'failed' && (
           <div className="bg-red-950/20 border border-red-900/30 rounded-xl p-4 text-red-400 text-xs">
             <p className="font-bold uppercase tracking-wider">Fallo en la importación</p>
-            <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
+            <p className="text-[10px] text-[#cbd5e1] mt-1 leading-relaxed">
               Error: <strong className="text-red-300 font-mono">{catalog.error}</strong>
             </p>
           </div>
@@ -202,36 +204,36 @@ const SyncTab = () => {
           <button
             onClick={() => triggerCatalogSync('HardPart')}
             disabled={isCatalogSyncing || triggeringCatalog !== null}
-            className="flex-1 min-w-[160px] bg-zinc-900 hover:bg-zinc-850 disabled:bg-zinc-950 disabled:text-zinc-700 border border-zinc-800 hover:border-zinc-700 text-white py-3.5 rounded-xl text-xs font-black uppercase italic tracking-wider transition-all flex items-center justify-center gap-2"
+            className="flex-1 min-w-[160px] bg-[#1a1b1e] hover:bg-zinc-850 disabled:bg-tech-card disabled:text-zinc-700 border border-tech-border hover:border-zinc-700 text-tech-text py-3.5 rounded-xl text-xs font-black uppercase italic tracking-wider transition-all flex items-center justify-center gap-2"
           >
             {triggeringCatalog === 'HardPart' ? (
-              <Icons.Loader2 className="w-4 h-4 animate-spin text-racing-orange" />
+              <Icons.Loader2 className="w-4 h-4 animate-spin text-tech-yellow" />
             ) : (
-              <Icons.Play className="w-3.5 h-3.5 text-racing-orange" />
+              <Icons.Play className="w-3.5 h-3.5 text-tech-yellow" />
             )}
             Sincronizar HardParts
           </button>
           <button
             onClick={() => triggerCatalogSync('RiderGear')}
             disabled={isCatalogSyncing || triggeringCatalog !== null}
-            className="flex-1 min-w-[160px] bg-zinc-900 hover:bg-zinc-850 disabled:bg-zinc-950 disabled:text-zinc-700 border border-zinc-800 hover:border-zinc-700 text-white py-3.5 rounded-xl text-xs font-black uppercase italic tracking-wider transition-all flex items-center justify-center gap-2"
+            className="flex-1 min-w-[160px] bg-[#1a1b1e] hover:bg-zinc-850 disabled:bg-tech-card disabled:text-zinc-700 border border-tech-border hover:border-zinc-700 text-tech-text py-3.5 rounded-xl text-xs font-black uppercase italic tracking-wider transition-all flex items-center justify-center gap-2"
           >
             {triggeringCatalog === 'RiderGear' ? (
-              <Icons.Loader2 className="w-4 h-4 animate-spin text-racing-orange" />
+              <Icons.Loader2 className="w-4 h-4 animate-spin text-tech-yellow" />
             ) : (
-              <Icons.Play className="w-3.5 h-3.5 text-racing-orange" />
+              <Icons.Play className="w-3.5 h-3.5 text-tech-yellow" />
             )}
             Sincronizar RiderGear
           </button>
           <button
             onClick={() => triggerCatalogSync('Prices')}
             disabled={isCatalogSyncing || triggeringCatalog !== null}
-            className="flex-1 min-w-[160px] bg-zinc-900 hover:bg-zinc-850 disabled:bg-zinc-950 disabled:text-zinc-700 border border-zinc-800 hover:border-zinc-700 text-white py-3.5 rounded-xl text-xs font-black uppercase italic tracking-wider transition-all flex items-center justify-center gap-2"
+            className="flex-1 min-w-[160px] bg-[#1a1b1e] hover:bg-zinc-850 disabled:bg-tech-card disabled:text-zinc-700 border border-tech-border hover:border-zinc-700 text-tech-text py-3.5 rounded-xl text-xs font-black uppercase italic tracking-wider transition-all flex items-center justify-center gap-2"
           >
             {triggeringCatalog === 'Prices' ? (
-              <Icons.Loader2 className="w-4 h-4 animate-spin text-racing-orange" />
+              <Icons.Loader2 className="w-4 h-4 animate-spin text-tech-yellow" />
             ) : (
-              <Icons.Play className="w-3.5 h-3.5 text-racing-orange" />
+              <Icons.Play className="w-3.5 h-3.5 text-tech-yellow" />
             )}
             Sincronizar Precios
           </button>
@@ -239,15 +241,15 @@ const SyncTab = () => {
       </div>
 
       {/* Image Downloader section */}
-      <div className="bg-zinc-950 border border-zinc-900 rounded-2xl p-6 shadow-lg shadow-black/40 space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-zinc-900 pb-4 gap-4">
+      <div className="bg-tech-card border border-tech-border rounded-2xl p-6 shadow-lg shadow-black/40 space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-tech-border pb-4 gap-4">
           <div>
             <h3 className="text-md font-black uppercase tracking-tighter italic text-zinc-200 flex items-center gap-2">
-              <Icons.Image className="w-5 h-5 text-racing-orange" /> Descargador y Optimizador de Imágenes (PM2)
+              <Icons.Image className="w-5 h-5 text-tech-yellow" /> Descargador y Optimizador de Imágenes (PM2)
             </h3>
-            <p className="text-[10px] text-zinc-500 mt-1 leading-relaxed">
+            <p className="text-[10px] text-tech-muted mt-1 leading-relaxed">
               Descarga en paralelo y convierte las imágenes de Bihr a WebP adaptadas para la web de Escapes y Más.
-              El estado se persiste en la tabla <code className="font-mono text-zinc-400">image_regen_state</code> de PostgreSQL.
+              El estado se persiste en la tabla <code className="font-mono text-[#cbd5e1]">image_regen_state</code> de PostgreSQL.
             </p>
           </div>
           <div className="flex gap-2 items-center">
@@ -255,7 +257,7 @@ const SyncTab = () => {
               className={`px-2.5 py-1 rounded text-[8px] font-black uppercase tracking-widest border ${
                 images.running
                   ? 'bg-green-950/20 text-green-400 border-green-900/30'
-                  : 'bg-zinc-900 text-zinc-500 border-zinc-800'
+                  : 'bg-[#1a1b1e] text-tech-muted border-tech-border'
               }`}
             >
               PM2: {images.pm2Status?.toUpperCase() || 'STOPPED'}
@@ -266,7 +268,7 @@ const SyncTab = () => {
                   ? 'bg-yellow-950/20 text-yellow-400 border-yellow-900/30 animate-pulse'
                   : images.status === 'completed'
                   ? 'bg-green-950/20 text-green-400 border-green-900/30'
-                  : 'bg-zinc-900 text-zinc-500 border-zinc-800'
+                  : 'bg-[#1a1b1e] text-tech-muted border-tech-border'
               }`}
             >
               Estado: {images.status === 'idle' && 'Inactivo'}
@@ -278,27 +280,27 @@ const SyncTab = () => {
 
         {/* Image Download progress */}
         {images.status === 'running' && (
-          <div className="space-y-3 bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/40 animate-fade-in">
-            <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-zinc-400">
+          <div className="space-y-3 bg-[#1a1b1e]/40 p-4 rounded-xl border border-tech-border/40 animate-fade-in">
+            <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-[#cbd5e1]">
               <span>Progreso de Imágenes</span>
-              <span className="text-racing-orange">{imagesProgress}%</span>
+              <span className="text-tech-yellow">{imagesProgress}%</span>
             </div>
-            <div className="w-full bg-zinc-900 h-2 rounded-full overflow-hidden border border-zinc-800">
+            <div className="w-full bg-[#1a1b1e] h-2 rounded-full overflow-hidden border border-tech-border">
               <div 
-                className="bg-gradient-to-r from-orange-600 to-racing-orange h-full rounded-full transition-all duration-300"
+                className="bg-gradient-to-r from-orange-600 to-tech-yellow h-full rounded-full transition-all duration-300"
                 style={{ width: `${imagesProgress}%` }}
               />
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 pt-2 text-[10px] uppercase font-bold text-zinc-500">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 pt-2 text-[10px] uppercase font-bold text-tech-muted">
               <div>
                 <span>Descargando:</span>
-                <span className="block text-white mt-0.5 truncate max-w-[120px] font-mono" title={images.current_sku}>
+                <span className="block text-tech-text mt-0.5 truncate max-w-[120px] font-mono" title={images.current_sku}>
                   {images.current_sku || 'Buscando...'}
                 </span>
               </div>
               <div>
                 <span>Procesadas:</span>
-                <span className="block text-white mt-0.5">{images.processed} / {images.total}</span>
+                <span className="block text-tech-text mt-0.5">{images.processed} / {images.total}</span>
               </div>
               <div>
                 <span>Descargadas:</span>
@@ -306,7 +308,7 @@ const SyncTab = () => {
               </div>
               <div>
                 <span>Omitidas (Existentes):</span>
-                <span className="block text-zinc-400 mt-0.5 font-bold">{images.skipped}</span>
+                <span className="block text-[#cbd5e1] mt-0.5 font-bold">{images.skipped}</span>
               </div>
               <div>
                 <span>Fallidas:</span>
@@ -320,20 +322,20 @@ const SyncTab = () => {
           <div className="bg-green-950/10 border border-green-900/20 rounded-xl p-4 text-green-400 text-xs flex justify-between items-center">
             <div>
               <p className="font-bold uppercase tracking-wider">¡Proceso de imágenes finalizado!</p>
-              <p className="text-[10px] text-zinc-400 mt-0.5">Se descargaron y optimizaron las imágenes del catálogo en local.</p>
+              <p className="text-[10px] text-[#cbd5e1] mt-0.5">Se descargaron y optimizaron las imágenes del catálogo en local.</p>
             </div>
-            <div className="flex gap-4 text-[10px] font-black uppercase text-zinc-400">
+            <div className="flex gap-4 text-[10px] font-black uppercase text-[#cbd5e1]">
               <div>Éxito: <span className="text-green-400">{images.success}</span></div>
-              <div>Omitidas: <span className="text-zinc-400">{images.skipped}</span></div>
+              <div>Omitidas: <span className="text-[#cbd5e1]">{images.skipped}</span></div>
               <div>Error: <span className="text-red-500">{images.failed}</span></div>
             </div>
           </div>
         )}
 
         {images.status === 'idle' && !images.running && (
-          <div className="bg-zinc-900/30 border border-zinc-850 rounded-xl p-4 text-zinc-500 text-xs">
+          <div className="bg-[#1a1b1e]/30 border border-zinc-850 rounded-xl p-4 text-tech-muted text-xs">
             <p className="font-bold uppercase tracking-wider">Servicio en reposo</p>
-            <p className="text-[10px] text-zinc-500 mt-0.5">El descargador no está corriendo. Presiona "Iniciar Descarga" para procesar el catálogo ZIP actual.</p>
+            <p className="text-[10px] text-tech-muted mt-0.5">El descargador no está corriendo. Presiona "Iniciar Descarga" para procesar el catálogo ZIP actual.</p>
           </div>
         )}
 
@@ -343,7 +345,7 @@ const SyncTab = () => {
             <button
               onClick={() => controlImagesDownloader('start')}
               disabled={controllingImages !== null}
-              className="flex-1 min-w-[160px] bg-green-950/20 hover:bg-green-950/40 disabled:bg-zinc-950 border border-green-900/30 text-green-400 py-3.5 rounded-xl text-xs font-black uppercase italic tracking-wider transition-all flex items-center justify-center gap-2"
+              className="flex-1 min-w-[160px] bg-green-950/20 hover:bg-green-950/40 disabled:bg-tech-card border border-green-900/30 text-green-400 py-3.5 rounded-xl text-xs font-black uppercase italic tracking-wider transition-all flex items-center justify-center gap-2"
             >
               {controllingImages === 'start' ? (
                 <Icons.Loader2 className="w-4 h-4 animate-spin" />
@@ -357,7 +359,7 @@ const SyncTab = () => {
               <button
                 onClick={() => controlImagesDownloader('stop')}
                 disabled={controllingImages !== null}
-                className="flex-1 min-w-[160px] bg-red-950/20 hover:bg-red-950/40 disabled:bg-zinc-950 border border-red-900/30 text-red-500 py-3.5 rounded-xl text-xs font-black uppercase italic tracking-wider transition-all flex items-center justify-center gap-2"
+                className="flex-1 min-w-[160px] bg-red-950/20 hover:bg-red-950/40 disabled:bg-tech-card border border-red-900/30 text-red-500 py-3.5 rounded-xl text-xs font-black uppercase italic tracking-wider transition-all flex items-center justify-center gap-2"
               >
                 {controllingImages === 'stop' ? (
                   <Icons.Loader2 className="w-4 h-4 animate-spin" />
@@ -369,12 +371,12 @@ const SyncTab = () => {
               <button
                 onClick={() => controlImagesDownloader('restart')}
                 disabled={controllingImages !== null}
-                className="flex-1 min-w-[160px] bg-zinc-900 hover:bg-zinc-850 disabled:bg-zinc-950 border border-zinc-800 text-zinc-300 py-3.5 rounded-xl text-xs font-black uppercase italic tracking-wider transition-all flex items-center justify-center gap-2"
+                className="flex-1 min-w-[160px] bg-[#1a1b1e] hover:bg-zinc-850 disabled:bg-tech-card border border-tech-border text-zinc-300 py-3.5 rounded-xl text-xs font-black uppercase italic tracking-wider transition-all flex items-center justify-center gap-2"
               >
                 {controllingImages === 'restart' ? (
-                  <Icons.Loader2 className="w-4 h-4 animate-spin text-racing-orange" />
+                  <Icons.Loader2 className="w-4 h-4 animate-spin text-tech-yellow" />
                 ) : (
-                  <Icons.RefreshCw className="w-3.5 h-3.5 text-racing-orange" />
+                  <Icons.RefreshCw className="w-3.5 h-3.5 text-tech-yellow" />
                 )}
                 Reiniciar Proceso
               </button>

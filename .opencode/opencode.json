@@ -1,0 +1,47 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "postgres": {
+      "type": "local",
+      "command": ["bash", "/home/adrian/Documentos/GitHub/escapes-react/.opencode/scripts/pg-mcp.sh"],
+      "enabled": true
+    },
+
+    "git": {
+      "type": "local",
+      "command": ["npx", "--yes", "@cyanheads/git-mcp-server@latest"],
+      "enabled": true
+    },
+    "filesystem": {
+      "type": "local",
+      "command": ["npx", "--yes", "@modelcontextprotocol/server-filesystem", "/home/adrian/Documentos/GitHub/escapes-react"],
+      "enabled": true
+    }
+  },
+  "command": {
+    "deploy-backend": {
+      "description": "Despliega el backend al VPS (tag git + build + rsync + pm2 restart)",
+      "template": "Ejecuta el script /home/adrian/Documentos/GitHub/escapes-react/deploy.sh para desplegar el backend al VPS 212.227.134.161. Sigue exactamente los pasos del script sin modificar rutas ni credenciales."
+    },
+    "deploy-frontend": {
+      "description": "Compila y despliega el frontend Next.js al VPS (tag git + build + rsync + pm2 restart)",
+      "template": "Ejecuta el script /home/adrian/Documentos/GitHub/escapes-react/deploy-frontend.sh para compilar y desplegar el frontend al VPS 212.227.134.161. Asegúrate de que el build sea exitoso antes del rsync."
+    },
+    "deploy-admin": {
+      "description": "Compila y despliega el Admin Dashboard al VPS (tag git + build + rsync)",
+      "template": "Ejecuta el script /home/adrian/Documentos/GitHub/escapes-react/deploy-admin.sh para compilar y desplegar el admin al VPS 212.227.134.161."
+    },
+    "versions": {
+      "description": "Lista las versiones (tags) desplegadas, ordenadas de más reciente a más antigua",
+      "template": "Ejecuta 'git tag --list --sort=-version:refname' para mostrar los tags de deploy ordenados. Si se pide más detalle, usa 'git tag -l -n10' para ver también el mensaje de cada tag."
+    },
+    "rollback": {
+      "description": "Revertir un deploy a una versión anterior usando su tag",
+      "template": "Pide al usuario el tag al que hacer rollback (ej: backend-20260607-123456). Luego ejecuta: (1) git checkout tags/<tag> -b rollback-<tag>, (2) rsync del checkout según el prefijo del tag (backend-*/frontend-*/admin-*), (3) ssh + npm/pnpm install + pm2 restart. Pregunta al usuario antes de ejecutar cada paso."
+    },
+    "git-push-vps": {
+      "description": "Push de ramas y tags al VPS para backup",
+      "template": "Ejecuta 'git push vps --all' y 'git push vps --tags' para sincronizar todo el historial git con el VPS."
+    }
+  }
+}

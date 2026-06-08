@@ -1,0 +1,47 @@
+# 🛠️ Reglas del Proyecto y Sistema de Diseño (Technical Garage) para ADMIN
+
+Este archivo sirve como contexto y guía de estilo tanto para desarrolladores como para asistentes de IA que trabajen en la consola ADMIN.
+
+---
+
+## 📐 Estilo Visual: **Technical Garage**
+Inspirado en consolas de telemetría de Moto GP y cajas de herramientas industriales de alta precisión.
+
+- **Tipografía Primaria (`font-mono`):** Encabezados, códigos de pieza, medidas, badges, telemetría y elementos de compatibilidad.
+- **Tipografía Secundaria (`font-sans`):** Textos largos para máxima legibilidad.
+- **Bordes y Diseño:** Bordes ligeramente redondeados (`rounded-md`, aprox. 6px), cuadrículas técnicas, líneas finas y limpias.
+
+---
+
+## 🎨 Paleta de Colores Dinámica
+El panel de control ADMIN sigue el modo oscuro ("Garage Mode") para mantener la atmósfera de una consola de comandos.
+
+| Elemento | Tema Oscuro (Garage) | Variable CSS / Clase Tailwind |
+| :--- | :--- | :--- |
+| **Fondo General** | `#0a0a0b` | `bg-tech-carbon` |
+| **Tarjetas/Contenedores** | `#121315` | `bg-tech-card` |
+| **Bordes de Tarjeta** | `#1e293b` | `border-tech-border` |
+| **Color de Acento** | `#facc15` | `bg-tech-yellow` / `text-tech-yellow` |
+| **Texto Principal** | `#f1f5f9` | `text-tech-text` |
+| **Texto Secundario** | `#94a3b8` | `text-tech-muted` |
+
+### Inversión del Logotipo
+El logo principal es blanco por defecto. En este modo de consola, se mantiene sin invertir.
+
+---
+
+## 🗄️ Contexto de la Base de Datos (PostgreSQL)
+A lo largo del proyecto se han realizado modificaciones estructurales y de saneamiento clave en `escapes_db`:
+
+1. **Saneamiento del Catálogo:**
+   - **Productos de Marketing:** Se han purgado/archivado del catálogo público los productos correspondientes a expositores, displays y merchandising de marcas para evitar ensuciar los resultados.
+   - **Categorías Universales:** Se estructuró y organizó la Categoría 10 (productos universales y accesorios) integrándola correctamente en la base de datos para que los productos sin compatibilidad específica sean accesibles.
+2. **Sincronización de Compatibilidades:**
+   - Se ejecutaron scripts para alinear y verificar las compatibilidades de los productos, asegurando que las relaciones entre motos y recambios sean precisas en el frontend.
+3. **Optimización de Imágenes (Proceso Background):**
+   - Se desarrolló un script en Python (`regenerate_images.py`) que se encarga de descargar las imágenes del proveedor, optimizarlas (redimensión y conversión a WebP al 75% de calidad), y actualizar el campo JSON `images` en la tabla `productos_tienda`.
+4. **Credenciales:**
+   - ⚠️ LAS CREDENCIALES HAN SIDO ROTADAS. No incluir contraseñas en este archivo.
+   - Host: `localhost:5432`
+   - Base de datos: `escapes_db`
+   - Usuario y contraseña: usar variables de entorno (DB_USER, DB_PASSWORD, DATABASE_URL)

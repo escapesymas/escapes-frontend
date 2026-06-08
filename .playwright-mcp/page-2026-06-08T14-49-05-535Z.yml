@@ -1,0 +1,107 @@
+- generic [ref=e1]:
+  - link "Saltar al contenido principal" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - button "Mi Moto" [ref=e6]:
+          - img [ref=e7]
+          - generic [ref=e12]: Mi Moto
+        - link "Escapes y Más" [ref=e13] [cursor=pointer]:
+          - /url: /
+          - img "Escapes y Más" [ref=e14]
+        - generic [ref=e15]:
+          - button "Abrir carrito" [active] [ref=e16] [cursor=pointer]:
+            - img [ref=e17]
+            - generic [ref=e215]: "1"
+          - navigation [ref=e21]:
+            - link "Inicio" [ref=e22] [cursor=pointer]:
+              - /url: /
+            - link "Catálogo" [ref=e23] [cursor=pointer]:
+              - /url: /universales
+            - link "Acceder" [ref=e24] [cursor=pointer]:
+              - /url: /login
+    - main [ref=e25]:
+      - generic [ref=e224]:
+        - generic [ref=e225]:
+          - heading "Carrito de Compra (1 productos)" [level=1] [ref=e227]:
+            - text: Carrito de Compra
+            - generic [ref=e228]: (1 productos)
+          - button "Seguir comprando" [ref=e229] [cursor=pointer]:
+            - img [ref=e230]
+            - text: Seguir comprando
+        - generic [ref=e233]:
+          - generic [ref=e234]:
+            - generic [ref=e235]:
+              - paragraph [ref=e236]: Próximo Nivel
+              - heading "Envío Gratis + 5%" [level=4] [ref=e237]:
+                - text: Envío Gratis + 5%
+                - img [ref=e238]
+            - generic [ref=e240]:
+              - paragraph [ref=e241]: 110,05 €
+              - paragraph [ref=e242]: Para desbloquear
+          - generic [ref=e246]:
+            - generic [ref=e247]:
+              - img [ref=e249]
+              - generic [ref=e254]: Envío Gratis
+            - generic [ref=e256]:
+              - img [ref=e258]
+              - generic [ref=e262]: 10% DTO
+            - generic [ref=e264]:
+              - img [ref=e266]
+              - generic [ref=e272]: 15% DTO
+        - generic [ref=e273]:
+          - generic [ref=e274]:
+            - generic [ref=e277]:
+              - img "RST BACKPACK RUCKSACK, BLK" [ref=e279]
+              - generic [ref=e280]:
+                - generic [ref=e281]:
+                  - generic [ref=e282]:
+                    - heading "RST BACKPACK RUCKSACK, BLK" [level=3] [ref=e283]
+                    - paragraph [ref=e284]: Recambios de prendas
+                  - button [ref=e285] [cursor=pointer]:
+                    - img [ref=e286]
+                - generic [ref=e289]:
+                  - generic [ref=e290]:
+                    - button [disabled] [ref=e291] [cursor=pointer]:
+                      - img [ref=e292]
+                    - generic [ref=e293]: "1"
+                    - button [ref=e294] [cursor=pointer]:
+                      - img [ref=e295]
+                  - paragraph [ref=e297]: 89,95 €
+            - generic [ref=e298]:
+              - generic [ref=e299]:
+                - img [ref=e301]
+                - generic [ref=e304]:
+                  - heading "Garantía Oficial" [level=4] [ref=e305]
+                  - paragraph [ref=e306]: Recambios originales y marcas premium directas del fabricante.
+              - generic [ref=e307]:
+                - img [ref=e309]
+                - generic [ref=e314]:
+                  - heading "Envío Preferente" [level=4] [ref=e315]
+                  - paragraph [ref=e316]: Sigue tu pedido en tiempo real desde que sale de nuestro almacén.
+          - generic [ref=e318]:
+            - heading "Resumen" [level=3] [ref=e319]
+            - generic [ref=e320]:
+              - generic [ref=e321]:
+                - generic [ref=e322]: Subtotal
+                - generic [ref=e323]: 89,95 €
+              - generic [ref=e324]:
+                - generic [ref=e325]: Envío
+                - generic [ref=e326]: 6,99 €
+              - generic [ref=e327]:
+                - generic [ref=e328]: ¿Tienes un cupón de descuento?
+                - generic [ref=e329]:
+                  - textbox "Introduce tu cupón" [ref=e330]
+                  - button "Aplicar" [ref=e331] [cursor=pointer]
+            - generic [ref=e333]:
+              - generic [ref=e334]: Total
+              - generic [ref=e335]:
+                - generic [ref=e336]: 96,94 €
+                - generic [ref=e337]: IVA Incluido
+            - button "Tramitar Pedido" [ref=e338] [cursor=pointer]:
+              - text: Tramitar Pedido
+              - img [ref=e339]
+  - button "Open Next.js Dev Tools" [ref=e62] [cursor=pointer]:
+    - img [ref=e63]
+  - alert [ref=e214]
