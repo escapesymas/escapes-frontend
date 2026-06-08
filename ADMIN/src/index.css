@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply bg-black text-white font-sans selection:bg-racing-orange selection:text-white;
+    @apply bg-tech-carbon text-tech-text font-sans selection:bg-tech-yellow selection:text-black;
   }
 }
 
@@ -17,9 +17,10 @@
   background: #000000;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1f1f1f;
+  background: #1e293b;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #ff4d00;
+  background: #facc15;
 }
+

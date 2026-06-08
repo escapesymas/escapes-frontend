@@ -1,0 +1,2 @@
+- link "Saltar al contenido principal" [ref=e2] [cursor=pointer]:
+  - /url: "#main-content"

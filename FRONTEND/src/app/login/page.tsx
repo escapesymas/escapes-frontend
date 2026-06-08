@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
+import { isValidRedirect } from '../../lib/constants';
 import { Bike, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import Header from '../../components/Header';
 import BottomNav from '../../components/BottomNav';
@@ -14,7 +15,7 @@ function LoginPageContent() {
   const searchParams = useSearchParams();
   const { login, register, isAuthenticated, isLoading: authLoading } = useAuth();
 
-  const [tab, setTab] = useState<Tab>((searchParams.get('tab') as Tab) || 'login');
+  const [tab, setTab] = useState<Tab>('login');
 
   // Login fields
   const [loginUsername, setLoginUsername] = useState('');
@@ -38,12 +39,12 @@ function LoginPageContent() {
   const [success, setSuccess] = useState('');
 
   // Si ya está autenticado, redirigir
+  const fromParam = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('from') : null;
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      const redirectTo = searchParams.get('from') || '/';
-      router.replace(redirectTo);
+      router.replace(isValidRedirect(fromParam));
     }
-  }, [isAuthenticated, authLoading, router, searchParams]);
+  }, [isAuthenticated, authLoading, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,9 +57,9 @@ function LoginPageContent() {
     try {
       await login(loginUsername.trim(), loginPassword);
       setSuccess('¡Sesión iniciada!');
-      setTimeout(() => router.replace(searchParams.get('from') || '/'), 600);
-    } catch (err: any) {
-      setError(err.message || 'Error al iniciar sesión.');
+      setTimeout(() => router.replace(isValidRedirect(searchParams.get('from'))), 600);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al iniciar sesión.');
     } finally {
       setIsSubmitting(false);
     }
@@ -98,9 +99,9 @@ function LoginPageContent() {
         regPhone.trim()
       );
       setSuccess('¡Cuenta creada! Entrando...');
-      setTimeout(() => router.replace(searchParams.get('from') || '/'), 600);
-    } catch (err: any) {
-      setError(err.message || 'Error al crear la cuenta.');
+      setTimeout(() => router.replace(isValidRedirect(searchParams.get('from'))), 600);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al crear la cuenta.');
     } finally {
       setIsSubmitting(false);
     }

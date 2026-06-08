@@ -1,0 +1,60 @@
+- generic [active] [ref=e1]:
+  - link "Saltar al contenido principal" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - button "Mi Moto" [ref=e6]:
+          - img [ref=e7]
+          - generic [ref=e12]: Mi Moto
+        - link "Escapes y Más" [ref=e13] [cursor=pointer]:
+          - /url: /
+          - img "Escapes y Más" [ref=e14]
+        - generic [ref=e15]:
+          - button "Abrir carrito" [ref=e16] [cursor=pointer]:
+            - img [ref=e17]
+          - navigation [ref=e21]:
+            - link "Inicio" [ref=e22] [cursor=pointer]:
+              - /url: /
+            - link "Catálogo" [ref=e23] [cursor=pointer]:
+              - /url: /universales
+            - link "Acceder" [ref=e24] [cursor=pointer]:
+              - /url: /login
+    - main [ref=e25]:
+      - generic [ref=e27]:
+        - generic [ref=e29]:
+          - generic [ref=e30]: Uso general y accesorios
+          - heading "Productos Universales" [level=1] [ref=e31]
+          - paragraph [ref=e32]: Aquí encontrarás todo tipo de equipación, cascos y accesorios generales aptos para cualquier moto sin necesidad de compatibilidad específica.
+        - generic [ref=e35]:
+          - img [ref=e37]
+          - textbox "Buscar por referencia, SKU o nombre..." [ref=e40]
+          - button "Buscar" [ref=e42] [cursor=pointer]
+        - generic [ref=e43]:
+          - link "Catálogo Universal" [ref=e44] [cursor=pointer]:
+            - /url: /universales
+          - img [ref=e45]
+          - link "Cascos" [ref=e47] [cursor=pointer]:
+            - /url: /universales/cascos
+        - generic [ref=e48]:
+          - generic [ref=e49]:
+            - heading "Subcategorías de Cascos" [level=3] [ref=e50]
+            - link "Volver al inicio" [ref=e51] [cursor=pointer]:
+              - /url: /universales
+          - generic [ref=e52]:
+            - link "Cascos Integrales" [ref=e53] [cursor=pointer]:
+              - /url: /universales/cascos/cascos-integrales
+              - generic [ref=e54]: Cascos Integrales
+              - img [ref=e55]
+            - link "Cascos Modulares" [ref=e57] [cursor=pointer]:
+              - /url: /universales/cascos/cascos-modulares
+              - generic [ref=e58]: Cascos Modulares
+              - img [ref=e59]
+            - link "Cascos Jet / Urban" [ref=e61] [cursor=pointer]:
+              - /url: /universales/cascos/cascos-jet-urban
+              - generic [ref=e62]: Cascos Jet / Urban
+              - img [ref=e63]
+            - link "Accesorios y recambios para cascos" [ref=e65] [cursor=pointer]:
+              - /url: /universales/cascos/accesorios-y-recambios-para-cascos
+              - generic [ref=e66]: Accesorios y recambios para cascos
+              - img [ref=e67]

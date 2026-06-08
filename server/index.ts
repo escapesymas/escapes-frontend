@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import nodemailer from 'nodemailer';
 import fs from 'fs';
@@ -15,6 +16,8 @@ import {
   pgTable, serial, text, varchar, timestamp, integer
 } from 'drizzle-orm/pg-core';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import { fileURLToPath } from 'url';
 import PDFDocument from 'pdfkit';
@@ -30,12 +33,12 @@ if (!stripeLiveKey) {
 }
 
 const stripeLive = new Stripe(stripeLiveKey || 'sk_missing_set_env', {
-  apiVersion: '2026-05-27.dahlia' as any,
+  apiVersion: '2024-11-20.acacia' as any,
 });
 
 const stripeTestKey = process.env.STRIPE_TEST_SECRET_KEY;
 const stripeTest = stripeTestKey
-  ? new Stripe(stripeTestKey, { apiVersion: '2026-05-27.dahlia' as any })
+  ? new Stripe(stripeTestKey, { apiVersion: '2024-11-20.acacia' as any })
   : stripeLive;
 
 function getStripeClient(req: any): any {
@@ -57,7 +60,7 @@ async function sendMail(to: string, subject: string, text: string, html?: string
         pass: process.env.SMTP_PASSWORD
       },
       tls: {
-        rejectUnauthorized: false
+        rejectUnauthorized: process.env.SMTP_ALLOW_UNSECURE === 'true'
       }
     });
     
@@ -86,7 +89,7 @@ const WOO_SECRET = process.env.WOO_SECRET;
 if (!process.env.DATABASE_URL) console.warn('[WARNING] DATABASE_URL not set');
 if (!process.env.STRIPE_SECRET_KEY) console.warn('[WARNING] STRIPE_SECRET_KEY not set');
 if (!process.env.SMTP_PASSWORD) console.warn('[WARNING] SMTP_PASSWORD not set');
-if (!process.env.JWT_ADMIN_SECRET) console.warn('[WARNING] JWT_ADMIN_SECRET not set — using insecure default');
+if (!process.env.JWT_SECRET) console.warn('[WARNING] JWT_SECRET not set — using insecure default');
 if (!process.env.BIHR_MACKEY) console.warn('[WARNING] BIHR_MACKEY not set — Bihr sync will fail');
 
 // ================================================================
@@ -355,6 +358,9 @@ app.use('/uploads', express.static(uploadDir, {
 
 // ================================================================
 // RATE LIMITING BÁSICO (100 req/min por IP) - Excluye uploads y health
+// NOTA: Este rate limiter es por PROCESO. En modo cluster de PM2,
+// cada proceso tendrá su propio Map y el rate limiting no será efectivo.
+// Para modo cluster, usar Redis como store o limitar a 1 proceso.
 // ================================================================
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT_MAX = 100;
@@ -524,6 +530,46 @@ function sanitizeLike(str: string): string {
 function parseIntSafe(value: any): number | null {
   const parsed = parseInt(value);
   return isNaN(parsed) ? null : parsed;
+}
+
+function isLegacyPasswordHash(hash: string): boolean {
+  return /^[a-f0-9]{64}$/i.test(hash);
+}
+
+async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 12);
+}
+
+async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  if (!hash) return false;
+  if (isLegacyPasswordHash(hash)) {
+    const legacyHash = crypto.createHash('sha256').update(password).digest('hex');
+    return legacyHash === hash;
+  }
+  return bcrypt.compare(password, hash);
+}
+
+function generateJWT(user: any): string {
+  const secret = process.env.JWT_SECRET || 'insecure-default-secret-change-me';
+  return jwt.sign(
+    {
+      user_id: user.id,
+      email: user.email,
+      role: user.role || 'customer',
+      username: user.username
+    },
+    secret,
+    { expiresIn: '7d' }
+  );
+}
+
+function verifyJWT(token: string): any | null {
+  try {
+    const secret = process.env.JWT_SECRET || 'insecure-default-secret-change-me';
+    return jwt.verify(token, secret);
+  } catch {
+    return null;
+  }
 }
 
 // ================================================================
@@ -1012,6 +1058,52 @@ app.get('/api/catalog/sitemap-skus', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch sitemap SKUs' });
   }
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SEARCH SUGGESTIONS ENDPOINT
+// ═══════════════════════════════════════════════════════════════════════════════
+app.get('/api/search/suggestions', async (req, res) => {
+  try {
+    const { q, limit = '5' } = req.query;
+    
+    if (!q || typeof q !== 'string' || q.length < 2) {
+      res.json({ results: [] });
+      return;
+    }
+
+    const searchTerm = sanitizeLike(q);
+    const limitNum = Math.min(parseInt(limit as string) || 5, 10);
+
+    const result = await db.execute(sql`
+      SELECT name, slug, brand, category
+      FROM products
+      WHERE status = 'published'
+        AND name NOT LIKE 'Aplicaciones:%'
+        AND name NOT LIKE 'Applications:%'
+        AND (
+          LOWER(name) LIKE LOWER('%' || ${searchTerm} || '%') ESCAPE '\'
+          OR LOWER(sku) LIKE LOWER('%' || ${searchTerm} || '%') ESCAPE '\'
+          OR LOWER(supplier_code) LIKE LOWER('%' || ${searchTerm} || '%') ESCAPE '\'
+        )
+      ORDER BY 
+        CASE WHEN LOWER(name) LIKE LOWER(${searchTerm} || '%') THEN 0 ELSE 1 END,
+        name ASC
+      LIMIT ${limitNum}
+    `);
+
+    const results = result.rows.map(row => ({
+      name: row.name,
+      slug: row.slug,
+      category: row.category,
+    }));
+
+    res.json({ results });
+  } catch (error) {
+    console.error('[SEARCH SUGGESTIONS ERROR]:', error);
+    res.status(500).json({ error: 'Failed to fetch search suggestions' });
+  }
+});
+
 app.get('/api/catalog/products', catalogLimiter, async (req, res) => {
   try {
     const { search, category_id, page = '1', per_page = '20', universal, brand, min_price, max_price, in_stock, attrs } = req.query as any;
@@ -1061,7 +1153,8 @@ app.get('/api/catalog/products', catalogLimiter, async (req, res) => {
         try {
           const attrsObj = JSON.parse(attrs);
           if (typeof attrsObj === 'object' && !Array.isArray(attrsObj)) {
-            baseWhereClause += ` AND attributes @> '${JSON.stringify(attrsObj)}'::jsonb`;
+            const safeAttrsJson = JSON.stringify(attrsObj).replace(/'/g, "''");
+            baseWhereClause += ` AND attributes @> '${safeAttrsJson}'::jsonb`;
           }
         } catch {}
       }
@@ -1256,6 +1349,18 @@ app.get('/api/catalog/filters', async (req, res) => {
 app.get('/api/catalog/product/:id', async (req, res) => {
   try {
     const result = await db.execute(sql`SELECT * FROM products WHERE id = ${parseInt(req.params.id)} AND status = 'published'`);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'No encontrado' });
+    res.json(mapProductToFrontend(result.rows[0]));
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/catalog/product-by-slug/:slug', async (req, res) => {
+  try {
+    const slug = req.params.slug;
+    const sku = slug.replace(/-/g, '');
+    const result = await db.execute(sql`SELECT * FROM products WHERE sku = ${sku} AND status = 'published' LIMIT 1`);
     if (result.rows.length === 0) return res.status(404).json({ error: 'No encontrado' });
     res.json(mapProductToFrontend(result.rows[0]));
   } catch (err: any) {
@@ -1707,10 +1812,17 @@ app.get('/api/orders/download-invoice', async (req: any, res: any) => {
 app.all('/api/admin', adminLimiter, async (req, res) => {
   const { action, userId, email } = req.query as any;
 
+  // Verify JWT from Authorization header for admin access
+  const authHeader = req.headers.authorization;
   let isAdmin = false;
-  if (userId && userId !== 'undefined') {
-    const r = await db.execute(sql`SELECT role FROM users WHERE wp_id = ${parseInt(userId)}`);
-    if (r.rows[0]?.role === 'admin') isAdmin = true;
+  let jwtUser: any = null;
+
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    jwtUser = verifyJWT(token);
+    if (jwtUser && jwtUser.role === 'admin') {
+      isAdmin = true;
+    }
   }
 
   // Rutas públicas del catálogo (legacy compat)
@@ -3053,7 +3165,7 @@ app.all('/api/admin', adminLimiter, async (req, res) => {
               pass: process.env.SMTP_PASSWORD
             },
             tls: {
-              rejectUnauthorized: false
+              rejectUnauthorized: process.env.SMTP_ALLOW_UNSECURE === 'true'
             }
           });
 
@@ -3733,27 +3845,36 @@ app.post('/api/auth', async (req, res) => {
       }
 
       const user = userRes.rows[0] as any;
-      const passHash = crypto.createHash('sha256').update(password || '').digest('hex');
 
-      // Si el usuario no tiene contraseña establecida (migrado de WordPress), se la guardamos en el primer login
-      if (!user.password_hash) {
-        await db.execute(sql`
-          UPDATE users
-          SET password_hash = ${passHash}
-          WHERE id = ${user.id}
-        `);
-        user.password_hash = passHash;
-      }
-
-      // Si es un login social (bypass de contraseña) o contraseña coincide
+      // Si es un login social (bypass de contraseña)
       const isSocial = !!(body.provider && body.token);
-      if (!isSocial && user.password_hash && user.password_hash !== passHash) {
-        return res.status(401).json({ error: 'Contraseña incorrecta' });
+      
+      if (!isSocial) {
+        // Verificar contraseña
+        const isValid = await verifyPassword(password || '', user.password_hash);
+        if (!isValid) {
+          return res.status(401).json({ error: 'Contraseña incorrecta' });
+        }
+        
+        // Migrar hash legacy a bcrypt si es necesario
+        if (user.password_hash && isLegacyPasswordHash(user.password_hash)) {
+          const newHash = await hashPassword(password || '');
+          await db.execute(sql`UPDATE users SET password_hash = ${newHash} WHERE id = ${user.id}`);
+          user.password_hash = newHash;
+        }
       }
 
-      // Generar respuesta de sesión limpia y compatible con el frontend
+      // Si el usuario no tiene contraseña establecida, se la guardamos con bcrypt
+      if (!user.password_hash) {
+        const newHash = await hashPassword(password || '');
+        await db.execute(sql`UPDATE users SET password_hash = ${newHash} WHERE id = ${user.id}`);
+        user.password_hash = newHash;
+      }
+
+      // Generar JWT y respuesta de sesión
+      const token = generateJWT(user);
       const session = {
-        token: `db-session-token-${user.id}-${Date.now()}`,
+        token,
         user_id: user.id,
         user_email: user.email,
         user_nicename: user.username,
@@ -3834,7 +3955,7 @@ app.post('/api/auth', async (req, res) => {
         return res.status(400).json({ error: 'El email o nombre de usuario ya está registrado' });
       }
 
-      const passHash = crypto.createHash('sha256').update(password).digest('hex');
+      const passHash = await hashPassword(password);
       const role = email.toLowerCase() === 'info@escapesymas.com' ? 'admin' : 'customer';
       const billingData = JSON.stringify({ address_1: '', city: '', postcode: '', phone: phone || '' });
 
@@ -3846,15 +3967,17 @@ app.post('/api/auth', async (req, res) => {
 
       const newId = insertRes.rows[0]?.id;
 
-      // Auto-login
+      // Auto-login con JWT
+      const newUser = { id: newId, email, username, role };
+      const token = generateJWT(newUser);
       const session = {
-        token: `db-session-token-${newId}-${Date.now()}`,
+        token,
         user_id: newId,
         user_email: email,
         user_nicename: username,
         user_display_name: firstName || username,
         avatarUrl: '',
-        role: role
+        role
       };
 
       return res.json(session);
@@ -3942,13 +4065,12 @@ app.post('/api/auth', async (req, res) => {
       if (userRes.rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
 
       const user = userRes.rows[0] as any;
-      const currentHash = crypto.createHash('sha256').update(currentPassword).digest('hex');
-
-      if (user.password_hash && user.password_hash !== currentHash) {
+      const isValid = await verifyPassword(currentPassword, user.password_hash);
+      if (!isValid) {
         return res.status(401).json({ error: 'La contraseña actual es incorrecta' });
       }
 
-      const newHash = crypto.createHash('sha256').update(newPassword).digest('hex');
+      const newHash = await hashPassword(newPassword);
       await db.execute(sql`UPDATE users SET password_hash = ${newHash} WHERE id = ${parseInt(userId)}`);
       return res.json({ success: true });
     }
@@ -4728,8 +4850,11 @@ app.post('/api/create-payment-intent', async (req: any, res: any) => {
     console.log(`[STRIPE] PaymentIntent created: ${paymentIntent.id} for order ${orderId} (${amount} EUR)`);
     return res.json({ clientSecret: paymentIntent.client_secret, paymentIntentId: paymentIntent.id });
   } catch (error: any) {
-    console.error('[STRIPE CREATE PAYMENT INTENT ERROR]:', error);
-    return res.status(500).json({ error: 'Error al crear la intención de pago' });
+    console.error('[STRIPE CREATE PAYMENT INTENT ERROR]:', error.message || error);
+    console.error('[STRIPE ERROR TYPE]:', error.type);
+    console.error('[STRIPE ERROR CODE]:', error.code);
+    console.error('[STRIPE ERROR DETAIL]:', error.detail);
+    return res.status(500).json({ error: 'Error al crear la intención de pago', detail: error.message });
   }
 });
 
@@ -4754,7 +4879,7 @@ app.post('/api/contact', async (req: any, res: any) => {
         pass: process.env.SMTP_PASSWORD
       },
       tls: {
-        rejectUnauthorized: false
+        rejectUnauthorized: process.env.SMTP_ALLOW_UNSECURE === 'true'
       }
     });
 
@@ -4809,7 +4934,7 @@ app.post('/api/warranty', async (req: any, res: any) => {
         pass: process.env.SMTP_PASSWORD
       },
       tls: {
-        rejectUnauthorized: false
+        rejectUnauthorized: process.env.SMTP_ALLOW_UNSECURE === 'true'
       }
     });
 
@@ -5059,7 +5184,7 @@ async function sendShipmentNotificationEmail(orderId: number, email: string, fir
         pass: process.env.SMTP_PASSWORD
       },
       tls: {
-        rejectUnauthorized: false
+        rejectUnauthorized: process.env.SMTP_ALLOW_UNSECURE === 'true'
       }
     });
 
@@ -5276,6 +5401,108 @@ app.get('/api/checkout-session', async (req: any, res: any) => {
   } catch(e: any) {
     console.error('[CHECKOUT SESSION ERROR]', e);
     return res.status(500).json({ error: e.message });
+  }
+});
+
+// ================================================================
+// PRODUCT REVIEWS
+// ================================================================
+app.get('/api/reviews/:productId', async (req, res) => {
+  try {
+    const productId = parseInt(req.params.productId);
+    const { limit = '10', offset = '0' } = req.query as any;
+    
+    const reviewsRes = await db.execute(sql`
+      SELECT r.*, u.username, u.avatar_url
+      FROM product_reviews r
+      LEFT JOIN users u ON r.user_id = u.id
+      WHERE r.product_id = ${productId} AND r.status = 'approved'
+      ORDER BY r.created_at DESC
+      LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}
+    `);
+    
+    const countRes = await db.execute(sql`
+      SELECT COUNT(*) as total FROM product_reviews 
+      WHERE product_id = ${productId} AND status = 'approved'
+    `);
+    
+    const statsRes = await db.execute(sql`
+      SELECT 
+        AVG(rating)::numeric(2,1) as average,
+        COUNT(*) as total,
+        COUNT(CASE WHEN rating = 5 THEN 1 END) as five,
+        COUNT(CASE WHEN rating = 4 THEN 1 END) as four,
+        COUNT(CASE WHEN rating = 3 THEN 1 END) as three,
+        COUNT(CASE WHEN rating = 2 THEN 1 END) as two,
+        COUNT(CASE WHEN rating = 1 THEN 1 END) as one
+      FROM product_reviews 
+      WHERE product_id = ${productId} AND status = 'approved'
+    `);
+    
+    const countRow = countRes.rows[0] as { total: string } | undefined;
+    
+    const stats = statsRes.rows[0] as { average: string; total: string; five: string; four: string; three: string; two: string; one: string } | undefined;
+    
+    res.json({
+      reviews: reviewsRes.rows,
+      total: parseInt(countRow?.total || '0'),
+      stats: {
+        average: parseFloat(stats?.average) || 0,
+        total: parseInt(stats?.total || '0'),
+        distribution: {
+          5: parseInt(stats?.five || '0'),
+          4: parseInt(stats?.four || '0'),
+          3: parseInt(stats?.three || '0'),
+          2: parseInt(stats?.two || '0'),
+          1: parseInt(stats?.one || '0')
+        }
+      }
+    });
+  } catch (err: any) {
+    console.error('[REVIEWS GET ERROR]:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/reviews', async (req, res) => {
+  try {
+    const { product_id, rating, title, content } = req.body;
+    
+    if (!product_id || !rating) {
+      return res.status(400).json({ error: 'product_id and rating are required' });
+    }
+    
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+    }
+    
+    const userId = (req as any).userId || null;
+    let verified_purchase = false;
+    let orderId = null;
+    
+    if (userId) {
+      const orderRes = await db.execute(sql`
+        SELECT o.id FROM orders o
+        JOIN order_items oi ON o.id = oi.order_id
+        WHERE o.user_id = ${userId} AND oi.product_id = ${parseInt(product_id)} AND o.status = 'completed'
+        LIMIT 1
+      `);
+      if (orderRes.rows.length > 0) {
+        verified_purchase = true;
+        orderId = orderRes.rows[0].id;
+      }
+    }
+    
+    const result = await db.execute(sql`
+      INSERT INTO product_reviews (product_id, user_id, order_id, rating, title, content, verified_purchase, status)
+      VALUES (${parseInt(product_id)}, ${userId}, ${orderId}, ${parseInt(rating)}, ${title || null}, ${content || null}, ${verified_purchase}, 'approved')
+      RETURNING *
+    `);
+    
+    res.status(201).json(result.rows[0]);
+  } catch (err: any) {
+    console.error('[REVIEWS POST ERROR]:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 

@@ -46,58 +46,63 @@ export default function BikeSelectorModal({
       setSelectedModel('');
       setSelectedYear('');
       setSearchFilter('');
-      
+      let cancelled = false;
       const loadBrands = async () => {
         setIsLoading(true);
         try {
           const res = await fetch(`${API_BASE}/vehicles?action=brands`);
           const data = await res.json();
-          setBrands(data);
+          if (!cancelled) setBrands(data);
         } catch (err) {
-          console.error('Error fetching brands:', err);
+          if (!cancelled) console.error('Error fetching brands:', err);
         } finally {
-          setIsLoading(false);
+          if (!cancelled) setIsLoading(false);
         }
       };
       loadBrands();
+      return () => { cancelled = true; };
     }
   }, [isOpen]);
 
   // Cargar modelos cuando cambia la marca
   useEffect(() => {
     if (selectedBrand) {
+      let cancelled = false;
       const loadModels = async () => {
         setIsLoading(true);
         try {
           const res = await fetch(`${API_BASE}/vehicles?action=models&brand=${encodeURIComponent(selectedBrand)}`);
           const data = await res.json();
-          setModels(data);
+          if (!cancelled) setModels(data);
         } catch (err) {
-          console.error('Error fetching models:', err);
+          if (!cancelled) console.error('Error fetching models:', err);
         } finally {
-          setIsLoading(false);
+          if (!cancelled) setIsLoading(false);
         }
       };
       loadModels();
+      return () => { cancelled = true; };
     }
   }, [selectedBrand]);
 
   // Cargar años cuando cambia el modelo
   useEffect(() => {
     if (selectedBrand && selectedModel) {
+      let cancelled = false;
       const loadYears = async () => {
         setIsLoading(true);
         try {
           const res = await fetch(`${API_BASE}/vehicles?action=years&brand=${encodeURIComponent(selectedBrand)}&model=${encodeURIComponent(selectedModel)}`);
           const data = await res.json();
-          setYears(data);
+          if (!cancelled) setYears(data);
         } catch (err) {
-          console.error('Error fetching years:', err);
+          if (!cancelled) console.error('Error fetching years:', err);
         } finally {
-          setIsLoading(false);
+          if (!cancelled) setIsLoading(false);
         }
       };
       loadYears();
+      return () => { cancelled = true; };
     }
   }, [selectedBrand, selectedModel]);
 

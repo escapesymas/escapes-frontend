@@ -33,6 +33,10 @@ build/
 .env
 .env.*
 
+# Credentials
+ADMIN/accesos.txt
+**/accesos.txt
+
 # Backend
 BACKEND/
 

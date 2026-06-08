@@ -7,11 +7,14 @@
   "scripts": {
     "dev": "tsx watch index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
     "drizzle-orm": "^0.30.0",
     "express": "^4.21.0",
     "express-rate-limit": "^8.5.2",
@@ -23,6 +26,7 @@
     "puppeteer": "^25.1.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "redis": "^6.0.0",
     "sharp": "^0.34.0",
     "stripe": "^22.2.0",
     "zod": "^4.4.3"
@@ -38,8 +42,10 @@
     "@types/nodemailer": "^6.4.14",
     "@types/pdfkit": "^0.17.6",
     "@types/pg": "^8.11.0",
+    "@vitest/ui": "^4.1.8",
     "tsx": "^4.19.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "vitest": "^4.1.8"
   },
   "engines": {
     "node": ">=18.0.0"

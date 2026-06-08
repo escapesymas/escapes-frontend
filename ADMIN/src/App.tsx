@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AdminDashboard } from './components/AdminDashboard';
+import { ToastProvider } from './components/ToastContext';
 import { Shield, Key, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function App() {
@@ -42,14 +43,16 @@ export default function App() {
         throw new Error(data.error || 'Credenciales inválidas');
       }
 
-      if (data.user_email?.toLowerCase() !== 'info@escapesymas.com') {
-        throw new Error('Acceso restringido: Se requiere cuenta de administrador.');
-      }
+      const safeSession = {
+        token: data.token || data.jwt || '',
+        user_id: data.user_id || data.user?.id || data.wpId || '',
+        user_email: data.user_email || data.user?.email || '',
+        user: data.user || null,
+      };
 
-      localStorage.setItem('escapesymas_admin_session', JSON.stringify(data));
-      setSession(data);
+      localStorage.setItem('escapesymas_admin_session', JSON.stringify(safeSession));
+      setSession(safeSession);
     } catch (err: any) {
-      console.error('[ADMIN LOGIN ERROR]:', err);
       setError(err.message || 'Error de conexión con el VPS');
     } finally {
       setSubmitting(false);
@@ -63,33 +66,37 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="h-screen bg-black flex flex-col items-center justify-center text-white font-sans">
-        <Loader2 className="w-12 h-12 text-racing-orange animate-spin mb-4" />
-        <span className="text-zinc-500 text-xs font-bold uppercase tracking-widest italic animate-pulse">Iniciando Consola de Seguridad...</span>
+      <div className="h-screen bg-tech-carbon flex flex-col items-center justify-center text-tech-text font-sans">
+        <Loader2 className="w-12 h-12 text-tech-yellow animate-spin mb-4" />
+        <span className="text-tech-muted text-xs font-bold uppercase tracking-widest italic animate-pulse">Iniciando Consola de Seguridad...</span>
       </div>
     );
   }
 
   if (session) {
-    return <AdminDashboard session={session} onLogout={handleLogout} />;
+    return (
+      <ToastProvider>
+        <AdminDashboard session={session} onLogout={handleLogout} />
+      </ToastProvider>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center px-4 relative overflow-hidden font-sans">
+    <div className="min-h-screen bg-tech-carbon flex items-center justify-center px-4 relative overflow-hidden font-sans">
       {/* Decorative Grid and Glow */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#111_1px,transparent_1px),linear-gradient(to_bottom,#111_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-40"></div>
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-racing-orange/10 rounded-full blur-[120px] pointer-events-none"></div>
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-tech-yellow/10 rounded-full blur-[120px] pointer-events-none"></div>
 
       <div className="w-full max-w-md relative z-10 animate-fade-in">
-        <div className="bg-zinc-950/70 backdrop-blur-xl border border-zinc-800/80 rounded-2xl p-8 shadow-2xl shadow-black/90">
+        <div className="bg-tech-card/70 backdrop-blur-xl border border-tech-border/80 rounded-2xl p-8 shadow-2xl shadow-black/90">
           <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 bg-racing-orange/10 border border-racing-orange/30 rounded-2xl flex items-center justify-center mb-4 text-racing-orange shadow-lg shadow-orange-500/10">
+            <div className="w-16 h-16 bg-tech-yellow/10 border border-tech-yellow/30 rounded-2xl flex items-center justify-center mb-4 text-tech-yellow shadow-lg shadow-yellow-500/10">
               <Shield className="w-8 h-8" />
             </div>
-            <h1 className="text-2xl font-black italic uppercase tracking-tighter text-white">
-              Escapes <span className="text-racing-orange">Admin</span>
+            <h1 className="text-2xl font-black italic uppercase tracking-tighter text-tech-text">
+              Escapes <span className="text-tech-yellow">Admin</span>
             </h1>
-            <p className="text-zinc-500 text-xs mt-1 uppercase tracking-widest font-bold">Consola de Control del VPS</p>
+            <p className="text-tech-muted text-xs mt-1 uppercase tracking-widest font-bold">Consola de Control del VPS</p>
           </div>
 
           {error && (
@@ -97,14 +104,14 @@ export default function App() {
               <AlertCircle className="w-5 h-5 shrink-0 text-red-500" />
               <div>
                 <p className="font-bold uppercase tracking-wider mb-0.5">Acceso Denegado</p>
-                <p className="text-zinc-400 leading-relaxed">{error}</p>
+                <p className="text-[#cbd5e1] leading-relaxed">{error}</p>
               </div>
             </div>
           )}
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label className="block text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-2">Email Administrador</label>
+              <label className="block text-[10px] uppercase font-black tracking-widest text-tech-muted mb-2">Email Administrador</label>
               <div className="relative">
                 <input
                   type="email"
@@ -112,13 +119,13 @@ export default function App() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="admin@escapesymas.com"
                   required
-                  className="w-full bg-zinc-900/60 border border-zinc-800 focus:border-racing-orange/50 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-racing-orange/30 transition-all font-medium"
+                  className="w-full bg-[#1a1b1e]/60 border border-tech-border focus:border-tech-yellow/50 rounded-xl px-4 py-3 text-sm text-tech-text placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-tech-yellow/30 transition-all font-medium"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-2">Contraseña VPS</label>
+              <label className="block text-[10px] uppercase font-black tracking-widest text-tech-muted mb-2">Contraseña VPS</label>
               <div className="relative">
                 <input
                   type="password"
@@ -126,7 +133,7 @@ export default function App() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="w-full bg-zinc-900/60 border border-zinc-800 focus:border-racing-orange/50 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-racing-orange/30 transition-all"
+                  className="w-full bg-[#1a1b1e]/60 border border-tech-border focus:border-tech-yellow/50 rounded-xl px-4 py-3 text-sm text-tech-text placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-tech-yellow/30 transition-all"
                 />
               </div>
             </div>
@@ -134,7 +141,7 @@ export default function App() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-racing-orange hover:bg-orange-600 disabled:bg-racing-orange/50 text-white font-black uppercase italic tracking-widest text-xs py-4 rounded-xl shadow-lg shadow-orange-950/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-8"
+              className="w-full bg-tech-yellow hover:bg-yellow-500 disabled:bg-tech-yellow/50 text-tech-text font-black uppercase italic tracking-widest text-xs py-4 rounded-xl shadow-lg shadow-yellow-950/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-8"
             >
               {submitting ? (
                 <>

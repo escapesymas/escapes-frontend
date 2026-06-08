@@ -1,0 +1,53 @@
+- generic [ref=e1]:
+  - link "Saltar al contenido principal" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e3]:
+    - banner [ref=e15]:
+      - generic [ref=e16]:
+        - button "Mi Moto" [ref=e17]:
+          - img [ref=e18]
+          - generic [ref=e23]: Mi Moto
+        - link "Escapes y Más" [ref=e24] [cursor=pointer]:
+          - /url: /
+          - img "Escapes y Más" [ref=e25]
+        - generic [ref=e26]:
+          - button "Abrir carrito" [ref=e27] [cursor=pointer]:
+            - img [ref=e28]
+            - generic [ref=e32]: "3"
+          - navigation [ref=e33]:
+            - link "Inicio" [ref=e34] [cursor=pointer]:
+              - /url: /
+            - link "Catálogo" [ref=e35] [cursor=pointer]:
+              - /url: /universales
+            - link "Acceder" [ref=e36] [cursor=pointer]:
+              - /url: /login
+    - main [ref=e37]:
+      - generic [ref=e38]:
+        - generic [ref=e39]:
+          - button "Acceder" [ref=e40] [cursor=pointer]
+          - button "Crear cuenta" [ref=e41] [cursor=pointer]
+        - generic [ref=e42]:
+          - generic [ref=e59]:
+            - img [ref=e60]
+            - paragraph [ref=e62]: Usuario no encontrado
+          - generic [ref=e43]:
+            - generic [ref=e44]:
+              - generic [ref=e45]: Email o usuario
+              - textbox "Email o usuario" [ref=e46]:
+                - /placeholder: piloto@ejemplo.com
+                - text: testuser@test.com
+            - generic [ref=e47]:
+              - generic [ref=e48]: Contraseña
+              - generic [ref=e49]:
+                - textbox "Contraseña" [active] [ref=e50]:
+                  - /placeholder: ••••••••
+                  - text: TestPassword123!
+                - button "Mostrar contraseña" [ref=e51] [cursor=pointer]:
+                  - img [ref=e52]
+            - button "Iniciar sesión" [ref=e55] [cursor=pointer]
+        - paragraph [ref=e56]:
+          - text: ¿Aún no tienes cuenta?
+          - button "Regístrate" [ref=e57] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e11] [cursor=pointer]:
+    - img [ref=e12]
+  - alert [ref=e58]

@@ -11,6 +11,23 @@ export interface CategoryInfo {
   slug: string;
 }
 
+export interface ProductCompatibility {
+  make?: string;
+  model?: string;
+  year?: string;
+  sku?: string;
+  brand?: string;
+  cc?: string;
+  code?: string;
+  [key: string]: unknown;
+}
+
+export interface ProductAttribute {
+  name?: string;
+  value?: string;
+  options?: string[];
+}
+
 export interface Product {
   id: number;
   title: string;
@@ -38,12 +55,13 @@ export interface Product {
   description: string;
   shortDescription: string;
   status: string;
-  compatibility: any[];
-  attributes: any[];
+  compatibility: ProductCompatibility[];
+  attributes: ProductAttribute[];
   brand: string;
   barcode: string;
   supplierCode: string;
-  oldPartNumber: string;
+  supplier_code?: string;
+  oldPartNumber: string;   
   weight_g: number | null;
   length_mm: number | null;
   width_mm: number | null;
@@ -72,4 +90,11 @@ export interface ProductsResponse {
   products: Product[];
   total: number;
   totalPages: number;
+}
+
+export interface FilterOptions {
+  brands: string[];
+  price_min: number;
+  price_max: number;
+  attributes: Record<string, string[]>;
 }

@@ -1,98 +1,48 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Wrench, Check, Loader2, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Wrench, Loader2, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Product } from '../types';
-import { fetchProducts, fetchProductsBySkus } from '../lib/api';
-import ProductImage from './ProductImage';
-
-const parentCategories: Record<number, string> = {
-  1: "Escapes & Silenciadores",
-  2: "Frenado & Discos",
-  3: "Chasis, Horquillas & Suspensiones",
-  4: "Electrónica, ECUs & Baterías",
-  5: "Kits de Transmisión & Arrastre",
-  6: "Filtros & Mantenimiento",
-  7: "Neumáticos & Caballetes",
-  8: "Cascos",
-  9: "Equipación Piloto",
-  10: "Accesorios & Equipaje"
-};
+import { fetchCategories, fetchProducts, fetchProductsBySkus } from '../lib/api';
+import ProductCard from './ProductCard';
 
 interface CompatibleProductsProps {
   selectedBike?: string;
   onAddToCart: (product: Product) => void;
+  onNotifyMe: (product: Product) => void;
 }
 
-function ProductCard({ product, onAddToCart }: { product: Product; onAddToCart: (p: Product) => void }) {
-  return (
-    <a
-      href={`/producto/${product.id}`}
-      className="flex-shrink-0 snap-start w-[280px] md:w-full bg-card border rounded-md overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-md transition-all group cursor-pointer border-card-border hover:border-accent/40"
-    >
-      <div className="p-4 bg-image-wrapper flex items-center justify-center relative min-h-[160px] overflow-hidden">
-        <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
-          <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-card border border-card-border text-foreground shadow-sm">
-            {product.brand}
-          </span>
-          {product.isCompatible && (
-            <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-badge text-badge-text border border-badge-border flex items-center gap-0.5 shadow-sm">
-              <Check className="w-3 h-3 stroke-[3]" /> Compatible
-            </span>
-          )}
-        </div>
-
-        <ProductImage
-          src={product.image}
-          alt={product.name}
-          className="w-full h-full object-contain p-2"
-          wrapperClassName="w-full h-full absolute inset-0"
-        />
-      </div>
-
-      <div className="p-4 flex flex-col justify-between flex-grow">
-        <div className="mb-4">
-          <h4 className="font-mono text-xs font-bold uppercase text-foreground line-clamp-1 mb-1">
-            {product.name}
-          </h4>
-          <p className="text-[10px] text-text-muted line-clamp-2 leading-relaxed">
-            {product.shortDescription}
-          </p>
-        </div>
-
-        <div className="pt-3 border-t border-card-border/60 flex items-center justify-between">
-          <div>
-            <span className="text-[8px] font-mono text-text-muted uppercase font-bold block">Precio</span>
-            <span className="text-sm font-mono font-bold text-foreground">
-              {product.price.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €
-            </span>
-          </div>
-
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              onAddToCart(product);
-            }}
-            className="p-2 rounded bg-accent text-slate-950 hover:bg-accent-hover active:scale-95 transition-all shadow-sm cursor-pointer"
-            aria-label="Añadir al carrito"
-          >
-            <ShoppingCart className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-    </a>
-  );
-}
-
-export default function CompatibleProducts({ selectedBike, onAddToCart }: CompatibleProductsProps) {
+export default function CompatibleProducts({ selectedBike, onAddToCart, onNotifyMe }: CompatibleProductsProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
   const [collapsedSubcategories, setCollapsedSubcategories] = useState<Record<string, boolean>>({});
+  const [categoriesById, setCategoriesById] = useState<Record<number, { id: number; parentId: number; name: string; slug: string }>>({});
 
   useEffect(() => {
+    fetchCategories().then(cats => {
+      const map: Record<number, { id: number; parentId: number; name: string; slug: string }> = {};
+      cats.forEach((c: any) => { map[c.id] = c; });
+      setCategoriesById(map);
+    }).catch(() => {});
+  }, []);
+
+  function findL1(catId: number): string {
+    if (!categoriesById[catId]) return 'Otros Recambios';
+    let current = categoriesById[catId];
+    let depth = 0;
+    while (current.parentId !== 0 && current.parentId && depth < 10) {
+      current = categoriesById[current.parentId];
+      if (!current) return 'Otros Recambios';
+      depth++;
+    }
+    return current.name || 'Otros Recambios';
+  }
+
+  useEffect(() => {
+    let cancelled = false;
     const load = async () => {
       setIsLoading(true);
       setError('');
@@ -113,28 +63,37 @@ export default function CompatibleProducts({ selectedBike, onAddToCart }: Compat
           const skusRes = await fetch(skusUrl);
           const compatibleSkus = await skusRes.json();
 
-          if (compatibleSkus && compatibleSkus.length > 0) {
+          if (!cancelled && compatibleSkus && compatibleSkus.length > 0) {
             const data = await fetchProductsBySkus(compatibleSkus.slice(0, 100));
-            setProducts((data.products || []).map((p: Product) => ({ ...p, isCompatible: true })));
-            setFeaturedProducts([]);
-          } else {
+            if (!cancelled) {
+              setProducts((data.products || []).filter((p: Product) => p.price > 0 && p.image).map((p: Product) => ({ ...p, isCompatible: true })));
+              setFeaturedProducts([]);
+            }
+          } else if (!cancelled) {
             setProducts([]);
             const data = await fetchProducts({ per_page: 8 });
-            setFeaturedProducts((data.products || []).map((p: Product) => ({ ...p, isCompatible: false })));
+            if (!cancelled) {
+              setFeaturedProducts((data.products || []).filter((p: Product) => p.price > 0 && p.image).map((p: Product) => ({ ...p, isCompatible: false })));
+            }
           }
-        } else {
+        } else if (!cancelled) {
           const data = await fetchProducts({ per_page: 8 });
-          setProducts((data.products || []).map((p: Product) => ({ ...p, isCompatible: false })));
-          setFeaturedProducts([]);
+          if (!cancelled) {
+            setProducts((data.products || []).filter((p: Product) => p.price > 0 && p.image).map((p: Product) => ({ ...p, isCompatible: false })));
+            setFeaturedProducts([]);
+          }
         }
       } catch (err) {
-        console.error('Error loading compatible products:', err);
-        setError('No pudimos cargar los productos. Intenta de nuevo.');
+        if (!cancelled) {
+          console.error('Error loading compatible products:', err);
+          setError('No pudimos cargar los productos. Intenta de nuevo.');
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
     load();
+    return () => { cancelled = true; };
   }, [selectedBike]);
 
   const toggleCategory = (catName: string) => {
@@ -178,13 +137,11 @@ export default function CompatibleProducts({ selectedBike, onAddToCart }: Compat
     );
   }
 
-  // Nested grouping: Parent Category -> Subcategory -> Products
+  // Nested grouping: Parent Category (L1) -> Subcategory (L3) -> Products
   const nestedGrouped: Record<string, Record<string, Product[]>> = {};
   if (selectedBike) {
     products.forEach((product) => {
-      const catId = product.categoryId;
-      const parentId = catId >= 100 ? Math.floor(catId / 100) : catId;
-      const parentName = parentCategories[parentId] || "Otros Recambios";
+      const parentName = findL1(product.categoryId);
       const subName = product.category || "General";
 
       if (!nestedGrouped[parentName]) {
@@ -230,9 +187,9 @@ export default function CompatibleProducts({ selectedBike, onAddToCart }: Compat
                 <h4 className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-4 px-4 md:px-0">
                   Otros productos destacados
                 </h4>
-                <div className="flex overflow-x-auto snap-x scroll-smooth pb-4 px-4 md:px-0 gap-4 md:grid md:grid-cols-2 lg:grid-cols-4 md:overflow-visible no-scrollbar">
+                <div className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 px-4 md:px-0 gap-4 md:grid md:grid-cols-2 lg:grid-cols-4 md:overflow-visible no-scrollbar">
                   {featuredProducts.map((product) => (
-                    <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} />
+                    <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} onNotifyMe={onNotifyMe} />
                   ))}
                 </div>
               </div>
@@ -286,9 +243,9 @@ export default function CompatibleProducts({ selectedBike, onAddToCart }: Compat
                           </button>
                           
                           {!isSubCollapsed && (
-                            <div className="flex overflow-x-auto snap-x scroll-smooth pb-2 gap-4 md:grid md:grid-cols-2 lg:grid-cols-4 md:overflow-visible no-scrollbar">
+                            <div className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth pb-2 gap-4 md:grid md:grid-cols-2 lg:grid-cols-4 md:overflow-visible no-scrollbar">
                               {subProducts.map((product) => (
-                                <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} />
+                                <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} onNotifyMe={onNotifyMe} />
                               ))}
                             </div>
                           )}
@@ -302,9 +259,9 @@ export default function CompatibleProducts({ selectedBike, onAddToCart }: Compat
           })
         )
       ) : (
-        <div className="flex overflow-x-auto snap-x scroll-smooth pb-4 px-4 md:px-0 gap-4 md:grid md:grid-cols-2 lg:grid-cols-4 md:overflow-visible no-scrollbar">
+        <div className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 px-4 md:px-0 gap-4 md:grid md:grid-cols-2 lg:grid-cols-4 md:overflow-visible no-scrollbar">
           {products.map((product) => (
-            <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} />
+            <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} onNotifyMe={onNotifyMe} />
           ))}
         </div>
       )}

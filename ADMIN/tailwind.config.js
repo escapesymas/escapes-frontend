@@ -7,8 +7,12 @@ export default {
   theme: {
     extend: {
       colors: {
-        'racing-orange': '#ff4d00',
-        'racing-carbon': '#0c0c0c',
+        'tech-yellow': '#facc15',
+        'tech-carbon': '#0a0a0b',
+        'tech-card': '#121315',
+        'tech-border': '#1e293b',
+        'tech-text': '#f1f5f9',
+        'tech-muted': '#94a3b8'
       }
     },
   },

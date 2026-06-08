@@ -1,18 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import * as Icons from 'lucide-react';
+import { AttributesManager } from './AttributesManager';
+import { TaxonomiesTab } from './TaxonomiesTab';
+import { formatPrice } from '../../utils/format';
+import type { Product, ProductImage, ProductCompatibilityEntry, Category } from '../../types/admin';
 
 interface ProductsTabProps {
-  products: any[];
+  products: Product[];
   productsLoading: boolean;
   hasMoreProducts: boolean;
   productSearch: string;
   productPage: number;
   setProductSearch: (v: string) => void;
   setProductPage: (v: number) => void;
-  setEditingProduct: (p: any) => void;
-  setShowProductForm: (v: any) => void;
+  setEditingProduct: (p: Product | null) => void;
+  setShowProductForm: (v: 'create' | 'edit' | null) => void;
   fetchProductsList: (search: string, page: number, append: boolean, isSilent?: boolean, filters?: Record<string, string>) => Promise<void>;
   handleDeleteProduct: (id: number) => Promise<void>;
+  userId: string;
+  adminEmail: string;
+  adminToken: string;
 }
 
 type ColumnKey = 'image' | 'name' | 'brand' | 'sku' | 'barcode' | 'supplier_code' | 'cost' | 'price' | 'sale_price' | 'stock' | 'dropshipping' | 'ondemand' | 'delivery_plant' | 'category' | 'category2' | 'category3' | 'weight' | 'dimensions' | 'compatibility' | 'status' | 'created_at' | 'actions';
@@ -56,10 +63,27 @@ const ProductsTab: React.FC<ProductsTabProps> = ({
   setShowProductForm,
   fetchProductsList,
   handleDeleteProduct,
+  userId,
+  adminEmail,
+  adminToken,
 }) => {
+  const [subTab, setSubTab] = useState<'catalog' | 'attributes' | 'taxonomies'>('catalog');
   const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(new Set(DEFAULT_VISIBLE));
   const [showColumnMenu, setShowColumnMenu] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [categoryMap, setCategoryMap] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    if (!adminToken) return;
+    fetch(`/api/admin?action=get-categories`, { headers: { 'Authorization': `Bearer ${adminToken}` } })
+      .then(r => r.json())
+      .then(data => {
+        const map: Record<number, string> = {};
+        (Array.isArray(data) ? data : []).forEach((c: Category) => { map[c.id] = c.name; });
+        setCategoryMap(map);
+      })
+      .catch(() => {});
+  }, [adminToken]);
 
   const [filters, setFilters] = useState<Record<string, string>>({
     brand: '', category_id: '', category2_id: '', category3_id: '',
@@ -94,19 +118,33 @@ const ProductsTab: React.FC<ProductsTabProps> = ({
     fetchProductsList(productSearch, 1, false);
   };
 
-  const renderCell = (key: ColumnKey, p: any): React.ReactNode => {
-    let imgs: any[] = [];
-    try { imgs = p.images ? JSON.parse(p.images) : []; } catch { }
-    let compat: any[] = [];
-    try { compat = p.compatibility ? JSON.parse(p.compatibility) : []; } catch { }
-    const imageUrl = imgs[0]?.src || imgs[0] || '';
+  const handleSelectCategoryFromTaxonomies = (cat: Category) => {
+    const clearedFilters = Object.fromEntries(Object.keys(filters).map(k => [k, '']));
+    if (!cat.parent_id) {
+      clearedFilters.category_id = cat.id.toString();
+    } else {
+      clearedFilters.category2_id = cat.id.toString();
+    }
+    setFilters(clearedFilters);
+    setSubTab('catalog');
+    setShowFilters(true);
+    setProductPage(1);
+    fetchProductsList(productSearch, 1, false, false, clearedFilters);
+  };
+
+  const renderCell = (key: ColumnKey, p: Product): React.ReactNode => {
+    let imgs: ProductImage[] = [];
+    try { imgs = p.images ? (typeof p.images === 'string' ? JSON.parse(p.images) : p.images) : []; } catch { }
+    let compat: ProductCompatibilityEntry[] = [];
+    try { compat = p.compatibility ? (typeof p.compatibility === 'string' ? JSON.parse(p.compatibility) : p.compatibility) : []; } catch { }
+    const imageUrl = (imgs[0] as any)?.src || (typeof imgs[0] === 'string' ? imgs[0] : '') || '';
 
     switch (key) {
       case 'image':
         return (
-          <div className="w-12 h-12 bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 bg-[#1a1b1e] border border-tech-border rounded-lg overflow-hidden flex items-center justify-center shrink-0">
             {imageUrl ? (
-              <img src={imageUrl} className="w-full h-full object-cover" alt={p.name} />
+              <img src={imageUrl} className="w-full h-full object-cover" alt={p.name} loading="lazy" decoding="async" />
             ) : (
               <Icons.Package className="w-5 h-5 text-zinc-700" />
             )}
@@ -115,33 +153,33 @@ const ProductsTab: React.FC<ProductsTabProps> = ({
       case 'name':
         return (
           <div className="flex flex-col">
-            <span className="text-xs font-bold text-white">{p.name}</span>
-            <span className="text-[10px] text-zinc-500 truncate max-w-[180px]">{p.description}</span>
+            <span className="text-xs font-bold text-tech-text">{p.name}</span>
+            <span className="text-[10px] text-tech-muted truncate max-w-[180px]">{p.description}</span>
           </div>
         );
       case 'brand':
-        return <span className="text-xs font-bold text-zinc-400">{p.brand || '-'}</span>;
+        return <span className="text-xs font-bold text-[#cbd5e1]">{p.brand || '-'}</span>;
       case 'sku':
-        return <span className="font-mono text-xs text-zinc-500">{p.sku}</span>;
+        return <span className="font-mono text-xs text-tech-muted">{p.sku}</span>;
       case 'barcode':
-        return <span className="font-mono text-[10px] text-zinc-500">{p.barcode || '-'}</span>;
+        return <span className="font-mono text-[10px] text-tech-muted">{p.barcode || '-'}</span>;
       case 'supplier_code':
-        return <span className="font-mono text-[10px] text-zinc-500">{p.supplier_code || '-'}</span>;
+        return <span className="font-mono text-[10px] text-tech-muted">{p.supplier_code || '-'}</span>;
       case 'cost':
-        return <span className="font-mono text-xs text-zinc-500">{p.cost ? `€${(p.cost / 100).toFixed(2)}` : '-'}</span>;
+        return <span className="font-mono text-xs text-tech-muted">{p.cost ? formatPrice(p.cost) : '-'}</span>;
       case 'price':
         return (
           <div className="font-black italic text-zinc-300 text-sm">
-            {(p.price / 100).toFixed(2)}€
+            {formatPrice(p.price)}
             {p.sale_price && (
               <span className="block text-[9px] text-green-500 not-italic font-bold line-through">
-                {(p.sale_price / 100).toFixed(2)}€
+                {formatPrice(p.sale_price)}
               </span>
             )}
           </div>
         );
       case 'sale_price':
-        return <span className="font-mono text-xs text-green-500">{p.sale_price ? `${(p.sale_price / 100).toFixed(2)}€` : '-'}</span>;
+        return <span className="font-mono text-xs text-green-500">{p.sale_price ? formatPrice(p.sale_price) : '-'}</span>;
       case 'stock':
         return (
           <span className={`px-2.5 py-0.5 rounded text-[10px] font-black uppercase italic ${p.stock > 0 ? 'bg-green-950/20 text-green-500 border border-green-900/30' : 'bg-red-950/20 text-red-500 border border-red-900/30'}`}>
@@ -161,52 +199,47 @@ const ProductsTab: React.FC<ProductsTabProps> = ({
           <span className="text-[10px] text-zinc-600">No</span>
         );
       case 'delivery_plant':
-        return <span className="text-[10px] text-zinc-500">{p.delivery_plant || '-'}</span>;
+        return <span className="text-[10px] text-tech-muted">{p.delivery_plant || '-'}</span>;
       case 'category': {
-        const catMap: Record<number, string> = {
-          1: 'Escape', 2: 'Frenos', 3: 'Ciclista', 4: 'Electrónica',
-          5: 'Transmisión', 6: 'Mantenimiento', 7: 'Neumáticos',
-          8: 'Cascos', 9: 'Equipación', 10: 'Accesorios'
-        };
-        return <span className="text-[10px] text-zinc-400">{catMap[p.category_id] || p.category_id || '-'}</span>;
+        return <span className="text-[10px] text-[#cbd5e1]">{categoryMap[p.category_id!] || p.category_id || '-'}</span>;
       }
       case 'category2':
-        return <span className="text-[10px] text-zinc-500">{p.category2 || '-'}</span>;
+        return <span className="text-[10px] text-tech-muted">{p.category2 || '-'}</span>;
       case 'category3':
-        return <span className="text-[10px] text-zinc-500">{p.category3 || '-'}</span>;
+        return <span className="text-[10px] text-tech-muted">{p.category3 || '-'}</span>;
       case 'weight':
-        return <span className="text-[10px] text-zinc-500">{p.weight_g ? `${(p.weight_g / 1000).toFixed(2)} kg` : '-'}</span>;
+        return <span className="text-[10px] text-tech-muted">{p.weight_g ? `${(p.weight_g / 1000).toFixed(2)} kg` : '-'}</span>;
       case 'dimensions':
         if (p.length_mm && p.width_mm && p.height_mm) {
-          return <span className="text-[10px] text-zinc-500">{p.length_mm}×{p.width_mm}×{p.height_mm} mm</span>;
+          return <span className="text-[10px] text-tech-muted">{p.length_mm}×{p.width_mm}×{p.height_mm} mm</span>;
         }
-        return <span className="text-[10px] text-zinc-500">-</span>;
+        return <span className="text-[10px] text-tech-muted">-</span>;
       case 'compatibility':
         return (
-          <span className="text-[10px] bg-zinc-900 border border-zinc-800 text-zinc-400 px-2 py-0.5 rounded font-bold">
+          <span className="text-[10px] bg-[#1a1b1e] border border-tech-border text-[#cbd5e1] px-2 py-0.5 rounded font-bold">
             {compat.length} Motos
           </span>
         );
       case 'status': {
         const statusColors: Record<string, string> = {
           published: 'bg-green-950/20 text-green-400 border-green-900/30',
-          draft: 'bg-zinc-900 text-zinc-500 border-zinc-800',
+          draft: 'bg-[#1a1b1e] text-tech-muted border-tech-border',
           out_of_stock: 'bg-red-950/20 text-red-400 border-red-900/30'
         };
         return (
-          <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase border ${statusColors[p.status] || 'bg-zinc-900 text-zinc-500'}`}>
+          <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase border ${statusColors[p.status] || 'bg-[#1a1b1e] text-tech-muted'}`}>
             {p.status || 'draft'}
           </span>
         );
       }
       case 'created_at':
-        return <span className="text-[10px] text-zinc-500">{p.created_at ? new Date(p.created_at).toLocaleDateString() : '-'}</span>;
+        return <span className="text-[10px] text-tech-muted">{p.created_at ? new Date(p.created_at).toLocaleDateString() : '-'}</span>;
       case 'actions':
         return (
           <div className="flex items-center justify-end gap-2">
             <button
               onClick={() => { setEditingProduct(p); setShowProductForm('edit'); }}
-              className="text-zinc-400 hover:text-white p-1"
+              className="text-[#cbd5e1] hover:text-tech-text p-1"
               title="Editar"
             >
               <Icons.Edit3 size={14} />
@@ -225,40 +258,65 @@ const ProductsTab: React.FC<ProductsTabProps> = ({
     }
   };
 
-  const filterInputCls = "w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-[11px] text-white placeholder-zinc-600 focus:outline-none focus:border-racing-orange";
-  const filterLabelCls = "text-[9px] uppercase font-black tracking-widest text-zinc-500 block mb-1";
+  const filterInputCls = "w-full bg-[#1a1b1e] border border-tech-border rounded-lg px-3 py-2 text-[11px] text-tech-text placeholder-zinc-600 focus:outline-none focus:border-tech-yellow";
+  const filterLabelCls = "text-[9px] uppercase font-black tracking-widest text-tech-muted block mb-1";
 
   return (
     <div className="space-y-6">
-      {/* Search, Columns, Filters Toolbar */}
+      {/* Sub-tabs Navigation */}
+      <div className="flex flex-wrap gap-2 border-b border-tech-border pb-4">
+        <button onClick={() => setSubTab('catalog')} className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-lg transition-all ${subTab === 'catalog' ? 'bg-tech-yellow text-black' : 'text-tech-muted hover:text-tech-text'}`}>
+          <Icons.Package className="w-4 h-4 inline mr-2"/> Catálogo General
+        </button>
+        <button onClick={() => setSubTab('attributes')} className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-lg transition-all ${subTab === 'attributes' ? 'bg-tech-yellow text-black' : 'text-tech-muted hover:text-tech-text'}`}>
+          <Icons.Sliders className="w-4 h-4 inline mr-2"/> Atributos (Tallas/Colores)
+        </button>
+        <button onClick={() => setSubTab('taxonomies')} className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-lg transition-all ${subTab === 'taxonomies' ? 'bg-tech-yellow text-black' : 'text-tech-muted hover:text-tech-text'}`}>
+          <Icons.Tags className="w-4 h-4 inline mr-2"/> Taxonomías (Categorías/Motos)
+        </button>
+      </div>
+
+      {subTab === 'attributes' && <AttributesManager userId={userId} adminEmail={adminEmail} adminToken={adminToken} />}
+      {subTab === 'taxonomies' && (
+        <TaxonomiesTab
+          userId={userId}
+          adminEmail={adminEmail}
+          adminToken={adminToken}
+          onSelectCategory={handleSelectCategoryFromTaxonomies}
+        />
+      )}
+
+      {subTab === 'catalog' && (
+        <>
+          {/* Search, Columns, Filters Toolbar */}
       <div className="flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-[200px]">
-          <Icons.Search className="absolute left-4 top-3.5 w-4 h-4 text-zinc-500" />
+          <Icons.Search className="absolute left-4 top-3.5 w-4 h-4 text-tech-muted" />
           <input
             type="text"
             value={productSearch}
             onChange={(e) => setProductSearch(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') { setProductPage(1); fetchProductsList(e.currentTarget.value, 1, false, false, Object.fromEntries(Object.entries(filters).filter(([_, v]) => v !== ''))); } }}
             placeholder="Buscar por nombre, SKU o descripción..."
-            className="w-full bg-zinc-950 border border-zinc-900 rounded-xl pl-11 pr-4 py-3 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-racing-orange transition-all shadow-inner"
+            className="w-full bg-tech-card border border-tech-border rounded-xl pl-11 pr-4 py-3 text-xs text-tech-text placeholder-zinc-600 focus:outline-none focus:border-tech-yellow transition-all shadow-inner"
           />
         </div>
 
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className={`flex items-center gap-2 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${showFilters ? 'bg-racing-orange text-white border-racing-orange' : 'bg-zinc-950 text-zinc-400 border-zinc-900 hover:border-zinc-700'}`}
+          className={`flex items-center gap-2 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${showFilters ? 'bg-tech-yellow text-tech-text border-tech-yellow' : 'bg-tech-card text-[#cbd5e1] border-tech-border hover:border-zinc-700'}`}
         >
           <Icons.Filter size={14} />
           Filtros
           {Object.values(filters).some(v => v !== '') && (
-            <span className="w-2 h-2 rounded-full bg-racing-orange animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-tech-yellow animate-pulse" />
           )}
         </button>
 
         <div className="relative">
           <button
             onClick={() => setShowColumnMenu(!showColumnMenu)}
-            className="flex items-center gap-2 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-zinc-950 text-zinc-400 border border-zinc-900 hover:border-zinc-700"
+            className="flex items-center gap-2 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-tech-card text-[#cbd5e1] border border-tech-border hover:border-zinc-700"
           >
             <Icons.Columns size={14} />
             Columnas
@@ -267,14 +325,14 @@ const ProductsTab: React.FC<ProductsTabProps> = ({
           {showColumnMenu && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setShowColumnMenu(false)} />
-              <div className="absolute right-0 top-full mt-2 z-50 bg-zinc-950 border border-zinc-800 rounded-xl p-3 shadow-2xl min-w-[180px] max-h-80 overflow-y-auto">
+              <div className="absolute right-0 top-full mt-2 z-50 bg-tech-card border border-tech-border rounded-xl p-3 shadow-2xl min-w-[180px] max-h-80 overflow-y-auto">
                 {ALL_COLUMNS.map(col => (
-                  <label key={col.key} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-zinc-900 cursor-pointer text-[11px] text-zinc-400 hover:text-white transition-colors">
+                  <label key={col.key} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-[#1a1b1e] cursor-pointer text-[11px] text-[#cbd5e1] hover:text-tech-text transition-colors">
                     <input
                       type="checkbox"
                       checked={visibleColumns.has(col.key)}
                       onChange={() => toggleColumn(col.key)}
-                      className="accent-racing-orange"
+                      className="accent-tech-yellow"
                     />
                     {col.label}
                   </label>
@@ -284,14 +342,14 @@ const ProductsTab: React.FC<ProductsTabProps> = ({
           )}
         </div>
 
-        <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest bg-zinc-950 border border-zinc-900 px-4 py-3.5 rounded-xl whitespace-nowrap">
+        <div className="text-[10px] text-tech-muted font-bold uppercase tracking-widest bg-tech-card border border-tech-border px-4 py-3.5 rounded-xl whitespace-nowrap">
           <strong className="text-zinc-300 font-mono">{products.length}</strong> productos
         </div>
       </div>
 
       {/* Advanced Filters Panel */}
       {showFilters && (
-        <div className="bg-zinc-950 border border-zinc-900 rounded-2xl p-5 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="bg-tech-card border border-tech-border rounded-2xl p-5 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <div>
               <label className={filterLabelCls}>Marca</label>
@@ -360,11 +418,11 @@ const ProductsTab: React.FC<ProductsTabProps> = ({
               <input type="number" className={filterInputCls} placeholder="101-1004" value={filters.category2_id} onChange={e => updateFilter('category2_id', e.target.value)} />
             </div>
           </div>
-          <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-zinc-900">
-            <button onClick={clearFilters} className="text-zinc-500 hover:text-white text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-lg border border-zinc-900 hover:border-zinc-700 transition-all">
+          <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-tech-border">
+            <button onClick={clearFilters} className="text-tech-muted hover:text-tech-text text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-lg border border-tech-border hover:border-zinc-700 transition-all">
               Limpiar Filtros
             </button>
-            <button onClick={applyFilters} className="bg-racing-orange hover:bg-orange-600 text-white px-6 py-2 rounded-lg text-[10px] font-black uppercase italic tracking-wider transition-all shadow-lg shadow-orange-950/20">
+            <button onClick={applyFilters} className="bg-tech-yellow hover:bg-yellow-500 text-tech-text px-6 py-2 rounded-lg text-[10px] font-black uppercase italic tracking-wider transition-all shadow-lg shadow-yellow-950/20">
               <Icons.Filter size={12} className="inline mr-1" />
               Aplicar Filtros
             </button>
@@ -373,11 +431,11 @@ const ProductsTab: React.FC<ProductsTabProps> = ({
       )}
 
       {/* Table */}
-      <div className="bg-zinc-950 border border-zinc-900 rounded-2xl p-6 overflow-hidden">
+      <div className="bg-tech-card border border-tech-border rounded-2xl p-6 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-zinc-900 text-[10px] text-zinc-500 uppercase tracking-widest font-black">
+              <tr className="border-b border-tech-border text-[10px] text-tech-muted uppercase tracking-widest font-black">
                 {ALL_COLUMNS.filter(col => visibleColumns.has(col.key)).map(col => (
                   <th key={col.key} className={`pb-4 ${col.key === 'actions' ? 'text-right' : ''}`}>{col.label}</th>
                 ))}
@@ -386,7 +444,7 @@ const ProductsTab: React.FC<ProductsTabProps> = ({
             <tbody className="divide-y divide-zinc-900/50">
               {products.length === 0 ? (
                 <tr>
-                  <td colSpan={ALL_COLUMNS.filter(col => visibleColumns.has(col.key)).length} className="py-8 text-center text-zinc-500 italic">
+                  <td colSpan={ALL_COLUMNS.filter(col => visibleColumns.has(col.key)).length} className="py-8 text-center text-tech-muted italic">
                     {productsLoading ? 'Buscando recambios...' : 'No hay productos en el catálogo nativo.'}
                   </td>
                 </tr>
@@ -414,21 +472,23 @@ const ProductsTab: React.FC<ProductsTabProps> = ({
               await fetchProductsList(productSearch, nextPage, true, false, active);
             }}
             disabled={productsLoading}
-            className="bg-zinc-950 hover:bg-zinc-900 border border-zinc-900 text-zinc-300 px-6 py-3.5 rounded-xl text-xs font-black uppercase italic tracking-wider transition-all flex items-center gap-2 shadow-lg disabled:opacity-50"
+            className="bg-tech-card hover:bg-[#1a1b1e] border border-tech-border text-zinc-300 px-6 py-3.5 rounded-xl text-xs font-black uppercase italic tracking-wider transition-all flex items-center gap-2 shadow-lg disabled:opacity-50"
           >
             {productsLoading ? (
               <>
-                <Icons.Loader2 className="w-4 h-4 animate-spin text-racing-orange" />
+                <Icons.Loader2 className="w-4 h-4 animate-spin text-tech-yellow" />
                 Cargando productos...
               </>
             ) : (
               <>
-                <Icons.ChevronDown className="w-4 h-4 text-racing-orange" />
+                <Icons.ChevronDown className="w-4 h-4 text-tech-yellow" />
                 Cargar más productos
               </>
             )}
           </button>
         </div>
+          )}
+        </>
       )}
     </div>
   );

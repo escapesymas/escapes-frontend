@@ -40,7 +40,13 @@ export default function CartProgressBar({ subtotal }: CartProgressBarProps) {
   return (
     <div className="bg-card border border-card-border p-5 rounded mb-8 relative overflow-hidden group">
       {/* Carbon fiber grid pattern effect */}
-      <div className="absolute inset-0 opacity-5 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] pointer-events-none"></div>
+      <div className="absolute inset-0 opacity-5 pointer-events-none">
+        <div className="w-full h-full"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='1' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='1'/%3E%3Ccircle cx='13' cy='13' r='1'/%3E%3C/g%3E%3C/svg%3E")`,
+          }}
+        />
+      </div>
 
       <div className="relative z-10">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3 mb-4">
@@ -64,7 +70,12 @@ export default function CartProgressBar({ subtotal }: CartProgressBarProps) {
             className="h-full bg-gradient-to-r from-slate-700 via-slate-500 to-accent transition-all duration-1000 ease-out relative"
             style={{ width: `${progress}%` }}
           >
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/white-diamond.png')] opacity-10"></div>
+            <div className="absolute inset-0 opacity-10"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='30' height='30' viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M15 0l15 15-15 15L0 15z' fill='%23ffffff' fill-opacity='0.4' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+                backgroundSize: '30px 30px',
+              }}
+            ></div>
           </div>
         </div>
 

@@ -8,9 +8,12 @@ interface ProductImageProps {
   alt: string;
   className?: string;
   wrapperClassName?: string;
+  priority?: boolean;
+  srcDesktop?: string;
+  srcMobile?: string;
 }
 
-export default function ProductImage({ src, alt, className = '', wrapperClassName = '' }: ProductImageProps) {
+export default function ProductImage({ src, alt, className = '', wrapperClassName = '', priority, srcDesktop, srcMobile }: ProductImageProps) {
   const [failed, setFailed] = useState(false);
 
   if (!src || src.includes('placehold.co') || failed) {
@@ -19,6 +22,25 @@ export default function ProductImage({ src, alt, className = '', wrapperClassNam
         <div className="w-12 h-12 rounded bg-icon-box flex items-center justify-center border border-card-border">
           <Wrench className="w-6 h-6 text-accent-text" />
         </div>
+      </div>
+    );
+  }
+
+  if (srcDesktop || srcMobile) {
+    return (
+      <div className={wrapperClassName}>
+        <picture>
+          {srcMobile && <source media="(max-width: 767px)" srcSet={srcMobile} />}
+          {srcDesktop && <source media="(min-width: 768px)" srcSet={srcDesktop} />}
+          <img
+            src={src}
+            alt={alt}
+            fetchPriority={priority ? 'high' : undefined}
+            loading={priority ? undefined : 'lazy'}
+            className={className}
+            onError={() => setFailed(true)}
+          />
+        </picture>
       </div>
     );
   }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { apiLogin, apiRegister, apiGetProfile, apiUpdateProfile, apiDeleteAccount, SessionData, UserProfile } from '../lib/api';
+import { apiLogin, apiRegister, apiGetProfile, apiUpdateProfile, apiDeleteAccount, SessionData, UserProfile, UserBilling } from '../lib/api';
 
 const SESSION_KEY = 'tg_session';
 
@@ -28,7 +28,7 @@ interface AuthContextValue extends AuthState {
     firstName?: string;
     lastName?: string;
     email?: string;
-    billing?: any;
+    billing?: UserBilling;
     avatarUrl?: string;
   }) => Promise<void>;
   deleteAccount: () => Promise<void>;
@@ -56,12 +56,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Al montar: intentar restaurar sesión desde localStorage
   useEffect(() => {
+    let cancelled = false;
     const raw = localStorage.getItem(SESSION_KEY);
     if (raw) {
       try {
         const saved: SessionData = JSON.parse(raw);
         setSession(saved);
-        loadProfile(saved).finally(() => setIsLoading(false));
+        loadProfile(saved).then(() => {
+          if (!cancelled) setIsLoading(false);
+        }).catch(() => {
+          if (!cancelled) setIsLoading(false);
+        });
       } catch {
         localStorage.removeItem(SESSION_KEY);
         setIsLoading(false);
@@ -69,6 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else {
       setIsLoading(false);
     }
+    return () => { cancelled = true; };
   }, [loadProfile]);
 
   const persistSession = (s: SessionData) => {
@@ -112,7 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     firstName?: string;
     lastName?: string;
     email?: string;
-    billing?: any;
+    billing?: UserBilling;
     avatarUrl?: string;
   }) => {
     if (user) {

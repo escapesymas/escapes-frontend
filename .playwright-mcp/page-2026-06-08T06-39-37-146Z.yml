@@ -1,0 +1,98 @@
+- generic [active] [ref=e1]:
+  - link "Saltar al contenido principal" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - button "Mi Moto" [ref=e6]:
+          - img [ref=e7]
+          - generic [ref=e12]: Mi Moto
+        - link "Escapes y Más" [ref=e13] [cursor=pointer]:
+          - /url: /
+          - img "Escapes y Más" [ref=e14]
+        - generic [ref=e15]:
+          - button "Abrir carrito" [ref=e16] [cursor=pointer]:
+            - img [ref=e17]
+          - navigation [ref=e21]:
+            - link "Inicio" [ref=e22] [cursor=pointer]:
+              - /url: /
+            - link "Catálogo" [ref=e23] [cursor=pointer]:
+              - /url: /universales
+            - link "Acceder" [ref=e24] [cursor=pointer]:
+              - /url: /login
+    - generic [ref=e26]:
+      - link "Inicio" [ref=e27] [cursor=pointer]:
+        - /url: /
+      - generic [ref=e28]: /
+      - generic [ref=e29]: Piezas de recambio cascos
+      - generic [ref=e30]: /
+      - generic [ref=e31]: PEAK XTEND RAM/CT BLK
+    - main [ref=e32]:
+      - generic [ref=e33]:
+        - img "PEAK XTEND RAM/CT BLK" [ref=e38]
+        - generic [ref=e39]:
+          - generic [ref=e40]:
+            - generic [ref=e41]:
+              - generic [ref=e42]: ARAI
+              - generic [ref=e43]: Piezas de recambio cascos
+            - heading "PEAK XTEND RAM/CT BLK" [level=1] [ref=e44]
+            - paragraph [ref=e45]: "SKU: 8002281"
+          - generic [ref=e47]: 43,01 €
+          - generic [ref=e48]:
+            - generic [ref=e50]: En Stock
+            - generic [ref=e51]: Envío directo
+          - generic [ref=e52]:
+            - heading "Descripción" [level=2] [ref=e53]
+            - paragraph [ref=e55]: Recambio original ARAI, para un reacondicionamiento de calidad.
+          - generic [ref=e56]:
+            - heading "Especificaciones Técnicas" [level=2] [ref=e57]
+            - generic [ref=e58]:
+              - generic [ref=e59]:
+                - img [ref=e60]
+                - generic [ref=e63]: 0.11 kg
+              - generic [ref=e64]:
+                - img [ref=e65]
+                - generic [ref=e71]: 363 mm
+              - generic [ref=e72]:
+                - img [ref=e73]
+                - generic [ref=e79]: 246 mm
+              - generic [ref=e80]:
+                - img [ref=e81]
+                - generic [ref=e87]: 141 mm
+              - generic [ref=e88]:
+                - img [ref=e89]
+                - generic [ref=e93]: 12591 cm³
+              - generic [ref=e94]:
+                - generic [ref=e95]: "EAN:"
+                - generic [ref=e96]: "4530935521012"
+    - contentinfo [ref=e97]:
+      - generic [ref=e98]:
+        - generic [ref=e99]:
+          - generic [ref=e100]:
+            - heading "Legal" [level=4] [ref=e101]
+            - list [ref=e102]:
+              - listitem [ref=e103]:
+                - link "Aviso Legal" [ref=e104] [cursor=pointer]:
+                  - /url: /aviso-legal
+              - listitem [ref=e105]:
+                - link "Política de Privacidad" [ref=e106] [cursor=pointer]:
+                  - /url: /politica-privacidad
+          - generic [ref=e107]:
+            - heading "Contacto" [level=4] [ref=e108]
+            - list [ref=e109]:
+              - listitem [ref=e110]:
+                - link "info@escapesymas.com" [ref=e111] [cursor=pointer]:
+                  - /url: mailto:info@escapesymas.com
+          - generic [ref=e112]:
+            - heading "Síguenos" [level=4] [ref=e113]
+            - generic [ref=e114]:
+              - link "Instagram" [ref=e115] [cursor=pointer]:
+                - /url: https://instagram.com
+                - img [ref=e116]
+              - link "Facebook" [ref=e119] [cursor=pointer]:
+                - /url: https://facebook.com
+                - img [ref=e120]
+              - link "YouTube" [ref=e122] [cursor=pointer]:
+                - /url: https://youtube.com
+                - img [ref=e123]
+        - paragraph [ref=e127]: © 2026Escapes y Más — Todos los derechos reservados

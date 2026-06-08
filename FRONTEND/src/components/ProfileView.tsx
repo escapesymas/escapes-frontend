@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { User, LogIn, LogOut, Trophy, ShoppingBag, Bike, Edit3, Save, X, Trash2, ShieldCheck, Download, Camera, Loader2, MapPin, Key, Plus } from 'lucide-react';
-import Link from 'next/link';
+import React, { useState, useRef, useEffect } from 'react';
+import { User, LogOut, Trophy, ShoppingBag, Bike, Edit3, Save, X, Trash2, ShieldCheck, Download, Camera, Loader2, MapPin, Key, Plus, Package } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { apiChangePassword } from '../lib/api';
+import { apiChangePassword, apiGetMyOrders, OrderSummary, OrderDetail } from '../lib/api';
+import ProfileSkeleton from './ProfileSkeleton';
+import ProfileUnauthenticated from './ProfileUnauthenticated';
 
 // Lista de emojis predeterminados para avatares rápidos
 const PRESET_EMOJIS = ['🏍️', '🏁', '🛠️', '🏆', '⚡', '😎', '🔥', '🚥'];
@@ -38,6 +39,14 @@ export default function ProfileView() {
 
   // Estados de libreta de direcciones
   const [isAddingAddress, setIsAddingAddress] = useState(false);
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
+  const [editAddrAlias, setEditAddrAlias] = useState('');
+  const [editAddrType, setEditAddrType] = useState<'envio' | 'fiscal'>('envio');
+  const [editAddrAddress1, setEditAddrAddress1] = useState('');
+  const [editAddrCity, setEditAddrCity] = useState('');
+  const [editAddrPostcode, setEditAddrPostcode] = useState('');
+  const [editAddrPhone, setEditAddrPhone] = useState('');
+  const [editAddrNif, setEditAddrNif] = useState('');
   const [addrAlias, setAddrAlias] = useState('');
   const [addrType, setAddrType] = useState<'envio' | 'fiscal'>('envio');
   const [addrAddress1, setAddrAddress1] = useState('');
@@ -58,6 +67,28 @@ export default function ProfileView() {
   const [addressError, setAddressError] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Orders state
+  const [orders, setOrders] = useState<OrderDetail[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [showOrders, setShowOrders] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<OrderDetail | null>(null);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (!user?.email) return;
+      setOrdersLoading(true);
+      try {
+        const ordersData = await apiGetMyOrders(user.email);
+        setOrders(ordersData);
+      } catch (e) {
+        // handle error silently
+      } finally {
+        setOrdersLoading(false);
+      }
+    };
+    fetchOrders();
+  }, [user]);
 
   // Iniciar modo edición
   const handleStartEdit = () => {
@@ -95,8 +126,8 @@ export default function ProfileView() {
       });
       setSuccess('¡Perfil actualizado con éxito!');
       setIsEditing(false);
-    } catch (err: any) {
-      setError(err.message || 'Error al actualizar el perfil.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al actualizar el perfil.');
     } finally {
       setIsSubmitting(false);
     }
@@ -131,8 +162,8 @@ export default function ProfileView() {
         setConfirmNewPassword('');
         setIsChangingPassword(false);
       }
-    } catch (err: any) {
-      setPasswordError(err.message || 'Error al cambiar la contraseña.');
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : 'Error al cambiar la contraseña.');
     } finally {
       setIsSubmitting(false);
     }
@@ -180,8 +211,8 @@ export default function ProfileView() {
       setAddrPostcode('');
       setAddrPhone('');
       setAddrNif('');
-    } catch (err: any) {
-      setAddressError(err.message || 'Error al agregar la dirección.');
+    } catch (err) {
+      setAddressError(err instanceof Error ? err.message : 'Error al agregar la dirección.');
     } finally {
       setIsSubmitting(false);
     }
@@ -202,8 +233,50 @@ export default function ProfileView() {
       };
       await updateProfile({ billing: updatedBilling });
       setSuccess('Dirección eliminada.');
-    } catch (err: any) {
+    } catch (err) {
       setError('Error al eliminar la dirección.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Editar Dirección
+  const handleStartEditAddress = (addr: Address) => {
+    setEditingAddressId(addr.id);
+    setEditAddrAlias(addr.alias);
+    setEditAddrType(addr.type);
+    setEditAddrAddress1(addr.address_1);
+    setEditAddrCity(addr.city);
+    setEditAddrPostcode(addr.postcode);
+    setEditAddrPhone(addr.phone);
+    setEditAddrNif(addr.nif || '');
+  };
+
+  const handleSaveAddress = async (addrId: string) => {
+    if (!user) return;
+    if (!editAddrAlias.trim() || !editAddrAddress1.trim() || !editAddrCity.trim() || !editAddrPostcode.trim() || !editAddrPhone.trim()) return;
+
+    setIsSubmitting(true);
+    try {
+      const currentAddresses = Array.isArray(user.billing?.addresses) ? (user.billing.addresses as Address[]) : [];
+      const updatedBilling = {
+        ...user.billing,
+        addresses: currentAddresses.map(a => a.id === addrId ? {
+          ...a,
+          alias: editAddrAlias.trim(),
+          type: editAddrType,
+          address_1: editAddrAddress1.trim(),
+          city: editAddrCity.trim(),
+          postcode: editAddrPostcode.trim(),
+          phone: editAddrPhone.trim(),
+          nif: editAddrType === 'fiscal' ? editAddrNif.trim() : undefined,
+        } : a)
+      };
+      await updateProfile({ billing: updatedBilling });
+      setSuccess('Dirección actualizada.');
+      setEditingAddressId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al actualizar la dirección.');
     } finally {
       setIsSubmitting(false);
     }
@@ -217,8 +290,8 @@ export default function ProfileView() {
       await updateProfile({ avatarUrl: `emoji:${emoji}` });
       setSuccess('Avatar actualizado.');
       setIsAvatarPanelOpen(false);
-    } catch (err: any) {
-      setError(err.message || 'Error al actualizar el avatar.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al actualizar el avatar.');
     } finally {
       setIsSubmitting(false);
     }
@@ -246,8 +319,8 @@ export default function ProfileView() {
       await updateProfile({ avatarUrl: data.url });
       setSuccess('Avatar personalizado subido con éxito.');
       setIsAvatarPanelOpen(false);
-    } catch (err: any) {
-      setError(err.message || 'Error al subir el avatar.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al subir el avatar.');
     } finally {
       setIsSubmitting(false);
     }
@@ -291,52 +364,18 @@ export default function ProfileView() {
     setError('');
     try {
       await deleteAccount();
-    } catch (err: any) {
-      setError(err.message || 'Error al eliminar la cuenta.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al eliminar la cuenta.');
       setIsSubmitting(false);
     }
   };
 
   if (isLoading) {
-    return (
-      <div className="max-w-md mx-auto flex flex-col gap-6 animate-fade-in">
-        <div className="p-12 bg-card border border-card-border rounded-md shadow-sm flex items-center justify-center">
-          <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-        </div>
-      </div>
-    );
+    return <ProfileSkeleton />;
   }
 
   if (!isAuthenticated || !user) {
-    return (
-      <div className="max-w-md mx-auto flex flex-col gap-6 animate-fade-in">
-        <div className="p-8 bg-card border border-card-border rounded-md shadow-sm flex flex-col items-center text-center gap-5">
-          <div className="w-16 h-16 rounded-full bg-icon-box flex items-center justify-center border-2 border-card-border">
-            <User className="w-8 h-8 text-text-muted" />
-          </div>
-          <div>
-            <h2 className="font-mono text-sm font-bold uppercase text-foreground mb-1">¿Eres piloto?</h2>
-            <p className="text-xs text-text-muted font-sans leading-relaxed max-w-xs">
-              Inicia sesión para ver tu garaje, historial de pedidos y participar en el Paddock.
-            </p>
-          </div>
-          <Link
-            href="/login"
-            id="profile-login-cta"
-            className="flex items-center gap-2 px-6 py-3 bg-accent text-slate-950 font-mono font-bold text-xs uppercase tracking-wider rounded hover:bg-accent-hover transition-all"
-          >
-            <LogIn className="w-4 h-4" />
-            Iniciar sesión
-          </Link>
-          <Link
-            href="/login?tab=register"
-            className="text-[10px] font-mono text-text-muted hover:text-foreground transition-colors"
-          >
-            ¿Aún no tienes cuenta? <span className="text-accent">Regístrate gratis</span>
-          </Link>
-        </div>
-      </div>
-    );
+    return <ProfileUnauthenticated />;
   }
 
   const displayName = user.firstName
@@ -445,18 +484,144 @@ export default function ProfileView() {
             <span className="text-sm font-mono font-bold text-foreground block">{user.xp || 0}</span>
             <span className="text-[8px] font-mono text-text-muted uppercase">XP</span>
           </div>
-          <div className="px-4 py-2 bg-background border border-card-border rounded text-center">
+          <button onClick={() => setShowOrders(!showOrders)} className="px-4 py-2 bg-background border border-card-border rounded text-center hover:border-accent/50 transition-colors cursor-pointer w-full">
             <ShoppingBag className="w-3 h-3 text-text-muted mx-auto mb-1" />
-            <span className="text-sm font-mono font-bold text-foreground block">—</span>
+            <span className="text-sm font-mono font-bold text-foreground block">
+              {ordersLoading ? '...' : orders.length}
+            </span>
             <span className="text-[8px] font-mono text-text-muted uppercase">Pedidos</span>
-          </div>
+          </button>
           <div className="px-4 py-2 bg-background border border-card-border rounded text-center">
             <Bike className="w-3 h-3 text-text-muted mx-auto mb-1" />
             <span className="text-sm font-mono font-bold text-foreground block">{user.garage?.length || 0}</span>
             <span className="text-[8px] font-mono text-text-muted uppercase">Motos</span>
           </div>
         </div>
-      </div>
+        </div>
+
+        {/* Order History */}
+        {showOrders && (
+          <div className="mt-3 animate-fade-in">
+            <div className="bg-card border border-card-border rounded-md shadow-sm p-4">
+              <h3 className="font-mono text-[10px] font-bold uppercase text-text-muted tracking-wider mb-3">Historial de Pedidos</h3>
+              {orders.length === 0 ? (
+                <p className="text-[10px] text-text-muted font-mono text-center py-4">No hay pedidos aún.</p>
+              ) : (
+                <div className="flex flex-col gap-2 max-h-80 overflow-y-auto">
+                  {orders.map((order) => (
+                    <button
+                      key={order.id}
+                      onClick={() => setSelectedOrder(order)}
+                      className="flex items-center justify-between p-2.5 bg-background border border-card-border rounded text-[11px] font-mono w-full text-left hover:border-accent/40 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Package className="w-3.5 h-3.5 text-accent shrink-0" />
+                        <div>
+                          <span className="text-foreground font-bold">#{order.id}</span>
+                          <span className={`ml-2 text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
+                            order.status === 'completed' || order.status === 'processing'
+                              ? 'bg-emerald-500/10 text-emerald-500'
+                              : order.status === 'cancelled'
+                              ? 'bg-red-500/10 text-red-500'
+                              : 'bg-amber-500/10 text-amber-500'
+                          }`}>
+                            {order.status}
+                          </span>
+                          <span className="ml-2 text-[9px] text-text-muted">
+                            {new Date(order.createdAt).toLocaleDateString('es-ES')}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-foreground font-bold">
+                        {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(order.total)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Order Detail Modal */}
+        {selectedOrder && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs" onClick={() => setSelectedOrder(null)}>
+            <div className="bg-card border border-card-border rounded shadow-xl max-w-lg w-full p-6 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-mono font-bold text-foreground uppercase text-sm">Pedido #{selectedOrder.id}</h3>
+                <button onClick={() => setSelectedOrder(null)} className="text-text-muted hover:text-foreground cursor-pointer text-lg">&times;</button>
+              </div>
+
+              <div className="space-y-3 mb-4">
+                <div className="flex justify-between text-xs font-mono">
+                  <span className="text-text-muted">Estado</span>
+                  <span className={`font-bold px-2 py-0.5 rounded text-[10px] uppercase ${
+                    selectedOrder.status === 'completed' || selectedOrder.status === 'processing'
+                      ? 'bg-emerald-500/10 text-emerald-500'
+                      : selectedOrder.status === 'cancelled'
+                      ? 'bg-red-500/10 text-red-500'
+                      : 'bg-amber-500/10 text-amber-500'
+                  }`}>{selectedOrder.status}</span>
+                </div>
+                <div className="flex justify-between text-xs font-mono">
+                  <span className="text-text-muted">Fecha</span>
+                  <span className="text-foreground">{new Date(selectedOrder.createdAt).toLocaleString('es-ES')}</span>
+                </div>
+                <div className="flex justify-between text-xs font-mono">
+                  <span className="text-text-muted">Total</span>
+                  <span className="text-foreground font-bold">{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(selectedOrder.total)}</span>
+                </div>
+                <div className="flex justify-between text-xs font-mono">
+                  <span className="text-text-muted">Pago</span>
+                  <span className="text-foreground">{selectedOrder.paymentId ? `ID: ${selectedOrder.paymentId.slice(0, 12)}...` : 'Pendiente'}</span>
+                </div>
+              </div>
+
+              {selectedOrder.items.length > 0 && (
+                <>
+                  <h4 className="font-mono text-[10px] font-bold uppercase text-text-muted tracking-wider mb-2">Artículos</h4>
+                  <div className="space-y-2 mb-4">
+                    {selectedOrder.items.map((item) => (
+                      <div key={item.id} className="flex items-center gap-3 p-2 bg-background border border-card-border rounded">
+                        {item.image && (
+                          <img src={item.image} alt={item.productName} className="w-10 h-10 object-contain rounded bg-slate-950" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-mono text-foreground truncate">{item.productName}</p>
+                          <p className="text-[10px] text-text-muted font-mono">x{item.quantity}</p>
+                        </div>
+                        <span className="text-xs font-mono text-foreground font-bold">
+                          {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(item.price * item.quantity)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {selectedOrder.shippingData && Object.keys(selectedOrder.shippingData).length > 0 && (
+                <>
+                  <h4 className="font-mono text-[10px] font-bold uppercase text-text-muted tracking-wider mb-2">Envío</h4>
+                  <div className="p-2 bg-background border border-card-border rounded text-[10px] font-mono text-foreground space-y-1">
+                    {(selectedOrder.shippingData as Record<string, string>).address1 && (
+                      <p>{selectedOrder.shippingData.address1 as string}</p>
+                    )}
+                    {(selectedOrder.shippingData as Record<string, string>).city && (
+                      <p>{(selectedOrder.shippingData as Record<string, string>).city}, {(selectedOrder.shippingData as Record<string, string>).postcode}</p>
+                    )}
+                  </div>
+                </>
+              )}
+
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="mt-4 w-full bg-accent text-slate-950 font-mono font-bold text-xs uppercase tracking-wider py-2.5 rounded hover:bg-accent-hover transition-colors cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        )}
 
       {/* Datos Personales */}
       <div className="p-4 bg-card border border-card-border rounded-md shadow-sm">
@@ -602,7 +767,7 @@ export default function ProfileView() {
                 <label className="text-[8px] font-mono uppercase text-text-muted">Tipo *</label>
                 <select
                   value={addrType}
-                  onChange={e => setAddrType(e.target.value as any)}
+                  onChange={e => setAddrType(e.target.value as 'envio' | 'fiscal')}
                   className="w-full bg-background border border-card-border rounded px-2 py-1.5 text-xs font-mono text-foreground focus:outline-none focus:border-accent"
                 >
                   <option value="envio">Envío</option>
@@ -689,34 +854,81 @@ export default function ProfileView() {
         {savedAddresses.length > 0 ? (
           <div className="flex flex-col gap-3 mt-1">
             {savedAddresses.map((addr) => (
-              <div
-                key={addr.id}
-                className="p-3 border border-card-border/80 rounded bg-background/10 flex justify-between items-start gap-4 hover:border-card-border transition-colors"
-              >
-                <div className="flex flex-col gap-1 text-[11px] font-mono">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-foreground uppercase">{addr.alias}</span>
-                    <span className={`text-[8px] px-1.5 py-0.5 rounded font-bold uppercase border ${
-                      addr.type === 'fiscal'
-                        ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                        : 'bg-accent/10 text-accent-text border-accent/20'
-                    }`}>
-                      {addr.type === 'fiscal' ? 'Fiscal' : 'Envío'}
-                    </span>
+              editingAddressId === addr.id ? (
+                <div key={addr.id} className="p-3 border border-accent/40 rounded bg-background">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex flex-col gap-1 col-span-2">
+                      <label className="text-[8px] font-mono uppercase text-text-muted">Alias *</label>
+                      <input value={editAddrAlias} onChange={e => setEditAddrAlias(e.target.value)} className="w-full bg-background border border-card-border rounded px-2 py-1 text-xs font-mono text-foreground focus:outline-none focus:border-accent" />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[8px] font-mono uppercase text-text-muted">Tipo</label>
+                      <select value={editAddrType} onChange={e => setEditAddrType(e.target.value as 'envio' | 'fiscal')} className="w-full bg-background border border-card-border rounded px-2 py-1 text-xs font-mono text-foreground focus:outline-none focus:border-accent">
+                        <option value="envio">Envío</option>
+                        <option value="fiscal">Facturación</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-1 col-span-2">
+                      <label className="text-[8px] font-mono uppercase text-text-muted">Dirección *</label>
+                      <input value={editAddrAddress1} onChange={e => setEditAddrAddress1(e.target.value)} className="w-full bg-background border border-card-border rounded px-2 py-1 text-xs font-mono text-foreground focus:outline-none focus:border-accent" />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[8px] font-mono uppercase text-text-muted">Ciudad *</label>
+                      <input value={editAddrCity} onChange={e => setEditAddrCity(e.target.value)} className="w-full bg-background border border-card-border rounded px-2 py-1 text-xs font-mono text-foreground focus:outline-none focus:border-accent" />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[8px] font-mono uppercase text-text-muted">C.P. *</label>
+                      <input value={editAddrPostcode} onChange={e => setEditAddrPostcode(e.target.value)} className="w-full bg-background border border-card-border rounded px-2 py-1 text-xs font-mono text-foreground focus:outline-none focus:border-accent" />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[8px] font-mono uppercase text-text-muted">Teléfono *</label>
+                      <input value={editAddrPhone} onChange={e => setEditAddrPhone(e.target.value)} className="w-full bg-background border border-card-border rounded px-2 py-1 text-xs font-mono text-foreground focus:outline-none focus:border-accent" />
+                    </div>
+                    {editAddrType === 'fiscal' && (
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[8px] font-mono uppercase text-text-muted">NIF/CIF</label>
+                        <input value={editAddrNif} onChange={e => setEditAddrNif(e.target.value)} className="w-full bg-background border border-card-border rounded px-2 py-1 text-xs font-mono text-foreground focus:outline-none focus:border-accent" />
+                      </div>
+                    )}
+                    <div className="col-span-2 flex gap-2 mt-1">
+                      <button onClick={() => handleSaveAddress(addr.id)} disabled={isSubmitting} className="flex-1 py-1.5 bg-accent text-slate-950 font-mono font-bold text-[10px] uppercase tracking-wider rounded hover:bg-accent-hover transition-all flex items-center justify-center gap-1 cursor-pointer">
+                        {isSubmitting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                        Guardar
+                      </button>
+                      <button onClick={() => setEditingAddressId(null)} className="py-1.5 px-3 border border-card-border text-text-muted font-mono font-bold text-[10px] uppercase rounded hover:bg-card-border/25 transition-colors cursor-pointer">
+                        Cancelar
+                      </button>
+                    </div>
                   </div>
-                  <span className="text-text-muted leading-tight mt-1">{addr.address_1}</span>
-                  <span className="text-text-muted leading-tight">{addr.postcode} - {addr.city}</span>
-                  <span className="text-text-muted leading-tight">Tel: {addr.phone}</span>
-                  {addr.nif && <span className="text-accent-text text-[9px] font-bold">NIF/CIF: {addr.nif}</span>}
                 </div>
-                <button
-                  onClick={() => handleRemoveAddress(addr.id)}
-                  className="p-1 text-text-muted hover:text-red-400 transition-colors cursor-pointer"
-                  title="Eliminar dirección"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
+              ) : (
+                <div key={addr.id} className="p-3 border border-card-border/80 rounded bg-background/10 flex justify-between items-start gap-4 hover:border-card-border transition-colors">
+                  <div className="flex flex-col gap-1 text-[11px] font-mono">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-foreground uppercase">{addr.alias}</span>
+                      <span className={`text-[8px] px-1.5 py-0.5 rounded font-bold uppercase border ${
+                        addr.type === 'fiscal'
+                          ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                          : 'bg-accent/10 text-accent-text border-accent/20'
+                      }`}>
+                        {addr.type === 'fiscal' ? 'Fiscal' : 'Envío'}
+                      </span>
+                    </div>
+                    <span className="text-text-muted leading-tight mt-1">{addr.address_1}</span>
+                    <span className="text-text-muted leading-tight">{addr.postcode} - {addr.city}</span>
+                    <span className="text-text-muted leading-tight">Tel: {addr.phone}</span>
+                    {addr.nif && <span className="text-accent-text text-[9px] font-bold">NIF/CIF: {addr.nif}</span>}
+                  </div>
+                  <div className="flex gap-1">
+                    <button onClick={() => handleStartEditAddress(addr)} className="p-1 text-text-muted hover:text-accent transition-colors cursor-pointer" title="Editar dirección">
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => handleRemoveAddress(addr.id)} className="p-1 text-text-muted hover:text-red-400 transition-colors cursor-pointer" title="Eliminar dirección">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )
             ))}
           </div>
         ) : !isAddingAddress ? (

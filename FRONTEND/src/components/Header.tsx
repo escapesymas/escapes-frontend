@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { ShoppingCart, Bike } from 'lucide-react';
 import Link from 'next/link';
 import { useCart } from '../context/CartContext';
@@ -19,12 +20,7 @@ export default function Header({ selectedBike, onOpenBikeSelector, onCartClick, 
 
   return (
     <>
-      <div className="w-full bg-accent/10 border-b border-accent/20 py-2 px-4 text-center shrink-0">
-        <p className="text-[10px] md:text-xs font-mono text-accent-text font-bold uppercase tracking-wider">
-          Estamos trabajando en mejoras en la web. Para consultas sobre productos que no encuentres, contacta a <a href="mailto:info@escapesymas.com" className="underline text-foreground hover:text-accent-text">info@escapesymas.com</a>
-        </p>
-      </div>
-      <header className="sticky top-11 md:top-10 z-40 w-full bg-background/80 backdrop-blur-md border-b border-card-border">
+      <header className="sticky top-0 z-40 w-full bg-background/80 backdrop-blur-md border-b border-card-border">
         <div className="container mx-auto px-4 md:px-6 h-14 flex items-center justify-between gap-3">
 
         {/* IZQUIERDA: Selector de Moto */}
@@ -45,19 +41,21 @@ export default function Header({ selectedBike, onOpenBikeSelector, onCartClick, 
         {/* CENTRO: Logo */}
         <Link href="/" className="absolute left-1/2 -translate-x-1/2 h-11 shrink-0">
           {/* Logo para tema claro (letras negras + amarillo) */}
-          <img
-            src="/logo-cabecera-negro.svg"
-            alt="Escapes y Más"
-            className="h-full w-auto object-contain block dark:hidden"
-            style={{ aspectRatio: '150/48' }}
-          />
+            <Image
+              src="/logo-cabecera-negro.svg"
+              alt="Escapes y Más"
+              width={150}
+              height={48}
+              className="h-full w-auto object-contain block dark:hidden"
+            />
           {/* Logo para tema oscuro (letras blancas + amarillo) */}
-          <img
-            src="/logo-cabecera.svg"
-            alt="Escapes y Más"
-            className="h-full w-auto object-contain hidden dark:block"
-            style={{ aspectRatio: '150/48' }}
-          />
+            <Image
+              src="/logo-cabecera.svg"
+              alt="Escapes y Más"
+              width={150}
+              height={48}
+              className="h-full w-auto object-contain hidden dark:block"
+            />
         </Link>
 
         {/* DERECHA: Carrito + Nav desktop */}
@@ -90,7 +88,12 @@ export default function Header({ selectedBike, onOpenBikeSelector, onCartClick, 
             >
               Inicio
             </Link>
-            <span className="text-xs font-mono font-bold uppercase tracking-wider cursor-pointer text-foreground hover:text-accent-text transition-colors">Catálogo</span>
+            <Link
+              href="/universales"
+              className="text-xs font-mono font-bold uppercase tracking-wider cursor-pointer text-foreground hover:text-accent-text transition-colors decoration-none"
+            >
+              Catálogo
+            </Link>
             {isAuthenticated && user ? (
               <button
                 onClick={() => onTabChange ? onTabChange('profile') : window.location.href = '/?tab=profile'}

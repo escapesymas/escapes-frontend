@@ -1,24 +1,25 @@
+/* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps, @next/next/no-img-element, @typescript-eslint/no-unused-vars */
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { Bike, Cpu, ChevronLeft, ChevronRight, AlertCircle, Check, ShoppingCart, Wrench, Loader2 } from 'lucide-react';
+import { Bike, Cpu, ChevronLeft, ChevronRight, AlertCircle, Wrench, Loader2 } from 'lucide-react';
 
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
-import CategoryList from '../components/CategoryList';
 import CompatibleProducts from '../components/CompatibleProducts';
-// import PaddockFeed from '../components/PaddockFeed';
+import BrandCarousel from '../components/BrandCarousel';
 import SearchBar from '../components/SearchBar';
-import ProductImage from '../components/ProductImage';
+import ProductCard from '../components/ProductCard';
+import NotifyMeModal from '../components/NotifyMeModal';
 import { fetchProducts } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { Product, ProductCompatibility } from '../types';
 
 const BikeSelectorModal = dynamic(() => import('../components/BikeSelectorModal'), { ssr: false });
 const GarageView = dynamic(() => import('../components/GarageView'), { ssr: false });
 const AdvisorView = dynamic(() => import('../components/AdvisorView'), { ssr: false });
-// const PaddockView = dynamic(() => import('../components/PaddockView'), { ssr: false });
 const ProfileView = dynamic(() => import('../components/ProfileView'), { ssr: false });
 const CartView = dynamic(() => import('../components/CartView'), { ssr: false });
 
@@ -34,7 +35,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchCategoryId, setSearchCategoryId] = useState<number | undefined>(undefined);
   const [searchCategoryName, setSearchCategoryName] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [isSearchLoading, setIsSearchLoading] = useState(false);
   const [searchPage, setSearchPage] = useState(1);
   const [searchTotalPages, setSearchTotalPages] = useState(0);
@@ -65,12 +66,29 @@ export default function Home() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      const tab = params.get('tab');
-      if (tab) {
-        setActiveTab(tab);
-        // limpiar URL
-        const newUrl = window.location.pathname;
-        window.history.replaceState({}, '', newUrl);
+      const hasParams = params.has('tab') || params.has('payment_intent');
+
+      if (hasParams) {
+        const tab = params.get('tab');
+        if (tab) {
+          setActiveTab(tab);
+        }
+
+        if (params.has('payment_intent')) {
+          setActiveTab('cart');
+          const pending = sessionStorage.getItem('stripe_pending_order');
+          sessionStorage.removeItem('stripe_pending_order');
+          sessionStorage.setItem('stripe_redirect_result', JSON.stringify({
+            paymentIntentId: params.get('payment_intent'),
+            redirectStatus: params.get('redirect_status'),
+            orderId: pending ? JSON.parse(pending).orderId : null,
+          }));
+        }
+
+        setTimeout(() => {
+          const cleanUrl = window.location.origin + window.location.pathname;
+          window.history.replaceState({}, '', cleanUrl);
+        }, 500);
       }
     }
   }, []);
@@ -80,8 +98,14 @@ export default function Home() {
     { role: 'assistant', text: '¡Hola, piloto! Soy tu asesor de moto. Pregúntame sobre compatibilidades, repuestos, equipación o cualquier duda técnica sobre tu moto.' }
   ]);
 
-  const handleAddToCart = (product: any) => {
+  const [notifyProduct, setNotifyProduct] = useState<Product | null>(null);
+
+  const handleAddToCart = (product: Product) => {
     addToCart(product);
+  };
+
+  const handleNotifyMe = (product: Product) => {
+    setNotifyProduct(product);
   };
 
   const handleSelectBike = async (bike: string) => {
@@ -154,10 +178,12 @@ export default function Home() {
   };
 
   // Mapeo dinámico de compatibilidades y ordenación para los resultados
-  const processedSearchResults = searchResults.map((product) => ({
+  const processedSearchResults = searchResults
+    .filter((product) => product.price > 0 && product.image)
+    .map((product) => ({
     ...product,
     isCompatible: selectedBike
-      ? product.compatibility?.some((c: any) => {
+      ? product.compatibility?.some((c: ProductCompatibility | string) => {
           const search = selectedBike.split(' ')[0].toLowerCase();
           if (typeof c === 'string') return c.toLowerCase().includes(search);
           if (typeof c === 'object' && c !== null) {
@@ -209,7 +235,7 @@ export default function Home() {
 
       {/* El main tiene overflow-y:auto propio — así el BottomNav puede
           estar en flujo normal al fondo sin necesitar position:fixed */}
-      <main
+      <main id="main-content"
         className="flex-1 overflow-y-auto overscroll-contain"
         style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
       >
@@ -303,68 +329,12 @@ export default function Home() {
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 px-4 md:px-0">
                       {processedSearchResults.map((product) => (
-                        <a
+                        <ProductCard
                           key={product.id}
-                          href={`/producto/${product.id}`}
-                          className="bg-card border rounded-md overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-md transition-all group cursor-pointer"
-                          style={{ borderColor: product.isCompatible ? 'var(--badge-border)' : 'var(--card-border)' }}
-                        >
-                          <div className="p-4 bg-image-wrapper flex items-center justify-center relative min-h-[160px] overflow-hidden">
-                            <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
-                              <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-card border border-card-border text-foreground shadow-sm">
-                                {product.brand}
-                              </span>
-                              {product.isCompatible && (
-                                <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-badge text-badge-text border border-badge-border flex items-center gap-0.5 shadow-sm">
-                                  <Check className="w-3 h-3 stroke-[3]" /> Compatible
-                                </span>
-                              )}
-                            </div>
-
-                            <ProductImage
-                              src={product.image}
-                              alt={product.name}
-                              className="w-full h-full object-contain p-2"
-                              wrapperClassName="w-full h-full absolute inset-0"
-                            />
-                          </div>
-
-                          <div className="p-4 flex flex-col justify-between flex-grow">
-                            <div className="mb-4">
-                              <h4 className="font-mono text-xs font-bold uppercase text-foreground line-clamp-1 mb-1">
-                                {product.name}
-                              </h4>
-                              <p className="text-[10px] text-text-muted line-clamp-2 leading-relaxed">
-                                {product.shortDescription}
-                              </p>
-                              {product.supplier_code && (
-                                <p className="text-[9px] font-mono text-text-muted mt-2">
-                                  Ref: <span className="text-foreground/80">{product.supplier_code}</span>
-                                </p>
-                              )}
-                            </div>
-
-                            <div className="pt-3 border-t border-card-border/60 flex items-center justify-between">
-                              <div>
-                                <span className="text-[8px] font-mono text-text-muted uppercase font-bold block">Precio</span>
-                                <span className="text-sm font-mono font-bold text-foreground">
-                                  {product.price.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €
-                                </span>
-                              </div>
-
-                              <button
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  handleAddToCart(product);
-                                }}
-                                className="p-2 rounded bg-accent text-slate-950 hover:bg-accent-hover active:scale-95 transition-all shadow-sm cursor-pointer"
-                                aria-label="Añadir al carrito"
-                              >
-                                <ShoppingCart className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        </a>
+                          product={product}
+                          onAddToCart={handleAddToCart}
+                          onNotifyMe={handleNotifyMe}
+                        />
                       ))}
                     </div>
 
@@ -399,8 +369,26 @@ export default function Home() {
                   <CompatibleProducts
                     selectedBike={selectedBike}
                     onAddToCart={handleAddToCart}
+                    onNotifyMe={handleNotifyMe}
                   />
                 </section>
+
+                {!selectedBike && (
+                  <>
+                    <section className="mt-8">
+                      <BrandCarousel brand="RST" title="RST — Casual & Sport" onAddToCart={handleAddToCart} onNotifyMe={handleNotifyMe} />
+                    </section>
+                    <section className="mt-8">
+                      <BrandCarousel brand="SHARK" title="SHARK — Cascos" onAddToCart={handleAddToCart} onNotifyMe={handleNotifyMe} />
+                    </section>
+                    <section className="mt-8">
+                      <BrandCarousel brand="AKRAPOVIC" title="Akrapovič — Escapes" onAddToCart={handleAddToCart} onNotifyMe={handleNotifyMe} />
+                    </section>
+                    <section className="mt-8">
+                      <BrandCarousel brand="BIHR" title="Bihr — Recambios" onAddToCart={handleAddToCart} onNotifyMe={handleNotifyMe} />
+                    </section>
+                  </>
+                )}
 
                 {/* <section className="mb-6">
                   <PaddockFeed selectedBike={selectedBike} />
@@ -441,6 +429,13 @@ export default function Home() {
       <BottomNav
         activeTab={activeTab}
         onTabChange={(tab) => setActiveTab(tab)}
+      />
+
+      <NotifyMeModal
+        isOpen={!!notifyProduct}
+        onClose={() => setNotifyProduct(null)}
+        productName={notifyProduct?.name || ''}
+        productId={notifyProduct?.id || 0}
       />
 
       <BikeSelectorModal

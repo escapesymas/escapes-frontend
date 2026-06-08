@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ShoppingBag, Bike, Cpu, MessageSquare, User, LogIn } from 'lucide-react';
+import { ShoppingBag, Bike, Cpu, MessageSquare, User, LogIn, Library } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
 
@@ -15,6 +15,7 @@ export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
 
   const navItems = [
     { id: 'shop', label: 'Tienda', icon: ShoppingBag },
+    { id: 'catalog', label: 'Catálogo', icon: Library, href: '/universales' as const },
     { id: 'garage', label: 'Mi Moto', icon: Bike },
     // { id: 'paddock', label: 'Paddock', icon: MessageSquare },
   ];
@@ -31,14 +32,8 @@ export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
-
-          return (
-            <button
-              key={item.id}
-              onClick={() => onTabChange(item.id)}
-              className="flex flex-col items-center justify-center flex-1 py-1 px-2 h-full transition-all relative group"
-              aria-label={item.label}
-            >
+          const content = (
+            <>
               <div
                 className={`p-1.5 rounded-md transition-all duration-300 ${
                   isActive
@@ -58,6 +53,30 @@ export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
               {isActive && (
                 <span className="absolute bottom-0 w-8 h-[2px] bg-accent rounded-t-full shadow-[0_-2px_4px_rgba(250,204,21,0.5)]" />
               )}
+            </>
+          );
+
+          if ('href' in item) {
+            return (
+              <Link
+                key={item.id}
+                href={item.href!}
+                className="flex flex-col items-center justify-center flex-1 py-1 px-2 h-full transition-all relative group"
+                aria-label={item.label}
+              >
+                {content}
+              </Link>
+            );
+          }
+
+          return (
+            <button
+              key={item.id}
+              onClick={() => onTabChange(item.id)}
+              className="flex flex-col items-center justify-center flex-1 py-1 px-2 h-full transition-all relative group"
+              aria-label={item.label}
+            >
+              {content}
             </button>
           );
         })}
