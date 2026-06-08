@@ -442,6 +442,28 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
                 )}
               </div>
             </div>
+
+            {product && (
+              <div className="mt-6">
+                <button
+                  onClick={() => {
+                    if (product.inStock && product.stock > 0) {
+                      addToCart(product);
+                      showToast({ message: 'Añadido al carrito', type: 'success' });
+                    } else {
+                      handleNotifyMe();
+                    }
+                  }}
+                  className="w-full py-3 bg-accent text-slate-950 rounded font-mono text-xs font-bold uppercase tracking-wider hover:bg-accent-hover transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {product.inStock && product.stock > 0 ? (
+                    <><ShoppingCart className="w-4 h-4" /> Añadir al carrito</>
+                  ) : (
+                    <><Bell className="w-4 h-4" /> Avísame cuando vuelva</>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
