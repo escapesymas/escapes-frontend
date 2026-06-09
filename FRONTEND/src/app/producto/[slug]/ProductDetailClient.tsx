@@ -299,7 +299,7 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
         <div className="hidden md:grid md:grid-cols-2 gap-8 px-4">
           <div className="flex gap-3">
             {images.length > 1 && (
-              <div className="flex flex-col gap-2 shrink-0">
+              <div className="flex flex-col gap-2 shrink-0 aspect-square">
                 {images.map((img, i) => (
                   <button
                     key={i}
@@ -318,7 +318,7 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
                 ))}
               </div>
             )}
-            <div className="bg-image-wrapper border border-card-border rounded-md p-8 flex items-center justify-center min-h-[400px] overflow-hidden relative flex-1">
+            <div className="bg-image-wrapper border border-card-border rounded-md p-8 flex items-center justify-center min-h-[400px] aspect-square overflow-hidden relative flex-1">
               <ProductImage
                 src={pickImage(images[imgIdx]).src}
                 srcDesktop={images[imgIdx]?.srcCardDesktop}
@@ -594,13 +594,13 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
                         return (
                           <React.Fragment key={idx}>
                             {showGroupHeader && (
-                              <tr className="bg-slate-900 border-t border-b border-card-border font-bold text-foreground">
+                              <tr className="bg-tag border-t border-b border-tag-border font-bold text-tag-text">
                                 <td colSpan={5} className="p-2 text-left tracking-wide">
                                   {groupLabel.toUpperCase()}
                                 </td>
                               </tr>
                             )}
-                            <tr className="hover:bg-select-bg/50 border-b border-card-border/50 text-foreground transition-colors">
+                            <tr className="hover:bg-tag/50 border-b border-tag-border/50 text-foreground transition-colors">
                               <td className="p-2">{item.brand}</td>
                               <td className="p-2 text-accent-text font-bold">{item.model}</td>
                               <td className="p-2">{item.cc || '-'}</td>
