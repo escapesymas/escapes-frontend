@@ -55,6 +55,9 @@ ssh ${VPS_USER}@${VPS_HOST} << 'EOF'
   echo "📦 Instalando dependencias..."
   pnpm install --config.minimum-release-age=0
   
+  echo "🧹 Limpiando .next/cache para evitar errores de Server Actions stale..."
+  rm -rf /var/www/vhosts/escapesymas.com/app/.next/cache/*
+  
   echo "🚀 Levantando la app con PM2 en el puerto 3000..."
   pm2 delete escapes-frontend-prod 2>/dev/null || true
   pm2 start node_modules/next/dist/bin/next --name "escapes-frontend-prod" -- start -p 3000
