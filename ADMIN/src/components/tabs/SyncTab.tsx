@@ -18,7 +18,9 @@ const SyncTab = () => {
 
   const fetchSyncStatus = async () => {
     try {
-      const res = await fetch('/api/bihr/sync-status');
+      const res = await fetch('/api/bihr/sync-status', {
+        headers: { 'X-Admin-Key': import.meta.env.VITE_ADMIN_KEY || '' }
+      });
       if (res.ok) {
         const data = await res.json();
         setStatus(data);
@@ -41,7 +43,10 @@ const SyncTab = () => {
     try {
       const res = await fetch('/api/bihr/sync-catalog', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Key': import.meta.env.VITE_ADMIN_KEY || ''
+        },
         body: JSON.stringify({ catalogType: type })
       });
       if (res.ok) {
@@ -63,7 +68,10 @@ const SyncTab = () => {
     try {
       const res = await fetch('/api/bihr/sync-images/control', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Key': import.meta.env.VITE_ADMIN_KEY || ''
+        },
         body: JSON.stringify({ action })
       });
       if (res.ok) {
