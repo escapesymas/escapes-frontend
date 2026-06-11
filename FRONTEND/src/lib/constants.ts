@@ -5,12 +5,30 @@ export const MARKETING_TIERS = {
   PLATINO: { min: 1000, discount: 20, label: 'PLATINO', shipping: 0 },
 } as const;
 
+const DANGEROUS_TAGS = /<\/?(script|iframe|object|embed|form|input|button|select|textarea|style|link|meta|base|svg|math|●)/gi;
+const DANGEROUS_ATTRS = /\s(on\w+|href|src|action|formaction|data|cite|background|xlink:href|innerHTML|outerHTML|dangerouslySetInnerHTML)\s*=/gi;
+const JAVASCRIPT_URI = /[\s'"]javascript:/gi;
+const DATA_URI = /[\s'"]data:(?!image\/(png|jpg|jpeg|gif|webp|svg\+xml))/gi;
+
 export function sanitizeHTML(html: string): string {
-  return html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/\bon\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-    .replace(/href\s*=\s*(?:"javascript:[^"]*"|'javascript:[^']*')/gi, 'href="#"')
-    .replace(/src\s*=\s*(?:"javascript:[^"]*"|'javascript:[^']*')/gi, 'src="#"');
+  if (!html) return '';
+
+  let clean = String(html);
+
+  clean = clean.replace(DANGEROUS_TAGS, (match) => {
+    const tag = match.toLowerCase().replace(/[<>]/g, '');
+    if (['script', 'iframe', 'object', 'embed', 'form', 'input', 'button', 'select', 'textarea', 'style', 'link', 'meta', 'base', 'svg', 'math'].includes(tag)) {
+      return '';
+    }
+    return match;
+  });
+
+  clean = clean.replace(DANGEROUS_ATTRS, ' data-blocked="1"');
+
+  clean = clean.replace(JAVASCRIPT_URI, ' blocked:');
+  clean = clean.replace(DATA_URI, ' blocked:');
+
+  return clean;
 }
 
 export function isValidRedirect(url: string | null): string {

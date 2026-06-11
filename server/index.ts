@@ -21,9 +21,10 @@ import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import { fileURLToPath } from 'url';
 import PDFDocument from 'pdfkit';
-import { 
-  getLiveStockLevel, getLiveStockValue, checkProductsInfo, createBihrOrder, syncBihrCatalog 
+import {
+  getLiveStockLevel, getLiveStockValue, checkProductsInfo, createBihrOrder, syncBihrCatalog
 } from './bihrService.js';
+import { checkRateLimit } from './redis.js';
 import Stripe from 'stripe';
 import rateLimit from 'express-rate-limit';
 
@@ -40,6 +41,20 @@ const stripeTestKey = process.env.STRIPE_TEST_SECRET_KEY;
 const stripeTest = stripeTestKey
   ? new Stripe(stripeTestKey, { apiVersion: '2024-11-20.acacia' as any })
   : stripeLive;
+
+const adminKey = process.env.ADMIN_KEY;
+if (!adminKey) {
+  console.warn('[WARNING] ADMIN_KEY not set — Bihr sync endpoints are unprotected!');
+}
+
+function requireAdminKey(req: any, res: any): boolean {
+  const key = req.headers['x-admin-key'];
+  if (!key || key !== adminKey) {
+    res.status(401).json({ error: 'No autorizado' });
+    return false;
+  }
+  return true;
+}
 
 function getStripeClient(req: any): any {
   // Always use live mode in production.
@@ -358,11 +373,8 @@ app.use('/uploads', express.static(uploadDir, {
 
 // ================================================================
 // RATE LIMITING BÁSICO (100 req/min por IP) - Excluye uploads y health
-// NOTA: Este rate limiter es por PROCESO. En modo cluster de PM2,
-// cada proceso tendrá su propio Map y el rate limiting no será efectivo.
-// Para modo cluster, usar Redis como store o limitar a 1 proceso.
+// Usa Redis para funcionar correctamente en cluster PM2
 // ================================================================
-const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT_MAX = 100;
 const RATE_LIMIT_WINDOW_MS = 60000;
 
@@ -370,36 +382,28 @@ const rateLimitSkipPaths = ['/uploads', '/api/health', '/api/catalog'];
 
 app.use((req: any, res: any, next: any) => {
   const path = req.path || req.url || '';
-  
-  // Skip rate limiting para rutas específicas
+
   if (rateLimitSkipPaths.some(p => path.startsWith(p))) {
     return next();
   }
-  
+
   const ip = req.ip || req.connection.remoteAddress || 'unknown';
-  const now = Date.now();
-  const record = rateLimitStore.get(ip);
 
-  if (!record || now > record.resetTime) {
-    rateLimitStore.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
-    return next();
-  }
+  checkRateLimit(`global:${ip}`, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS)
+    .then(({ allowed, remaining, resetTime }) => {
+      res.setHeader('X-RateLimit-Limit', String(RATE_LIMIT_MAX));
+      res.setHeader('X-RateLimit-Remaining', String(remaining));
+      res.setHeader('X-RateLimit-Reset', String(resetTime));
 
-  if (record.count >= RATE_LIMIT_MAX) {
-    return res.status(429).json({ error: 'Demasiadas solicitudes. Intenta más tarde.' });
-  }
-
-  record.count++;
-  next();
+      if (!allowed) {
+        return res.status(429).json({ error: 'Demasiadas solicitudes. Intenta más tarde.' });
+      }
+      next();
+    })
+    .catch(() => {
+      next();
+    });
 });
-
-// Limpiar mapa de rate limiting cada 5 minutos
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, record] of rateLimitStore.entries()) {
-    if (now > record.resetTime) rateLimitStore.delete(ip);
-  }
-}, 300000);
 
 app.use(express.json({ limit: '10mb' }));
 
@@ -646,9 +650,9 @@ app.post('/api/bihr/order', async (req: any, res: any) => {
 });
 
 app.post('/api/bihr/sync-catalog', async (req: any, res: any) => {
+  if (!requireAdminKey(req, res)) return;
   const { catalogType } = req.body;
   try {
-    // Disparar en segundo plano de manera asíncrona para evitar timeout HTTP
     syncBihrCatalog(catalogType || 'HardPart')
       .then(success => {
         console.log(`[BIHR SYNC BACKGROUND]: Sincronización finalizada con éxito: ${success}`);
@@ -657,9 +661,9 @@ app.post('/api/bihr/sync-catalog', async (req: any, res: any) => {
         console.error('[BIHR SYNC BACKGROUND ERROR]:', err);
       });
 
-    res.json({ 
-      success: true, 
-      message: 'Sincronización iniciada en segundo plano. Puedes monitorear el progreso en el panel.' 
+    res.json({
+      success: true,
+      message: 'Sincronización iniciada en segundo plano. Puedes monitorear el progreso en el panel.'
     });
   } catch (error: any) {
     res.status(500).json({ error: 'Error al iniciar la sincronización', details: error.message });
@@ -667,6 +671,7 @@ app.post('/api/bihr/sync-catalog', async (req: any, res: any) => {
 });
 
 app.get('/api/bihr/sync-status', async (req: any, res: any) => {
+  if (!requireAdminKey(req, res)) return;
   try {
     // 1. Leer estado de imágenes desde PostgreSQL (migrado de /tmp/image_regen_state.json)
     let imageStats: any = null;
@@ -724,6 +729,7 @@ app.get('/api/bihr/sync-status', async (req: any, res: any) => {
 });
 
 app.post('/api/bihr/sync-images/control', async (req: any, res: any) => {
+  if (!requireAdminKey(req, res)) return;
   const { action } = req.body;
   if (!['start', 'stop', 'restart'].includes(action)) {
     return res.status(400).json({ error: 'Acción no válida. Use: start, stop o restart' });
@@ -1115,46 +1121,46 @@ app.get('/api/catalog/products', catalogLimiter, async (req, res) => {
 
     // Catálogo público: 1 min de datos frescos, 10 min de gracia SWR
     const result = await executeSWR(cacheKey, async () => {
-      let baseWhereClause = "WHERE status = 'published' AND name NOT LIKE 'Aplicaciones:%' AND name NOT LIKE 'Applications:%' AND sku NOT LIKE 'Aplicaciones:%' AND sku NOT LIKE 'Applications:%'";
+      const conditions = sql`WHERE status = 'published' AND name NOT LIKE 'Aplicaciones:%' AND name NOT LIKE 'Applications:%' AND sku NOT LIKE 'Aplicaciones:%' AND sku NOT LIKE 'Applications:%'`;
 
       if (universal === 'true') {
-        baseWhereClause += " AND (compatibility IS NULL OR compatibility = '[]'::jsonb OR compatibility::text = '[]')";
+        conditions.append(sql` AND (compatibility IS NULL OR compatibility = '[]'::jsonb OR compatibility::text = '[]')`);
       }
 
       if (search) {
-        const s = sanitizeLike(search);
-        baseWhereClause += ` AND (
-          LOWER(name) LIKE LOWER('%${s}%') ESCAPE '\\' 
-          OR LOWER(sku) LIKE LOWER('%${s}%') ESCAPE '\\' 
-          OR LOWER(description) LIKE LOWER('%${s}%') ESCAPE '\\'
-          OR LOWER(supplier_code) LIKE LOWER('%${s}%') ESCAPE '\\'
-          OR LOWER(barcode) LIKE LOWER('%${s}%') ESCAPE '\\'
-          OR LOWER(old_part_number) LIKE LOWER('%${s}%') ESCAPE '\\'
-        )`;
+        const searchPattern = `%${sanitizeLike(search)}%`;
+        conditions.append(sql`
+          AND (
+            LOWER(name) LIKE LOWER(${searchPattern}) ESCAPE '\\'
+            OR LOWER(sku) LIKE LOWER(${searchPattern}) ESCAPE '\\'
+            OR LOWER(description) LIKE LOWER(${searchPattern}) ESCAPE '\\'
+            OR LOWER(supplier_code) LIKE LOWER(${searchPattern}) ESCAPE '\\'
+            OR LOWER(barcode) LIKE LOWER(${searchPattern}) ESCAPE '\\'
+            OR LOWER(old_part_number) LIKE LOWER(${searchPattern}) ESCAPE '\\'
+          )`);
       }
 
       // Filter params
       if (brand) {
-        const b = sanitizeLike(brand);
-        baseWhereClause += ` AND LOWER(brand) = LOWER('${b}')`;
+        const brandLower = brand.toLowerCase();
+        conditions.append(sql` AND LOWER(brand) = LOWER(${brandLower})`);
       }
       if (min_price) {
         const mp = parseInt(min_price);
-        if (!isNaN(mp)) baseWhereClause += ` AND price >= ${mp * 100}`;
+        if (!isNaN(mp)) conditions.append(sql` AND price >= ${mp * 100}`);
       }
       if (max_price) {
         const mp = parseInt(max_price);
-        if (!isNaN(mp)) baseWhereClause += ` AND price <= ${mp * 100}`;
+        if (!isNaN(mp)) conditions.append(sql` AND price <= ${mp * 100}`);
       }
       if (in_stock === 'true') {
-        baseWhereClause += ` AND stock > 0`;
+        conditions.append(sql` AND stock > 0`);
       }
       if (attrs) {
         try {
           const attrsObj = JSON.parse(attrs);
           if (typeof attrsObj === 'object' && !Array.isArray(attrsObj)) {
-            const safeAttrsJson = JSON.stringify(attrsObj).replace(/'/g, "''");
-            baseWhereClause += ` AND attributes @> '${safeAttrsJson}'::jsonb`;
+            conditions.append(sql` AND attributes @> ${attrsObj}::jsonb`);
           }
         } catch {}
       }
@@ -1162,54 +1168,9 @@ app.get('/api/catalog/products', catalogLimiter, async (req, res) => {
       if (category_id) {
         const catId = parseInt(category_id);
         if (!isNaN(catId)) {
-          const categoryRules: Record<number, string> = {
-            101: "(LOWER(name) LIKE '%racing%' OR LOWER(name) LIKE '%completo%')",
-            102: "(LOWER(name) LIKE '%silenciador%' OR LOWER(name) LIKE '%silencioso%' OR LOWER(name) LIKE '%slip-on%' OR LOWER(name) LIKE '%escape%')",
-            103: "(LOWER(name) LIKE '%colector%' OR LOWER(name) LIKE '%header%')",
-            104: "(LOWER(name) LIKE '%accesorio%')",
-            201: "(LOWER(name) LIKE '%pastilla%' OR LOWER(name) LIKE '%pad%')",
-            202: "(LOWER(name) LIKE '%disco%' OR LOWER(name) LIKE '%disc%')",
-            203: "(LOWER(name) LIKE '%bomba%' OR LOWER(name) LIKE '%pump%')",
-            204: "(LOWER(name) LIKE '%latiguillo%' OR LOWER(name) LIKE '%line%')",
-            301: "(LOWER(name) LIKE '%amortiguador%' OR LOWER(name) LIKE '%shock%')",
-            302: "(LOWER(name) LIKE '%horquilla%' OR LOWER(name) LIKE '%fork%')",
-            303: "(LOWER(name) LIKE '%direccion%' OR LOWER(name) LIKE '%steering%')",
-            304: "(LOWER(name) LIKE '%estribera%' OR LOWER(name) LIKE '%peg%')",
-            401: "(LOWER(name) LIKE '%centralita%' OR LOWER(name) LIKE '%ecu%')",
-            402: "(LOWER(name) LIKE '%quickshifter%' OR LOWER(name) LIKE '%shifter%')",
-            403: "(LOWER(name) LIKE '%abs%' OR LOWER(name) LIKE '%tc%')",
-            404: "(LOWER(name) LIKE '%litio%' OR LOWER(name) LIKE '%lithium%')",
-            501: "(LOWER(name) LIKE '%kit%')",
-            502: "(LOWER(name) LIKE '%cadena%' OR LOWER(name) LIKE '%chain%')",
-            503: "(LOWER(name) LIKE '%piñon%' OR LOWER(name) LIKE '%sprocket%')",
-            504: "(LOWER(name) LIKE '%corona%')",
-            601: "(LOWER(name) LIKE '%filtro%' OR LOWER(name) LIKE '%filter%')",
-            602: "(LOWER(name) LIKE '%filtro aceite%')",
-            603: "(LOWER(name) LIKE '%aceite%' OR LOWER(name) LIKE '%oil%')",
-            604: "(LOWER(name) LIKE '%liquido%' OR LOWER(name) LIKE '%fluid%')",
-            701: "(LOWER(name) LIKE '%neumatico%' OR LOWER(name) LIKE '%tire%' OR LOWER(name) LIKE '%slick%')",
-            702: "(LOWER(name) LIKE '%calentador%' OR LOWER(name) LIKE '%warmer%')",
-            703: "(LOWER(name) LIKE '%caballete%' OR LOWER(name) LIKE '%stand%')",
-            704: "(LOWER(name) LIKE '%manometro%' OR LOWER(name) LIKE '%gauge%')",
-            801: "(LOWER(name) NOT LIKE '%modular%' AND LOWER(name) NOT LIKE '%flip-up%' AND LOWER(name) NOT LIKE '%system%' AND LOWER(name) NOT LIKE '%jet%' AND LOWER(name) NOT LIKE '%open face%' AND LOWER(name) NOT LIKE '%open-face%' AND LOWER(name) NOT LIKE '%off-road%' AND LOWER(name) NOT LIKE '%offroad%' AND LOWER(name) NOT LIKE '%cross%' AND LOWER(name) NOT LIKE '%enduro%' AND LOWER(name) NOT LIKE '%trial%' AND LOWER(name) NOT LIKE '%dual-sport%' AND LOWER(name) NOT LIKE '%dualsport%')",
-            802: "(LOWER(name) LIKE '%modular%' OR LOWER(name) LIKE '%flip-up%' OR LOWER(name) LIKE '%system%')",
-            803: "(LOWER(name) LIKE '%jet%' OR LOWER(name) LIKE '%open face%' OR LOWER(name) LIKE '%open-face%')",
-            804: "(LOWER(name) LIKE '%off-road%' OR LOWER(name) LIKE '%offroad%' OR LOWER(name) LIKE '%cross%' OR LOWER(name) LIKE '%enduro%' OR LOWER(name) LIKE '%trial%' OR LOWER(name) LIKE '%dual-sport%' OR LOWER(name) LIKE '%dualsport%')",
-            901: "(LOWER(name) LIKE '%chaqueta%' OR LOWER(name) LIKE '%jacket%')",
-            902: "(LOWER(name) LIKE '%mono%' AND LOWER(name) NOT LIKE '%glove%' AND LOWER(name) NOT LIKE '%guante%' AND LOWER(name) NOT LIKE '%pants%' AND LOWER(name) NOT LIKE '%pantalón%' AND LOWER(name) NOT LIKE '%jersey%' AND LOWER(name) NOT LIKE '%camiseta%' AND LOWER(name) NOT LIKE '%chaqueta%' AND LOWER(name) NOT LIKE '%bota%')",
-            903: "(LOWER(name) LIKE '%guante%' OR LOWER(name) LIKE '%glove%')",
-            904: "(LOWER(name) LIKE '%bota%' OR LOWER(name) LIKE '%boot%')",
-            1001: "(LOWER(name) LIKE '%baul%' OR LOWER(name) LIKE '%maleta%' OR LOWER(name) LIKE '%case%')",
-            1002: "(LOWER(name) LIKE '%quad lock%')",
-            1003: "(LOWER(name) LIKE '%intercom%')",
-            1004: "(LOWER(name) LIKE '%retrovisor%' OR LOWER(name) LIKE '%espejo%' OR LOWER(name) LIKE '%mirror%')",
-            805: "(LOWER(name) LIKE '%recambio%' OR LOWER(name) LIKE '%accesorio%' OR LOWER(name) LIKE '%pieza%' OR LOWER(name) LIKE '%almohadilla%' OR LOWER(name) LIKE '%visera%' OR LOWER(name) LIKE '%pantalla%' OR LOWER(name) LIKE '%pinlock%')",
-            1005: "(LOWER(name) LIKE '%promocional%' OR LOWER(name) LIKE '%goodie%' OR LOWER(name) LIKE '%display%')"
-          };
-          const clause = categoryRules[catId];
-          if (clause) {
-            const parentId = Math.floor(catId / 100);
-            baseWhereClause += ` AND (
+          const parentId = Math.floor(catId / 100);
+          conditions.append(sql`
+            AND (
               category_id IN (
                 WITH RECURSIVE descendants AS (
                   SELECT id FROM categories WHERE id = ${catId}
@@ -1218,38 +1179,25 @@ app.get('/api/catalog/products', catalogLimiter, async (req, res) => {
                 )
                 SELECT id FROM descendants
               )
-              OR (category_id = ${parentId} AND ${clause})
-            )`;
-          } else {
-            baseWhereClause += ` AND category_id IN (
-              WITH RECURSIVE descendants AS (
-                SELECT id FROM categories WHERE id = ${catId}
-                UNION ALL
-                SELECT c.id FROM categories c JOIN descendants d ON c.parent_id = d.id
-              )
-              SELECT id FROM descendants
-            )`;
-          }
+              OR (category_id = ${parentId})
+            )`);
         }
       }
 
-      const countQuery = `SELECT count(DISTINCT split_part(name, ',', 1)) as total FROM products ${baseWhereClause}`;
-      const selectQuery = `
-        SELECT * FROM (
-          SELECT DISTINCT ON (split_part(name, ',', 1)) * 
-          FROM products 
-          ${baseWhereClause}
-          ORDER BY split_part(name, ',', 1), stock DESC, id ASC
-        ) distinct_products
-        ORDER BY created_at DESC 
-        LIMIT ${perPage} OFFSET ${offset}
-      `;
-
-      const countRes = await db.execute(sql.raw(countQuery));
+      const countRes = await db.execute(sql`SELECT count(DISTINCT split_part(name, ',', 1)) as total FROM products ${conditions}`);
       const total = Number(countRes.rows[0]?.total || 0);
       const totalPages = Math.ceil(total / perPage) || 1;
 
-      const productsRes = await db.execute(sql.raw(selectQuery));
+      const productsRes = await db.execute(sql`
+        SELECT * FROM (
+          SELECT DISTINCT ON (split_part(name, ',', 1)) *
+          FROM products
+          ${conditions}
+          ORDER BY split_part(name, ',', 1), stock DESC, id ASC
+        ) distinct_products
+        ORDER BY created_at DESC
+        LIMIT ${perPage} OFFSET ${offset}
+      `);
       const products = productsRes.rows.map(mapProductToFrontend);
 
       return { products, total, totalPages };
@@ -1283,46 +1231,45 @@ app.get('/api/catalog/filters', async (req, res) => {
     const cacheKey = `/api/catalog/filters?category_id=${category_id || ''}&search=${search || ''}&universal=${universal || ''}`;
 
     const result = await executeSWR(cacheKey, async () => {
-      let whereClause = "WHERE status = 'published'";
+      const conditions = sql`WHERE status = 'published'`;
 
       if (universal === 'true') {
-        whereClause += " AND (compatibility IS NULL OR compatibility = '[]'::jsonb OR compatibility::text = '[]')";
+        conditions.append(sql` AND (compatibility IS NULL OR compatibility = '[]'::jsonb OR compatibility::text = '[]')`);
       }
 
       if (search) {
-        const s = sanitizeLike(search);
-        whereClause += ` AND (LOWER(name) LIKE LOWER('%${s}%') ESCAPE '\\' OR LOWER(sku) LIKE LOWER('%${s}%') ESCAPE '\\')`;
+        const searchPattern = `%${sanitizeLike(search)}%`;
+        conditions.append(sql` AND (LOWER(name) LIKE LOWER(${searchPattern}) ESCAPE '\\' OR LOWER(sku) LIKE LOWER(${searchPattern}) ESCAPE '\\')`);
       }
 
       if (category_id) {
         const catId = parseInt(category_id);
         if (!isNaN(catId)) {
-          whereClause += ` AND category_id IN (
+          conditions.append(sql` AND category_id IN (
             WITH RECURSIVE descendants AS (
               SELECT id FROM categories WHERE id = ${catId}
               UNION ALL
               SELECT c.id FROM categories c JOIN descendants d ON c.parent_id = d.id
             )
             SELECT id FROM descendants
-          )`;
+          )`);
         }
       }
 
       const attrKeysArr = Array.from(FILTER_ATTR_KEYS);
-      const attrKeysSql = attrKeysArr.map(k => `'${k.replace(/'/g, "''")}'`).join(', ');
 
       const [brandsRes, priceRes, attrsRes] = await Promise.all([
-        db.execute(sql.raw(`SELECT DISTINCT brand FROM products ${whereClause} AND brand IS NOT NULL AND brand != '' ORDER BY brand`)),
-        db.execute(sql.raw(`SELECT MIN(price) as min_p, MAX(price) as max_p FROM products ${whereClause}`)),
-        db.execute(sql.raw(`
+        db.execute(sql`SELECT DISTINCT brand FROM products ${conditions} AND brand IS NOT NULL AND brand != '' ORDER BY brand`),
+        db.execute(sql`SELECT MIN(price) as min_p, MAX(price) as max_p FROM products ${conditions}`),
+        db.execute(sql`
           SELECT att.key, JSON_AGG(DISTINCT att.value) AS values
           FROM products p, jsonb_each_text(p.attributes) AS att(key, value)
-          ${whereClause}
+          ${conditions}
             AND att.value IS NOT NULL AND att.value != ''
-            AND att.key IN (${attrKeysSql})
+            AND att.key = ANY(${attrKeysArr})
           GROUP BY att.key
           ORDER BY att.key
-        `))
+        `)
       ]);
 
       const brands = brandsRes.rows.map((r: any) => r.brand).filter(Boolean);
@@ -1440,18 +1387,17 @@ app.get('/api/catalog/product-compatibility/:id', async (req, res) => {
 app.get('/api/catalog/products-by-skus', async (req, res) => {
   try {
     const { skus, ids, category_id } = req.query as any;
-    
-    let baseWhereClause = "WHERE status = 'published'";
-    
+
+    const conditions = sql`WHERE status = 'published'`;
+
     if (ids) {
       const idsList = ids.split(',').map((id: string) => parseInt(id)).filter((id: number) => !isNaN(id));
       if (idsList.length === 0) return res.json([]);
-      baseWhereClause += ` AND id IN (${idsList.join(',')})`;
+      conditions.append(sql` AND id = ANY(${idsList})`);
     } else if (skus) {
       const skusList = skus.split(',').map((s: string) => sanitizeString(s.trim()));
       if (skusList.length === 0) return res.json([]);
-      const inClause = skusList.map((s: string) => `'${s}'`).join(',');
-      baseWhereClause += ` AND sku IN (${inClause})`;
+      conditions.append(sql` AND sku = ANY(${skusList})`);
     } else {
       return res.json([]);
     }
@@ -1459,54 +1405,9 @@ app.get('/api/catalog/products-by-skus', async (req, res) => {
     if (category_id) {
       const catId = parseInt(category_id);
       if (!isNaN(catId)) {
-        const categoryRules: Record<number, string> = {
-          101: "(LOWER(name) LIKE '%racing%' OR LOWER(name) LIKE '%completo%')",
-          102: "(LOWER(name) LIKE '%silenciador%' OR LOWER(name) LIKE '%silencioso%' OR LOWER(name) LIKE '%slip-on%' OR LOWER(name) LIKE '%escape%')",
-          103: "(LOWER(name) LIKE '%colector%' OR LOWER(name) LIKE '%header%')",
-          104: "(LOWER(name) LIKE '%accesorio%')",
-          201: "(LOWER(name) LIKE '%pastilla%' OR LOWER(name) LIKE '%pad%')",
-          202: "(LOWER(name) LIKE '%disco%' OR LOWER(name) LIKE '%disc%')",
-          203: "(LOWER(name) LIKE '%bomba%' OR LOWER(name) LIKE '%pump%')",
-          204: "(LOWER(name) LIKE '%latiguillo%' OR LOWER(name) LIKE '%line%')",
-          301: "(LOWER(name) LIKE '%amortiguador%' OR LOWER(name) LIKE '%shock%')",
-          302: "(LOWER(name) LIKE '%horquilla%' OR LOWER(name) LIKE '%fork%')",
-          303: "(LOWER(name) LIKE '%direccion%' OR LOWER(name) LIKE '%steering%')",
-          304: "(LOWER(name) LIKE '%estribera%' OR LOWER(name) LIKE '%peg%')",
-          401: "(LOWER(name) LIKE '%centralita%' OR LOWER(name) LIKE '%ecu%')",
-          402: "(LOWER(name) LIKE '%quickshifter%' OR LOWER(name) LIKE '%shifter%')",
-          403: "(LOWER(name) LIKE '%abs%' OR LOWER(name) LIKE '%tc%')",
-          404: "(LOWER(name) LIKE '%litio%' OR LOWER(name) LIKE '%lithium%')",
-          501: "(LOWER(name) LIKE '%kit%')",
-          502: "(LOWER(name) LIKE '%cadena%' OR LOWER(name) LIKE '%chain%')",
-          503: "(LOWER(name) LIKE '%piñon%' OR LOWER(name) LIKE '%sprocket%')",
-          504: "(LOWER(name) LIKE '%corona%')",
-          601: "(LOWER(name) LIKE '%filtro%' OR LOWER(name) LIKE '%filter%')",
-          602: "(LOWER(name) LIKE '%filtro aceite%')",
-          603: "(LOWER(name) LIKE '%aceite%' OR LOWER(name) LIKE '%oil%')",
-          604: "(LOWER(name) LIKE '%liquido%' OR LOWER(name) LIKE '%fluid%')",
-          701: "(LOWER(name) LIKE '%neumatico%' OR LOWER(name) LIKE '%tire%' OR LOWER(name) LIKE '%slick%')",
-          702: "(LOWER(name) LIKE '%calentador%' OR LOWER(name) LIKE '%warmer%')",
-          703: "(LOWER(name) LIKE '%caballete%' OR LOWER(name) LIKE '%stand%')",
-          704: "(LOWER(name) LIKE '%manometro%' OR LOWER(name) LIKE '%gauge%')",
-          801: "(LOWER(name) NOT LIKE '%modular%' AND LOWER(name) NOT LIKE '%flip-up%' AND LOWER(name) NOT LIKE '%system%' AND LOWER(name) NOT LIKE '%jet%' AND LOWER(name) NOT LIKE '%open face%' AND LOWER(name) NOT LIKE '%open-face%' AND LOWER(name) NOT LIKE '%off-road%' AND LOWER(name) NOT LIKE '%offroad%' AND LOWER(name) NOT LIKE '%cross%' AND LOWER(name) NOT LIKE '%enduro%' AND LOWER(name) NOT LIKE '%trial%' AND LOWER(name) NOT LIKE '%dual-sport%' AND LOWER(name) NOT LIKE '%dualsport%')",
-          802: "(LOWER(name) LIKE '%modular%' OR LOWER(name) LIKE '%flip-up%' OR LOWER(name) LIKE '%system%')",
-          803: "(LOWER(name) LIKE '%jet%' OR LOWER(name) LIKE '%open face%' OR LOWER(name) LIKE '%open-face%')",
-          804: "(LOWER(name) LIKE '%off-road%' OR LOWER(name) LIKE '%offroad%' OR LOWER(name) LIKE '%cross%' OR LOWER(name) LIKE '%enduro%' OR LOWER(name) LIKE '%trial%' OR LOWER(name) LIKE '%dual-sport%' OR LOWER(name) LIKE '%dualsport%')",
-          901: "(LOWER(name) LIKE '%chaqueta%' OR LOWER(name) LIKE '%jacket%')",
-          902: "(LOWER(name) LIKE '%mono%' AND LOWER(name) NOT LIKE '%glove%' AND LOWER(name) NOT LIKE '%guante%' AND LOWER(name) NOT LIKE '%pants%' AND LOWER(name) NOT LIKE '%pantalón%' AND LOWER(name) NOT LIKE '%jersey%' AND LOWER(name) NOT LIKE '%camiseta%' AND LOWER(name) NOT LIKE '%chaqueta%' AND LOWER(name) NOT LIKE '%bota%')",
-          903: "(LOWER(name) LIKE '%guante%' OR LOWER(name) LIKE '%glove%')",
-          904: "(LOWER(name) LIKE '%bota%' OR LOWER(name) LIKE '%boot%')",
-          1001: "(LOWER(name) LIKE '%baul%' OR LOWER(name) LIKE '%maleta%' OR LOWER(name) LIKE '%case%')",
-          1002: "(LOWER(name) LIKE '%quad lock%')",
-          1003: "(LOWER(name) LIKE '%intercom%')",
-          1004: "(LOWER(name) LIKE '%retrovisor%' OR LOWER(name) LIKE '%espejo%' OR LOWER(name) LIKE '%mirror%')",
-          805: "(LOWER(name) LIKE '%recambio%' OR LOWER(name) LIKE '%accesorio%' OR LOWER(name) LIKE '%pieza%' OR LOWER(name) LIKE '%almohadilla%' OR LOWER(name) LIKE '%visera%' OR LOWER(name) LIKE '%pantalla%' OR LOWER(name) LIKE '%pinlock%')",
-          1005: "(LOWER(name) LIKE '%promocional%' OR LOWER(name) LIKE '%goodie%' OR LOWER(name) LIKE '%display%')"
-        };
-        const clause = categoryRules[catId];
-        if (clause) {
-          const parentId = Math.floor(catId / 100);
-          baseWhereClause += ` AND (
+        const parentId = Math.floor(catId / 100);
+        conditions.append(sql`
+          AND (
             category_id IN (
               WITH RECURSIVE descendants AS (
                 SELECT id FROM categories WHERE id = ${catId}
@@ -1515,32 +1416,20 @@ app.get('/api/catalog/products-by-skus', async (req, res) => {
               )
               SELECT id FROM descendants
             )
-            OR (category_id = ${parentId} AND ${clause})
-          )`;
-        } else {
-          baseWhereClause += ` AND category_id IN (
-            WITH RECURSIVE descendants AS (
-              SELECT id FROM categories WHERE id = ${catId}
-              UNION ALL
-              SELECT c.id FROM categories c JOIN descendants d ON c.parent_id = d.id
-            )
-            SELECT id FROM descendants
-          )`;
-        }
+            OR category_id = ${parentId}
+          )`);
       }
     }
 
-    const selectQuery = `
+    const productsRes = await db.execute(sql`
       SELECT * FROM (
-        SELECT DISTINCT ON (split_part(name, ',', 1)) * 
-        FROM products 
-        ${baseWhereClause}
+        SELECT DISTINCT ON (split_part(name, ',', 1)) *
+        FROM products
+        ${conditions}
         ORDER BY split_part(name, ',', 1), stock DESC, id ASC
       ) distinct_products
       ORDER BY price ASC
-    `;
-
-    const productsRes = await db.execute(sql.raw(selectQuery));
+    `);
     const products = productsRes.rows.map(mapProductToFrontend);
     return res.json(products);
   } catch (err: any) {
@@ -3276,14 +3165,13 @@ app.all('/api/admin', adminLimiter, async (req, res) => {
           await db.execute(sql`DELETE FROM forum_likes WHERE content_type = 'post' AND content_id = ${parseInt(threadId)}`);
           await db.execute(sql`DELETE FROM forum_posts WHERE id = ${parseInt(threadId)}`);
         } else {
-          let updateQuery = `UPDATE forum_posts SET `;
-          const updates = [];
-          if (isPinned !== undefined) updates.push(`is_pinned = ${parseInt(isPinned)}`);
-          if (isClosed !== undefined) updates.push(`is_closed = ${parseInt(isClosed)}`);
-          
-          if (updates.length > 0) {
-            updateQuery += updates.join(', ') + ` WHERE id = ${parseInt(threadId)}`;
-            await db.execute(sql.raw(updateQuery));
+          const setClauses = [];
+          if (isPinned !== undefined) setClauses.push(sql`is_pinned = ${parseInt(isPinned)}`);
+          if (isClosed !== undefined) setClauses.push(sql`is_closed = ${parseInt(isClosed)}`);
+
+          if (setClauses.length > 0) {
+            const threadIdInt = parseInt(threadId);
+            await db.execute(sql`UPDATE forum_posts SET ${sql.join(setClauses, ', ')} WHERE id = ${threadIdInt}`);
           }
         }
         // Invalidate forum cache

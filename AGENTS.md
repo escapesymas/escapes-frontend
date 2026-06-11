@@ -1,5 +1,19 @@
 # Escapes y Más — Contexto del proyecto
 
+## Skills instaladas (gstack)
+
+52 skills de [gstack](https://github.com/garrytan/gstack) disponibles en `~/.config/opencode/skills/gstack-*/`. Sprint workflow: Think → Plan → Build → Review → Test → Ship → Reflect.
+
+- **Think/Plan**: `gstack-office-hours`, `gstack-plan-ceo-review`, `gstack-plan-eng-review`, `gstack-plan-design-review`, `gstack-plan-devex-review`, `gstack-autoplan`, `gstack-spec`
+- **Build/Design**: `gstack-design-consultation`, `gstack-design-shotgun`, `gstack-design-html`, `gstack-design-review`
+- **Review/Test**: `gstack-review`, `gstack-cso`, `gstack-codex`, `gstack-browse`, `gstack-qa`, `gstack-qa-only`
+- **Ship**: `gstack-ship`, `gstack-land-and-deploy`, `gstack-canary`, `gstack-benchmark`
+- **Docs/Reflect**: `gstack-document-release`, `gstack-document-generate`, `gstack-retro`
+- **Debug/Memory**: `gstack-investigate`, `gstack-learn`, `gstack-context-save`, `gstack-context-restore`
+- **Safety**: `gstack-careful`, `gstack-freeze`, `gstack-guard`, `gstack-unfreeze`
+
+Para web browsing/QA usar siempre `gstack-browse` (no `playwright_*` ni `webfetch`).
+
 ## Stack
 - **Frontend**: Next.js 16.2.6 (Turbopack) en `FRONTEND/`, TailwindCSS
 - **Backend**: Express/Node.js en `server/`, PostgreSQL

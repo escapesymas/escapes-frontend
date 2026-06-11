@@ -549,10 +549,30 @@ async function processCatalogJson(filePath: string, catalogType: string, startTi
         const oldPartNumber = ref.OldPartNumber || '';
 
         let cost = 0;
+        let price = 0;
+        
+        // Obtener cost (precio base dealer sin IVA)
         if (ref.BaseDealerPriceExcludingTax) {
           cost = Math.round(parseFloat(ref.BaseDealerPriceExcludingTax) * 100);
         } else if (ref.RetailPriceExcludingTax) {
           cost = Math.round(parseFloat(ref.RetailPriceExcludingTax) * 100);
+        }
+        
+        // Obtener price (precio retail con IVA - este es el precio OFICIAL de Bihr)
+        if (ref.RetailPriceIncludingTax) {
+          price = Math.round(parseFloat(ref.RetailPriceIncludingTax) * 100);
+        } else if (ref.RetailPriceExcludingTax) {
+          price = Math.round(parseFloat(ref.RetailPriceExcludingTax) * 100);
+        }
+        
+        // Si no tenemos cost ni price, no procesamos este producto
+        if (cost === 0 && price === 0) {
+          return null;
+        }
+        
+        // Si tenemos price pero no cost, calculamos cost desde price (IVA20%)
+        if (cost === 0 && price > 0) {
+          cost = Math.round(price / 1.20);
         }
 
         const barcode = ref.BarCode || '';
@@ -594,35 +614,6 @@ async function processCatalogJson(filePath: string, catalogType: string, startTi
           'MNT&CARE CLEAN&CARE': 601
         };
         const category2Id = subcategoryMap[ref.Category3?.toUpperCase()] || subcategoryMap[ref.Category2?.toUpperCase()] || null;
-
-        // Calcular precio según márgenes
-        let marginPercent = 20;
-        const brandRule = pricingRules.find(r => r.rule_type === 'brand' && r.target_id?.toLowerCase() === brand?.toLowerCase());
-        if (brandRule) {
-          marginPercent = brandRule.margin_percent;
-        } else {
-          const categoryRule = pricingRules.find(r => r.rule_type === 'category' && r.target_id === String(categoryId));
-          if (categoryRule) {
-            marginPercent = categoryRule.margin_percent;
-          } else {
-            const globalRule = pricingRules.find(r => r.rule_type === 'global');
-            if (globalRule) {
-              marginPercent = globalRule.margin_percent;
-            }
-          }
-        }
-
-        let price = Math.round(cost * (1 + marginPercent / 100));
-
-        // Respaldo de precio si cost es 0
-        if (price === 0) {
-          if (ref.RetailPriceIncludingTax) {
-            price = Math.round(parseFloat(ref.RetailPriceIncludingTax) * 100);
-          } else if (ref.RetailPriceExcludingTax) {
-            price = Math.round(parseFloat(ref.RetailPriceExcludingTax) * 100);
-          }
-          cost = Math.round(price / 1.20);
-        }
 
         // Campos físicos
         const weightG = ref['Weight (g)'] ? parseInt(ref['Weight (g)']) : null;
