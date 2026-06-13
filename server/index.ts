@@ -11,7 +11,7 @@ import cors from 'cors';
 import pkg from 'pg';
 const { Pool } = pkg;
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { sql, eq, desc, and } from 'drizzle-orm';
+import { sql, eq, desc, and, type SQL } from 'drizzle-orm';
 import {
   pgTable, serial, text, varchar, timestamp, integer
 } from 'drizzle-orm/pg-core';
@@ -523,8 +523,13 @@ async function executeSWR<T>(
 // HELPERS DE SEGURIDAD
 // ================================================================
 function sanitizeString(str: string): string {
-  if (!str || typeof str !== 'string') return '';
-  return str.replace(/'/g, "''").replace(/[^\x20-\x7E]/g, '').substring(0, 1000);
+  return str.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+}
+
+function buildInClause<T extends string | number>(values: T[]): SQL {
+  if (values.length === 0) return sql`1=0`;
+  if (values.length === 1) return sql`${values[0]}`;
+  return sql.join(values.map(v => sql`${v}`), sql`, `);
 }
 
 function sanitizeLike(str: string): string {
@@ -1266,7 +1271,7 @@ app.get('/api/catalog/filters', async (req, res) => {
           FROM products p, jsonb_each_text(p.attributes) AS att(key, value)
           ${conditions}
             AND att.value IS NOT NULL AND att.value != ''
-            AND att.key = ANY(${attrKeysArr})
+            AND att.key IN (${buildInClause(attrKeysArr)})
           GROUP BY att.key
           ORDER BY att.key
         `)
@@ -1393,11 +1398,11 @@ app.get('/api/catalog/products-by-skus', async (req, res) => {
     if (ids) {
       const idsList = ids.split(',').map((id: string) => parseInt(id)).filter((id: number) => !isNaN(id));
       if (idsList.length === 0) return res.json([]);
-      conditions.append(sql` AND id = ANY(${idsList})`);
+      conditions.append(sql` AND id IN (${buildInClause(idsList)})`);
     } else if (skus) {
       const skusList = skus.split(',').map((s: string) => sanitizeString(s.trim()));
       if (skusList.length === 0) return res.json([]);
-      conditions.append(sql` AND sku = ANY(${skusList})`);
+      conditions.append(sql` AND sku IN (${buildInClause(skusList)})`);
     } else {
       return res.json([]);
     }
