@@ -186,11 +186,12 @@ function formatHitText(p: CatalogHit): string {
 
 async function searchByKeywords(
   keywords: string[],
-  options: { garageMotos?: GarageMotorcycle[]; preferGarage?: boolean; limit?: number }
+  options: { garageMotos?: GarageMotorcycle[]; preferGarage?: boolean; limit?: number; typeFilter?: string }
 ): Promise<CatalogHit[]> {
   if (keywords.length === 0) return [];
   const tsQuery = keywords.map((k) => `${k}:*`).join(' | ');
   const limit = options.limit ?? 8;
+  const typeFilter = options.typeFilter || '';
 
   try {
     const result = await pool.query(
@@ -217,6 +218,7 @@ async function searchByKeywords(
          AND coalesce(category2,'') NOT ILIKE '%patinete%'
          AND coalesce(category3,'') NOT ILIKE '%bici%'
          AND coalesce(category3,'') NOT ILIKE '%patinete%'
+         ${typeFilter}
        ORDER BY stock DESC NULLS LAST, price ASC
        LIMIT 40`,
       [tsQuery]
@@ -255,11 +257,12 @@ async function searchByCompatibility(
     const modelNorm = moto.model.replace(/[^A-Za-z0-9]/g, '');
     const modelHyphen = modelNorm.replace(/^([A-Za-z]+)(\d+)$/, '$1-$2');
     const modelSpace = modelNorm.replace(/^([A-Za-z]+)(\d+)$/, '$1 $2');
-    const variants = Array.from(new Set([modelNorm, modelHyphen, modelSpace].filter(Boolean)));
+    const modelOriginal = moto.model.replace(/[^A-Za-z0-9]/g, '');
+    const variants = Array.from(new Set([modelNorm, modelHyphen, modelSpace, modelOriginal].filter((v, i, a) => v && a.indexOf(v) === i)));
 
     if (moto.brand && moto.model && moto.year) {
       const variantConds = variants.map((_v, idx) => `c->>'model' ILIKE $${i + 1 + idx}`).join(' OR ');
-      parts.push(`(c->>'brand' = $${i} AND (${variantConds}) AND ABS(COALESCE((c->>'year')::int, $${i + 1 + variants.length}) - $${i + 1 + variants.length}) <= 3)`);
+      parts.push(`(c->>'brand' = $${i} AND (${variantConds}) AND ABS(COALESCE((c->>'year')::int, $${i + 1 + variants.length}) - $${i + 1 + variants.length}) <= 2)`);
       params.push(moto.brand, ...variants.map((v) => `%${v}%`), moto.year);
       i += 2 + variants.length;
     }
@@ -296,6 +299,29 @@ async function searchByCompatibility(
     i += 1;
   }
 
+  let nameILikeFilter = '';
+  const productKeywords = keywords.filter((k) => /pastill|brake|pads|filtro|filter|aceite|oil|escape|exhaust|cadena|chain|buji|spark|embrague|clutch|amortiguador|suspension|bateria|battery|kit|faros?|light|motor|engine|correa|belt|sprocket|rodamiento|bearing|junta|gasket|disco|disc|casco|helmet|guant|glove/i.test(k));
+  if (productKeywords.length > 0) {
+    const orClauses = productKeywords
+      .map((_k, idx) => `(coalesce(name,'') ILIKE $${i + idx} OR coalesce(category3,'') ILIKE $${i + idx})`)
+      .join(' OR ');
+    nameILikeFilter = `AND (${orClauses})`;
+    params.push(...productKeywords.map((k) => `%${k}%`));
+    i += productKeywords.length;
+  }
+
+  let typeSpecificFilter = '';
+  const wantsOil = keywords.some((k) => /aceite|oil/i.test(k));
+  const wantsPad = keywords.some((k) => /pastill|pads/i.test(k));
+  const wantsAir = keywords.some((k) => /aire|air/i.test(k));
+  if (wantsOil && !wantsAir) {
+    typeSpecificFilter = `AND (coalesce(name,'') ILIKE '%oil%' OR coalesce(name,'') ILIKE '%aceite%' OR coalesce(category3,'') ILIKE '%oil%')`;
+  } else if (wantsPad) {
+    typeSpecificFilter = `AND (coalesce(name,'') ILIKE '%pad%' OR coalesce(name,'') ILIKE '%pastilla%' OR coalesce(category3,'') ILIKE '%brake pads%')`;
+  } else if (wantsAir) {
+    typeSpecificFilter = `AND (coalesce(name,'') ILIKE '%air%' OR coalesce(name,'') ILIKE '%aire%')`;
+  }
+
   const sql = `
     SELECT id, sku, name, brand, price, sale_price, stock, stock_status,
            images, compatibility, category2, category3
@@ -303,6 +329,8 @@ async function searchByCompatibility(
     WHERE (${conditions.join(' OR ')})
       AND stock > 0
       ${keywordFilter}
+      ${nameILikeFilter}
+      ${typeSpecificFilter}
     ORDER BY stock DESC NULLS LAST, price ASC
     LIMIT ${limit}
   `;
@@ -428,7 +456,7 @@ function normalizeModelForSearch(model: string): string {
   return model.toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
 
-function extractMotorcycleFromQuery(query: string): GarageMotorcycle | null {
+export function extractMotorcycleFromQuery(query: string): GarageMotorcycle | null {
   const lower = query.toLowerCase();
   let detectedBrand: string | null = null;
 
@@ -444,7 +472,7 @@ function extractMotorcycleFromQuery(query: string): GarageMotorcycle | null {
   const detectedYear = yearMatch ? parseInt(yearMatch[1], 10) : null;
 
   const modelCandidates: string[] = [];
-  const knownModelPrefixes = ['mt', 'gs', 'xr', 'cbr', 'cb', 'yzf', 'r1', 'r6', 'z750', 'z800', 'z900', 'zx', 'ninja', 'er6', 'er', 'klr', 'crf', 'cb500', 'cb1000', 'cbr600', 'cbr1000', 'gsxr', 'sv', 'rmz', 'drz', 'dr', 'xt', 'wr', 'xf', 'xc', 'fe', 'te', 'tx', 'sm', 'yz', 'wr', 'cr', 'rm', 'klx'];
+  const knownModelPrefixes = ['mt', 'gs', 'xr', 'cbr', 'cb', 'yzf', 'r1', 'r6', 'z750', 'z800', 'z900', 'zx', 'ninja', 'er6', 'er', 'klr', 'crf', 'cb500', 'cb1000', 'cbr600', 'cbr1000', 'gsxr', 'sv', 'rmz', 'drz', 'dr', 'xt', 'wr', 'xf', 'xc', 'fe', 'te', 'tx', 'sm', 'yz', 'cr', 'rm', 'klx', 'pcx', 'sh', 'nss', 'vision', 'xmax', 'aerox', 'fz', 'mtn', 'trk', 'rx', 'cbf', 'cbx', 'nx', 'gl', 'st', 'vf', 'vfr', 'cbrf', 'kx', 'versys', 'tmax', 'nmax', 'vespa', 'medley', 'mp3', 'gts', 'et4', 'fj1200', 'tenera', 'tracer', 'tricity', 'niken', 'xs', 'xj', 'tt', 'fz', 'fz6', 'fz1', 'fazer', 'xl', 'xr', 'xt'];
 
   const tokenRe = /\b([a-z]{2,}[\-\d]?[a-z\d]*)\b/g;
   let m: RegExpExecArray | null;
@@ -507,21 +535,28 @@ export async function getCatalogContext(
   const targetMotos: GarageMotorcycle[] = [];
   if (queryMoto && (queryMoto.brand || queryMoto.model)) {
     targetMotos.push(queryMoto);
+  } else if (queryMentionsGarage && garageMotos.length > 0) {
+    targetMotos.push(garageMotos[0]);
   }
-  if (queryMentionsGarage) {
-    for (const m of garageMotos) {
-      if (!targetMotos.some((t) => t.brand === m.brand && t.model === m.model)) {
-        targetMotos.push(m);
-      }
-    }
+
+  const wantsOil = keywords.some((k) => /aceite|oil/i.test(k));
+  const wantsPad = keywords.some((k) => /pastill|pads/i.test(k));
+  const wantsAir = keywords.some((k) => /aire|air/i.test(k));
+  let typeFilter = '';
+  if (wantsOil && !wantsAir) {
+    typeFilter = `AND (coalesce(name,'') ILIKE '%oil%' OR coalesce(name,'') ILIKE '%aceite%' OR coalesce(category3,'') ILIKE '%oil%')`;
+  } else if (wantsPad) {
+    typeFilter = `AND (coalesce(name,'') ILIKE '%pad%' OR coalesce(name,'') ILIKE '%pastilla%' OR coalesce(category3,'') ILIKE '%brake pads%')`;
+  } else if (wantsAir) {
+    typeFilter = `AND (coalesce(name,'') ILIKE '%air%' OR coalesce(name,'') ILIKE '%aire%')`;
   }
 
   let primaryHits: CatalogHit[] = [];
 
   if (targetMotos.length > 0) {
-    primaryHits = await searchByCompatibility(targetMotos, keywords, 8);
+    primaryHits = await searchByCompatibility(targetMotos, keywords, 12);
   } else {
-    primaryHits = await searchByKeywords(keywords, { garageMotos: [], limit: 8 });
+    primaryHits = await searchByKeywords(keywords, { garageMotos: [], limit: 12, typeFilter });
   }
 
   const merged: CatalogHit[] = [];
@@ -534,9 +569,9 @@ export async function getCatalogContext(
   }
 
   if (merged.length < 4) {
-    const keywordHits = await searchByKeywords(keywords, { garageMotos: [], limit: 8 });
-    for (const h of keywordHits) {
-      if (!seen.has(h.id) && merged.length < 8) {
+    const fallbackHits = await searchByKeywords(keywords, { garageMotos: [], limit: 12, typeFilter });
+    for (const h of fallbackHits) {
+      if (!seen.has(h.id) && merged.length < 12) {
         seen.add(h.id);
         merged.push(h);
       }
@@ -550,11 +585,73 @@ export async function getCatalogContext(
     };
   }
 
-  const limit = 8;
-  const finalHits = merged.slice(0, limit);
+  const ranked = rankByBrandAndPrice(merged);
+  const diversified = diversifyByBrand(ranked, 1);
+  const finalHits = diversified.slice(0, 6);
+
   const text = finalHits.map(formatHitText).join('\n');
 
   return { hits: finalHits, text };
+}
+
+const BRAND_QUALITY_RANK: Record<string, number> = {
+  'BREMBO': 9,
+  'BREMBO RACING': 10,
+  'CL BRAKES': 8,
+  'NG BRAKE DISC': 8,
+  'NISSIN': 7,
+  'EBC': 6,
+  'TRW': 5,
+  'FERODO': 4,
+  'TECNIUM': 3,
+  'POLINI': 2,
+  'HIFLOFILTRO': 5,
+  'NGK': 7,
+  'BOSCH': 6,
+  'DENSO': 7,
+  'MOTUL': 8,
+  'CASTROL': 7,
+  'LIQUI MOLY': 8,
+  'AKRAPOVIC': 10,
+  'LEOVINCE': 9,
+  'ARROW': 9,
+  'SCORPION': 9,
+  'YOSHIMURA': 10,
+  'TERMIGNONI': 10,
+  'MIVV': 8,
+  'GIANNELLI': 7,
+  'KOSO': 5,
+  'TOURMAX': 4,
+};
+
+function brandRank(brand: string): number {
+  if (!brand) return 1;
+  const norm = brand.toUpperCase().trim();
+  if (BRAND_QUALITY_RANK[norm] !== undefined) return BRAND_QUALITY_RANK[norm];
+  const ranked = BRAND_QUALITY_RANK[norm];
+  if (ranked !== undefined) return ranked;
+  return 1;
+}
+
+function rankByBrandAndPrice(hits: CatalogHit[]): CatalogHit[] {
+  return [...hits].sort((a, b) => {
+    const rankDiff = brandRank(b.brand) - brandRank(a.brand);
+    if (rankDiff !== 0) return rankDiff;
+    return a.price - b.price;
+  });
+}
+
+function diversifyByBrand(hits: CatalogHit[], maxPerBrand: number): CatalogHit[] {
+  const result: CatalogHit[] = [];
+  const brandCount = new Map<string, number>();
+  for (const h of hits) {
+    const key = h.brand.toUpperCase().trim();
+    const count = brandCount.get(key) || 0;
+    if (count >= maxPerBrand) continue;
+    brandCount.set(key, count + 1);
+    result.push(h);
+  }
+  return result;
 }
 
 export async function getGarageContext(userId: number): Promise<string> {
