@@ -2,27 +2,51 @@ import redis from 'redis';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
-let redisClient: ReturnType<typeof redis.createClient> | null = null;
+type RedisClient = ReturnType<typeof redis.createClient>;
 
-export async function getRedisClient() {
+let redisClient: RedisClient | null = null;
+let connectingPromise: Promise<RedisClient | null> | null = null;
+
+function connectWithTimeout(client: RedisClient, timeoutMs: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('Redis connect timeout')), timeoutMs);
+    client.connect()
+      .then(() => { clearTimeout(timer); resolve(); })
+      .catch((e) => { clearTimeout(timer); reject(e); });
+  });
+}
+
+export async function getRedisClient(): Promise<RedisClient | null> {
   if (redisClient && redisClient.isOpen) {
     return redisClient;
   }
-  
-  try {
-    redisClient = redis.createClient({ url: REDIS_URL });
-    redisClient.on('error', (err) => {
-      console.error('[REDIS ERROR]', err);
-      redisClient = null;
-    });
-    await redisClient.connect();
-    console.log('[REDIS] Connected successfully');
-    return redisClient;
-  } catch (error) {
-    console.error('[REDIS] Failed to connect:', error);
-    redisClient = null;
-    return null;
+
+  if (connectingPromise) {
+    return connectingPromise;
   }
+
+  connectingPromise = (async (): Promise<RedisClient | null> => {
+    try {
+      const newClient: RedisClient = redis.createClient({
+        url: REDIS_URL,
+        socket: { connectTimeout: 1500, reconnectStrategy: false },
+      });
+      newClient.on('error', () => {
+        // swallow errors once client is created; do not null out mid-operation
+      });
+      await connectWithTimeout(newClient, 2000);
+      redisClient = newClient;
+      console.log('[REDIS] Connected successfully');
+      return newClient;
+    } catch (error) {
+      console.error('[REDIS] Failed to connect:', (error as Error).message);
+      return null;
+    } finally {
+      connectingPromise = null;
+    }
+  })();
+
+  return connectingPromise;
 }
 
 export interface RateLimitResult {

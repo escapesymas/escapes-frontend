@@ -132,6 +132,13 @@ function LoginPageContent() {
         onCartClick={() => router.push('/?tab=cart')}
       />
 
+      <div className="bg-accent/10 border-b border-accent/30 px-4 py-2.5 flex items-center justify-center gap-2 text-xs text-center">
+        <span className="font-mono uppercase tracking-wider text-accent font-bold">🤖</span>
+        <span className="text-foreground/80">
+          Con tu cuenta accedes al <strong>asistente IA 24/7</strong> para preguntas sobre catálogo, pedidos y soporte.
+        </span>
+      </div>
+
       <main
         className="flex-1 overflow-y-auto overscroll-contain flex flex-col items-center py-8"
         style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}

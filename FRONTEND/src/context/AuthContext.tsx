@@ -77,6 +77,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true; };
   }, [loadProfile]);
 
+  // Escuchar 'session-expired' para forzar logout cuando el backend rechace JWT
+  useEffect(() => {
+    const handler = () => {
+      localStorage.removeItem(SESSION_KEY);
+      setSession(null);
+      setUser(null);
+    };
+    window.addEventListener('session-expired', handler);
+    return () => window.removeEventListener('session-expired', handler);
+  }, []);
+
   const persistSession = (s: SessionData) => {
     localStorage.setItem(SESSION_KEY, JSON.stringify(s));
     setSession(s);
