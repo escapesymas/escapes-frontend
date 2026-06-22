@@ -54,7 +54,7 @@ rsync -avz --delete --exclude 'uploads/' --exclude 'invoices/' \
 echo "🔄 Restaurando base de datos y reiniciando servicio..."
 ssh ${VPS_USER}@${VPS_HOST} << 'EOF'
   cd /var/www/vhosts/backendescapes.com/server
-  npm install --production
+  npm install --production --legacy-peer-deps
   pm2 start ecosystem.config.cjs || pm2 restart ecosystem.config.cjs
   pm2 save
 EOF

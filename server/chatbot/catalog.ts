@@ -27,6 +27,66 @@ interface GarageMotorcycle {
   year: number | null;
 }
 
+const SYNONYMS_ES_EN: Record<string, string[]> = {
+  'pastilla': ['brake', 'pad', 'pads'],
+  'pastillas': ['brake', 'pad', 'pads'],
+  'freno': ['brake', 'brakes'],
+  'frenos': ['brake', 'brakes'],
+  'escape': ['exhaust'],
+  'escapes': ['exhaust'],
+  'bujia': ['spark', 'plug'],
+  'bujias': ['spark', 'plug'],
+  'bujía': ['spark', 'plug'],
+  'bujías': ['spark', 'plug'],
+  'cadena': ['chain'],
+  'cadenas': ['chain'],
+  'transmision': ['chain', 'transmission'],
+  'aceite': ['oil'],
+  'filtro': ['filter'],
+  'filtros': ['filter'],
+  'embrague': ['clutch'],
+  'amortiguador': ['shock', 'absorber', 'fork'],
+  'amortiguadores': ['shock', 'absorber', 'fork'],
+  'suspension': ['suspension', 'shock', 'fork'],
+  'bateria': ['battery'],
+  'baterias': ['battery'],
+  'manillar': ['handlebar'],
+  'espejo': ['mirror'],
+  'espejos': ['mirror'],
+  'intermitente': ['indicator', 'turn'],
+  'intermitentes': ['indicator', 'turn'],
+  'piloto': ['light', 'lamp'],
+  'pilotos': ['light', 'lamp'],
+  'casco': ['helmet'],
+  'guante': ['glove'],
+  'guantes': ['glove'],
+  'chaqueta': ['jacket'],
+  'chaquetas': ['jacket'],
+  'pantalon': ['trouser', 'pant'],
+  'pantalones': ['trouser', 'pant'],
+  'motor': ['engine'],
+  'piston': ['piston'],
+  'pistones': ['piston'],
+  'junta': ['gasket'],
+  'juntas': ['gasket'],
+  'rodamiento': ['bearing'],
+  'rodamientos': ['bearing'],
+  'kit': ['kit'],
+  'arrastre': ['chain', 'sprocket'],
+};
+
+function expandSynonyms(keywords: string[]): string[] {
+  const expanded = new Set<string>();
+  for (const kw of keywords) {
+    expanded.add(kw);
+    const synonyms = SYNONYMS_ES_EN[kw];
+    if (synonyms) {
+      for (const s of synonyms) expanded.add(s);
+    }
+  }
+  return Array.from(expanded);
+}
+
 function extractKeywords(text: string): string[] {
   const stopwords = new Set([
     'para', 'como', 'cuál', 'cuales', 'donde', 'cuando', 'cuanto', 'tengo', 'tienes',
@@ -37,7 +97,8 @@ function extractKeywords(text: string): string[] {
     'the', 'and', 'for', 'are', 'you', 'can', 'have', 'has', 'with', 'from',
   ]);
   const matches = text.toLowerCase().match(/[a-záéíóúñ0-9]{3,}/g) || [];
-  return matches.filter((w) => !stopwords.has(w)).slice(0, 8);
+  const filtered = matches.filter((w) => !stopwords.has(w)).slice(0, 8);
+  return expandSynonyms(filtered);
 }
 
 const PURCHASE_INTENT_WORDS = [
@@ -136,8 +197,26 @@ async function searchByKeywords(
       `SELECT id, sku, name, brand, price, sale_price, stock, stock_status,
               images, compatibility, category2, category3
        FROM products
-       WHERE to_tsvector('simple', coalesce(name,'') || ' ' || coalesce(brand,'') || ' ' || coalesce(sku,''))
-             @@ to_tsquery('simple', $1)
+       WHERE to_tsvector('simple',
+                coalesce(name,'') || ' ' ||
+                coalesce(brand,'') || ' ' ||
+                coalesce(sku,'') || ' ' ||
+                coalesce(category2,'') || ' ' ||
+                coalesce(category3,'')
+              ) @@ to_tsquery('simple', $1)
+         AND (
+           (compatibility IS NOT NULL AND jsonb_array_length(compatibility) > 0)
+           OR coalesce(category2,'') ILIKE '%moto%'
+           OR coalesce(category3,'') ILIKE '%moto%'
+         )
+         AND coalesce(name,'') NOT ILIKE '%bici%'
+         AND coalesce(name,'') NOT ILIKE '%patinete%'
+         AND coalesce(name,'') NOT ILIKE '%bicycle%'
+         AND coalesce(name,'') NOT ILIKE '%ebike%'
+         AND coalesce(category2,'') NOT ILIKE '%bici%'
+         AND coalesce(category2,'') NOT ILIKE '%patinete%'
+         AND coalesce(category3,'') NOT ILIKE '%bici%'
+         AND coalesce(category3,'') NOT ILIKE '%patinete%'
        ORDER BY stock DESC NULLS LAST, price ASC
        LIMIT 40`,
       [tsQuery]
@@ -236,6 +315,18 @@ function isCompatibleWithGarage(hit: CatalogHit, garage: GarageMotorcycle[]): bo
   return false;
 }
 
+function mentionsGarage(query: string, garageMotos: GarageMotorcycle[]): boolean {
+  const lower = query.toLowerCase();
+  return garageMotos.some((m) => {
+    if (m.brand && lower.includes(m.brand.toLowerCase())) return true;
+    if (m.model) {
+      const tokens = m.model.toLowerCase().split(/\s+/).filter((t) => t.length >= 3);
+      return tokens.some((t) => lower.includes(t));
+    }
+    return false;
+  });
+}
+
 export async function getCatalogContext(
   query: string,
   garageEntries: string[] = []
@@ -259,26 +350,52 @@ export async function getCatalogContext(
     };
   }
 
-  const keywordHits = await searchByKeywords(keywords, { garageMotos, limit: 8 });
+  const queryMentionsGarage = mentionsGarage(query, garageMotos);
 
-  let garageHits: CatalogHit[] = [];
-  if (garageMotos.length > 0 && keywordHits.length < 4) {
-    garageHits = await searchByGarage(garageMotos, 4);
-    const seen = new Set(keywordHits.map((h) => h.id));
-    for (const g of garageHits) {
-      if (!seen.has(g.id)) keywordHits.push(g);
+  let primaryHits: CatalogHit[] = [];
+  let primarySource = '';
+
+  if (queryMentionsGarage && garageMotos.length > 0) {
+    primaryHits = await searchByGarage(garageMotos, 6);
+    primarySource = 'garage';
+  } else {
+    primaryHits = await searchByKeywords(keywords, { garageMotos, limit: 6 });
+    primarySource = 'keywords';
+  }
+
+  const keywordHits = queryMentionsGarage
+    ? await searchByKeywords(keywords, { garageMotos, limit: 4 })
+    : [];
+
+  const merged: CatalogHit[] = [];
+  const seen = new Set<number>();
+  for (const h of [...primaryHits, ...keywordHits]) {
+    if (!seen.has(h.id)) {
+      seen.add(h.id);
+      merged.push(h);
     }
   }
 
-  if (keywordHits.length === 0) {
-    return {
-      hits: [],
-      text: 'Resumen del catálogo: 156.862 productos totales, 107.917 en stock. No se encontraron coincidencias exactas para la consulta.',
-    };
+  if (merged.length === 0) {
+    if (queryMentionsGarage && garageMotos.length > 0) {
+      const fallback = await searchByKeywords(keywords, { garageMotos, limit: 8 });
+      for (const h of fallback) {
+        if (!seen.has(h.id)) {
+          seen.add(h.id);
+          merged.push(h);
+        }
+      }
+    }
+    if (merged.length === 0) {
+      return {
+        hits: [],
+        text: 'Resumen del catálogo: 156.862 productos totales, 107.917 en stock. No se encontraron coincidencias exactas para la consulta.',
+      };
+    }
   }
 
   const limit = 8;
-  const finalHits = keywordHits.slice(0, limit);
+  const finalHits = merged.slice(0, limit);
   const text = finalHits.map(formatHitText).join('\n');
 
   return { hits: finalHits, text };
