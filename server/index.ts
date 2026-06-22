@@ -364,6 +364,54 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
+// Subdir para imágenes optimizadas (Bihr/Andreani)
+const OPTIMIZED_DIR = path.join(uploadDir, 'optimized');
+if (!fs.existsSync(OPTIMIZED_DIR)) {
+  fs.mkdirSync(OPTIMIZED_DIR, { recursive: true });
+}
+
+// Sanitiza un SKU para usarlo como nombre de archivo (reemplaza caracteres no seguros por _)
+function sanitizeSkuForFilename(sku: string | null | undefined): string {
+  if (!sku) return '';
+  return String(sku).replace(/[^A-Za-z0-9._-]/g, '_');
+}
+
+// ¿Es una URL de imagen remota que deberíamos intentar reescribir a local?
+function isRemoteImageUrl(s: string | null | undefined): boolean {
+  if (!s) return false;
+  if (typeof s !== 'string') return false;
+  if (!/^https?:\/\//.test(s)) return false;
+  if (s.includes('/uploads/optimized/')) return false;
+  if (s.includes('placehold.co')) return false;
+  return true;
+}
+
+// Helper: devuelve la URL local "/uploads/optimized/{sku}-{variant}.webp" si el archivo existe.
+// Usa caché en memoria con TTL para evitar miles de stat por petición de catálogo.
+type ImageVariant = 'desktop' | 'mobile' | 'card-desktop' | 'card-mobile';
+const localImageCache = new Map<string, { result: string | null; expiresAt: number }>();
+const LOCAL_IMAGE_CACHE_TTL_MS = 60_000;
+const LOCAL_IMAGE_CACHE_MAX = 50_000;
+
+function localImageForSku(sku: string | null | undefined, variant: ImageVariant = 'desktop'): string | null {
+  if (!sku) return null;
+  const safeSku = sanitizeSkuForFilename(sku);
+  if (!safeSku) return null;
+  const key = `${safeSku}:${variant}`;
+  const cached = localImageCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.result;
+  if (localImageCache.size > LOCAL_IMAGE_CACHE_MAX) localImageCache.clear();
+
+  const filename = `${safeSku}-${variant}.webp`;
+  let exists = false;
+  try {
+    exists = fs.existsSync(path.join(OPTIMIZED_DIR, filename));
+  } catch {}
+  const result = exists ? `/uploads/optimized/${filename}` : null;
+  localImageCache.set(key, { result, expiresAt: Date.now() + LOCAL_IMAGE_CACHE_TTL_MS });
+  return result;
+}
+
 // Archivos estáticos ANTES del rate limiting
 app.use('/uploads', express.static(uploadDir, {
   setHeaders: (res) => {
@@ -378,7 +426,7 @@ app.use('/uploads', express.static(uploadDir, {
 const RATE_LIMIT_MAX = 100;
 const RATE_LIMIT_WINDOW_MS = 60000;
 
-const rateLimitSkipPaths = ['/uploads', '/api/health', '/api/catalog'];
+const rateLimitSkipPaths = ['/uploads', '/api/health', '/api/catalog', '/api/image-proxy'];
 
 app.use((req: any, res: any, next: any) => {
   const path = req.path || req.url || '';
@@ -587,7 +635,7 @@ function verifyJWT(token: string): any | null {
 app.get('/api/health', async (_req, res) => {
   let dbStatus = 'disconnected';
   let dbLatency = 0;
-  
+
   try {
     const start = Date.now();
     await pool.query('SELECT 1');
@@ -597,13 +645,81 @@ app.get('/api/health', async (_req, res) => {
     dbStatus = 'error';
   }
 
-  res.json({ 
-    status: 'ok', 
-    version: '1.0.0', 
+  res.json({
+    status: 'ok',
+    version: '1.0.0',
     db: dbStatus,
     dbLatency: `${dbLatency}ms`,
-    timestamp: new Date().toISOString() 
+    timestamp: new Date().toISOString()
   });
+});
+
+// ================================================================
+// IMAGE PROXY (Cloudflare-bypass for catalog images)
+// El CDN Bihr bloquea con 403 a navegadores de usuarios finales.
+// El VPS sí tiene acceso. Cacheamos la imagen en memoria.
+// ================================================================
+const imageProxyCache = new Map<string, { buffer: Buffer; contentType: string; expiresAt: number }>();
+const IMAGE_PROXY_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+const IMAGE_PROXY_MAX_ENTRIES = 5000;
+const ALLOWED_IMAGE_HOSTS = ['api.mybihr.com', 'bihr.net', 'cdn.mybihr.com'];
+
+app.get('/api/image-proxy', async (req, res) => {
+  try {
+    const rawUrl = String(req.query.url || '');
+    if (!rawUrl) return res.status(400).json({ error: 'Missing url param' });
+
+    let parsed: URL;
+    try { parsed = new URL(rawUrl); } catch { return res.status(400).json({ error: 'Invalid url' }); }
+    if (!ALLOWED_IMAGE_HOSTS.includes(parsed.hostname)) {
+      return res.status(400).json({ error: 'Host not allowed' });
+    }
+
+    const cached = imageProxyCache.get(rawUrl);
+    if (cached && cached.expiresAt > Date.now()) {
+      res.set('Content-Type', cached.contentType);
+      res.set('Cache-Control', 'public, max-age=86400');
+      res.set('X-Image-Proxy', 'HIT');
+      return res.end(cached.buffer);
+    }
+
+    if (imageProxyCache.size > IMAGE_PROXY_MAX_ENTRIES) {
+      const now = Date.now();
+      for (const [k, v] of imageProxyCache.entries()) {
+        if (v.expiresAt < now) imageProxyCache.delete(k);
+      }
+      if (imageProxyCache.size > IMAGE_PROXY_MAX_ENTRIES) imageProxyCache.clear();
+    }
+
+    const upstream = await fetch(rawUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; EscapesYMas/1.0; +https://escapesymas.com)',
+        'Accept': 'image/jpeg,image/png,image/webp,image/*',
+      },
+    });
+
+    if (!upstream.ok) {
+      return res.status(upstream.status).json({ error: `Upstream ${upstream.status}` });
+    }
+
+    const contentType = upstream.headers.get('content-type') || 'image/jpeg';
+    const ab = await upstream.arrayBuffer();
+    const buffer = Buffer.from(ab);
+
+    imageProxyCache.set(rawUrl, {
+      buffer,
+      contentType,
+      expiresAt: Date.now() + IMAGE_PROXY_TTL_MS,
+    });
+
+    res.set('Content-Type', contentType);
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.set('X-Image-Proxy', 'MISS');
+    res.end(buffer);
+  } catch (err: any) {
+    console.error('[image-proxy] error:', err.message);
+    res.status(502).json({ error: 'Proxy error' });
+  }
 });
 
 // ================================================================
@@ -769,6 +885,72 @@ app.post('/api/bihr/sync-images/control', async (req: any, res: any) => {
     res.json({ success: true, message: `Acción ${action} ejecutada correctamente`, output: stdout });
   } catch (error: any) {
     res.status(500).json({ error: `Fallo al ejecutar acción ${action} de imágenes`, details: error.message });
+  }
+});
+
+// Estado del downloader de imágenes Andreani (lee BD + PM2)
+app.get('/api/andreani/sync-images/status', async (req: any, res: any) => {
+  try {
+    let imageDownloaderRunning = false;
+    let pm2Status = 'stopped';
+    try {
+      // Timeout 3s para evitar cuelgues si PM2 daemon no responde
+      const proc = await Promise.race([
+        execPromise('pm2 jlist'),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('pm2 timeout')), 3000)),
+      ]).then(r => r.stdout).catch(() => '[]');
+      const pm2List = JSON.parse(proc);
+      const p = pm2List.find((x: any) => x.name === 'image_downloader_andreani');
+      if (p) {
+        pm2Status = p.pm2_env?.status || 'stopped';
+        imageDownloaderRunning = pm2Status === 'online';
+      }
+    } catch (e) {
+      // PM2 no disponible en local dev — no es error
+    }
+    res.json({ success: true, running: imageDownloaderRunning, pm2Status });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Error al obtener estado Andreani', details: error.message });
+  }
+});
+
+app.post('/api/andreani/sync-images/control', async (req: any, res: any) => {
+  if (!requireAdminKey(req, res)) return;
+  const { action } = req.body;
+  if (!['start', 'stop', 'restart'].includes(action)) {
+    return res.status(400).json({ error: 'Acción no válida. Use: start, stop o restart' });
+  }
+
+  try {
+    let exists = false;
+    try {
+      const out = await Promise.race([
+        execPromise('pm2 jlist'),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('pm2 timeout')), 3000)),
+      ]).then(r => r.stdout).catch(() => '[]');
+      const pm2List = JSON.parse(out);
+      exists = pm2List.some((p: any) => p.name === 'image_downloader_andreani');
+    } catch (e) {}
+
+    let command = '';
+    if (action === 'start') {
+      if (exists) {
+        command = 'pm2 start image_downloader_andreani';
+      } else {
+        const scriptPath = path.join(process.cwd(), 'scripts', 'download_images_andreani.ts');
+        command = `pm2 start "${scriptPath}" --name image_downloader_andreani --interpreter "npx" --interpreter-args "tsx"`;
+      }
+    } else if (action === 'stop') {
+      command = 'pm2 stop image_downloader_andreani';
+    } else if (action === 'restart') {
+      command = 'pm2 restart image_downloader_andreani';
+    }
+
+    console.log(`[ANDREANI CONTROL]: Ejecutando comando: ${command}`);
+    const { stdout } = await execPromise(command);
+    res.json({ success: true, message: `Acción ${action} ejecutada correctamente`, output: stdout });
+  } catch (error: any) {
+    res.status(500).json({ error: `Fallo al ejecutar acción ${action} de imágenes Andreani`, details: error.message });
   }
 });
 
@@ -1046,6 +1228,16 @@ const catalogLimiter = rateLimit({
   message: { error: 'Demasiadas peticiones al catálogo. Inténtalo de nuevo.' }
 });
 
+import { chatHandler, chatHealthHandler } from './chatbot/index.js';
+
+const chatLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Has alcanzado el límite de mensajes del asistente. Espera 10 minutos.' }
+});
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // SITEMAP ENDPOINT
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1126,7 +1318,7 @@ app.get('/api/catalog/products', catalogLimiter, async (req, res) => {
 
     // Catálogo público: 1 min de datos frescos, 10 min de gracia SWR
     const result = await executeSWR(cacheKey, async () => {
-      const conditions = sql`WHERE status = 'published' AND name NOT LIKE 'Aplicaciones:%' AND name NOT LIKE 'Applications:%' AND sku NOT LIKE 'Aplicaciones:%' AND sku NOT LIKE 'Applications:%'`;
+      const conditions = sql`WHERE status IN ('published', 'active') AND name NOT LIKE 'Aplicaciones:%' AND name NOT LIKE 'Applications:%' AND sku NOT LIKE 'Aplicaciones:%' AND sku NOT LIKE 'Applications:%'`;
 
       if (universal === 'true') {
         conditions.append(sql` AND (compatibility IS NULL OR compatibility = '[]'::jsonb OR compatibility::text = '[]')`);
@@ -1844,29 +2036,43 @@ app.all('/api/admin', adminLimiter, async (req, res) => {
 
         // Stats de la base de datos
         try {
-          const optR = await db.execute(sql`SELECT count(*) as count FROM products WHERE images LIKE '%optimized%'`);
-          const pendingR = await db.execute(sql`SELECT count(*) as count FROM products WHERE images LIKE '%api.mybihr.com%' OR images LIKE '%static.bihr.pro%'`);
-          const placeR = await db.execute(sql`SELECT count(*) as count FROM products WHERE images LIKE '%placehold.co%'`);
-          const cardOptR = await db.execute(sql`SELECT count(*) as count FROM products WHERE images LIKE '%srcCardDesktop%'`);
-          
+          const optR = await db.execute(sql`SELECT count(*) as count FROM products WHERE images::text LIKE '%/uploads/optimized/%'`);
+          const pendingR = await db.execute(sql`SELECT count(*) as count FROM products WHERE images::text LIKE '%api.mybihr.com%' OR images::text LIKE '%static.bihr.pro%'`);
+          const placeR = await db.execute(sql`SELECT count(*) as count FROM products WHERE images::text LIKE '%placehold.co%'`);
+          const cardOptR = await db.execute(sql`SELECT count(*) as count FROM products WHERE images::text LIKE '%srcCardDesktop%'`);
+          // Contadores por proveedor
+          const bihrOptR = await db.execute(sql`SELECT count(*) as count FROM products WHERE (provider_id IS NULL OR provider_id = 'bihr') AND images::text LIKE '%/uploads/optimized/%'`);
+          const bihrPendR = await db.execute(sql`SELECT count(*) as count FROM products WHERE (provider_id IS NULL OR provider_id = 'bihr') AND (images::text LIKE '%api.mybihr.com%' OR images::text LIKE '%static.bihr.pro%')`);
+          const andrOptR = await db.execute(sql`SELECT count(*) as count FROM products WHERE provider_id = 'andreani' AND images::text LIKE '%/uploads/optimized/%'`);
+          const andrPendR = await db.execute(sql`SELECT count(*) as count FROM products WHERE provider_id = 'andreani' AND images::text LIKE '%andreanimhs.com%'`);
+          const andrEmptyR = await db.execute(sql`SELECT count(*) as count FROM products WHERE provider_id = 'andreani' AND (images = '[]'::jsonb OR images IS NULL OR images::text = '[]')`);
+
           const optCount = Number(optR.rows[0]?.count || 0);
           const pendingCount = Number(pendingR.rows[0]?.count || 0);
           const placeCount = Number(placeR.rows[0]?.count || 0);
           const cardOptCount = Number(cardOptR.rows[0]?.count || 0);
-          
+
           imageStats.optimized = optCount;
           imageStats.omitted = placeCount;
           imageStats.failed = 0; // Fallbacks are placeholders
           imageStats.total = optCount + pendingCount + placeCount;
-          
+
           // Card specific stats
           imageStats.cardOptimized = cardOptCount;
           imageStats.cardPending = Math.max(0, optCount - cardOptCount);
           imageStats.cardTotal = optCount;
-          
+
           // Purged images can be approximated or set as:
           imageStats.purged = optCount;
           imageStats.purgedTotal = optCount;
+
+          // Por proveedor
+          imageStats.bihrOptimized = Number(bihrOptR.rows[0]?.count || 0);
+          imageStats.bihrPending = Number(bihrPendR.rows[0]?.count || 0);
+          imageStats.andreaniOptimized = Number(andrOptR.rows[0]?.count || 0);
+          imageStats.andreaniPending = Number(andrPendR.rows[0]?.count || 0);
+          imageStats.andreaniEmpty = Number(andrEmptyR.rows[0]?.count || 0);
+          imageStats.andreaniTotal = imageStats.andreaniOptimized + imageStats.andreaniPending + imageStats.andreaniEmpty;
 
           if (pendingCount === 0 && optCount > 0 && imageStats.cardPending === 0) {
             imageStats.status = "Finalizado";
@@ -4968,9 +5174,11 @@ function mapProductToFrontend(row: any) {
   }
   
   images = (Array.isArray(images) ? images : []).map((img: any) => {
-    if (typeof img === 'string') return { src: img, alt: row.name };
+    if (typeof img === 'string') {
+      return { src: img, alt: row.name };
+    }
     if (img.srcSet && typeof img.srcSet === 'object') {
-      return {
+      img = {
         src: img.src,
         srcMobile: img.srcSet.mobile || img.srcSet['mobile'],
         srcCardDesktop: img.srcSet['card-desktop'] || img.srcSet.cardDesktop,
@@ -4981,6 +5189,35 @@ function mapProductToFrontend(row: any) {
     // Map URL to SRC for legacy data or API data
     if (img.url && !img.src) {
       img.src = img.url;
+    }
+    // Reescritura a local: si src apunta a una URL remota y existe archivo local para este SKU/variante, sustituir.
+    if (img.src && isRemoteImageUrl(img.src)) {
+      const local = localImageForSku(row.sku, 'desktop');
+      if (local) img.src = local;
+      else if (/^https?:\/\/(api\.|cdn\.)?mybihr\.com\//i.test(img.src)) {
+        img.src = `/api/image-proxy?url=${encodeURIComponent(img.src)}`;
+      }
+    }
+    if (img.srcMobile && isRemoteImageUrl(img.srcMobile)) {
+      const local = localImageForSku(row.sku, 'mobile');
+      if (local) img.srcMobile = local;
+      else if (/^https?:\/\/(api\.|cdn\.)?mybihr\.com\//i.test(img.srcMobile)) {
+        img.srcMobile = `/api/image-proxy?url=${encodeURIComponent(img.srcMobile)}`;
+      }
+    }
+    if (img.srcCardDesktop && isRemoteImageUrl(img.srcCardDesktop)) {
+      const local = localImageForSku(row.sku, 'card-desktop');
+      if (local) img.srcCardDesktop = local;
+      else if (/^https?:\/\/(api\.|cdn\.)?mybihr\.com\//i.test(img.srcCardDesktop)) {
+        img.srcCardDesktop = `/api/image-proxy?url=${encodeURIComponent(img.srcCardDesktop)}`;
+      }
+    }
+    if (img.srcCardMobile && isRemoteImageUrl(img.srcCardMobile)) {
+      const local = localImageForSku(row.sku, 'card-mobile');
+      if (local) img.srcCardMobile = local;
+      else if (/^https?:\/\/(api\.|cdn\.)?mybihr\.com\//i.test(img.srcCardMobile)) {
+        img.srcCardMobile = `/api/image-proxy?url=${encodeURIComponent(img.srcCardMobile)}`;
+      }
     }
     return img;
   });
@@ -4998,9 +5235,7 @@ function mapProductToFrontend(row: any) {
   const catInfo = categoryMap[row.category_id] || { name: "General", slug: "general" };
 
   const productImage = images[0]?.src || '';
-  const hasLocalImage = productImage.includes('/uploads/optimized/') && !productImage.includes('placehold.co');
-  const placeholderImg = `https://placehold.co/800x800/18181b/f97316?text=${encodeURIComponent(row.name?.substring(0, 20) || 'ESCAPES+Y+MAS')}`;
-  const finalImage = productImage || placeholderImg;
+  const finalImage = productImage || '';
 
   // Subcategorías
   const cat2Info = row.category2_id ? categoryMap[row.category2_id] : null;
@@ -5010,7 +5245,8 @@ function mapProductToFrontend(row: any) {
     id: row.id, title: row.name, name: row.name,
     slug: row.sku?.toLowerCase().replace(/[^a-z0-9]/g, '-') || `product-${row.id}`,
     price: salePriceEur || priceEur, regularPrice: priceEur, salePrice: salePriceEur,
-    sku: row.sku || '', image: finalImage, images: images.length ? images : [{ src: placeholderImg, alt: row.name }],
+    sku: row.sku || '', image: finalImage, images: images.length ? images : [{ src: '', alt: row.name }],
+    providerId: row.provider_id || 'bihr',
     inStock: (row.stock || 0) > 0, stock: row.stock || 0,
     category: catInfo.name, categorySlug: catInfo.slug, categoryId: row.category_id || 0,
     category2: row.category2 || '', category3: row.category3 || '',
@@ -5398,6 +5634,13 @@ app.post('/api/reviews', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ================================================================
+// CHATBOT IA (MiniMax) — Solo usuarios autenticados
+// ================================================================
+app.get('/api/chat/health', chatHealthHandler);
+
+app.post('/api/chat/message', chatLimiter, chatHandler);
 
 // ================================================================
 // ARRANQUE
