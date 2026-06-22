@@ -233,6 +233,23 @@ export default function Home() {
         onTabChange={(tab) => setActiveTab(tab)}
       />
 
+      {!isAuthenticated && (
+        <div className="bg-accent/10 border-b border-accent/30 px-4 py-2.5 flex items-center justify-center gap-3 text-xs">
+          <span className="font-mono uppercase tracking-wider text-accent font-bold">
+            🤖 Asistente IA
+          </span>
+          <span className="text-foreground/80">
+            Crea cuenta gratis y pregúntale sobre escapes y recambios para tu moto.
+          </span>
+          <a
+            href="/login"
+            className="font-mono uppercase text-[10px] font-bold bg-accent text-accent-foreground px-3 py-1 rounded hover:bg-accent/90 transition-colors"
+          >
+            Iniciar sesión
+          </a>
+        </div>
+      )}
+
       {/* El main tiene overflow-y:auto propio — así el BottomNav puede
           estar en flujo normal al fondo sin necesitar position:fixed */}
       <main id="main-content"
