@@ -235,20 +235,66 @@ async function searchByGarage(
   limit: number
 ): Promise<CatalogHit[]> {
   if (garageMotos.length === 0) return [];
+  return searchByCompatibility(garageMotos, [], limit);
+}
+
+async function searchByCompatibility(
+  motos: GarageMotorcycle[],
+  keywords: string[],
+  limit: number
+): Promise<CatalogHit[]> {
+  const validMotos = motos.filter((m) => m.brand || m.model);
+  if (validMotos.length === 0) return [];
 
   const conditions: string[] = [];
   const params: any[] = [];
   let i = 1;
-  for (const moto of garageMotos) {
-    if (!moto.brand) continue;
-    conditions.push(`(compatibility @> $${i}::jsonb OR compatibility @> $${i + 1}::jsonb)`);
-    const exactCompat = JSON.stringify([{ brand: moto.brand, model: moto.model, year: moto.year }]);
-    const brandOnly = JSON.stringify([{ brand: moto.brand }]);
-    params.push(exactCompat, brandOnly);
-    i += 2;
+
+  for (const moto of validMotos) {
+    const parts: string[] = [];
+    const modelNorm = moto.model.replace(/[^A-Za-z0-9]/g, '');
+    const modelHyphen = modelNorm.replace(/^([A-Za-z]+)(\d+)$/, '$1-$2');
+    const modelSpace = modelNorm.replace(/^([A-Za-z]+)(\d+)$/, '$1 $2');
+    const variants = Array.from(new Set([modelNorm, modelHyphen, modelSpace].filter(Boolean)));
+
+    if (moto.brand && moto.model && moto.year) {
+      const variantConds = variants.map((_v, idx) => `c->>'model' ILIKE $${i + 1 + idx}`).join(' OR ');
+      parts.push(`(c->>'brand' = $${i} AND (${variantConds}) AND ABS(COALESCE((c->>'year')::int, $${i + 1 + variants.length}) - $${i + 1 + variants.length}) <= 3)`);
+      params.push(moto.brand, ...variants.map((v) => `%${v}%`), moto.year);
+      i += 2 + variants.length;
+    }
+    if (moto.brand && moto.model) {
+      const variantConds = variants.map((_v, idx) => `c->>'model' ILIKE $${i + 1 + idx}`).join(' OR ');
+      parts.push(`(c->>'brand' = $${i} AND (${variantConds}))`);
+      params.push(moto.brand, ...variants.map((v) => `%${v}%`));
+      i += 1 + variants.length;
+    }
+    if (moto.brand && !moto.model) {
+      parts.push(`(c->>'brand' = $${i})`);
+      params.push(moto.brand);
+      i += 1;
+    }
+    if (!moto.brand && moto.model) {
+      const variantConds = variants.map((_v, idx) => `c->>'model' ILIKE $${i + idx}`).join(' OR ');
+      parts.push(`(${variantConds})`);
+      params.push(...variants.map((v) => `%${v}%`));
+      i += variants.length;
+    }
+
+    if (parts.length > 0) {
+      conditions.push(`(EXISTS (SELECT 1 FROM jsonb_array_elements(compatibility) AS c WHERE ${parts.join(' OR ')}))`);
+    }
   }
 
   if (conditions.length === 0) return [];
+
+  let keywordFilter = '';
+  if (keywords.length > 0) {
+    const tsQuery = keywords.map((k) => `${k}:*`).join(' | ');
+    keywordFilter = `AND to_tsvector('simple', coalesce(name,'') || ' ' || coalesce(category2,'') || ' ' || coalesce(category3,'') || ' ' || coalesce(brand,'') || ' ' || coalesce(sku,'')) @@ to_tsquery('simple', $${i})`;
+    params.push(tsQuery);
+    i += 1;
+  }
 
   const sql = `
     SELECT id, sku, name, brand, price, sale_price, stock, stock_status,
@@ -256,6 +302,7 @@ async function searchByGarage(
     FROM products
     WHERE (${conditions.join(' OR ')})
       AND stock > 0
+      ${keywordFilter}
     ORDER BY stock DESC NULLS LAST, price ASC
     LIMIT ${limit}
   `;
@@ -264,7 +311,7 @@ async function searchByGarage(
     const result = await pool.query(sql, params);
     return (result.rows as any[]).map(mapHit);
   } catch (err) {
-    console.error('[chatbot] garage search failed:', err);
+    console.error('[chatbot] compatibility search failed:', err);
     return [];
   }
 }
@@ -327,6 +374,110 @@ function mentionsGarage(query: string, garageMotos: GarageMotorcycle[]): boolean
   });
 }
 
+const KNOWN_BRANDS = new Set([
+  'HONDA', 'YAMAHA', 'KAWASAKI', 'SUZUKI', 'DUCATI', 'BMW', 'KTM',
+  'TRIUMPH', 'APRILIA', 'MV AGUSTA', 'HUSQVARNA', 'ROYAL ENFIELD',
+  'MOTO GUZZI', 'BENELLI', 'DERBI', 'GILERA', 'PIAGGIO', 'VESPA',
+  'PEUGEOT', 'RIEJU', 'SYM', 'KYMCO', 'BETA', 'FANTIC', 'MONTESA',
+  'HUSABERG', 'BUELL', 'INDIAN', 'HARLEY', 'DAVIDSON', 'MOTO MORINI',
+  'SHERCO', 'GASGAS', 'SCORPA', 'POLARIS',
+]);
+
+const BRAND_ALIASES: Record<string, string> = {
+  'yamaha': 'YAMAHA',
+  'honda': 'HONDA',
+  'kawasaki': 'KAWASAKI',
+  'suzuki': 'SUZUKI',
+  'ducati': 'DUCATI',
+  'bmw': 'BMW',
+  'ktm': 'KTM',
+  'triumph': 'TRIUMPH',
+  'aprilia': 'APRILIA',
+  'mv': 'MV AGUSTA',
+  'mv agusta': 'MV AGUSTA',
+  'agusta': 'MV AGUSTA',
+  'husqvarna': 'HUSQVARNA',
+  'husaberg': 'HUSABERG',
+  'royal': 'ROYAL ENFIELD',
+  'enfield': 'ROYAL ENFIELD',
+  'guzzi': 'MOTO GUZZI',
+  'benelli': 'BENELLI',
+  'derbi': 'DERBI',
+  'gilera': 'GILERA',
+  'piaggio': 'PIAGGIO',
+  'vespa': 'VESPA',
+  'peugeot': 'PEUGEOT',
+  'rieju': 'RIEJU',
+  'sym': 'SYM',
+  'kymco': 'KYMCO',
+  'beta': 'BETA',
+  'fantic': 'FANTIC',
+  'montesa': 'MONTESA',
+  'buell': 'BUELL',
+  'indian': 'INDIAN',
+  'harley': 'HARLEY',
+  'davidson': 'HARLEY',
+  'morini': 'MOTO MORINI',
+  'sherco': 'SHERCO',
+  'gasgas': 'GASGAS',
+  'polaris': 'POLARIS',
+};
+
+function normalizeModelForSearch(model: string): string {
+  if (!model) return model;
+  return model.toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function extractMotorcycleFromQuery(query: string): GarageMotorcycle | null {
+  const lower = query.toLowerCase();
+  let detectedBrand: string | null = null;
+
+  for (const alias of Object.keys(BRAND_ALIASES)) {
+    const re = new RegExp(`(?:^|[^a-z])${alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:[^a-z]|$)`);
+    if (re.test(lower)) {
+      detectedBrand = BRAND_ALIASES[alias];
+      break;
+    }
+  }
+
+  const yearMatch = lower.match(/\b(19[8-9]\d|20[0-3]\d)\b/);
+  const detectedYear = yearMatch ? parseInt(yearMatch[1], 10) : null;
+
+  const modelCandidates: string[] = [];
+  const knownModelPrefixes = ['mt', 'gs', 'xr', 'cbr', 'cb', 'yzf', 'r1', 'r6', 'z750', 'z800', 'z900', 'zx', 'ninja', 'er6', 'er', 'klr', 'crf', 'cb500', 'cb1000', 'cbr600', 'cbr1000', 'gsxr', 'sv', 'rmz', 'drz', 'dr', 'xt', 'wr', 'xf', 'xc', 'fe', 'te', 'tx', 'sm', 'yz', 'wr', 'cr', 'rm', 'klx'];
+
+  const tokenRe = /\b([a-z]{2,}[\-\d]?[a-z\d]*)\b/g;
+  let m: RegExpExecArray | null;
+  while ((m = tokenRe.exec(lower)) !== null) {
+    const t = m[1];
+    if (KNOWN_BRANDS.has(t.toUpperCase())) continue;
+    if (/^\d+$/.test(t)) continue;
+    if (/^(para|mi|tu|tus|mis|los|las|del|con|sin|uno|una|unos|unas|este|esta|ese|esa|moto|necesito|quiero|busco|tengo|tienes|filtro|filtros|aceite|escape|escapes|recambio|recambios|hola|holas)$/.test(t)) continue;
+    if (t.length < 3) continue;
+
+    const isKnownModel = knownModelPrefixes.some((p) => t.toUpperCase().startsWith(p.toUpperCase()) || t.toUpperCase() === p.toUpperCase());
+    if (isKnownModel) {
+      modelCandidates.push(t);
+    } else if (/^[a-z]+\d+/.test(t) && t.length <= 12) {
+      modelCandidates.push(t);
+    }
+  }
+
+  let detectedModel: string | null = null;
+  if (modelCandidates.length > 0) {
+    const sorted = [...modelCandidates].sort((a, b) => b.length - a.length);
+    detectedModel = normalizeModelForSearch(sorted[0]);
+  }
+
+  if (!detectedBrand && !detectedModel) return null;
+
+  return {
+    brand: detectedBrand || '',
+    model: detectedModel || '',
+    year: detectedYear,
+  };
+}
+
 export async function getCatalogContext(
   query: string,
   garageEntries: string[] = []
@@ -351,47 +502,52 @@ export async function getCatalogContext(
   }
 
   const queryMentionsGarage = mentionsGarage(query, garageMotos);
+  const queryMoto = extractMotorcycleFromQuery(query);
 
-  let primaryHits: CatalogHit[] = [];
-  let primarySource = '';
-
-  if (queryMentionsGarage && garageMotos.length > 0) {
-    primaryHits = await searchByGarage(garageMotos, 6);
-    primarySource = 'garage';
-  } else {
-    primaryHits = await searchByKeywords(keywords, { garageMotos, limit: 6 });
-    primarySource = 'keywords';
+  const targetMotos: GarageMotorcycle[] = [];
+  if (queryMoto && (queryMoto.brand || queryMoto.model)) {
+    targetMotos.push(queryMoto);
+  }
+  if (queryMentionsGarage) {
+    for (const m of garageMotos) {
+      if (!targetMotos.some((t) => t.brand === m.brand && t.model === m.model)) {
+        targetMotos.push(m);
+      }
+    }
   }
 
-  const keywordHits = queryMentionsGarage
-    ? await searchByKeywords(keywords, { garageMotos, limit: 4 })
-    : [];
+  let primaryHits: CatalogHit[] = [];
+
+  if (targetMotos.length > 0) {
+    primaryHits = await searchByCompatibility(targetMotos, keywords, 8);
+  } else {
+    primaryHits = await searchByKeywords(keywords, { garageMotos: [], limit: 8 });
+  }
 
   const merged: CatalogHit[] = [];
   const seen = new Set<number>();
-  for (const h of [...primaryHits, ...keywordHits]) {
+  for (const h of primaryHits) {
     if (!seen.has(h.id)) {
       seen.add(h.id);
       merged.push(h);
     }
   }
 
-  if (merged.length === 0) {
-    if (queryMentionsGarage && garageMotos.length > 0) {
-      const fallback = await searchByKeywords(keywords, { garageMotos, limit: 8 });
-      for (const h of fallback) {
-        if (!seen.has(h.id)) {
-          seen.add(h.id);
-          merged.push(h);
-        }
+  if (merged.length < 4) {
+    const keywordHits = await searchByKeywords(keywords, { garageMotos: [], limit: 8 });
+    for (const h of keywordHits) {
+      if (!seen.has(h.id) && merged.length < 8) {
+        seen.add(h.id);
+        merged.push(h);
       }
     }
-    if (merged.length === 0) {
-      return {
-        hits: [],
-        text: 'Resumen del catálogo: 156.862 productos totales, 107.917 en stock. No se encontraron coincidencias exactas para la consulta.',
-      };
-    }
+  }
+
+  if (merged.length === 0) {
+    return {
+      hits: [],
+      text: 'Resumen del catálogo: 156.862 productos totales, 107.917 en stock. No se encontraron coincidencias exactas para la consulta.',
+    };
   }
 
   const limit = 8;

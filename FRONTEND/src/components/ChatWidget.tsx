@@ -209,13 +209,13 @@ export default function ChatWidget() {
                 >
                   {m.role === 'assistant' ? (
                     <>
-                      {m.content || (streaming && i === messages.length - 1 ? (
+                      {!m.content && streaming && i === messages.length - 1 && (
                         <div className="px-3 py-2 bg-card border border-card-border rounded-2xl inline-flex gap-1">
                           <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                           <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                           <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                         </div>
-                      ) : null)}
+                      )}
                       {m.content && (
                         <div className="px-3 py-2 bg-card border border-card-border text-foreground whitespace-pre-wrap break-words rounded-2xl">
                           {m.content}
