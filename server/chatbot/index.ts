@@ -47,7 +47,7 @@ REGLAS DE RESPUESTA:
 - Si preguntan algo FUERA de tu alcance, responde EXACTAMENTE: "Lo siento, solo puedo ayudarte con temas de Escapes y Más (catálogo, pedidos o soporte web). ¿En qué producto o pedido te echo una mano?"
 - Si el cliente tiene motos en su garaje y pregunta por un producto que pueda depender de compatibilidad, recomienda SOLO productos del catálogo relevante que sean compatibles con sus motos.
 - NUNCA inventes datos. Si no lo sabes, dilo.
-- Cuando recomiendes productos específicos del catálogo, menciona SIEMPRE su SKU exacto (el código alfanumérico tipo "BR9ES", "AND-311/W08H"). Esto permite al cliente ver el producto y añadirlo al carrito con un clic.
+- IMPORTANTE: NO tienes que mostrar SKUs en tu texto. El sistema muestra automáticamente tarjetas con los productos encontrados. Tú solo describe brevemente qué has encontrado (marca, tipo, características generales).
 - IMPORTANTE: Tu respuesta visible es ÚNICAMENTE el texto que ve el cliente. NO incluyas razonamiento interno, planificación ni auto-diálogos. Responde directamente al cliente.`;
 }
 
@@ -82,17 +82,6 @@ function stripThinking(text: string): string {
   const encoded = encodeForFilter(text);
   const re = new RegExp(`${THINK_OPEN}[\\s\\S]*?${THINK_CLOSE}`, 'g');
   return encoded.replace(re, '').replace(/\s{2,}/g, ' ').trim();
-}
-
-function extractSkusFromText(text: string, catalog: CatalogHit[]): string[] {
-  const skusInCatalog = new Set(catalog.map((c) => c.sku).filter(Boolean));
-  const found = new Set<string>();
-  const re = /\b([A-Z0-9][A-Z0-9\-]{4,15})\b/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) {
-    if (skusInCatalog.has(m[1])) found.add(m[1]);
-  }
-  return Array.from(found);
 }
 
 function mergeCatalogHits(primary: CatalogHit[], secondary: CatalogHit[]): CatalogHit[] {
@@ -186,21 +175,18 @@ export async function chatHandler(req: Request, res: Response) {
   }
 
   try {
-    const [userContext, garageEntries, initialCatalog] = await Promise.all([
+    const [userContext, garageEntries, catalogResult] = await Promise.all([
       getGarageContext(user.user_id),
       getGarageEntries(user.user_id),
       getCatalogContext(cleanInput, []),
     ]);
 
-    let { hits: catalogHits, text: catalogText } = initialCatalog;
+    let { hits: catalogHits, text: catalogText } = catalogResult;
 
     if (garageEntries.length > 0) {
-      const garageContextResult = await getCatalogContext(
-        cleanInput,
-        garageEntries
-      );
-      const merged = mergeCatalogHits(catalogHits, garageContextResult.hits);
-      if (merged.length > 0) {
+      const garageResult = await getCatalogContext(cleanInput, garageEntries);
+      if (garageResult.hits.length > 0) {
+        const merged = mergeCatalogHits(catalogHits, garageResult.hits);
         catalogHits = merged.slice(0, 8);
         catalogText = catalogHits.map((h) => formatHitForPrompt(h)).join('\n');
       }
@@ -249,29 +235,24 @@ export async function chatHandler(req: Request, res: Response) {
       res.write(`data: ${JSON.stringify({ delta: cleaned })}\n\n`);
     }
 
-    const mentionedSkus = extractSkusFromText(cleaned, catalogHits);
-    if (mentionedSkus.length > 0) {
-      const products = mentionedSkus
-        .map((sku) => {
-          const hit = catalogHits.find((c) => c.sku === sku);
-          if (!hit) return null;
-          return {
-            id: hit.id,
-            sku: hit.sku,
-            name: hit.name,
-            brand: hit.brand,
-            price: hit.price,
-            sale_price: hit.sale_price,
-            stock: hit.stock,
-            image: hit.image,
-            slug: hit.slug,
-            in_stock: (hit.stock || 0) > 0,
-          };
-        })
-        .filter(Boolean);
-      if (products.length > 0) {
-        res.write(`data: ${JSON.stringify({ products })}\n\n`);
-      }
+    const productCards = catalogHits
+      .filter((h) => h.stock > 0)
+      .slice(0, 4)
+      .map((hit) => ({
+        id: hit.id,
+        sku: hit.sku,
+        name: hit.name,
+        brand: hit.brand,
+        price: hit.price,
+        sale_price: hit.sale_price,
+        stock: hit.stock,
+        image: hit.image,
+        slug: hit.slug,
+        in_stock: (hit.stock || 0) > 0,
+      }));
+
+    if (productCards.length > 0) {
+      res.write(`data: ${JSON.stringify({ products: productCards })}\n\n`);
     }
 
     res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
