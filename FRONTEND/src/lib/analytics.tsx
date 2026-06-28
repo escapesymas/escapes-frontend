@@ -67,17 +67,22 @@ export const trackEvent = {
   },
 
   beginCheckout: (items: { product: Product; quantity: number }[], value: number) => {
+    const eventId = (typeof crypto !== 'undefined' && 'randomUUID' in crypto) ? crypto.randomUUID() : `${Date.now()}_${Math.random()}`;
+    trackEvent.beginCheckoutEventId = eventId;
     pushEvent('begin_checkout', {
+      event_id: eventId,
       currency: 'EUR',
       value,
       items: items.map((it) => ({
         item_id: String(it.product.id),
         item_name: it.product.name,
-        price: (it.product.salePrice || it.product.price) / 100,
+        price: (it.product.salePrice ?? it.product.price),
         quantity: it.quantity,
       })),
     });
   },
+
+  beginCheckoutEventId: undefined as string | undefined,
 
   purchase: (orderId: string, items: { product: Product; quantity: number }[], value: number) => {
     pushEvent('purchase', {
