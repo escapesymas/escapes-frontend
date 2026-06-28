@@ -48,6 +48,8 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
   const [promoCodeInput, setPromoCodeInput] = useState('');
   const [promoError, setPromoError] = useState<string | null>(null);
   const [promoSuccessMsg, setPromoSuccessMsg] = useState<string | null>(null);
+  const [recoveryMessage, setRecoveryMessage] = useState<string | null>(null);
+  const [recoveryError, setRecoveryError] = useState<string | null>(null);
 
   // Cross-selling / Recommendations
   const [recommended, setRecommended] = useState<Product[]>([]);
@@ -121,6 +123,61 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
   };
   syncProfile();
 }, [user]);
+
+  // Carrito abandonado: si la URL trae ?recover=TOKEN, restaurar productos del snapshot
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    const recoverToken = url.searchParams.get('recover');
+    if (!recoverToken || !/^[0-9a-f-]{36}$/i.test(recoverToken)) return;
+    if (sessionStorage.getItem(`recovered_${recoverToken}`)) return;
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/cart/recover/${recoverToken}`);
+        if (!res.ok) {
+          setRecoveryError(res.status === 404 ? 'Carrito no encontrado o enlace expirado' : 'Error al recuperar carrito');
+          return;
+        }
+        const data = await res.json();
+        if (!Array.isArray(data.cart) || data.cart.length === 0) {
+          setRecoveryError('El carrito no contiene productos');
+          return;
+        }
+        for (const it of data.cart) {
+          addToCart({
+            id: it.id || it.productId,
+            sku: it.sku || '',
+            slug: it.slug || '',
+            name: it.name || it.title || 'Producto',
+            price: typeof it.price === 'number' ? it.price : (parseInt(it.price) || 0) / 100,
+            regularPrice: typeof it.regularPrice === 'number' ? it.regularPrice : (typeof it.price === 'number' ? it.price : (parseInt(it.price) || 0) / 100),
+            salePrice: null,
+            stock: typeof it.stock === 'number' ? it.stock : 999,
+            inStock: true,
+            brand: it.brand || '',
+            category: it.category || '',
+            categorySlug: it.categorySlug || '',
+            image: it.image || it.src || '',
+            title: it.name || it.title || 'Producto',
+          } as any, Math.max(1, parseInt(it.quantity) || 1));
+        }
+        sessionStorage.setItem(`recovered_${recoverToken}`, '1');
+        setRecoveryMessage(data.already_recovered
+          ? `Carrito reabierto · ${data.cart.length} producto${data.cart.length === 1 ? '' : 's'} añadidos. Esta vez te avisaremos si no completas el pago.`
+          : `Carrito recuperado · ${data.cart.length} producto${data.cart.length === 1 ? '' : 's'} añadidos.`);
+        if (data.discount_cents && data.discount_cents > 0) {
+          const discountPct = Math.round((data.discount_cents / data.total_cents) * 100);
+          setRecoveryMessage(prev => `${prev} Tienes un cupón del ${discountPct}% reservado si completas la compra.`);
+        }
+        url.searchParams.delete('recover');
+        window.history.replaceState({}, '', url.toString());
+      } catch (err: any) {
+        setRecoveryError('Error de conexión al recuperar carrito');
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Procesar resultado de pago al montar el carrito (redirect de Klarna/Bizum)
   useEffect(() => {
@@ -351,7 +408,7 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
       const cartTotal = cart.reduce((sum, it) => sum + it.price * it.quantity, 0);
       trackEvent.beginCheckout(
         cart.map((it) => ({ product: it as any, quantity: it.quantity })),
-        cartTotal / 100
+        cartTotal
       );
 
       const piRes = await fetch('/api/create-payment-intent', {
@@ -730,6 +787,42 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
           </div>
 
           <CartProgressBar subtotal={subtotal} />
+
+          {recoveryMessage && (
+            <div data-testid="recovery-banner" className="bg-green-500/10 border border-green-500/30 p-4 rounded-sm mb-6 flex items-start gap-3 font-sans">
+              <RotateCcw className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-green-500 font-mono font-bold text-xs uppercase tracking-wide">Carrito Recuperado</h4>
+                <p className="text-text-muted text-xs mt-1 leading-normal">{recoveryMessage}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRecoveryMessage(null)}
+                className="ml-auto text-text-muted hover:text-accent-text text-xs"
+                aria-label="Cerrar mensaje"
+              >
+                ×
+              </button>
+            </div>
+          )}
+
+          {recoveryError && (
+            <div data-testid="recovery-banner-error" className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-sm mb-6 flex items-start gap-3 font-sans">
+              <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-amber-500 font-mono font-bold text-xs uppercase tracking-wide">No se pudo recuperar</h4>
+                <p className="text-text-muted text-xs mt-1 leading-normal">{recoveryError}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRecoveryError(null)}
+                className="ml-auto text-text-muted hover:text-accent-text text-xs"
+                aria-label="Cerrar mensaje"
+              >
+                ×
+              </button>
+            </div>
+          )}
 
           {orderError && (
             <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-sm mb-6 flex items-start gap-3 font-sans">

@@ -28,13 +28,13 @@ export const trackEvent = {
   viewItem: (product: Product) => {
     pushEvent('view_item', {
       currency: 'EUR',
-      value: (product.salePrice || product.price) / 100,
+      value: (product.salePrice || product.price),
       items: [{
         item_id: String(product.id),
         item_name: product.name,
         item_brand: product.brand,
         item_category: product.category,
-        price: (product.salePrice || product.price) / 100,
+        price: (product.salePrice || product.price),
         item_variant: product.sku,
       }],
     });
@@ -43,12 +43,12 @@ export const trackEvent = {
   addToCart: (product: Product, quantity: number) => {
     pushEvent('add_to_cart', {
       currency: 'EUR',
-      value: ((product.salePrice || product.price) / 100) * quantity,
+      value: (product.salePrice || product.price) * quantity,
       items: [{
         item_id: String(product.id),
         item_name: product.name,
         item_brand: product.brand,
-        price: (product.salePrice || product.price) / 100,
+        price: (product.salePrice || product.price),
         quantity,
       }],
     });
@@ -60,7 +60,7 @@ export const trackEvent = {
       items: [{
         item_id: String(product.id),
         item_name: product.name,
-        price: (product.salePrice || product.price) / 100,
+        price: (product.salePrice || product.price),
         quantity,
       }],
     });
@@ -85,14 +85,16 @@ export const trackEvent = {
   beginCheckoutEventId: undefined as string | undefined,
 
   purchase: (orderId: string, items: { product: Product; quantity: number }[], value: number) => {
+    const eventId = (typeof crypto !== 'undefined' && 'randomUUID' in crypto) ? crypto.randomUUID() : `${Date.now()}_${Math.random()}`;
     pushEvent('purchase', {
+      event_id: eventId,
       transaction_id: orderId,
       currency: 'EUR',
       value,
       items: items.map((it) => ({
         item_id: String(it.product.id),
         item_name: it.product.name,
-        price: (it.product.salePrice || it.product.price) / 100,
+        price: (it.product.salePrice || it.product.price),
         quantity: it.quantity,
       })),
     });

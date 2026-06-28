@@ -83,7 +83,7 @@ FOR UPDATE SKIP LOCKED
 - Disclaimer: cupón aplicable (24h: -5%, 72h: -10%)
 
 **Frontend:**
-- `/carrito?recover=TOKEN` — auto-añade productos del snapshot, muestra mensaje "Carrito recuperado"
+- `/checkout?recover=TOKEN` — auto-añade productos del snapshot, muestra mensaje "Carrito recuperado"
 
 ---
 

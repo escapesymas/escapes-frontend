@@ -5272,6 +5272,41 @@ app.post('/api/cart', async (req: any, res: any) => {
       console.error('[CART ABANDONED TRACK ERROR]:', abandonedErr.message);
     }
 
+    try {
+      const { sendServerSideEvent } = await import('./lib/server-tracking.js');
+      const safeItemsForTrack = Array.isArray(items) ? items.filter((it: any) => it && (it.id || it.product_id)) : [];
+      const safeEmailForTrack = (userEmail && userEmail !== 'undefined' && userEmail.includes('@')) ? userEmail : undefined;
+      if (safeItemsForTrack.length > 0 && safeEmailForTrack) {
+        const itemForEvent = safeItemsForTrack[safeItemsForTrack.length - 1] as any;
+        const itemCents = typeof itemForEvent.price === 'number' ? itemForEvent.price : (parseInt(itemForEvent.price) || 0);
+        const itemQty = parseInt(itemForEvent.quantity) || 1;
+        const itemProductId = itemForEvent.id || itemForEvent.product_id;
+        const cartTotalCents = safeItemsForTrack.reduce((acc: number, it: any) => {
+          const cents = typeof it.price === 'number' ? it.price : (parseInt(it.price) || 0);
+          const qty = parseInt(it.quantity) || 1;
+          return acc + cents * qty;
+        }, 0);
+        await sendServerSideEvent({
+          eventName: 'add_to_cart',
+          eventId: `add_to_cart_${safeEmailForTrack}_${itemProductId}_${Date.now()}`,
+          userEmail: safeEmailForTrack,
+          userAgent: req.headers['user-agent'] as string,
+          clientIp: req.ip,
+          payload: {
+            currency: 'EUR',
+            value: cartTotalCents / 100,
+            content_ids: [String(itemProductId)],
+            content_type: 'product',
+            content_name: itemForEvent.name || itemForEvent.title || '',
+            content_price: itemCents / 100,
+            quantity: itemQty,
+          },
+        });
+      }
+    } catch (trackErr: any) {
+      console.error('[CART ADD SERVER TRACKING ERROR]:', trackErr.message);
+    }
+
     return res.json({ success: true });
   } catch (e: any) {
     console.error('[CART SAVE ERROR]:', e);
@@ -5297,12 +5332,25 @@ app.get('/api/cart/recover/:token', async (req: any, res: any) => {
     }
 
     const row = result.rows[0] as any;
+    const wasAlreadyRecovered = row.recovered_at !== null;
+
+    if (wasAlreadyRecovered) {
+      await db.execute(sql`
+        UPDATE cart_abandoned_emails
+        SET recovered_at = NULL,
+            emails_sent = 0,
+            last_emailed_at = NULL,
+            last_activity_at = NOW()
+        WHERE id = ${row.id}
+      `);
+    }
+
     res.json({
       email: row.user_email,
       cart: row.cart_snapshot,
       total_cents: row.cart_total_cents,
       discount_cents: row.discount_cents,
-      already_recovered: row.recovered_at !== null,
+      already_recovered: wasAlreadyRecovered,
       recovery_token: token,
     });
   } catch (err: any) {
