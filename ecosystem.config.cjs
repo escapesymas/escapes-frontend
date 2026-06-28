@@ -15,7 +15,7 @@ module.exports = {
         NODE_ENV: 'production',
         PORT: 3001,
         DATABASE_URL: 'postgresql://postgres:EscapesPostgres2026Vercel@localhost:5432/escapes_db',
-        STRIPE_SECRET_KEY: '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',
+        STRIPE_SECRET_KEY: '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',
         STRIPE_TEST_SECRET_KEY: 'sk_test_51TXr6bPhkRo6LHVF8D6EulnAXr8aMCnl9lVfqZBPxQ0vTtwIJ26OaSLBFF1AtcB5AJ37G0sYNuk9CR2hQ7R5gMQP00N9kexbMD',
         WP_URL: 'https://backendescapes.com',
         WOO_KEY: 'ck_d0f72f0bf56e8e3f459dfe648a8d33cd531be4b4',

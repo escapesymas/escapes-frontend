@@ -11,7 +11,7 @@ module.exports = {
       NODE_ENV: 'production',
       PORT: 3001,
       DATABASE_URL: 'postgresql://postgres:EscapesPostgres2026Vercel@localhost:5432/escapes_db',
-      STRIPE_SECRET_KEY: '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',
+      STRIPE_SECRET_KEY: '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',
       STRIPE_WEBHOOK_SECRET: 'whsec_bGl2ZV9uVENyTmZ1UFkzUWdOOWlhUjVTdGJtQXlPd2ZOSXRqYVozd2NsQ3BWQTVEQVhtM2gzclhxN0VFbjFQNnFhcg',
       WP_URL: 'https://backendescapes.com',
       BIHR_USERNAME: 'info@escapesymas.com',
