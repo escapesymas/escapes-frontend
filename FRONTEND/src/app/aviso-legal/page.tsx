@@ -1,7 +1,6 @@
 'use client';
 
 import Header from '../../components/Header';
-import Footer from '../../components/Footer';
 import Head from 'next/head';
 
 export default function AvisoLegalPage() {
@@ -65,7 +64,6 @@ export default function AvisoLegalPage() {
           </section>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

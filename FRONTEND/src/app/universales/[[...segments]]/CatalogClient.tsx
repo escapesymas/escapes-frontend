@@ -60,6 +60,10 @@ function CatalogContent({
 }) {
   const { addToCart } = useCart();
   const [selectedBike, setSelectedBike] = useState<string>('');
+  const [products, setProducts] = useState<Product[]>(initialProducts?.products || []);
+  const [productsTotal, setProductsTotal] = useState<number>(initialSearchTotal);
+  const [productsTotalPages, setProductsTotalPages] = useState<number>(initialSearchTotalPages);
+  const [isProductsLoading, setIsProductsLoading] = useState(false);
 
   const categories = initialCategories;
   const filterOptions = initialFilterOptions;
@@ -86,10 +90,9 @@ function CatalogContent({
   }, [selectedSubId, categories]);
 
   const isCategoriesLoading = false;
-  const searchResults = initialProducts?.products || [];
-  const searchTotal = initialSearchTotal;
-  const searchTotalPages = initialSearchTotalPages;
-  const isProductsLoading = false;
+  const searchResults = products;
+  const searchTotal = productsTotal;
+  const searchTotalPages = productsTotalPages;
 
   const getSearchParam = (key: string): string => {
     const p = new URLSearchParams(initialSearchParamsStr);
@@ -118,6 +121,53 @@ function CatalogContent({
     const active = localStorage.getItem('tg_selected_bike');
     if (active) setSelectedBike(active);
   }, []);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    const loadProducts = async () => {
+      setIsProductsLoading(true);
+      try {
+        const paramsObj: Record<string, string> = { universal: 'true', per_page: '24' };
+        const page = Number(getSearchParam('page')) || 1;
+        paramsObj.page = String(page);
+        const q = searchQuery || getSearchParam('q');
+        if (q) paramsObj.search = q;
+        const catId = selectedSubId || selectedParentId;
+        if (catId) paramsObj.category_id = String(catId);
+        const brands = getSearchParam('brands');
+        if (brands) paramsObj.brand = brands;
+        const maxPrice = getSearchParam('maxPrice');
+        if (maxPrice) paramsObj.max_price = maxPrice;
+        if (getSearchParam('inStock') === '1') paramsObj.in_stock = '1';
+        const attrs = getSearchParam('attrs');
+        if (attrs) paramsObj.attrs = attrs;
+
+        const qs = new URLSearchParams(paramsObj).toString();
+        const res = await fetch(`/api/catalog/products?${qs}`, { signal: ctrl.signal });
+        if (!res.ok) {
+          setProducts([]);
+          setProductsTotal(0);
+          setProductsTotalPages(0);
+          return;
+        }
+        const data = await res.json();
+        setProducts(Array.isArray(data) ? data : (data.products || []));
+        const total = Number(res.headers.get('X-WP-Total') || data.total || 0);
+        const totalPages = Number(res.headers.get('X-WP-TotalPages') || data.totalPages || 0);
+        setProductsTotal(total);
+        setProductsTotalPages(totalPages);
+      } catch (e: any) {
+        if (e?.name !== 'AbortError') {
+          console.error('[CATALOG] Failed to load products:', e?.message);
+        }
+      } finally {
+        setIsProductsLoading(false);
+      }
+    };
+    loadProducts();
+    return () => ctrl.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [segments.join('/'), selectedParentId, selectedSubId, searchQuery, initialSearchParamsStr]);
 
   const basePath = useMemo(() => {
     if (segments.length === 0) return '/universales';
