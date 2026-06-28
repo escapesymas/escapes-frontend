@@ -1278,7 +1278,7 @@ app.get('/api/vehicles', async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 const adminLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 60,
+  max: 600,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Demasiadas acciones administrativas. Inténtalo más tarde.' }

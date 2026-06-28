@@ -1,7 +1,6 @@
 'use client';
 
 import Header from '../../components/Header';
-import Footer from '../../components/Footer';
 
 export default function PoliticaCookiesPage() {
   return (
@@ -94,7 +93,6 @@ export default function PoliticaCookiesPage() {
           <p className="text-foreground/60 italic mt-8">Última actualización: junio de 2026.</p>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

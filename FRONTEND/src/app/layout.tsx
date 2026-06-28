@@ -8,6 +8,7 @@ import SchemaMarkup from "../components/SchemaMarkup";
 import ServiceWorkerRegistration from "../components/ServiceWorkerRegistration";
 import CookieBanner from "../components/CookieBanner";
 import ChatWidget from "../components/ChatWidget";
+import Footer from "../components/Footer";
 import { GtmScript, GtmNoScript } from "../lib/analytics";
 
 const geistSans = Geist({
@@ -86,21 +87,24 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">
+<body className="min-h-full flex flex-col">
         <GtmScript />
         <GtmNoScript />
         <SchemaMarkup />
         <ServiceWorkerRegistration />
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:bg-accent focus:text-slate-950 focus:px-4 focus:py-2 focus:rounded focus:font-mono focus:font-bold focus:text-xs focus:uppercase focus:tracking-wider"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:bg-accent focus:text-slate-950 focus:px-4 focus:py-2 focus:rounded focus:font-mono focus:bold text-xs focus:uppercase focus:tracking-wider"
         >
           Saltar al contenido principal
         </a>
         <AuthProvider>
           <ToastProvider>
             <CartProvider>
-              {children}
+              <div className="flex-1 flex flex-col">
+                {children}
+              </div>
+              <Footer />
               <CookieBanner />
               <ChatWidget />
             </CartProvider>

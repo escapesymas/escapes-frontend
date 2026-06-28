@@ -15,7 +15,6 @@ import Header from '../../../components/Header';
 import ProductImage from '../../../components/ProductImage';
 import ProductDetailSkeleton from '../../../components/ProductDetailSkeleton';
 import NotifyMeModal from '../../../components/NotifyMeModal';
-import Footer from '../../../components/Footer';
 import ProductReviews from '../../../components/ProductReviews';
 
 export default function ProductDetailClient({ slug, initialProduct }: { slug: string; initialProduct?: Product | null }) {
@@ -713,7 +712,6 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
           productId={product?.id || 0}
         />
       </main>
-      <Footer />
     </div>
   );
 }
