@@ -2,19 +2,19 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { ShoppingCart, Bike } from 'lucide-react';
+import { ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 
 interface HeaderProps {
   selectedBike?: string;
-  onOpenBikeSelector: () => void;
+  onOpenBikeSelector?: () => void;
   onCartClick: () => void;
   onTabChange?: (tab: string) => void;
 }
 
-export default function Header({ selectedBike, onOpenBikeSelector, onCartClick, onTabChange }: HeaderProps) {
+export default function Header({ onCartClick, onTabChange }: HeaderProps) {
   const { cartCount } = useCart();
   const { user, isAuthenticated } = useAuth();
 
@@ -23,29 +23,22 @@ export default function Header({ selectedBike, onOpenBikeSelector, onCartClick, 
       <header className="sticky top-0 z-40 w-full bg-background/80 backdrop-blur-md border-b border-card-border">
         <div className="container mx-auto px-4 md:px-6 h-14 flex items-center justify-between gap-3">
 
-        {/* IZQUIERDA: Selector de Moto */}
-        <button
-          onClick={onOpenBikeSelector}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-sm border text-[10px] font-mono font-bold uppercase transition-all shrink-0 ${
-            selectedBike
-              ? 'bg-badge text-badge-text border-badge-border'
-              : 'bg-card border-card-border text-text-muted hover:text-foreground hover:bg-select-bg'
-          }`}
-        >
-          <Bike className="w-3.5 h-3.5 shrink-0" />
-          <span className="max-w-[110px] truncate">
-            {selectedBike ? selectedBike : 'Mi Moto'}
-          </span>
-        </button>
+        {/* IZQUIERDA: placeholder vacío para mantener logo centrado */}
+        <div className="w-9 h-9 shrink-0 md:w-10 md:h-10" aria-hidden="true" />
 
-        {/* CENTRO: Logo */}
-        <Link href="/" className="absolute left-1/2 -translate-x-1/2 h-11 shrink-0">
+        {/* CENTRO: Logo (acceso directo a home) */}
+        <Link
+          href="/"
+          aria-label="Escapes y Más — Inicio"
+          className="absolute left-1/2 -translate-x-1/2 h-11 shrink-0"
+        >
           {/* Logo para tema claro (letras negras + amarillo) */}
             <Image
               src="/logo-cabecera-negro.svg"
               alt="Escapes y Más"
               width={150}
               height={48}
+              priority
               className="h-full w-auto object-contain block dark:hidden"
             />
           {/* Logo para tema oscuro (letras blancas + amarillo) */}
@@ -54,6 +47,7 @@ export default function Header({ selectedBike, onOpenBikeSelector, onCartClick, 
               alt="Escapes y Más"
               width={150}
               height={48}
+              priority
               className="h-full w-auto object-contain hidden dark:block"
             />
         </Link>

@@ -476,6 +476,7 @@ export default function Home() {
       <BottomNav
         activeTab={activeTab}
         onTabChange={(tab) => setActiveTab(tab)}
+        selectedBike={selectedBike}
       />
 
       <NotifyMeModal

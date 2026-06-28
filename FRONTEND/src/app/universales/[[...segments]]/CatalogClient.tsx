@@ -647,6 +647,7 @@ function CatalogContent({
       <BottomNav
         activeTab="shop"
         onTabChange={(tab) => navigate(`/?tab=${tab}`)}
+        selectedBike={selectedBike}
       />
 
       <NotifyMeModal

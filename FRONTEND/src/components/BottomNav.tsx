@@ -8,15 +8,16 @@ import { useAuth } from '../context/AuthContext';
 interface BottomNavProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  selectedBike?: string;
 }
 
-export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
+export default function BottomNav({ activeTab, onTabChange, selectedBike }: BottomNavProps) {
   const { user, isAuthenticated } = useAuth();
 
   const navItems = [
     { id: 'shop', label: 'Tienda', icon: ShoppingBag },
     { id: 'catalog', label: 'Catálogo', icon: Library, href: '/universales' as const },
-    { id: 'garage', label: 'Mi Moto', icon: Bike },
+    { id: 'garage', label: selectedBike ? truncateForNav(selectedBike) : 'Mi Moto', icon: Bike },
     // { id: 'paddock', label: 'Paddock', icon: MessageSquare },
   ];
 
@@ -32,26 +33,32 @@ export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
+          const hasBikeSelected = item.id === 'garage' && !!selectedBike;
           const content = (
             <>
               <div
                 className={`p-1.5 rounded-md transition-all duration-300 ${
                   isActive
                     ? 'bg-accent/10 text-accent-text scale-110'
+                    : hasBikeSelected
+                    ? 'text-accent-text'
                     : 'text-text-muted hover:text-foreground'
                 }`}
               >
                 <Icon className="w-5 h-5" />
               </div>
               <span
-                className={`text-[9px] font-mono uppercase tracking-wider transition-colors mt-0.5 ${
-                  isActive ? 'text-accent-text font-bold' : 'text-text-muted'
+                title={hasBikeSelected ? selectedBike : undefined}
+                className={`text-[9px] font-mono uppercase tracking-wider transition-colors mt-0.5 max-w-[90px] truncate ${
+                  isActive ? 'text-accent-text font-bold' : hasBikeSelected ? 'text-accent-text font-bold' : 'text-text-muted'
                 }`}
               >
                 {item.label}
               </span>
-              {isActive && (
-                <span className="absolute bottom-0 w-8 h-[2px] bg-accent rounded-t-full shadow-[0_-2px_4px_rgba(250,204,21,0.5)]" />
+              {(isActive || hasBikeSelected) && (
+                <span className={`absolute bottom-0 w-8 h-[2px] rounded-t-full shadow-[0_-2px_4px_rgba(250,204,21,0.5)] ${
+                  hasBikeSelected && !isActive ? 'bg-accent/60' : 'bg-accent'
+                }`} />
               )}
             </>
           );
@@ -141,7 +148,13 @@ export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
           </Link>
         )}
       </div>
-    </nav>
-  </>
+</nav>
+    </>
   );
+}
+
+function truncateForNav(bike: string): string {
+  const max = 14;
+  if (bike.length <= max) return bike.toUpperCase();
+  return bike.slice(0, max - 1).trimEnd() + '…';
 }
