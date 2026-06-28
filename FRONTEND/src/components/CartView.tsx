@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps, @next/next/no-img-element, @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
-import { Trash2, Plus, Minus, ShoppingBag, Truck, ArrowLeft, ArrowRight, AlertCircle, RotateCcw, Loader2, Package, ShieldCheck } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag, Truck, ArrowLeft, ArrowRight, AlertCircle, RotateCcw, Loader2, Package, ShieldCheck, Lock, Repeat } from 'lucide-react';
 import { useCart, CartItem } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import Link from 'next/link';
@@ -58,6 +58,7 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
   const [shippingData, setShippingData] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
+    email: user?.email || '',
     address1: user?.billing?.address_1 || '',
     city: user?.billing?.city || '',
     postcode: user?.billing?.postcode || '',
@@ -88,6 +89,7 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
       setShippingData({
         firstName: user.firstName || '',
         lastName: user.lastName || '',
+        email: user.email || '',
         address1: firstAddr.address_1,
         city: firstAddr.city,
         postcode: firstAddr.postcode,
@@ -99,6 +101,7 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
       setShippingData({
         firstName: user.firstName || '',
         lastName: user.lastName || '',
+        email: user.email || '',
         address1: user.billing?.address_1 || '',
         city: user.billing?.city || '',
         postcode: user.billing?.postcode || '',
@@ -311,13 +314,18 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
       setIsSubmittingOrder(false);
       return;
     }
+    if (!user && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(shippingData.email)) {
+      setOrderError('Introduce un email válido para enviarte la confirmación y la factura.');
+      setIsSubmittingOrder(false);
+      return;
+    }
 
     try {
       const res = await fetch('/api/orders/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userEmail: user?.email || 'guest@escapesymas.com',
+          userEmail: user?.email || shippingData.email,
           cart: cart.map((item) => ({ id: item.id, quantity: item.quantity })),
           shippingData,
           paymentMethod: 'stripe',
@@ -409,6 +417,7 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
                       setShippingData({
                         firstName: user.firstName || '',
                         lastName: user.lastName || '',
+                        email: user.email || '',
                         address1: addr.address_1,
                         city: addr.city,
                         postcode: addr.postcode,
@@ -439,6 +448,7 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
                     setShippingData({
                       firstName: '',
                       lastName: '',
+                      email: '',
                       address1: '',
                       city: '',
                       postcode: '',
@@ -546,6 +556,22 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
                 />
               </div>
             </div>
+
+            {!user && (
+              <div className="mt-4">
+                <label className="block text-[10px] font-mono font-bold text-text-muted uppercase mb-1">
+                  Email (para confirmación y factura)
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={shippingData.email}
+                  onChange={(e) => setShippingData({ ...shippingData, email: e.target.value })}
+                  placeholder="tu@email.com"
+                  className="w-full bg-background border border-card-border rounded px-3 py-2 text-sm text-foreground placeholder:text-text-muted focus:outline-none focus:border-accent"
+                />
+              </div>
+            )}
 
             <div className="border-t border-card-border pt-4 mt-6">
               <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-foreground mb-4">Resumen de Pago</h3>
@@ -692,30 +718,56 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
               </div>
 
               {/* Trust Section */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-card border border-card-border p-4 rounded flex items-start gap-4">
-                  <div className="bg-background p-2 rounded border border-card-border">
-                    <ShieldCheck className="w-5 h-5 text-emerald-500" />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-card border border-card-border p-3 rounded flex items-start gap-3">
+                  <div className="bg-background p-2 rounded border border-card-border shrink-0">
+                    <ShieldCheck className="w-4 h-4 text-emerald-500" />
                   </div>
                   <div>
                     <h4 className="text-[10px] font-mono font-bold uppercase tracking-wider text-foreground">
                       Garantía Oficial
                     </h4>
-                    <p className="text-[10px] text-text-muted">
-                      Recambios originales y marcas premium directas del fabricante.
+                    <p className="text-[9px] text-text-muted leading-tight mt-0.5">
+                      Recambios originales del fabricante.
                     </p>
                   </div>
                 </div>
-                <div className="bg-card border border-card-border p-4 rounded flex items-start gap-4">
-                  <div className="bg-background p-2 rounded border border-card-border">
-                    <Truck className="w-5 h-5 text-accent" />
+                <div className="bg-card border border-card-border p-3 rounded flex items-start gap-3">
+                  <div className="bg-background p-2 rounded border border-card-border shrink-0">
+                    <Truck className="w-4 h-4 text-accent" />
                   </div>
                   <div>
                     <h4 className="text-[10px] font-mono font-bold uppercase tracking-wider text-foreground">
-                      Envío Preferente
+                      Envío 24-72h
                     </h4>
-                    <p className="text-[10px] text-text-muted">
-                      Sigue tu pedido en tiempo real desde que sale de nuestro almacén.
+                    <p className="text-[9px] text-text-muted leading-tight mt-0.5">
+                      Desde nuestro almacén a tu puerta.
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-card border border-card-border p-3 rounded flex items-start gap-3">
+                  <div className="bg-background p-2 rounded border border-card-border shrink-0">
+                    <Repeat className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <div>
+                    <h4 className="text-[10px] font-mono font-bold uppercase tracking-wider text-foreground">
+                      Devolución 14 días
+                    </h4>
+                    <p className="text-[9px] text-text-muted leading-tight mt-0.5">
+                      Sin preguntas. Reembolso íntegro.
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-card border border-card-border p-3 rounded flex items-start gap-3">
+                  <div className="bg-background p-2 rounded border border-card-border shrink-0">
+                    <Lock className="w-4 h-4 text-amber-500" />
+                  </div>
+                  <div>
+                    <h4 className="text-[10px] font-mono font-bold uppercase tracking-wider text-foreground">
+                      Pago seguro SSL
+                    </h4>
+                    <p className="text-[9px] text-text-muted leading-tight mt-0.5">
+                      Cifrado 256-bit vía Stripe.
                     </p>
                   </div>
                 </div>
