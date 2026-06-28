@@ -7,7 +7,7 @@ import { ShoppingBag, ArrowLeft } from 'lucide-react';
 import { Product } from '../types';
 
 interface EmptyCartViewProps {
-  onContinueShopping: () => void;
+  onContinueShopping?: () => void;
   recommended: Product[];
   loadingRecs: boolean;
   addToCart: (product: Product, quantity?: number) => void;
@@ -26,7 +26,7 @@ export default function EmptyCartView({ onContinueShopping, recommended, loading
       </p>
 
       <button
-        onClick={onContinueShopping}
+        onClick={() => onContinueShopping?.()}
         className="bg-accent text-slate-950 font-mono font-bold uppercase tracking-wide py-3 px-8 rounded-sm hover:bg-accent-hover transition-colors flex items-center gap-2 cursor-pointer mb-12"
       >
         <ArrowLeft className="w-4 h-4" /> Volver a la tienda

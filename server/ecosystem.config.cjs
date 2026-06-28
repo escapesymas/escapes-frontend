@@ -12,10 +12,12 @@ module.exports = {
       PORT: 3001,
       DATABASE_URL: 'postgresql://postgres:EscapesPostgres2026Vercel@localhost:5432/escapes_db',
       STRIPE_SECRET_KEY: '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',
+      STRIPE_WEBHOOK_SECRET: 'whsec_bGl2ZV9uVENyTmZ1UFkzUWdOOWlhUjVTdGJtQXlPd2ZOSXRqYVozd2NsQ3BWQTVEQVhtM2gzclhxN0VFbjFQNnFhcg',
       WP_URL: 'https://backendescapes.com',
       BIHR_USERNAME: 'info@escapesymas.com',
       BIHR_MACKEY: '3799B392-3934-4514-ABF0-9EF7F544A117',
-      BIHR_API_BASE: 'https://api.bihr.net'
+      BIHR_API_BASE: 'https://api.bihr.net',
+      MINIMAX_API_KEY: 'sk-cp-IjvomnJ7PdDWM6F8zzGJtLIHiL-l3d-CnDAOwhoxpV3cRU7cFWB2qnAlOcIgpGmAcMezcyZhN-nF8Qq88N_6CCdkTw1M8j094Dlwapy7CEypGXnhXNmRVyk'
     }
   }]
 };

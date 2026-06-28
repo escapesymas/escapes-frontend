@@ -24,7 +24,8 @@ const stripePromise = loadStripe(
 );
 
 interface CartViewProps {
-  onContinueShopping: () => void;
+  onContinueShopping?: () => void;
+  initialStep?: 'cart' | 'checkout';
 }
 
 interface SavedAddress {
@@ -38,7 +39,7 @@ interface SavedAddress {
   nif?: string;
 }
 
-export default function CartView({ onContinueShopping }: CartViewProps) {
+export default function CartView({ onContinueShopping, initialStep = 'cart' }: CartViewProps) {
   const { cart, updateQuantity, removeItem, clearCart, addToCart } = useCart();
   const { user, isAuthenticated } = useAuth();
 
@@ -56,7 +57,7 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
   const [loadingRecs, setLoadingRecs] = useState(false);
 
   // Checkout form state
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(initialStep === 'checkout');
   const [selectedAddressId, setSelectedAddressId] = useState<string>('');
   const [shippingData, setShippingData] = useState({
     firstName: user?.firstName || '',
@@ -123,6 +124,14 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
   };
   syncProfile();
 }, [user]);
+
+  // Guard: si llegamos a /checkout con carrito vacío, redirigir a /
+  useEffect(() => {
+    if (initialStep !== 'checkout') return;
+    if (!cart || cart.length === 0) {
+      window.location.href = '/?emptyCart=1';
+    }
+  }, [initialStep, cart]);
 
   // Carrito abandonado: si la URL trae ?recover=TOKEN, restaurar productos del snapshot
   useEffect(() => {
@@ -191,6 +200,7 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
       const { paymentIntentId, redirectStatus, orderId } = JSON.parse(redirectResult);
       if (redirectStatus === 'succeeded' && orderId) {
         await finalizeStripeOrder(orderId, paymentIntentId);
+        trackEvent.clearBeginCheckoutEventId();
       } else {
         setOrderError('El pago no se completó. Ha sido cancelado o rechazado por el banco.');
         setShowPaymentModal(false);
@@ -216,6 +226,7 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
       if (finalizeRes.ok) {
         setCompletedOrder({ orderId, total: 0 });
         clearCart();
+        trackEvent.clearBeginCheckoutEventId();
         setShowPaymentModal(false);
       } else {
         const errData = await finalizeRes.json();
@@ -419,7 +430,7 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
           amount: orderData.total,
           currency: 'EUR',
           customerEmail: user?.email || undefined,
-          eventId: trackEvent.beginCheckoutEventId,
+          eventId: trackEvent.getBeginCheckoutEventId(),
         })
       });
 
@@ -468,7 +479,7 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
     <div className="animate-fade-in font-sans">
       {isCheckingOut ? (
         // Checkout simulator drawer
-        <div className="max-w-2xl mx-auto bg-card border border-card-border p-6 md:p-8 rounded shadow-xl">
+        <div data-testid="checkout-form" className="max-w-2xl mx-auto bg-card border border-card-border p-6 md:p-8 rounded shadow-xl">
           <button
             onClick={() => setIsCheckingOut(false)}
             className="text-text-muted hover:text-foreground text-xs font-mono font-bold uppercase tracking-widest transition-colors flex items-center gap-2 mb-6 cursor-pointer"

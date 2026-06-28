@@ -1,3 +1,19 @@
+import 'dotenv/config';
+import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { sql } from 'drizzle-orm';
+
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  console.warn('[SERVER TRACKING] DATABASE_URL not set — dedup disabled');
+}
+
+const pool = connectionString
+  ? new Pool({ connectionString, max: 2 })
+  : null as any;
+
+const db = pool ? drizzle(pool) : null;
+
 interface ServerEvent {
   eventName: string;
   eventId: string;
@@ -50,8 +66,44 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 2, baseMs = 500): Pr
   return null;
 }
 
+/**
+ * Marca un event_id como procesado atómicamente para una plataforma.
+ * Devuelve true si es nuevo (se debe enviar), false si ya fue procesado (skip).
+ *
+ * Usa INSERT ... ON CONFLICT DO NOTHING con UNIQUE(event_id, platform).
+ * Si la BD falla, retorna true (fail-open) para no bloquear el tracking —
+ * el coste de un evento duplicado es menor que perder tracking completamente.
+ */
+export async function markEventProcessed(
+  eventId: string,
+  platform: 'meta' | 'ga4',
+  eventName: string
+): Promise<boolean> {
+  if (!db) {
+    return true;
+  }
+  try {
+    const result = await db.execute(sql`
+      INSERT INTO processed_events (event_id, platform, event_name)
+      VALUES (${eventId}, ${platform}, ${eventName})
+      ON CONFLICT (event_id, platform) DO NOTHING
+      RETURNING id
+    `);
+    return result.rows.length > 0;
+  } catch (err: any) {
+    console.error('[DEDUPE ERROR]:', err?.message);
+    return true;
+  }
+}
+
 export async function sendMetaEvent(event: ServerEvent): Promise<boolean> {
   if (!META) return false;
+
+  const alreadyProcessed = !(await markEventProcessed(event.eventId, 'meta', event.eventName));
+  if (alreadyProcessed) {
+    console.log(`[DEDUPE] Meta event ${event.eventId} (${event.eventName}) already processed, skipping`);
+    return false;
+  }
 
   const url = `https://graph.facebook.com/v18.0/${META.pixelId}/events`;
   const userData: Record<string, any> = {
@@ -64,11 +116,7 @@ export async function sendMetaEvent(event: ServerEvent): Promise<boolean> {
 
   const customData: Record<string, any> = {};
   for (const [k, v] of Object.entries(event.payload)) {
-    if (k === 'currency' || k === 'value' || k.startsWith('content_')) {
-      customData[k] = v;
-    } else {
-      customData[k] = v;
-    }
+    customData[k] = v;
   }
 
   const body = {
@@ -89,6 +137,7 @@ export async function sendMetaEvent(event: ServerEvent): Promise<boolean> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(5000),
     });
     if (!r.ok) throw new Error(`Meta API ${r.status}: ${await r.text()}`);
     return true;
@@ -99,11 +148,13 @@ export async function sendMetaEvent(event: ServerEvent): Promise<boolean> {
 export async function sendGA4Event(event: ServerEvent): Promise<boolean> {
   if (!GA4) return false;
 
+  const alreadyProcessed = !(await markEventProcessed(event.eventId, 'ga4', event.eventName));
+  if (alreadyProcessed) {
+    console.log(`[DEDUPE] GA4 event ${event.eventId} (${event.eventName}) already processed, skipping`);
+    return false;
+  }
+
   const url = `https://www.google-analytics.com/mp/collect?measurement_id=${GA4.measurementId}&api_secret=${GA4.apiSecret}`;
-  const params: Record<string, any> = {
-    engagement_time_msec: 1,
-  };
-  if (event.userEmail) params.user_id = event.userEmail;
 
   const body = {
     client_id: event.clientIp || '0.0.0.0',
@@ -123,6 +174,7 @@ export async function sendGA4Event(event: ServerEvent): Promise<boolean> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(5000),
     });
     if (!r.ok) throw new Error(`GA4 API ${r.status}`);
     return true;
