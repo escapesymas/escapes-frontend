@@ -53,18 +53,41 @@ jobs:
         working-directory: FRONTEND
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Run backend migrations + seed test data
+      - name: Run backend schema + migrations + seed test data
         working-directory: FRONTEND
         env:
           E2E_DATABASE_URL: postgresql://postgres:E2EdbPass123!@localhost:5432/escapes_db
         run: |
-          PGPASSWORD=E2EdbPass123! psql -h localhost -U postgres -d escapes_db -f ../.gstack/plans/sql/reviews-migration.sql || true
-          PGPASSWORD=E2EdbPass123! psql -h localhost -U postgres -d escapes_db -c "INSERT INTO products (sku, name, brand, price, stock, status, images, attributes, created_at, updated_at) VALUES ('E2E-001', 'Filtro aire E2E', 'E2E', 1999, 50, 'published', '[]'::jsonb, '{}'::jsonb, NOW(), NOW()) ON CONFLICT (sku) DO NOTHING;"
-          PGPASSWORD=E2EdbPass123! psql -h localhost -U postgres -d escapes_db -c "INSERT INTO products (sku, name, brand, price, stock, status, images, attributes, created_at, updated_at) VALUES ('E2E-002', 'Pastillas freno E2E', 'E2E', 4598, 20, 'published', '[]'::jsonb, '{}'::jsonb, NOW(), NOW()) ON CONFLICT (sku) DO NOTHING;"
+          PGPASSWORD=E2EdbPass123! psql -h localhost -U postgres -d escapes_db -f ../.gstack/plans/sql/schema-base.sql
+          PGPASSWORD=E2EdbPass123! psql -h localhost -U postgres -d escapes_db -f ../.gstack/plans/sql/reviews-migration.sql
+          PGPASSWORD=E2EdbPass123! psql -h localhost -U postgres -d escapes_db -f ../.gstack/plans/sql/cart-abandoned-migration.sql
 
       - name: Build backend
         working-directory: server
         run: pnpm install --frozen-lockfile && pnpm run build
+
+      - name: Seed test data (bcrypt user + 5 products)
+        working-directory: server
+        env:
+          E2E_DATABASE_URL: postgresql://postgres:E2EdbPass123!@localhost:5432/escapes_db
+        run: |
+          DATABASE_URL=${{ env.E2E_DATABASE_URL }} node -e "
+            const {Pool}=require('pg');
+            const bcrypt=require('bcrypt');
+            (async()=>{
+              const pool=new Pool({connectionString:process.env.DATABASE_URL});
+              const h=await bcrypt.hash('E2ETestPass123!',10);
+              await pool.query(\"DELETE FROM products WHERE sku LIKE 'E2E-%'\");
+              await pool.query(\"DELETE FROM users WHERE email='e2e-test@escapesymas.com'\");
+              await pool.query(\"INSERT INTO users (username,email,first_name,last_name,password_hash,role,billing,garage,cart,created_at,updated_at) VALUES ('e2e_test_user','e2e-test@escapesymas.com','E2E','Tester',\$1,'customer','{}','[]','{}',NOW(),NOW()) ON CONFLICT (email) DO NOTHING\",[h]);
+              const products=[['E2E-001','Filtro de aire E2E Test','E2E Brand',1999,50],['E2E-002','Pastillas de freno E2E Test','E2E Brand',4598,20],['E2E-003','Aceite motor E2E Test','E2E Brand',1199,100],['E2E-004','Casco E2E Test','E2E Brand',8999,5],['E2E-005','Escape E2E Test','E2E Brand',15999,0]];
+              for(const [sku,name,brand,price,stock] of products){
+                await pool.query(\"INSERT INTO products (sku,name,brand,price,stock,status,images,attributes,created_at,updated_at) VALUES (\$1,\$2,\$3,\$4,\$5,'published','[]'::jsonb,'{}'::jsonb,NOW(),NOW()) ON CONFLICT (sku) DO NOTHING\",[sku,name,brand,price,stock]);
+              }
+              await pool.end();
+              console.log('Seeded:',products.length,'products + 1 user');
+            })();
+          "
 
       - name: Start backend (test server)
         working-directory: server

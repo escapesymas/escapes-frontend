@@ -37,7 +37,7 @@ export default defineConfig({
     : (process.env.E2E_NO_SERVER
       ? undefined
       : {
-          command: `pnpm run start -- -p ${PORT}`,
+          command: `pnpm exec next start -p ${PORT}`,
           url: BASE_URL,
           reuseExistingServer: !process.env.CI,
           timeout: 120_000,

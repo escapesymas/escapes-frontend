@@ -3,7 +3,7 @@
 -- Ejecutar una sola vez en BD
 -- =============================================================
 
-CREATE TABLE IF NOT EXISTS reviews (
+CREATE TABLE IF NOT EXISTS product_reviews (
   id SERIAL PRIMARY KEY,
   product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
   user_email VARCHAR(255),
@@ -15,9 +15,9 @@ CREATE TABLE IF NOT EXISTS reviews (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_reviews_product_id ON reviews(product_id);
-CREATE INDEX IF NOT EXISTS idx_reviews_created_at ON reviews(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_reviews_product_rating ON reviews(product_id, rating);
+CREATE INDEX IF NOT EXISTS idx_reviews_product_id ON product_reviews(product_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_created_at ON product_reviews(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_reviews_product_rating ON product_reviews(product_id, rating);
 
 -- Vista para ratings agregados por producto (cache en query)
 CREATE OR REPLACE VIEW product_rating_stats AS
@@ -30,5 +30,5 @@ SELECT
   COUNT(*) FILTER (WHERE rating = 3) AS three_star,
   COUNT(*) FILTER (WHERE rating = 2) AS two_star,
   COUNT(*) FILTER (WHERE rating = 1) AS one_star
-FROM reviews
+FROM product_reviews
 GROUP BY product_id;
