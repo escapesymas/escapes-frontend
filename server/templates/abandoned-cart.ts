@@ -15,7 +15,7 @@ export function renderAbandonedCartEmail(
 ): { subject: string; html: string; text: string } {
   const locale = options.locale || 'es-ES';
   const siteUrl = options.siteUrl.replace(/\/$/, '');
-  const recoveryUrl = `${siteUrl}/carrito?recover=${cart.recovery_token}`;
+  const recoveryUrl = `${siteUrl}/checkout?recover=${cart.recovery_token}`;
   const discountPct = cart.discount_cents > 0 ? Math.round((cart.discount_cents / cart.cart_total_cents) * 100) : 0;
   const totalCents = Math.max(0, cart.cart_total_cents - cart.discount_cents);
   const totalFormatted = (totalCents / 100).toFixed(2);
