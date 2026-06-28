@@ -6,7 +6,7 @@ export default function ServiceWorkerRegistration() {
   useEffect(() => {
     if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
       navigator.serviceWorker
-        .register('/sw.js')
+        .register('/sw.js?v=3')
         .then((registration) => {
           console.log('[SW] Registered:', registration.scope);
         })

@@ -1,50 +1,19 @@
-const CACHE_VERSION = 2;
-const CACHE_NAME = `escapes-v${CACHE_VERSION}`;
-const STATIC_ASSETS = ['/', '/manifest.json'];
+// Minimal SW v3: clean up old broken SWs from previous deployments.
+// v1 had a cache.addAll that failed on missing icons → never installed →
+// users saw stale HTML + "Maximum call stack size exceeded".
+// v2 was network-first but didn't clean up v1 caches.
+// This v3 just unregisters everything and stops itself.
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) =>
-      Promise.all(
-        STATIC_ASSETS.map((url) =>
-          cache.add(url).catch((err) => {
-            console.warn('[SW] skip cache for', url, err.message);
-          })
-        )
-      )
-    ).then(() => self.skipWaiting())
-  );
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) =>
-      Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
-      )
-    ).then(() => self.clients.claim())
-  );
-});
-
-self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
-  const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin) return;
-  if (event.request.mode === 'navigate') return;
-
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        if (response && response.status === 200 && response.type === 'basic') {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
-          });
-        }
-        return response;
-      })
-      .catch(() => caches.match(event.request).then((cached) => cached || new Response('Offline', { status: 503 })))
+    Promise.all([
+      caches.keys().then((names) => Promise.all(names.map((n) => caches.delete(n)))),
+      self.registration.unregister(),
+    ]).then(() => self.clients.matchAll({ type: 'window' }))
+      .then((clients) => clients.forEach((c) => c.navigate(c.url)))
   );
 });

@@ -3,7 +3,7 @@ import { FilterOptions } from '../types';
 const API_BASE = '/api';
 
 async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
-  return apiFetch(`${path}`, {
+  return fetch(`${API_BASE}${path.startsWith('/') ? path : '/' + path}`, {
     credentials: 'include',
     ...init,
     headers: {
