@@ -1252,6 +1252,22 @@ const chatLimiter = rateLimit({
   message: { error: 'Has alcanzado el límite de mensajes del asistente. Espera 10 minutos.' }
 });
 
+const formsLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados envíos. Por favor, espera 15 minutos.' }
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos. Por favor, espera 15 minutos.' }
+});
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // SITEMAP ENDPOINT
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1401,10 +1417,14 @@ app.get('/api/catalog/products', catalogLimiter, async (req, res) => {
 
       const productsRes = await db.execute(sql`
         SELECT * FROM (
-          SELECT DISTINCT ON (split_part(name, ',', 1)) *
-          FROM products
+          SELECT DISTINCT ON (split_part(p.name, ',', 1))
+            p.*,
+            COALESCE(rs.avg_rating, 0) AS avg_rating,
+            COALESCE(rs.review_count, 0) AS review_count
+          FROM products p
+          LEFT JOIN product_rating_stats rs ON rs.product_id = p.id
           ${conditions}
-          ORDER BY split_part(name, ',', 1), stock DESC, id ASC
+          ORDER BY split_part(p.name, ',', 1), p.stock DESC, p.id ASC
         ) distinct_products
         ORDER BY created_at DESC
         LIMIT ${perPage} OFFSET ${offset}
@@ -1506,7 +1526,14 @@ app.get('/api/catalog/filters', async (req, res) => {
 
 app.get('/api/catalog/product/:id', async (req, res) => {
   try {
-    const result = await db.execute(sql`SELECT * FROM products WHERE id = ${parseInt(req.params.id)} AND status = 'published'`);
+    const result = await db.execute(sql`
+      SELECT p.*,
+             COALESCE(rs.avg_rating, 0) AS avg_rating,
+             COALESCE(rs.review_count, 0) AS review_count
+      FROM products p
+      LEFT JOIN product_rating_stats rs ON rs.product_id = p.id
+      WHERE p.id = ${parseInt(req.params.id)} AND p.status = 'published'
+    `);
     if (result.rows.length === 0) return res.status(404).json({ error: 'No encontrado' });
     res.json(mapProductToFrontend(result.rows[0]));
   } catch (err: any) {
@@ -1518,7 +1545,15 @@ app.get('/api/catalog/product-by-slug/:slug', async (req, res) => {
   try {
     const slug = req.params.slug;
     const sku = slug.replace(/-/g, '');
-    const result = await db.execute(sql`SELECT * FROM products WHERE sku = ${sku} AND status = 'published' LIMIT 1`);
+    const result = await db.execute(sql`
+      SELECT p.*,
+             COALESCE(rs.avg_rating, 0) AS avg_rating,
+             COALESCE(rs.review_count, 0) AS review_count
+      FROM products p
+      LEFT JOIN product_rating_stats rs ON rs.product_id = p.id
+      WHERE p.sku = ${sku} AND p.status = 'published'
+      LIMIT 1
+    `);
     if (result.rows.length === 0) return res.status(404).json({ error: 'No encontrado' });
     res.json(mapProductToFrontend(result.rows[0]));
   } catch (err: any) {
@@ -1591,6 +1626,34 @@ app.get('/api/catalog/product-compatibility/:id', async (req, res) => {
     return res.json(compatibility);
   } catch (err: any) {
     console.error('[COMPATIBILITY ERROR]:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/catalog/stock-check', async (req, res) => {
+  try {
+    const { ids } = req.query as any;
+    if (!ids) return res.status(400).json({ error: 'Falta ids' });
+    const idsList = ids.split(',').map((id: string) => parseInt(id)).filter((id: number) => !isNaN(id) && id > 0);
+    if (idsList.length === 0) return res.json({ checks: [] });
+
+    const result = await db.execute(sql`
+      SELECT id, sku, name, stock
+      FROM products
+      WHERE id IN (${sql.join(idsList.map((id: number) => sql`${id}`), sql`, `)})
+    `);
+
+    const checks = (result.rows as any[]).map((row) => ({
+      id: row.id,
+      sku: row.sku,
+      name: row.name,
+      stock: typeof row.stock === 'string' ? parseInt(row.stock) : (row.stock || 0),
+      available: (typeof row.stock === 'string' ? parseInt(row.stock) : (row.stock || 0)) > 0,
+    }));
+
+    return res.json({ checks });
+  } catch (err: any) {
+    console.error('[STOCK CHECK ERROR]:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -3938,7 +4001,7 @@ app.get('/api/auth', async (req, res) => {
   }
 });
 
-app.post('/api/auth', async (req, res) => {
+app.post('/api/auth', authLimiter, async (req, res) => {
   const { action } = req.query as any;
   const body = req.body;
 
@@ -4432,7 +4495,7 @@ app.post('/api/coupons/validate', async (req: any, res: any) => {
   }
 });
 
-app.post('/api/stock-notify', async (req: any, res: any) => {
+app.post('/api/stock-notify', formsLimiter, async (req: any, res: any) => {
   const { email, productId } = req.body;
   if (!email || !productId) {
     return res.status(400).json({ success: false, error: 'Email y productId son requeridos' });
@@ -4990,7 +5053,7 @@ app.post('/api/create-payment-intent', async (req: any, res: any) => {
   }
 });
 
-app.post('/api/contact', async (req: any, res: any) => {
+app.post('/api/contact', formsLimiter, async (req: any, res: any) => {
   const { name, email, subject, message } = req.body;
 
   console.log("[CONTACT] Received request from:", name, email);
@@ -5045,7 +5108,7 @@ app.post('/api/contact', async (req: any, res: any) => {
   }
 });
 
-app.post('/api/warranty', async (req: any, res: any) => {
+app.post('/api/warranty', formsLimiter, async (req: any, res: any) => {
   const { invoiceNumber, purchaseDate, installationDate, buyerName, email, phone, products, images } = req.body;
 
   console.log("[WARRANTY] Received request from:", buyerName, email);
@@ -5296,7 +5359,9 @@ function mapProductToFrontend(row: any) {
     volume_cm3: row.volume_cm3 || null,
     dropshipping: row.dropshipping || false, ondemand: row.ondemand || false,
     deliveryPlant: row.delivery_plant || '', commodityCode: row.commodity_code || '',
-    averageRating: 0, ratingCount: 0, source: 'postgresql'
+    averageRating: parseFloat(row.avg_rating) || 0,
+    ratingCount: parseInt(row.review_count) || 0,
+    source: 'postgresql'
   };
 }
 
