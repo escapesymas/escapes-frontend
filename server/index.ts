@@ -4934,6 +4934,19 @@ app.post('/api/orders/create', async (req: any, res: any) => {
 
     // Crear la orden en PostgreSQL con las columnas de contabilidad dedicadas
     const upperPromo = promoCode ? promoCode.trim().toUpperCase() : null;
+    if (userEmail && userEmail !== 'undefined' && userEmail.includes('@')) {
+      try {
+        await db.execute(sql`
+          UPDATE cart_abandoned_emails
+          SET recovered_at = NOW(),
+              last_activity_at = NOW()
+          WHERE user_email = ${userEmail} AND recovered_at IS NULL
+        `);
+      } catch (e: any) {
+        console.error('[MARK RECOVERED ERROR]:', e.message);
+      }
+    }
+
     const orderInsert = await db.execute(sql`
       INSERT INTO orders (user_id, total, status, shipping_data, subtotal, discount_amount, shipping_cost, promo_code)
       VALUES (${dbUserId}, ${totalCents}, 'pending', ${shippingJson}, ${subtotalCents}, ${discountCents}, ${shippingCents}, ${upperPromo})
@@ -5084,6 +5097,83 @@ app.post('/api/orders/finalize', async (req: any, res: any) => {
 });
 
 // ================================================================
+// ABANDONED CART EMAIL CRON
+// ================================================================
+import { renderAbandonedCartEmail } from './templates/abandoned-cart.js';
+
+async function processAbandonedCartEmails() {
+  try {
+    const now = Date.now();
+    const HOUR = 60 * 60 * 1000;
+    const windows = [
+      { stage: 1 as const, afterMs: 1 * HOUR, beforeMs: 24 * HOUR, discount: 0 },
+      { stage: 2 as const, afterMs: 24 * HOUR, beforeMs: 72 * HOUR, discount: 0.05 },
+      { stage: 3 as const, afterMs: 72 * HOUR, beforeMs: 168 * HOUR, discount: 0.10 },
+    ];
+
+    for (const w of windows) {
+      const after = new Date(now - w.afterMs).toISOString();
+      const before = new Date(now - w.beforeMs).toISOString();
+      const discountPct = w.discount;
+
+      const rows = await db.execute(sql`
+        SELECT id, user_email, cart_snapshot, cart_total_cents, emails_sent, recovery_token
+        FROM cart_abandoned_emails
+        WHERE recovered_at IS NULL
+          AND emails_sent = ${w.stage - 1}
+          AND last_activity_at < ${after}::timestamptz
+          AND last_activity_at >= ${before}::timestamptz
+        ORDER BY last_activity_at ASC
+        LIMIT 50
+      `);
+
+      for (const raw of rows.rows) {
+        const row = raw as any;
+        const cartTotalCents = parseInt(row.cart_total_cents) || 0;
+        const discountCents = Math.floor(cartTotalCents * discountPct);
+        try {
+          const { subject, html, text } = renderAbandonedCartEmail(
+            {
+              id: row.id,
+              user_email: row.user_email,
+              cart_snapshot: row.cart_snapshot,
+              cart_total_cents: cartTotalCents,
+              discount_cents: discountCents,
+              emails_sent: row.emails_sent,
+              last_activity_at: new Date(),
+              recovery_token: row.recovery_token,
+            },
+            {
+              siteUrl: process.env.SITE_URL || 'https://escapesymas.com',
+              stage: w.stage,
+            }
+          );
+          await sendMail(row.user_email, subject, text, html);
+          await db.execute(sql`
+            UPDATE cart_abandoned_emails
+            SET emails_sent = ${w.stage},
+                last_emailed_at = NOW(),
+                discount_cents = ${discountCents}
+            WHERE id = ${row.id}
+          `);
+          console.log(`[ABANDONED CART] Stage ${w.stage} email sent to ${row.user_email} (cart id ${row.id})`);
+        } catch (sendErr: any) {
+          console.error(`[ABANDONED CART] Failed to send stage ${w.stage} to ${row.user_email}:`, sendErr.message);
+        }
+      }
+    }
+  } catch (e: any) {
+    console.error('[ABANDONED CART CRON ERROR]:', e.message);
+  }
+}
+
+setInterval(() => {
+  processAbandonedCartEmails().catch(e => console.error('[ABANDONED CART CRON INTERVAL ERROR]:', e));
+}, 10 * 60 * 1000);
+
+processAbandonedCartEmails().catch(e => console.error('[ABANDONED CART CRON INITIAL ERROR]:', e));
+
+// ================================================================
 // PERSISTENT CART ENDPOINTS
 // ================================================================
 app.post('/api/cart', async (req: any, res: any) => {
@@ -5141,10 +5231,108 @@ app.post('/api/cart', async (req: any, res: any) => {
         VALUES (${safeUserId}, ${sessionToken}, ${itemsStr})
       `);
     }
+
+    try {
+      const safeEmail = (userEmail && userEmail !== 'undefined' && userEmail.includes('@')) ? userEmail : null;
+      const safeItems = Array.isArray(items) ? items.filter((it: any) => it && (it.id || it.product_id)) : [];
+      if (safeEmail && safeItems.length > 0) {
+        const cartTotalCents = safeItems.reduce((acc: number, it: any) => {
+          const cents = typeof it.price === 'number' ? it.price : (parseInt(it.price) || 0);
+          const qty = parseInt(it.quantity) || 1;
+          return acc + cents * qty;
+        }, 0);
+
+        const existingAbandoned = await db.execute(sql`
+          SELECT id, recovered_at FROM cart_abandoned_emails
+          WHERE user_email = ${safeEmail} AND recovered_at IS NULL
+          LIMIT 1
+        `);
+
+        if (cartTotalCents > 0) {
+          const snapshot = JSON.stringify(items);
+          if (existingAbandoned.rows.length > 0) {
+            await db.execute(sql`
+              UPDATE cart_abandoned_emails
+              SET cart_snapshot = ${snapshot}::jsonb,
+                  cart_total_cents = ${cartTotalCents},
+                  last_activity_at = NOW(),
+                  emails_sent = 0,
+                  last_emailed_at = NULL
+              WHERE id = ${(existingAbandoned.rows[0] as any).id}
+            `);
+          } else {
+            await db.execute(sql`
+              INSERT INTO cart_abandoned_emails (user_email, cart_snapshot, cart_total_cents)
+              VALUES (${safeEmail}, ${snapshot}::jsonb, ${cartTotalCents})
+            `);
+          }
+        }
+      }
+    } catch (abandonedErr: any) {
+      console.error('[CART ABANDONED TRACK ERROR]:', abandonedErr.message);
+    }
+
     return res.json({ success: true });
   } catch (e: any) {
     console.error('[CART SAVE ERROR]:', e);
     return res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/cart/recover/:token', async (req: any, res: any) => {
+  try {
+    const { token } = req.params;
+    if (!token || !/^[0-9a-f-]{36}$/i.test(token)) {
+      return res.status(400).json({ error: 'Token inválido' });
+    }
+
+    const result = await db.execute(sql`
+      SELECT id, user_email, cart_snapshot, cart_total_cents, discount_cents, recovered_at
+      FROM cart_abandoned_emails
+      WHERE recovery_token = ${token}::uuid
+    `);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Carrito no encontrado' });
+    }
+
+    const row = result.rows[0] as any;
+    res.json({
+      email: row.user_email,
+      cart: row.cart_snapshot,
+      total_cents: row.cart_total_cents,
+      discount_cents: row.discount_cents,
+      already_recovered: row.recovered_at !== null,
+      recovery_token: token,
+    });
+  } catch (err: any) {
+    console.error('[CART RECOVER GET ERROR]:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/cart/recover/:token', async (req: any, res: any) => {
+  try {
+    const { token } = req.params;
+    if (!token || !/^[0-9a-f-]{36}$/i.test(token)) {
+      return res.status(400).json({ error: 'Token inválido' });
+    }
+
+    const result = await db.execute(sql`
+      UPDATE cart_abandoned_emails
+      SET recovered_at = NOW(), last_activity_at = NOW()
+      WHERE recovery_token = ${token}::uuid AND recovered_at IS NULL
+      RETURNING id, user_email
+    `);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Carrito ya recuperado o no encontrado' });
+    }
+
+    res.json({ success: true, email: (result.rows[0] as any).user_email });
+  } catch (err: any) {
+    console.error('[CART RECOVER POST ERROR]:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -5189,15 +5377,20 @@ app.get('/api/cart', async (req: any, res: any) => {
 // ================================================================
 
 app.post('/api/create-payment-intent', async (req: any, res: any) => {
-  const { orderId, amount, currency, customerEmail } = req.body;
+  const { orderId, amount, currency, customerEmail, eventId } = req.body;
   if (!amount || amount <= 0) return res.status(400).json({ error: 'Importe inválido' });
 
   try {
     const client = getStripeClient(req);
+    const metadata: Record<string, string> = { orderId: String(orderId) };
+    if (eventId) {
+      metadata.event_id = eventId;
+      metadata.customer_email = customerEmail || '';
+    }
     const paymentIntent = await client.paymentIntents.create({
       amount: Math.round(amount * 100),
       currency: (currency || 'eur').toLowerCase(),
-      metadata: { orderId: String(orderId) },
+      metadata,
       receipt_email: customerEmail || undefined,
       payment_method_types: ['card', 'bizum', 'klarna'],
     });
@@ -5808,6 +6001,62 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
           }
         } catch (emailErr: any) {
           console.error(`[STRIPE WEBHOOK] Failed to send confirmation email for Order ${orderId}:`, emailErr.message);
+        }
+
+        try {
+          const { sendServerSideEvent } = await import('./lib/server-tracking.js');
+          const orderForTrack = await db.execute(sql`
+            SELECT total, shipping_cost, shipping_data FROM orders WHERE id = ${parseInt(orderId)}
+          `);
+          const itemsForTrack = await db.execute(sql`
+            SELECT oi.product_id, oi.price, oi.quantity, p.sku, p.name, p.brand
+            FROM order_items oi
+            LEFT JOIN products p ON p.id = oi.product_id
+            WHERE oi.order_id = ${parseInt(orderId)}
+          `);
+          if (orderForTrack.rows.length > 0) {
+            const orderRow = orderForTrack.rows[0] as any;
+            const totalCents = parseInt(orderRow.total) || 0;
+            const eventId =
+              (paymentIntent.metadata?.event_id as string) ||
+              (paymentIntent.metadata?.eventId as string) ||
+              `purchase_${orderId}_${paymentIntent.id}`;
+            const customerEmail =
+              paymentIntent.receipt_email ||
+              paymentIntent.shipping?.email ||
+              (paymentIntent.metadata?.customer_email as string) ||
+              undefined;
+            const items = (itemsForTrack.rows as any[]).map((it) => ({
+              id: it.product_id?.toString(),
+              sku: it.sku,
+              name: it.name,
+              brand: it.brand,
+              price: parseFloat((parseInt(it.price) / 100).toFixed(2)),
+              quantity: parseInt(it.quantity) || 1,
+            }));
+            const shippingCents = parseInt(orderRow.shipping_cost) || 0;
+            const taxCents = Math.floor(totalCents * 0.21);
+            await sendServerSideEvent({
+              eventName: 'purchase',
+              eventId,
+              userEmail: customerEmail,
+              userAgent: req.headers['user-agent'] as string,
+              clientIp: req.ip,
+              payload: {
+                currency: 'EUR',
+                value: totalCents / 100,
+                shipping: shippingCents / 100,
+                tax: taxCents / 100,
+                items,
+                content_ids: items.map(i => i.id),
+                content_type: 'product',
+                num_items: items.length,
+                transaction_id: paymentIntent.id,
+              },
+            });
+          }
+        } catch (trackErr: any) {
+          console.error(`[STRIPE WEBHOOK] Server-side tracking failed for Order ${orderId}:`, trackErr.message);
         }
 
         console.log(`[STRIPE WEBHOOK] Order ${orderId} finalized via payment_intent.succeeded`);

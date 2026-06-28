@@ -362,6 +362,7 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
           amount: orderData.total,
           currency: 'EUR',
           customerEmail: user?.email || undefined,
+          eventId: trackEvent.beginCheckoutEventId,
         })
       });
 
