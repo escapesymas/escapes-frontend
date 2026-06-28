@@ -2,6 +2,17 @@ import { FilterOptions } from '../types';
 
 const API_BASE = '/api';
 
+async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  return apiFetch(`${path}`, {
+    credentials: 'include',
+    ...init,
+    headers: {
+      ...(init.headers || {}),
+      ...(init.body && !(init.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
+    },
+  });
+}
+
 export async function fetchProducts(params?: {
   search?: string;
   category_id?: number;
@@ -65,31 +76,31 @@ export async function fetchProductsBySkus(skus: string[], category_id?: number) 
 }
 
 export async function fetchProduct(id: number) {
-  const res = await fetch(`${API_BASE}/catalog/product/${id}`);
+  const res = await apiFetch(`/catalog/product/${id}`);
   if (!res.ok) return null;
   return res.json();
 }
 
 export async function fetchProductBySlug(slug: string) {
-  const res = await fetch(`${API_BASE}/catalog/product-by-slug/${slug}`);
+  const res = await apiFetch(`/catalog/product-by-slug/${slug}`);
   if (!res.ok) return null;
   return res.json();
 }
 
 export async function fetchProductBySku(sku: string) {
-  const res = await fetch(`${API_BASE}/catalog/product-by-sku/${sku}/variants`);
+  const res = await apiFetch(`/catalog/product-by-sku/${sku}/variants`);
   if (!res.ok) return [];
   return res.json();
 }
 
 export async function fetchProductCompatibility(id: number) {
-  const res = await fetch(`${API_BASE}/catalog/product-compatibility/${id}`);
+  const res = await apiFetch(`/catalog/product-compatibility/${id}`);
   if (!res.ok) return [];
   return res.json();
 }
 
 export async function fetchCategories() {
-  const res = await fetch(`${API_BASE}/catalog/categories`);
+  const res = await apiFetch(`/catalog/categories`);
   if (!res.ok) return [];
   return res.json();
 }
@@ -132,7 +143,7 @@ export interface UserProfile {
 }
 
 export async function apiLogin(username: string, password: string): Promise<SessionData> {
-  const res = await fetch(`${API_BASE}/auth?action=login`, {
+  const res = await apiFetch(`/auth?action=login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password }),
@@ -150,7 +161,7 @@ export async function apiRegister(
   lastName?: string,
   phone?: string
 ): Promise<SessionData> {
-  const res = await fetch(`${API_BASE}/auth?action=register`, {
+  const res = await apiFetch(`/auth?action=register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, email, password, firstName, lastName, phone }),
@@ -161,7 +172,7 @@ export async function apiRegister(
 }
 
 export async function apiGetProfile(email: string): Promise<UserProfile> {
-  const res = await fetch(`${API_BASE}/auth?action=get-profile`, {
+  const res = await apiFetch(`/auth?action=get-profile`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
@@ -182,7 +193,7 @@ export async function apiUpdateProfile(
     avatarUrl?: string;
   }
 ): Promise<{ success: boolean }> {
-  const res = await fetch(`${API_BASE}/auth?action=update-profile`, {
+  const res = await apiFetch(`/auth?action=update-profile`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId, ...params }),
@@ -193,7 +204,7 @@ export async function apiUpdateProfile(
 }
 
 export async function apiDeleteAccount(userId: number): Promise<{ success: boolean }> {
-  const res = await fetch(`${API_BASE}/auth?action=delete-account`, {
+  const res = await apiFetch(`/auth?action=delete-account`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId }),
@@ -208,7 +219,7 @@ export async function apiChangePassword(
   currentPassword: string,
   newPassword: string
 ): Promise<{ success: boolean }> {
-  const res = await fetch(`${API_BASE}/auth?action=change-password`, {
+  const res = await apiFetch(`/auth?action=change-password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId, currentPassword, newPassword }),
@@ -247,13 +258,13 @@ export interface OrderDetail {
 }
 
 export async function apiGetOrders(userId: number): Promise<OrderSummary[]> {
-  const res = await fetch(`${API_BASE}/orders?userId=${userId}&status=`);
+  const res = await apiFetch(`/orders?userId=${userId}&status=`);
   if (!res.ok) return [];
   return res.json();
 }
 
 export async function apiGetMyOrders(userEmail: string): Promise<OrderDetail[]> {
-  const res = await fetch(`${API_BASE}/orders/my-orders?userEmail=${encodeURIComponent(userEmail)}`);
+  const res = await apiFetch(`/orders/my-orders?userEmail=${encodeURIComponent(userEmail)}`);
   if (!res.ok) return [];
   return res.json();
 }

@@ -79,6 +79,21 @@ export default function ProductCard({ product, onAddToCart, onNotifyMe }: Produc
           </div>
         )}
 
+        {product.dropshipping && !isOutOfStock && (
+          <div className="absolute bottom-2 right-2 z-10">
+            <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-amber-100/90 text-amber-900 border border-amber-300/50 shadow-sm">
+              Envío 3-5 días
+            </span>
+          </div>
+        )}
+        {!product.dropshipping && !isOutOfStock && product.stock > 0 && (
+          <div className="absolute bottom-2 right-2 z-10">
+            <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-emerald-100/90 text-emerald-900 border border-emerald-300/50 shadow-sm">
+              Envío 24h
+            </span>
+          </div>
+        )}
+
         <ProductImage
           src={current.src}
           srcMobile={current.mobileSrc || undefined}

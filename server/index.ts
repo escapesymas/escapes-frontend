@@ -372,6 +372,16 @@ app.use(cors({
   exposedHeaders: ['X-WP-Total', 'X-WP-TotalPages']
 }));
 
+// Attach authenticated user to req.user when a valid JWT is present
+app.use((req: any, _res, next) => {
+  const user = authenticateRequest(req);
+  if (user) {
+    req.user = user;
+    req.userId = user.user_id;
+  }
+  next();
+});
+
 // Configuración de directorio de uploads
 const uploadDir = path.join(process.cwd(), 'uploads');
 if (!fs.existsSync(uploadDir)) {
@@ -634,6 +644,26 @@ function generateJWT(user: any): string {
   );
 }
 
+function setAuthCookie(res: any, token: string) {
+  res.cookie('eym_jwt', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: '/',
+  });
+}
+
+function clearAuthCookie(res: any) {
+  res.cookie('eym_jwt', '', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 0,
+    path: '/',
+  });
+}
+
 function verifyJWT(token: string): any | null {
   try {
     const secret = process.env.JWT_SECRET || 'insecure-default-secret-change-me';
@@ -641,6 +671,26 @@ function verifyJWT(token: string): any | null {
   } catch {
     return null;
   }
+}
+
+function authenticateRequest(req: any): any | null {
+  const authHeader = req.headers?.authorization;
+  if (authHeader?.startsWith?.('Bearer ')) {
+    const user = verifyJWT(authHeader.substring(7));
+    if (user) return user;
+  }
+
+  const cookieHeader = req.headers?.cookie || '';
+  const cookies: Record<string, string> = {};
+  cookieHeader.split(';').forEach((part: string) => {
+    const [k, ...v] = part.trim().split('=');
+    if (k) cookies[k] = decodeURIComponent(v.join('='));
+  });
+  if (cookies.eym_jwt) {
+    const user = verifyJWT(cookies.eym_jwt);
+    if (user) return user;
+  }
+  return null;
 }
 
 // ================================================================
@@ -1227,12 +1277,32 @@ app.get('/api/vehicles', async (req, res) => {
 // RATE LIMITING
 // ═══════════════════════════════════════════════════════════════════════════════
 const adminLimiter = rateLimit({
-  windowMs: 60 * 1000,
+  windowMs: 15 * 60 * 1000,
   max: 60,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Demasiadas peticiones. Inténtalo de nuevo en un minuto.' }
+  message: { error: 'Demasiadas acciones administrativas. Inténtalo más tarde.' }
 });
+
+const adminDestructiveLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas acciones destructivas. Espera una hora.' }
+});
+
+async function logAdminAction(req: any, action: string, details: Record<string, any> = {}) {
+  try {
+    const admin = authenticateRequest(req);
+    const adminEmail = admin?.email || 'unknown';
+    const adminId = admin?.user_id || null;
+    const ip = req.ip || req.headers?.['x-forwarded-for'] || req.connection?.remoteAddress || '';
+    console.log(`[ADMIN AUDIT] ${new Date().toISOString()} action=${action} admin_email=${adminEmail} admin_id=${adminId} ip=${ip}`, JSON.stringify(details));
+  } catch {
+    // no-op
+  }
+}
 
 const catalogLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -1298,7 +1368,7 @@ app.get('/api/catalog/sitemap-skus', async (req, res) => {
 app.get('/api/search/suggestions', async (req, res) => {
   try {
     const { q, limit = '5' } = req.query;
-    
+
     if (!q || typeof q !== 'string' || q.length < 2) {
       res.json({ results: [] });
       return;
@@ -1307,7 +1377,7 @@ app.get('/api/search/suggestions', async (req, res) => {
     const searchTerm = sanitizeLike(q);
     const limitNum = Math.min(parseInt(limit as string) || 5, 10);
 
-    const result = await db.execute(sql`
+    const exactResult = await db.execute(sql`
       SELECT name, slug, brand, category
       FROM products
       WHERE status = 'published'
@@ -1318,13 +1388,36 @@ app.get('/api/search/suggestions', async (req, res) => {
           OR LOWER(sku) LIKE LOWER('%' || ${searchTerm} || '%') ESCAPE '\'
           OR LOWER(supplier_code) LIKE LOWER('%' || ${searchTerm} || '%') ESCAPE '\'
         )
-      ORDER BY 
+      ORDER BY
         CASE WHEN LOWER(name) LIKE LOWER(${searchTerm} || '%') THEN 0 ELSE 1 END,
         name ASC
       LIMIT ${limitNum}
     `);
 
-    const results = result.rows.map(row => ({
+    if (exactResult.rows.length > 0) {
+      const results = exactResult.rows.map(row => ({
+        name: row.name,
+        slug: row.slug,
+        category: row.category,
+      }));
+      return res.json({ results });
+    }
+
+    const fuzzyResult = await db.execute(sql`
+      SELECT name, slug, brand, category,
+             GREATEST(similarity(LOWER(name), LOWER(${searchTerm})),
+                      similarity(LOWER(COALESCE(sku, '')), LOWER(${searchTerm})),
+                      similarity(LOWER(COALESCE(brand, '')), LOWER(${searchTerm}))) AS sim
+      FROM products
+      WHERE status = 'published'
+        AND name NOT LIKE 'Aplicaciones:%'
+        AND name NOT LIKE 'Applications:%'
+        AND similarity(LOWER(name), LOWER(${searchTerm})) > 0.25
+      ORDER BY sim DESC
+      LIMIT ${limitNum}
+    `);
+
+    const results = fuzzyResult.rows.map(row => ({
       name: row.name,
       slug: row.slug,
       category: row.category,
@@ -1538,6 +1631,69 @@ app.get('/api/catalog/product/:id', async (req, res) => {
     res.json(mapProductToFrontend(result.rows[0]));
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+const fbCache = new Map<string, { data: any[]; expiresAt: number }>();
+const FB_TTL_MS = 5 * 60 * 1000;
+
+app.get('/api/catalog/frequently-bought-together/:productId', async (req, res) => {
+  try {
+    const productId = parseInt(req.params.productId);
+    if (isNaN(productId)) return res.json([]);
+
+    const cached = fbCache.get(String(productId));
+    if (cached && cached.expiresAt > Date.now()) {
+      res.setHeader('X-Cache', 'HIT');
+      return res.json(cached.data);
+    }
+
+    const result = await db.execute(sql`
+      WITH related AS (
+        SELECT oi2.product_id AS related_id, COUNT(*) AS co_count
+        FROM order_items oi1
+        JOIN order_items oi2 ON oi1.order_id = oi2.order_id
+        WHERE oi1.product_id = ${productId} AND oi2.product_id != ${productId}
+        GROUP BY oi2.product_id
+        ORDER BY co_count DESC
+        LIMIT 6
+      )
+      SELECT p.id, p.sku, p.name, p.brand, p.price, p.sale_price, p.stock, p.images,
+             r.co_count
+      FROM related r
+      JOIN products p ON p.id = r.related_id
+      WHERE p.status = 'published' AND p.stock > 0
+      ORDER BY r.co_count DESC
+      LIMIT 6
+    `);
+
+    const items = (result.rows as any[]).map((row) => {
+      let imgs: any[] = [];
+      try {
+        imgs = typeof row.images === 'string' ? JSON.parse(row.images) : (row.images || []);
+      } catch {}
+      let firstImage: string = imgs[0]?.src || imgs[0]?.url || '';
+      if (firstImage && /^https?:\/\/(api\.|cdn\.)?mybihr\.com\//i.test(firstImage)) {
+        firstImage = `/api/image-proxy?url=${encodeURIComponent(firstImage)}`;
+      }
+      return {
+        id: row.id,
+        sku: row.sku,
+        name: row.name,
+        brand: row.brand,
+        price: row.price,
+        sale_price: row.sale_price,
+        stock: row.stock,
+        image: firstImage,
+        co_count: row.co_count,
+      };
+    });
+
+    fbCache.set(String(productId), { data: items, expiresAt: Date.now() + FB_TTL_MS });
+    res.json(items);
+  } catch (err: any) {
+    console.error('[FREQ BOUGHT ERROR]:', err);
+    res.json([]);
   }
 });
 
@@ -1972,20 +2128,21 @@ app.get('/api/orders/download-invoice', async (req: any, res: any) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN (requiere autenticación)
 // ================================================================
+app.post('/api/auth/logout', (req: any, res: any) => {
+  clearAuthCookie(res);
+  res.json({ success: true });
+});
+
 app.all('/api/admin', adminLimiter, async (req, res) => {
   const { action, userId, email } = req.query as any;
 
-  // Verify JWT from Authorization header for admin access
-  const authHeader = req.headers.authorization;
   let isAdmin = false;
   let jwtUser: any = null;
 
-  if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.substring(7);
-    jwtUser = verifyJWT(token);
-    if (jwtUser && jwtUser.role === 'admin') {
-      isAdmin = true;
-    }
+  const auth = authenticateRequest(req);
+  if (auth && auth.role === 'admin') {
+    isAdmin = true;
+    jwtUser = auth;
   }
 
   // Rutas públicas del catálogo (legacy compat)
@@ -3427,6 +3584,7 @@ app.all('/api/admin', adminLimiter, async (req, res) => {
         if (req.method !== 'POST') return res.status(405).end();
         const { userId: targetUserId, role } = req.body;
         if (!targetUserId || !role) return res.status(400).json({ error: 'Faltan datos' });
+        await logAdminAction(req, 'update-user-role', { targetUserId, role });
         await db.execute(sql`
           UPDATE users
           SET role = ${role}
@@ -4049,6 +4207,7 @@ app.post('/api/auth', authLimiter, async (req, res) => {
 
       // Generar JWT y respuesta de sesión
       const token = generateJWT(user);
+      setAuthCookie(res, token);
       const session = {
         token,
         user_id: user.id,
@@ -4146,6 +4305,7 @@ app.post('/api/auth', authLimiter, async (req, res) => {
       // Auto-login con JWT
       const newUser = { id: newId, email, username, role };
       const token = generateJWT(newUser);
+      setAuthCookie(res, token);
       const session = {
         token,
         user_id: newId,
