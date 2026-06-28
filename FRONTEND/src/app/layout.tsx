@@ -8,6 +8,7 @@ import SchemaMarkup from "../components/SchemaMarkup";
 import ServiceWorkerRegistration from "../components/ServiceWorkerRegistration";
 import CookieBanner from "../components/CookieBanner";
 import ChatWidget from "../components/ChatWidget";
+import { GtmScript, GtmNoScript } from "../lib/analytics";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -68,6 +69,8 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
+        <GtmScript />
+        <GtmNoScript />
         <SchemaMarkup />
         <ServiceWorkerRegistration />
         <a

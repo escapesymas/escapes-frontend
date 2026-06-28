@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { sendChatMessage, type ChatMessage, type ChatProduct } from '../lib/chatApi';
+import { trackEvent } from '../lib/analytics';
 import ProductCardMessage from './chat/ProductCardMessage';
 
 const SUGGESTIONS = [
@@ -63,6 +64,7 @@ export default function ChatWidget() {
     if (!clean || streaming) return;
 
     setError(null);
+    trackEvent.chatInteraction('message');
     const newMessages: ChatMessage[] = [...messages, { role: 'user', content: clean }];
     setMessages(newMessages);
     setInput('');

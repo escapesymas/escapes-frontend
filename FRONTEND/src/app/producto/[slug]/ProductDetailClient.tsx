@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShoppingCart, Bell, Bike, ChevronLeft, AlertCircle, Ruler, Weight, Package, Check } from 'lucide-react';
+import { trackEvent } from '../../../lib/analytics';
 import { Product, ProductCompatibility, ProductImage as ProductImageType } from '../../../types';
 import { fetchProductBySlug } from '../../../lib/api';
 import { useCart } from '../../../context/CartContext';
@@ -58,11 +59,13 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
   }, [compatSearch]);
 
   useEffect(() => {
+    if (product) trackEvent.viewItem(product);
+  }, [product]);
+
+  useEffect(() => {
     if (!slug || initialProduct) return;
     let cancelled = false;
     const load = async () => {
-      setIsLoading(true);
-      setError('');
       try {
         const data = await fetchProductBySlug(slug);
         if (!cancelled) {
@@ -215,11 +218,21 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className={`w-2 h-2 rounded-full ${product.inStock ? 'bg-emerald-500' : 'bg-red-500'}`} />
               <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-foreground">
                 {product.inStock ? 'En Stock' : 'Sin Stock'}
               </span>
+              {product.inStock && product.stock > 0 && product.stock <= 5 && (
+                <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-red-500 text-white border border-red-300 animate-pulse">
+                  {product.stock <= 2 ? '¡Última unidad!' : `¡Quedan ${product.stock}!`}
+                </span>
+              )}
+              {product.inStock && product.stock > 5 && product.stock <= 20 && (
+                <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-amber-500 text-white border border-amber-300">
+                  Pocas unidades
+                </span>
+              )}
               {product.dropshipping && (
                 <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-accent/10 text-accent border border-accent/20">
                   Envío directo
@@ -365,11 +378,21 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className={`w-2 h-2 rounded-full ${product.inStock ? 'bg-emerald-500' : 'bg-red-500'}`} />
               <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-foreground">
                 {product.inStock ? 'En Stock' : 'Sin Stock'}
               </span>
+              {product.inStock && product.stock > 0 && product.stock <= 5 && (
+                <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-red-500 text-white border border-red-300 animate-pulse">
+                  {product.stock <= 2 ? '¡Última unidad!' : `¡Quedan ${product.stock}!`}
+                </span>
+              )}
+              {product.inStock && product.stock > 5 && product.stock <= 20 && (
+                <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-amber-500 text-white border border-amber-300">
+                  Pocas unidades
+                </span>
+              )}
               {product.dropshipping && (
                 <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-accent/10 text-accent border border-accent/20">
                   Envío directo
@@ -448,7 +471,7 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
                 <button
                   onClick={() => {
                     if (product.inStock && product.stock > 0) {
-                      addToCart(product);
+                      addToCart(product); trackEvent.addToCart(product, 1);
                       showToast({ message: 'Añadido al carrito', type: 'success' });
                     } else {
                       handleNotifyMe();
@@ -473,6 +496,7 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
               onClick={() => {
                 if (product.inStock && product.stock > 0) {
                   addToCart(product);
+                  trackEvent.addToCart(product, 1);
                   showToast({ message: 'Añadido al carrito', type: 'success' });
                 } else {
                   handleNotifyMe();

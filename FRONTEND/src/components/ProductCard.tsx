@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ShoppingCart, Check, Bell } from 'lucide-react';
 import { Product, ProductImage as ProductImageType } from '../types';
 import ProductImage from './ProductImage';
+import RatingStars from './RatingStars';
 
 interface ProductCardProps {
   product: Product;
@@ -48,10 +49,32 @@ export default function ProductCard({ product, onAddToCart, onNotifyMe }: Produc
           )}
         </div>
 
+        {product.ratingCount > 0 && (
+          <div className="absolute bottom-2 left-2 z-10 bg-card/90 backdrop-blur-sm border border-card-border rounded px-1.5 py-0.5 shadow-sm">
+            <RatingStars rating={product.averageRating || 0} count={product.ratingCount} size="xs" showCount={true} />
+          </div>
+        )}
+
         {isOutOfStock && (
           <div className="absolute top-2 right-2 z-10">
             <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-red-600/90 text-white border border-red-400/50 shadow-sm">
               Agotado
+            </span>
+          </div>
+        )}
+
+        {!isOutOfStock && product.stock > 0 && product.stock <= 5 && (
+          <div className="absolute top-2 right-2 z-10">
+            <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-red-500 text-white border border-red-300 shadow-sm animate-pulse">
+              {product.stock <= 2 ? '¡Último!' : `¡Quedan ${product.stock}!`}
+            </span>
+          </div>
+        )}
+
+        {!isOutOfStock && product.stock > 5 && product.stock <= 20 && (
+          <div className="absolute top-2 right-2 z-10">
+            <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-amber-500 text-white border border-amber-300 shadow-sm">
+              Pocas unidades
             </span>
           </div>
         )}

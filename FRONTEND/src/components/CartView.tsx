@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps, @next/next/no-img-element, @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 import { Trash2, Plus, Minus, ShoppingBag, Truck, ArrowLeft, ArrowRight, AlertCircle, RotateCcw, Loader2, Package, ShieldCheck, Lock, Repeat } from 'lucide-react';
+import { trackEvent } from '../lib/analytics';
 import { useCart, CartItem } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import Link from 'next/link';
@@ -70,6 +71,14 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
   const [completedOrder, setCompletedOrder] = useState<{ orderId: string; total?: number } | null>(null);
+  const [billingDifferent, setBillingDifferent] = useState(false);
+  const [billingData, setBillingData] = useState({
+    companyName: (user?.billing as any)?.company || '',
+    nif: user?.billing?.nif || '',
+    address1: user?.billing?.address_1 || '',
+    city: user?.billing?.city || '',
+    postcode: user?.billing?.postcode || '',
+  });
 
   // Stripe payment state
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -328,6 +337,7 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
           userEmail: user?.email || shippingData.email,
           cart: cart.map((item) => ({ id: item.id, quantity: item.quantity })),
           shippingData,
+          billingData: billingDifferent ? billingData : null,
           paymentMethod: 'stripe',
           promoCode: appliedPromo,
         }),
@@ -337,6 +347,12 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
       if (!res.ok) {
         throw new Error(orderData.error || 'Error al procesar el pedido');
       }
+
+      const cartTotal = cart.reduce((sum, it) => sum + it.price * it.quantity, 0);
+      trackEvent.beginCheckout(
+        cart.map((it) => ({ product: it as any, quantity: it.quantity })),
+        cartTotal / 100
+      );
 
       const piRes = await fetch('/api/create-payment-intent', {
         method: 'POST',
@@ -471,6 +487,78 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
           )}
 
           <form onSubmit={handleCheckoutSubmit} className="space-y-4">
+            <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={billingDifferent}
+                onChange={(e) => setBillingDifferent(e.target.checked)}
+                className="w-4 h-4 accent-accent"
+              />
+              <span className="font-sans">
+                ¿La dirección de facturación es diferente a la de envío? <span className="text-text-muted">(empresas, autónomos)</span>
+              </span>
+            </label>
+
+            {billingDifferent && (
+              <div className="bg-card border border-card-border rounded-md p-4 space-y-4">
+                <h3 className="font-mono font-bold text-sm uppercase tracking-wide text-foreground">Datos de facturación</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-mono font-bold text-text-muted uppercase mb-1">Empresa / Razón social</label>
+                    <input
+                      type="text"
+                      value={billingData.companyName}
+                      onChange={(e) => setBillingData({ ...billingData, companyName: e.target.value })}
+                      placeholder="Ej. Mi Moto S.L."
+                      className="w-full bg-background border border-card-border rounded px-3 py-2 text-sm text-foreground placeholder:text-text-muted focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-mono font-bold text-text-muted uppercase mb-1">NIF / CIF</label>
+                    <input
+                      type="text"
+                      value={billingData.nif}
+                      onChange={(e) => setBillingData({ ...billingData, nif: e.target.value })}
+                      placeholder="Ej. B12345678"
+                      className="w-full bg-background border border-card-border rounded px-3 py-2 text-sm text-foreground placeholder:text-text-muted focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-mono font-bold text-text-muted uppercase mb-1">Dirección de facturación</label>
+                  <input
+                    type="text"
+                    value={billingData.address1}
+                    onChange={(e) => setBillingData({ ...billingData, address1: e.target.value })}
+                    placeholder="Calle, número, piso..."
+                    className="w-full bg-background border border-card-border rounded px-3 py-2 text-sm text-foreground placeholder:text-text-muted focus:outline-none focus:border-accent"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-mono font-bold text-text-muted uppercase mb-1">Ciudad</label>
+                    <input
+                      type="text"
+                      value={billingData.city}
+                      onChange={(e) => setBillingData({ ...billingData, city: e.target.value })}
+                      placeholder="Ej. Madrid"
+                      className="w-full bg-background border border-card-border rounded px-3 py-2 text-sm text-foreground placeholder:text-text-muted focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-mono font-bold text-text-muted uppercase mb-1">Código postal</label>
+                    <input
+                      type="text"
+                      value={billingData.postcode}
+                      onChange={(e) => setBillingData({ ...billingData, postcode: e.target.value })}
+                      placeholder="28001"
+                      className="w-full bg-background border border-card-border rounded px-3 py-2 text-sm text-foreground placeholder:text-text-muted focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-[10px] font-mono font-bold text-text-muted uppercase mb-1">Nombre</label>
@@ -653,6 +741,20 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Shipping banner */}
+            <div className="lg:col-span-3 bg-accent/5 border border-accent/30 rounded-md p-3 md:p-4 flex items-start gap-3">
+              <Truck className="w-5 h-5 text-accent shrink-0 mt-0.5" />
+              <div className="text-xs flex-1">
+                <p className="font-mono font-bold uppercase tracking-wider text-foreground mb-1">
+                  Gastos de envío
+                </p>
+                <p className="text-foreground/85 leading-snug">
+                  <span className="font-bold text-accent">Envío GRATIS</span> en pedidos superiores a 150€ (Península y Baleares).
+                  Envío estándar 6,99€ · Canarias, Ceuta y Melilla consultar.
+                </p>
+              </div>
+            </div>
+
             {/* Cart Items List */}
             <div className="lg:col-span-2 space-y-4">
               <div className="bg-card border border-card-border rounded overflow-hidden">
@@ -906,7 +1008,7 @@ export default function CartView({ onContinueShopping }: CartViewProps) {
                 </div>
                 <div>
                   <h3 className="font-mono font-bold text-sm uppercase tracking-wide text-foreground">Pago Seguro</h3>
-                  <p className="text-[10px] text-text-muted font-sans">Stripe • Tarjeta, Google Pay, Apple Pay, Klarna, Bizum</p>
+                  <p className="text-[10px] text-text-muted font-sans">Stripe • Tarjeta, Bizum, Klarna</p>
                 </div>
               </div>
               <span className="font-mono text-xs font-bold text-accent-text bg-accent/5 px-2.5 py-1 rounded border border-accent/10">
