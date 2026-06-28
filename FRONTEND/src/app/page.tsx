@@ -357,23 +357,53 @@ export default function Home() {
 
                     {/* Paginación */}
                     {searchTotalPages > 1 && (
-                      <div className="flex items-center justify-center gap-3 mt-8">
+                      <div className="flex items-center justify-center gap-1.5 mt-8 flex-wrap">
                         <button
                           disabled={searchPage <= 1}
-                          onClick={() => handleSearch(searchQuery, searchPage - 1)}
-                          className="p-2 border border-card-border rounded bg-card hover:bg-icon-box/40 disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer"
+                          onClick={() => handleSearch(searchQuery, Math.max(1, searchPage - 1))}
+                          className="px-3 py-2 text-[10px] font-mono font-bold uppercase tracking-wider border border-card-border hover:border-accent/40 rounded text-text-muted hover:text-foreground disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer"
+                          aria-label="Página anterior"
                         >
-                          <ChevronLeft className="w-4 h-4" />
+                          <ChevronLeft className="w-3.5 h-3.5" />
                         </button>
-                        <span className="text-xs font-mono text-text-muted">
-                          Página {searchPage} de {searchTotalPages}
-                        </span>
+
+                        {Array.from({ length: searchTotalPages }, (_, i) => i + 1).map((pageNum) => {
+                          const isVisible =
+                            pageNum === 1 ||
+                            pageNum === searchTotalPages ||
+                            Math.abs(pageNum - searchPage) <= 2;
+                          const showEllipsis =
+                            (pageNum === 2 && searchPage > 4) ||
+                            (pageNum === searchTotalPages - 1 && searchPage < searchTotalPages - 3);
+                          if (!isVisible) {
+                            return showEllipsis ? (
+                              <span key={pageNum} className="text-text-muted px-1 text-xs font-bold">…</span>
+                            ) : null;
+                          }
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => handleSearch(searchQuery, pageNum)}
+                              className={`min-w-[36px] py-2 px-2 text-[10px] font-mono font-bold uppercase tracking-wider rounded border transition-all cursor-pointer ${
+                                searchPage === pageNum
+                                  ? 'bg-accent border-accent text-slate-950'
+                                  : 'border-card-border hover:border-accent/40 text-text-muted hover:text-foreground'
+                              }`}
+                              aria-label={`Página ${pageNum}`}
+                              aria-current={searchPage === pageNum ? 'page' : undefined}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        })}
+
                         <button
                           disabled={searchPage >= searchTotalPages}
-                          onClick={() => handleSearch(searchQuery, searchPage + 1)}
-                          className="p-2 border border-card-border rounded bg-card hover:bg-icon-box/40 disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer"
+                          onClick={() => handleSearch(searchQuery, Math.min(searchTotalPages, searchPage + 1))}
+                          className="px-3 py-2 text-[10px] font-mono font-bold uppercase tracking-wider border border-card-border hover:border-accent/40 rounded text-text-muted hover:text-foreground disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer"
+                          aria-label="Página siguiente"
                         >
-                          <ChevronRight className="w-4 h-4" />
+                          <ChevronRight className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     )}

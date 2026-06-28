@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShoppingCart, Bell, Bike, ChevronLeft, AlertCircle, Ruler, Weight, Package, Check } from 'lucide-react';
 import { trackEvent } from '../../../lib/analytics';
+import FrequentlyBoughtTogether from '../../../components/FrequentlyBoughtTogether';
 import { Product, ProductCompatibility, ProductImage as ProductImageType } from '../../../types';
 import { fetchProductBySlug } from '../../../lib/api';
 import { useCart } from '../../../context/CartContext';
@@ -491,7 +492,10 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
         </div>
 
         {product && (
-          <div className="fixed bottom-0 left-0 right-0 md:hidden bg-card border-t border-card-border p-3 z-40 shadow-lg">
+          <div
+            className="fixed bottom-0 left-0 right-0 md:hidden bg-card border-t border-card-border p-3 z-40 shadow-lg"
+            style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
+          >
             <button
               onClick={() => {
                 if (product.inStock && product.stock > 0) {
@@ -690,6 +694,10 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
             </div>
           );
         })()}
+
+        {product && product.id && (
+          <FrequentlyBoughtTogether productId={product.id} />
+        )}
 
         <div className="mt-8">
           <h2 className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-4">

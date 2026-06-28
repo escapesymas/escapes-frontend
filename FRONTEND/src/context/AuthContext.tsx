@@ -114,6 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem(SESSION_KEY);
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
     setSession(null);
     setUser(null);
   };
