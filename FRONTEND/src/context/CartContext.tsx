@@ -31,6 +31,7 @@ interface CartContextValue {
   clearCart: () => void;
   restoreCart: (items: CartItem[]) => void;
   restoreLastRemoved: () => void;
+  isInitialized: boolean;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -235,6 +236,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         clearCart,
         restoreCart,
         restoreLastRemoved,
+        isInitialized,
       }}
     >
       {children}

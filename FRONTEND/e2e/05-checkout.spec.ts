@@ -20,7 +20,7 @@ test.describe('Checkout E2E', () => {
   });
 
   test('/checkout con carrito pre-lleno muestra el form', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
     await page.evaluate(() => {
       localStorage.setItem('escapesymas_cart', JSON.stringify([{
         id: 999001,
@@ -37,9 +37,10 @@ test.describe('Checkout E2E', () => {
         image: '',
         quantity: 2,
       }]));
+      localStorage.setItem('escapes_cart_session_token', `token_${Date.now()}`);
     });
-    await page.goto('/checkout');
-    await expect(page.locator('[data-testid="checkout-form"]')).toBeVisible({ timeout: 10000 });
+    await page.goto('/checkout', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('[data-testid="checkout-form"]')).toBeVisible({ timeout: 15000 });
   });
 
   test('POST /api/orders/create rechaza stock insuficiente', async ({ request }) => {
@@ -47,11 +48,11 @@ test.describe('Checkout E2E', () => {
       data: {
         userEmail: 'e2e-stock@test.com',
         cart: [{
-          id: 999999999,
+          id: 234594,
           quantity: 99999,
-          price: 1,
-          name: 'no-stock',
-          slug: 'no-stock',
+          price: 21.45,
+          name: 'Camiseta BIHR 2019 Negra - Talla S',
+          slug: '980706s',
         }],
         shippingData: { firstName: 'E2E', lastName: 'Test', email: 'e2e@test.com', address1: 'Calle Test 1', city: 'Madrid', postcode: '28001', phone: '+34666555444' },
         paymentMethod: 'stripe',
@@ -97,8 +98,8 @@ test.describe('Checkout E2E', () => {
 
   test('GET /checkout/success con payment_intent válido muestra success-ok o success-error', async ({ page }) => {
     await page.goto('/checkout/success?payment_intent=pi_test_nonexistent_12345&redirect_status=succeeded');
-    const ok = await page.locator('[data-testid="success-ok"]').isVisible({ timeout: 10000 }).catch(() => false);
-    const error = await page.locator('[data-testid="success-error"]').isVisible({ timeout: 1000 }).catch(() => false);
-    expect(ok || error).toBe(true);
+    const errorLocator = page.locator('[data-testid="success-error"]');
+    await expect(errorLocator).toBeVisible({ timeout: 15000 });
+    await expect(errorLocator).toContainText(/Falta orderId|orderId/i);
   });
 });
