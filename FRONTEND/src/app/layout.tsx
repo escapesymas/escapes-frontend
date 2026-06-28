@@ -33,6 +33,24 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+  openGraph: {
+    type: 'website',
+    title: "Escapes y Más — Escapes de Moto de Alto Rendimiento",
+    description: "Encuentra escapes homologados y recambios oficiales para tu moto. Compatible con las marcas más exigentes del mercado.",
+    url: 'https://escapesymas.com',
+    siteName: 'Escapes y Más',
+    locale: 'es_ES',
+    images: [
+      { url: 'https://escapesymas.com/icon-512.svg', width: 512, height: 512, alt: 'Escapes y Más' },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: "Escapes y Más — Escapes de Moto de Alto Rendimiento",
+    description: "Encuentra escapes homologados y recambios oficiales para tu moto.",
+    images: ['https://escapesymas.com/icon-512.svg'],
+  },
+  alternates: { canonical: 'https://escapesymas.com' },
   other: {
     'mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-status-bar-style': 'black-translucent',
