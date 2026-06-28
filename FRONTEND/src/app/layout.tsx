@@ -6,6 +6,7 @@ import { CartProvider } from "../context/CartContext";
 import { ToastProvider } from "../context/ToastContext";
 import SchemaMarkup from "../components/SchemaMarkup";
 import ServiceWorkerRegistration from "../components/ServiceWorkerRegistration";
+import CookieBanner from "../components/CookieBanner";
 import ChatWidget from "../components/ChatWidget";
 
 const geistSans = Geist({
@@ -79,6 +80,7 @@ export default function RootLayout({
           <ToastProvider>
             <CartProvider>
               {children}
+              <CookieBanner />
               <ChatWidget />
             </CartProvider>
           </ToastProvider>

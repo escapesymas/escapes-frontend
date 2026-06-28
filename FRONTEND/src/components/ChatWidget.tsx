@@ -19,6 +19,23 @@ export default function ChatWidget() {
   const { addToCart } = useCart();
   const { showToast } = useToast();
   const [open, setOpen] = useState(false);
+  const [proactiveBike, setProactiveBike] = useState<string | null>(null);
+  const [dismissedProactive, setDismissedProactive] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated || dismissedProactive) {
+      setProactiveBike(null);
+      return;
+    }
+    try {
+      const bike = localStorage.getItem('tg_selected_bike');
+      if (bike) {
+        const timer = setTimeout(() => setProactiveBike(bike), 45000);
+        return () => clearTimeout(timer);
+      }
+    } catch {}
+    setProactiveBike(null);
+  }, [isAuthenticated, dismissedProactive]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [productsByMessage, setProductsByMessage] = useState<Record<number, ChatProduct[]>>({});
   const [input, setInput] = useState('');
@@ -130,6 +147,25 @@ export default function ChatWidget() {
         aria-expanded={open}
       >
         <div className="relative">
+          {proactiveBike && !open && (
+            <button
+              onClick={() => { setOpen(true); setDismissedProactive(true); }}
+              className="absolute -top-12 -right-16 md:-top-10 md:-right-12 whitespace-nowrap bg-card border border-accent text-foreground text-[10px] font-mono uppercase font-bold px-3 py-1.5 rounded-full shadow-md animate-bounce hover:bg-accent hover:text-accent-foreground transition-colors"
+              aria-label="Abrir sugerencia del asistente"
+            >
+              💬 Sugerencia para tu {proactiveBike.split(' ').slice(0, 2).join(' ')}
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => { e.stopPropagation(); setDismissedProactive(true); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); setDismissedProactive(true); } }}
+                className="ml-2 text-muted-foreground hover:text-foreground cursor-pointer"
+                aria-label="Cerrar sugerencia"
+              >
+                ✕
+              </span>
+            </button>
+          )}
           <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full animate-pulse" />
           <div
             className={`bg-accent hover:bg-accent/90 text-accent-foreground rounded-full p-3.5 shadow-lg transition-all duration-300 group-hover:scale-110 ${

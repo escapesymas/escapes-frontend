@@ -352,8 +352,22 @@ const pricingRules = pgTable('pricing_rules', {
 const app: any = express();
 app.set('trust proxy', 1);
 
+const isProduction = process.env.NODE_ENV === 'production';
+const allowedOrigins = isProduction
+  ? ['https://escapesymas.com', 'https://www.escapesymas.com']
+  : [
+      'https://escapesymas.com',
+      'https://www.escapesymas.com',
+      'https://test.escapesymas.com',
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://localhost:5175',
+      'http://localhost:3000',
+      'http://localhost:3002',
+    ];
+
 app.use(cors({
-  origin: ['https://escapesymas.com', 'https://www.escapesymas.com', 'https://test.escapesymas.com', 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:3000', 'http://localhost:3002'],
+  origin: allowedOrigins,
   credentials: true,
   exposedHeaders: ['X-WP-Total', 'X-WP-TotalPages']
 }));
@@ -4055,7 +4069,7 @@ app.post('/api/auth', async (req, res) => {
       }
 
       const passHash = await hashPassword(password);
-      const role = email.toLowerCase() === 'info@escapesymas.com' ? 'admin' : 'customer';
+      const role = 'customer';
       const billingData = JSON.stringify({ address_1: '', city: '', postcode: '', phone: phone || '' });
 
       const insertRes = await db.execute(sql`
@@ -4532,19 +4546,34 @@ app.post('/api/orders/create', async (req: any, res: any) => {
     // Calcular total seguro en céntimos consultando los productos en la BD
     let subtotalCents = 0;
     const itemsToInsert = [];
+    const stockErrors: any[] = [];
 
     for (const item of cart) {
-      const pRes = await db.execute(sql`SELECT price, sale_price FROM products WHERE id = ${parseInt(item.id as string)}`);
+      const pRes = await db.execute(sql`SELECT price, sale_price, stock FROM products WHERE id = ${parseInt(item.id as string)}`);
       if (pRes.rows.length === 0) return res.status(400).json({ error: `Producto con ID ${item.id} no existe` });
-      
+
       const dbRow = pRes.rows[0] as any;
       const dbPrice = dbRow.sale_price || dbRow.price || 0; // en céntimos
-      subtotalCents += (dbPrice as number) * parseInt(item.quantity as string);
-      
+      const reqQty = parseInt(item.quantity as string);
+      subtotalCents += (dbPrice as number) * reqQty;
+
+      const currentStock = typeof dbRow.stock === 'string' ? parseInt(dbRow.stock) : (dbRow.stock || 0);
+      if (currentStock < reqQty) {
+        stockErrors.push({ id: item.id, requested: reqQty, available: currentStock });
+      }
+
       itemsToInsert.push({
         productId: parseInt(item.id as string),
-        quantity: parseInt(item.quantity as string),
+        quantity: reqQty,
         price: dbPrice
+      });
+    }
+
+    if (stockErrors.length > 0) {
+      console.warn(`[ORDER CREATE] Stock insuficiente:`, stockErrors);
+      return res.status(409).json({
+        error: 'Stock insuficiente para uno o más productos. Por favor, actualiza tu carrito.',
+        stockErrors
       });
     }
 
@@ -4773,35 +4802,40 @@ app.post('/api/orders/finalize', async (req: any, res: any) => {
     const { orderId, paymentId, status } = req.body;
     if (!orderId) return res.status(400).json({ error: 'Falta orderId' });
 
-    // Verificar el estado del pago con Stripe si hay un paymentId
-    if (paymentId) {
-      try {
-        const client = getStripeClient(req);
-        const paymentIntent = await client.paymentIntents.retrieve(paymentId);
-        if (paymentIntent.status !== 'succeeded') {
-          console.warn(`[ORDER FINALIZE WARNING]: PaymentIntent ${paymentId} is in status ${paymentIntent.status}. Rejecting order finalization.`);
-          return res.status(400).json({ error: 'El pago ha sido rechazado o cancelado. Por favor, inténtalo de nuevo o prueba con otro método de pago.' });
-        }
-      } catch (stripeErr: any) {
-        console.error('[ORDER FINALIZE STRIPE VERIFY ERROR]:', stripeErr);
-        return res.status(400).json({ error: 'No se pudo verificar el estado del pago con Stripe.' });
-      }
+    if (!paymentId || typeof paymentId !== 'string') {
+      console.warn(`[SECURITY] /api/orders/finalize rejected: missing paymentId. orderId=${orderId} ip=${req.ip}`);
+      return res.status(400).json({ error: 'Falta paymentId. La finalización de pedidos requiere verificación con Stripe.' });
     }
 
-    // Actualizar el estado y el payment_id en la base de datos
+    try {
+      const client = getStripeClient(req);
+      const paymentIntent = await client.paymentIntents.retrieve(paymentId);
+      if (paymentIntent.status !== 'succeeded') {
+        console.warn(`[ORDER FINALIZE WARNING]: PaymentIntent ${paymentId} is in status ${paymentIntent.status}. Rejecting order finalization.`);
+        return res.status(400).json({ error: 'El pago ha sido rechazado o cancelado. Por favor, inténtalo de nuevo o prueba con otro método de pago.' });
+      }
+      const piOrderId = (paymentIntent.metadata && (paymentIntent.metadata.order_id || paymentIntent.metadata.orderId)) || null;
+      if (piOrderId && String(piOrderId) !== String(orderId)) {
+        console.warn(`[SECURITY] /api/orders/finalize rejected: paymentIntent ${paymentId} metadata.order_id=${piOrderId} does not match request orderId=${orderId}`);
+        return res.status(400).json({ error: 'El paymentIntent no corresponde a esta orden.' });
+      }
+    } catch (stripeErr: any) {
+      console.error('[ORDER FINALIZE STRIPE VERIFY ERROR]:', stripeErr);
+      return res.status(400).json({ error: 'No se pudo verificar el estado del pago con Stripe.' });
+    }
+
     await db.execute(sql`
       UPDATE orders
-      SET status = ${status || 'processing'}, payment_id = ${paymentId || null}
+      SET status = ${status || 'processing'}, payment_id = ${paymentId}
       WHERE id = ${parseInt(orderId)}
     `);
 
-    // Reducir stock si la orden se marca como pagada
     const finalStatus = status || 'processing';
     if (finalStatus === 'processing' || finalStatus === 'completed') {
       const itemsRes = await db.execute(sql`
         SELECT product_id, quantity FROM order_items WHERE order_id = ${parseInt(orderId)}
       `);
-      
+
       for (const rawItem of itemsRes.rows) {
         const item = rawItem as any;
         await db.execute(sql`
@@ -4811,7 +4845,6 @@ app.post('/api/orders/finalize', async (req: any, res: any) => {
         `);
       }
 
-      // Auto-generate invoice when paid
       try {
         await createInvoiceForOrder(parseInt(orderId));
         console.log(`[AUTO-INVOICE] Invoice auto-generated successfully for Order ${orderId}`);
@@ -5473,11 +5506,83 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
           `);
         }
 
+        let invoiceRecord: any = null;
         try {
-          await createInvoiceForOrder(parseInt(orderId));
+          invoiceRecord = await createInvoiceForOrder(parseInt(orderId));
           console.log(`[STRIPE WEBHOOK] Invoice auto-generated for Order ${orderId}`);
         } catch (e: any) {
           console.error(`[STRIPE WEBHOOK] Invoice error for Order ${orderId}:`, e);
+        }
+
+        try {
+          const orderRowRes = await db.execute(sql`
+            SELECT total, subtotal, shipping_cost, discount_amount, shipping_data
+            FROM orders WHERE id = ${parseInt(orderId)}
+          `);
+          const orderRow = orderRowRes.rows[0] as any;
+          let customerEmail: string | null = null;
+          let customerName = '';
+          if (paymentIntent.receipt_email) {
+            customerEmail = paymentIntent.receipt_email;
+          } else if (paymentIntent.shipping) {
+            customerEmail = paymentIntent.shipping.email || null;
+          }
+          if (!customerEmail && paymentIntent.metadata && paymentIntent.metadata.customer_email) {
+            customerEmail = paymentIntent.metadata.customer_email;
+          }
+          if (!customerEmail && orderRow && orderRow.shipping_data) {
+            try {
+              const sd = typeof orderRow.shipping_data === 'string' ? JSON.parse(orderRow.shipping_data) : orderRow.shipping_data;
+              customerEmail = sd?.email || null;
+              customerName = [sd?.firstName, sd?.lastName].filter(Boolean).join(' ');
+            } catch {}
+          }
+
+          if (customerEmail) {
+            const totalEur = ((orderRow?.total || 0) / 100).toFixed(2);
+            const invoiceNum = invoiceRecord?.invoice_number || '';
+            const subject = `Pedido #${orderId} confirmado · Escapes y Más`;
+            const text = `Hola${customerName ? ` ${customerName}` : ''},\n\nTu pedido #${orderId} por ${totalEur}€ ha sido confirmado correctamente. Adjuntamos tu factura en PDF.\n\nEn los próximos días recibirás un email con el código de seguimiento cuando tu pedido salga de nuestro almacén.\n\nGracias por confiar en Escapes y Más.\n\nEl equipo de Escapes y Más.`;
+            const html = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
+  <h2 style="color:#FF6B00;margin-bottom:8px">¡Pedido confirmado!</h2>
+  <p>Hola${customerName ? ` <strong>${customerName}</strong>` : ''},</p>
+  <p>Tu pedido <strong>#${orderId}</strong> por <strong style="color:#FF6B00">${totalEur}€</strong> ha sido confirmado correctamente.</p>
+  ${invoiceNum ? `<p>Factura: <strong>${invoiceNum}</strong> (adjunta en este email).</p>` : ''}
+  <p>En los próximos días recibirás un email con el código de seguimiento cuando tu pedido salga de nuestro almacén.</p>
+  <p style="margin-top:24px">Gracias por confiar en nosotros.</p>
+  <p style="color:#888;font-size:12px;margin-top:24px">Escapes y Más · <a href="https://escapesymas.com">escapesymas.com</a></p>
+</div>`;
+
+            const attachments: any[] = [];
+            if (invoiceRecord && invoiceRecord.pdf_path && fs.existsSync(invoiceRecord.pdf_path)) {
+              attachments.push({
+                filename: `${invoiceRecord.invoice_number}.pdf`,
+                path: invoiceRecord.pdf_path,
+                contentType: 'application/pdf',
+              });
+            }
+
+            const transporter = nodemailer.createTransport({
+              host: process.env.SMTP_HOST || "smtp.buzondecorreo.com",
+              port: parseInt(process.env.SMTP_PORT || "465"),
+              secure: true,
+              auth: { user: process.env.SMTP_USER || "web@escapesymas.com", pass: process.env.SMTP_PASSWORD },
+              tls: { rejectUnauthorized: process.env.SMTP_ALLOW_UNSECURE === 'true' },
+            });
+            await transporter.sendMail({
+              from: '"Escapes y Más" <web@escapesymas.com>',
+              to: customerEmail,
+              subject,
+              text,
+              html,
+              attachments,
+            });
+            console.log(`[STRIPE WEBHOOK] Confirmation email sent to ${customerEmail} for Order ${orderId}`);
+          } else {
+            console.warn(`[STRIPE WEBHOOK] No customer email found for Order ${orderId}; skipping confirmation email`);
+          }
+        } catch (emailErr: any) {
+          console.error(`[STRIPE WEBHOOK] Failed to send confirmation email for Order ${orderId}:`, emailErr.message);
         }
 
         console.log(`[STRIPE WEBHOOK] Order ${orderId} finalized via payment_intent.succeeded`);

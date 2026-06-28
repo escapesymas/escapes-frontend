@@ -25,6 +25,10 @@ export default function AvisoLegalPage() {
             </p>
             <ul className="list-disc pl-5 mt-2 space-y-1">
               <li><strong>Denominación social:</strong> Escapes y Más</li>
+              <li><strong>NIF / CIF:</strong> [RELLENAR POR EL TITULAR]</li>
+              <li><strong>Domicilio social:</strong> [RELLENAR POR EL TITLAR — calle, número, código postal, ciudad, provincia, país]</li>
+              <li><strong>Registro Mercantil:</strong> [RELLENAR POR EL TITULAR — tomo, folio, hoja, inscripción]</li>
+              <li><strong>Teléfono de contacto:</strong> [RELLENAR POR EL TITULAR]</li>
               <li><strong>Correo electrónico:</strong> info@escapesymas.com</li>
             </ul>
           </section>
