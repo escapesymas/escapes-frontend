@@ -718,6 +718,45 @@ app.get('/api/health', async (_req, res) => {
   });
 });
 
+app.get('/api/health/stripe', async (_req: any, res: any) => {
+  try {
+    if (!stripeLiveKey) {
+      return res.status(503).json({
+        stripe: 'not_configured',
+        message: 'STRIPE_SECRET_KEY no está configurada en .env del servidor',
+        action: 'Configurar STRIPE_SECRET_KEY y reiniciar el proceso',
+      });
+    }
+    const balance = await stripeLive.balance.retrieve();
+    res.json({
+      stripe: 'ok',
+      keyPrefix: stripeLiveKey.substring(0, 12) + '...',
+      keyLastChars: stripeLiveKey.slice(-6),
+      mode: stripeLiveKey.startsWith('sk_live_') ? 'live' : stripeLiveKey.startsWith('sk_test_') ? 'test' : 'unknown',
+      livemode: balance.livemode,
+      currency: balance.available?.[0]?.currency || 'unknown',
+      timestamp: new Date().toISOString(),
+    });
+  } catch (e: any) {
+    const msg = e?.message || 'Unknown error';
+    const isExpired = msg.includes('Expired API Key');
+    const isInvalid = msg.includes('Invalid API Key');
+    res.status(isExpired || isInvalid ? 503 : 500).json({
+      stripe: isExpired ? 'expired' : isInvalid ? 'invalid' : 'error',
+      keyPrefix: stripeLiveKey ? stripeLiveKey.substring(0, 12) + '...' : null,
+      mode: stripeLiveKey?.startsWith('sk_live_') ? 'live' : stripeLiveKey?.startsWith('sk_test_') ? 'test' : 'unknown',
+      message: msg,
+      action: isExpired
+        ? 'Renovar la clave en https://dashboard.stripe.com/apikeys y actualizar STRIPE_SECRET_KEY en ecosystem.config.cjs'
+        : isInvalid
+        ? 'Verificar que STRIPE_SECRET_KEY es correcta en ecosystem.config.cjs'
+        : 'Revisar logs del backend para más detalles',
+      requires_admin_action: true,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
 // ================================================================
 // IMAGE PROXY (Cloudflare-bypass for catalog images)
 // El CDN Bihr bloquea con 403 a navegadores de usuarios finales.
@@ -5450,7 +5489,22 @@ app.post('/api/create-payment-intent', async (req: any, res: any) => {
     console.error('[STRIPE ERROR TYPE]:', error.type);
     console.error('[STRIPE ERROR CODE]:', error.code);
     console.error('[STRIPE ERROR DETAIL]:', error.detail);
-    return res.status(500).json({ error: 'Error al crear la intención de pago', detail: error.message });
+
+    const isExpiredKey = (error.message || '').includes('Expired API Key') || error.code === 'authentication_error';
+    const isInvalidKey = (error.message || '').includes('Invalid API Key') || error.code === 'authentication_error';
+    const userMessage = isExpiredKey
+      ? 'La clave de Stripe ha expirado. El administrador debe renovarla en https://dashboard.stripe.com/apikeys'
+      : isInvalidKey
+      ? 'La clave de Stripe es inválida. Verifica STRIPE_SECRET_KEY en la configuración del servidor.'
+      : 'Error al procesar el pago. Inténtalo de nuevo o contacta con soporte si persiste.';
+
+    return res.status(isExpiredKey || isInvalidKey ? 503 : 500).json({
+      error: userMessage,
+      detail: error.message,
+      code: error.code || 'unknown',
+      type: error.type || 'unknown',
+      requires_admin_action: isExpiredKey || isInvalidKey,
+    });
   }
 });
 

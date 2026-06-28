@@ -39,4 +39,17 @@ test.describe('Backend endpoints públicos', () => {
     const r = await request.get(`${API_BASE}/image-proxy?url=https%3A%2F%2Fevil.com%2Fimage.jpg`);
     expect(r.status()).toBe(400);
   });
+
+  test('GET /health/stripe reporta estado de la clave (ok, expired, o invalid)', async ({ request }) => {
+    const r = await request.get(`${API_BASE}/health/stripe`);
+    const body = await r.json();
+    expect(['ok', 'expired', 'invalid', 'not_configured', 'error']).toContain(body.stripe);
+    if (body.stripe !== 'ok') {
+      expect(body.requires_admin_action).toBe(true);
+      expect(body.action).toBeTruthy();
+    } else {
+      expect(body.keyPrefix).toMatch(/^sk_(live|test)_/);
+      expect(body.livemode).toBeDefined();
+    }
+  });
 });
