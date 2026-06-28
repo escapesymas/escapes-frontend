@@ -15,7 +15,7 @@ test.describe('Auth', () => {
     await page.fill('input[placeholder*="piloto" i], input[name="email"], input[name="username"], input[type="email"], input[type="text"]', 'wrong@test.com');
     await page.fill('input[type="password"]', 'wrongpass');
     await page.click('button:has-text("Iniciar sesión")');
-    const errorLocator = page.locator('text=/contraseña incorrecta|invalid|credenciales/i').first();
+    const errorLocator = page.locator('text=/contraseña incorrecta|invalid|credenciales|no encontrad|incorrect/i').first();
     await expect(errorLocator).toBeVisible({ timeout: 10000 });
     const maxStackLocator = page.locator('text=/Maximum call stack/i');
     expect(await maxStackLocator.count()).toBe(0);

@@ -40,7 +40,7 @@ interface SavedAddress {
 }
 
 export default function CartView({ onContinueShopping, initialStep = 'cart' }: CartViewProps) {
-  const { cart, updateQuantity, removeItem, clearCart, addToCart } = useCart();
+  const { cart, updateQuantity, removeItem, clearCart, addToCart, isInitialized } = useCart();
   const { user, isAuthenticated } = useAuth();
 
   const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
@@ -128,10 +128,11 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
   // Guard: si llegamos a /checkout con carrito vacío, redirigir a /
   useEffect(() => {
     if (initialStep !== 'checkout') return;
+    if (!isInitialized) return;
     if (!cart || cart.length === 0) {
       window.location.href = '/?emptyCart=1';
     }
-  }, [initialStep, cart]);
+  }, [initialStep, cart, isInitialized]);
 
   // Carrito abandonado: si la URL trae ?recover=TOKEN, restaurar productos del snapshot
   useEffect(() => {
