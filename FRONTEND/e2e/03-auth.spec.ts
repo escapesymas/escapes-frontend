@@ -1,12 +1,24 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Auth', () => {
-  test('Login con credenciales inválidas muestra error', async ({ page }) => {
+  test('Login con credenciales inválidas muestra error (API)', async ({ request }) => {
+    const r = await request.post('/api/auth?action=login', {
+      data: { username: 'nonexistent@example.com', password: 'wrongpass123' },
+    });
+    expect(r.status()).toBe(401);
+    const body = await r.json();
+    expect(body.error).toBeTruthy();
+  });
+
+  test('Login con credenciales inválidas por UI muestra mensaje de error sin Maximum call stack', async ({ page }) => {
     await page.goto('/login');
-    await page.getByLabel(/email|correo/i).first().fill('nonexistent@example.com');
-    await page.getByLabel(/contraseña|password/i).first().fill('wrongpass123');
-    await page.getByRole('button', { name: /entrar|iniciar|acceder/i }).first().click();
-    await expect(page.locator('body')).toContainText(/error|incorrecto|inválid/i, { timeout: 5_000 });
+    await page.fill('input[placeholder*="piloto" i], input[name="email"], input[name="username"], input[type="email"], input[type="text"]', 'wrong@test.com');
+    await page.fill('input[type="password"]', 'wrongpass');
+    await page.click('button:has-text("Iniciar sesión")');
+    const errorLocator = page.locator('text=/contraseña incorrecta|invalid|credenciales/i').first();
+    await expect(errorLocator).toBeVisible({ timeout: 10000 });
+    const maxStackLocator = page.locator('text=/Maximum call stack/i');
+    expect(await maxStackLocator.count()).toBe(0);
   });
 
   test('Login con cookie httpOnly setea header correcto', async ({ page, context }) => {

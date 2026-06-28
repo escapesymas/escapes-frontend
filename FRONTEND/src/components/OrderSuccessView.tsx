@@ -8,7 +8,7 @@ interface OrderSuccessViewProps {
   total: string;
   address: string;
   city: string;
-  onContinueShopping: () => void;
+  onContinueShopping?: () => void;
   onReset: () => void;
 }
 
@@ -28,7 +28,7 @@ export default function OrderSuccessView({ orderId, total, address, city, onCont
         <p><span className="font-bold text-foreground">Dirección:</span> {address}, {city}</p>
       </div>
       <button
-        onClick={() => { onReset(); onContinueShopping(); }}
+        onClick={() => { onReset(); if (onContinueShopping) onContinueShopping(); }}
         className="bg-accent text-slate-950 font-mono font-bold uppercase tracking-wide py-3 px-8 rounded-sm hover:bg-accent-hover transition-colors flex items-center gap-2 cursor-pointer"
       >
         Volver a la tienda

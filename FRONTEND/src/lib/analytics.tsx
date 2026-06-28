@@ -68,7 +68,11 @@ export const trackEvent = {
 
   beginCheckout: (items: { product: Product; quantity: number }[], value: number) => {
     const eventId = (typeof crypto !== 'undefined' && 'randomUUID' in crypto) ? crypto.randomUUID() : `${Date.now()}_${Math.random()}`;
-    trackEvent.beginCheckoutEventId = eventId;
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('begin_checkout_event_id', eventId);
+      } catch {}
+    }
     pushEvent('begin_checkout', {
       event_id: eventId,
       currency: 'EUR',
@@ -82,7 +86,21 @@ export const trackEvent = {
     });
   },
 
-  beginCheckoutEventId: undefined as string | undefined,
+  getBeginCheckoutEventId(): string | undefined {
+    if (typeof window === 'undefined') return undefined;
+    try {
+      return sessionStorage.getItem('begin_checkout_event_id') || undefined;
+    } catch {
+      return undefined;
+    }
+  },
+
+  clearBeginCheckoutEventId(): void {
+    if (typeof window === 'undefined') return;
+    try {
+      sessionStorage.removeItem('begin_checkout_event_id');
+    } catch {}
+  },
 
   purchase: (orderId: string, items: { product: Product; quantity: number }[], value: number) => {
     const eventId = (typeof crypto !== 'undefined' && 'randomUUID' in crypto) ? crypto.randomUUID() : `${Date.now()}_${Math.random()}`;
