@@ -20,8 +20,8 @@ export default function Header({ onCartClick, onTabChange }: HeaderProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full bg-background/80 backdrop-blur-md border-b border-card-border">
-        <div className="container mx-auto px-4 md:px-6 h-14 flex items-center justify-between gap-3">
+      <header className="sticky top-0 z-40 w-full bg-background/80 backdrop-blur-md border-b border-card-border relative">
+        <div className="container mx-auto px-4 md:px-6 h-14 flex items-center justify-between gap-3 relative">
 
         {/* IZQUIERDA: placeholder vacío para mantener logo centrado */}
         <div className="w-9 h-9 shrink-0 md:w-10 md:h-10" aria-hidden="true" />
@@ -30,7 +30,7 @@ export default function Header({ onCartClick, onTabChange }: HeaderProps) {
         <Link
           href="/"
           aria-label="Escapes y Más — Inicio"
-          className="absolute left-1/2 -translate-x-1/2 h-11 shrink-0"
+          className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 h-11 shrink-0 z-10"
         >
           {/* Logo para tema claro (letras negras + amarillo) */}
             <Image
