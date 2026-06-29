@@ -264,8 +264,7 @@ export default function Home() {
 
   return (
     <div
-      className="bg-background text-foreground flex flex-col font-sans"
-      style={{ height: '100dvh' }}
+      className="bg-background text-foreground flex flex-col font-sans min-h-screen"
     >
 
       <Header
@@ -294,9 +293,10 @@ export default function Home() {
 
       {/* El main tiene overflow-y:auto propio — así el BottomNav puede
           estar en flujo normal al fondo sin necesitar position:fixed */}
-      <main id="main-content"
-        className="flex-1 overflow-y-auto overscroll-contain"
-        style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
+      <main
+        id="main-content"
+        className={activeTab === 'shop' ? 'flex-1' : 'flex-1 overflow-y-auto overscroll-contain'}
+        style={activeTab === 'shop' ? undefined : { WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
       >
         <div className="container mx-auto px-4 py-6 max-w-5xl">
 
@@ -454,34 +454,67 @@ export default function Home() {
               </section>
             ) : (
               <>
-                <section>
-                  <CompatibleProducts
-                    selectedBike={selectedBike}
-                    onAddToCart={handleAddToCart}
-                    onNotifyMe={handleNotifyMe}
-                  />
-                </section>
-
-                {!selectedBike && (
+                {selectedBike ? (
                   <>
+                    <section>
+                      <CompatibleProducts
+                        selectedBike={selectedBike}
+                        onAddToCart={handleAddToCart}
+                        onNotifyMe={handleNotifyMe}
+                      />
+                    </section>
+
                     <section className="mt-8">
                       <BrandCarousel brand="RST" title="RST — Casual & Sport" onAddToCart={handleAddToCart} onNotifyMe={handleNotifyMe} />
+                    </section>
+                    <section className="mt-8">
+                      <BrandCarousel brand="AKRAPOVIC" title="Akrapovič — Escapes" onAddToCart={handleAddToCart} onNotifyMe={handleNotifyMe} />
+                    </section>
+                  </>
+                ) : (
+                  <>
+                    {/* Categorías principales (sin moto seleccionada) */}
+                    <section className="mt-2">
+                      <div className="flex items-center justify-between mb-4 px-4 md:px-0">
+                        <h3 className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider">
+                          Compra por categoría
+                        </h3>
+                      </div>
+                      <div className="grid grid-cols-3 md:grid-cols-6 gap-3 px-4 md:px-0">
+                        {[
+                          { id: 'cascos', name: 'Cascos', icon: '🪖' },
+                          { id: 'chasis', name: 'Chasis', icon: '🏍️' },
+                          { id: 'electricidad', name: 'Electricidad', icon: '⚡' },
+                          { id: 'equipamiento-piloto', name: 'Equipamiento', icon: '🧥' },
+                          { id: 'aceite-fluidos', name: 'Aceites', icon: '🛢️' },
+                          { id: 'neumaticos', name: 'Neumáticos', icon: '⚙️' },
+                          { id: 'herramientas', name: 'Herramientas', icon: '🔧' },
+                          { id: 'escapes', name: 'Escapes', icon: '💨' },
+                          { id: 'frenos', name: 'Frenos', icon: '🛑' },
+                        ].map((cat) => (
+                          <a
+                            key={cat.id}
+                            href={`/universales/${cat.id}`}
+                            className="aspect-square bg-card border border-card-border rounded-md flex flex-col items-center justify-center gap-1 p-2 hover:border-accent hover:bg-select-bg transition-all text-center no-underline"
+                          >
+                            <span className="text-2xl">{cat.icon}</span>
+                            <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-foreground">{cat.name}</span>
+                          </a>
+                        ))}
+                      </div>
+                    </section>
+
+                    <section className="mt-10">
+                      <BrandCarousel brand="AKRAPOVIC" title="Akrapovič — Escapes premium" onAddToCart={handleAddToCart} onNotifyMe={handleNotifyMe} />
                     </section>
                     <section className="mt-8">
                       <BrandCarousel brand="SHARK" title="SHARK — Cascos" onAddToCart={handleAddToCart} onNotifyMe={handleNotifyMe} />
                     </section>
                     <section className="mt-8">
-                      <BrandCarousel brand="AKRAPOVIC" title="Akrapovič — Escapes" onAddToCart={handleAddToCart} onNotifyMe={handleNotifyMe} />
-                    </section>
-                    <section className="mt-8">
-                      <BrandCarousel brand="BIHR" title="Bihr — Recambios" onAddToCart={handleAddToCart} onNotifyMe={handleNotifyMe} />
+                      <BrandCarousel brand="RST" title="RST — Equipación" onAddToCart={handleAddToCart} onNotifyMe={handleNotifyMe} />
                     </section>
                   </>
                 )}
-
-                {/* <section className="mb-6">
-                  <PaddockFeed selectedBike={selectedBike} />
-                </section> */}
               </>
             )}
 
