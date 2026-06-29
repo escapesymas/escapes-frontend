@@ -1471,7 +1471,7 @@ app.get('/api/search/suggestions', async (req, res) => {
 
 app.get('/api/catalog/products', catalogLimiter, async (req, res) => {
   try {
-    const { search, category_id, page = '1', per_page = '20', universal, brand, min_price, max_price, in_stock, attrs } = req.query as any;
+    const { search, category_id, category_slug, page = '1', per_page = '20', universal, brand, min_price, max_price, in_stock, attrs } = req.query as any;
     const pageNum = parseInt(page) || 1;
     const perPage = Math.min(parseInt(per_page) || 20, 50);
     const offset = (pageNum - 1) * perPage;
@@ -1540,6 +1540,18 @@ app.get('/api/catalog/products', catalogLimiter, async (req, res) => {
               OR (category_id = ${parentId})
             )`);
         }
+      }
+      if (category_slug && !category_id) {
+        const slugLower = String(category_slug).toLowerCase();
+        conditions.append(sql`
+          AND category_id IN (
+            WITH RECURSIVE descendants AS (
+              SELECT id FROM categories WHERE LOWER(slug) LIKE ${'%' + slugLower + '%'} OR LOWER(name) LIKE ${'%' + slugLower + '%'}
+              UNION ALL
+              SELECT c.id FROM categories c JOIN descendants d ON c.parent_id = d.id
+            )
+            SELECT id FROM descendants
+          )`);
       }
 
       const countRes = await db.execute(sql`SELECT count(*) as total FROM (SELECT 1 FROM products ${conditions} LIMIT 10000) sub`);

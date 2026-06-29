@@ -133,7 +133,14 @@ function CatalogContent({
         const q = searchQuery || getSearchParam('q');
         if (q) paramsObj.search = q;
         const catId = selectedSubId || selectedParentId;
-        if (catId) paramsObj.category_id = String(catId);
+        if (catId) {
+          paramsObj.category_id = String(catId);
+        } else {
+          const ps = segments[0];
+          if (ps && ps !== 'buscar') {
+            paramsObj.category_slug = ps;
+          }
+        }
         const brands = getSearchParam('brands');
         if (brands) paramsObj.brand = brands;
         const maxPrice = getSearchParam('maxPrice');
