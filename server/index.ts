@@ -21,6 +21,7 @@ import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import { fileURLToPath } from 'url';
 import PDFDocument from 'pdfkit';
+import sharp from 'sharp';
 import {
   getLiveStockLevel, getLiveStockValue, checkProductsInfo, createBihrOrder, syncBihrCatalog
 } from './bihrService.js';
@@ -760,12 +761,26 @@ app.get('/api/health/stripe', async (_req: any, res: any) => {
 // ================================================================
 // IMAGE PROXY (Cloudflare-bypass for catalog images)
 // El CDN Bihr bloquea con 403 a navegadores de usuarios finales.
-// El VPS sí tiene acceso. Cacheamos la imagen en memoria.
+// El VPS sí tiene acceso. Cacheamos en disco + optimizamos con sharp.
 // ================================================================
+const IMAGE_PROXY_CACHE_DIR = path.join(os.tmpdir(), 'image-proxy-cache');
+if (!fs.existsSync(IMAGE_PROXY_CACHE_DIR)) {
+  fs.mkdirSync(IMAGE_PROXY_CACHE_DIR, { recursive: true });
+}
+
 const imageProxyCache = new Map<string, { buffer: Buffer; contentType: string; expiresAt: number }>();
-const IMAGE_PROXY_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+const IMAGE_PROXY_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 días
 const IMAGE_PROXY_MAX_ENTRIES = 5000;
 const ALLOWED_IMAGE_HOSTS = ['api.mybihr.com', 'bihr.net', 'cdn.mybihr.com'];
+const ALLOWED_SIZES = new Set([200, 400, 600, 800]);
+
+function diskPathFor(rawUrl: string, width: number): string {
+  const hash = crypto.createHash('sha1').update(rawUrl).digest('hex');
+  const subdir = hash.slice(0, 2);
+  const dir = path.join(IMAGE_PROXY_CACHE_DIR, subdir);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  return path.join(dir, `${hash}-${width}.webp`);
+}
 
 app.get('/api/image-proxy', async (req, res) => {
   try {
@@ -778,22 +793,31 @@ app.get('/api/image-proxy', async (req, res) => {
       return res.status(400).json({ error: 'Host not allowed' });
     }
 
-    const cached = imageProxyCache.get(rawUrl);
+    const width = Math.max(100, Math.min(1600, parseInt(String(req.query.w || '400'), 10) || 400));
+    const cacheKey = `${width}|${rawUrl}`;
+    const diskFile = diskPathFor(rawUrl, width);
+
+    // 1) Disco: archivo ya optimizado
+    try {
+      if (fs.existsSync(diskFile)) {
+        const buf = fs.readFileSync(diskFile);
+        res.set('Content-Type', 'image/webp');
+        res.set('Cache-Control', 'public, max-age=2592000, immutable');
+        res.set('X-Image-Proxy', 'DISK-HIT');
+        return res.end(buf);
+      }
+    } catch {}
+
+    // 2) Memoria: archivo recién optimizado
+    const cached = imageProxyCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
       res.set('Content-Type', cached.contentType);
-      res.set('Cache-Control', 'public, max-age=86400');
-      res.set('X-Image-Proxy', 'HIT');
+      res.set('Cache-Control', 'public, max-age=2592000, immutable');
+      res.set('X-Image-Proxy', 'MEM-HIT');
       return res.end(cached.buffer);
     }
 
-    if (imageProxyCache.size > IMAGE_PROXY_MAX_ENTRIES) {
-      const now = Date.now();
-      for (const [k, v] of imageProxyCache.entries()) {
-        if (v.expiresAt < now) imageProxyCache.delete(k);
-      }
-      if (imageProxyCache.size > IMAGE_PROXY_MAX_ENTRIES) imageProxyCache.clear();
-    }
-
+    // 3) Upstream
     const upstream = await fetch(rawUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; EscapesYMas/1.0; +https://escapesymas.com)',
@@ -805,20 +829,35 @@ app.get('/api/image-proxy', async (req, res) => {
       return res.status(upstream.status).json({ error: `Upstream ${upstream.status}` });
     }
 
-    const contentType = upstream.headers.get('content-type') || 'image/jpeg';
     const ab = await upstream.arrayBuffer();
-    const buffer = Buffer.from(ab);
+    const originalBuffer = Buffer.from(ab);
 
-    imageProxyCache.set(rawUrl, {
-      buffer,
-      contentType,
+    let optimized: Buffer;
+    try {
+      optimized = await sharp(originalBuffer)
+        .resize({ width, withoutEnlargement: true, fit: 'inside' })
+        .webp({ quality: 80, effort: 4 })
+        .toBuffer();
+    } catch (sharpErr: any) {
+      console.error('[image-proxy] sharp error, fallback to original:', sharpErr.message);
+      optimized = originalBuffer;
+    }
+
+    // Persistir en disco (fire & forget)
+    fs.promises.writeFile(diskFile, optimized).catch(() => {});
+
+    // Cache memoria
+    if (imageProxyCache.size > IMAGE_PROXY_MAX_ENTRIES) imageProxyCache.clear();
+    imageProxyCache.set(cacheKey, {
+      buffer: optimized,
+      contentType: 'image/webp',
       expiresAt: Date.now() + IMAGE_PROXY_TTL_MS,
     });
 
-    res.set('Content-Type', contentType);
-    res.set('Cache-Control', 'public, max-age=86400');
+    res.set('Content-Type', 'image/webp');
+    res.set('Cache-Control', 'public, max-age=2592000, immutable');
     res.set('X-Image-Proxy', 'MISS');
-    res.end(buffer);
+    res.end(optimized);
   } catch (err: any) {
     console.error('[image-proxy] error:', err.message);
     res.status(502).json({ error: 'Proxy error' });
@@ -1723,7 +1762,7 @@ app.get('/api/catalog/frequently-bought-together/:productId', async (req, res) =
       } catch {}
       let firstImage: string = imgs[0]?.src || imgs[0]?.url || '';
       if (firstImage && /^https?:\/\/(api\.|cdn\.)?mybihr\.com\//i.test(firstImage)) {
-        firstImage = `/api/image-proxy?url=${encodeURIComponent(firstImage)}`;
+        firstImage = `/api/image-proxy?w=400&url=${encodeURIComponent(firstImage)}`;
       }
       return {
         id: row.id,
@@ -5756,28 +5795,28 @@ function mapProductToFrontend(row: any) {
       const local = localImageForSku(row.sku, 'desktop');
       if (local) img.src = local;
       else if (/^https?:\/\/(api\.|cdn\.)?mybihr\.com\//i.test(img.src)) {
-        img.src = `/api/image-proxy?url=${encodeURIComponent(img.src)}`;
+        img.src = `/api/image-proxy?w=800&url=${encodeURIComponent(img.src)}`;
       }
     }
     if (img.srcMobile && isRemoteImageUrl(img.srcMobile)) {
       const local = localImageForSku(row.sku, 'mobile');
       if (local) img.srcMobile = local;
       else if (/^https?:\/\/(api\.|cdn\.)?mybihr\.com\//i.test(img.srcMobile)) {
-        img.srcMobile = `/api/image-proxy?url=${encodeURIComponent(img.srcMobile)}`;
+        img.srcMobile = `/api/image-proxy?w=600&url=${encodeURIComponent(img.srcMobile)}`;
       }
     }
     if (img.srcCardDesktop && isRemoteImageUrl(img.srcCardDesktop)) {
       const local = localImageForSku(row.sku, 'card-desktop');
       if (local) img.srcCardDesktop = local;
       else if (/^https?:\/\/(api\.|cdn\.)?mybihr\.com\//i.test(img.srcCardDesktop)) {
-        img.srcCardDesktop = `/api/image-proxy?url=${encodeURIComponent(img.srcCardDesktop)}`;
+        img.srcCardDesktop = `/api/image-proxy?w=400&url=${encodeURIComponent(img.srcCardDesktop)}`;
       }
     }
     if (img.srcCardMobile && isRemoteImageUrl(img.srcCardMobile)) {
       const local = localImageForSku(row.sku, 'card-mobile');
       if (local) img.srcCardMobile = local;
       else if (/^https?:\/\/(api\.|cdn\.)?mybihr\.com\//i.test(img.srcCardMobile)) {
-        img.srcCardMobile = `/api/image-proxy?url=${encodeURIComponent(img.srcCardMobile)}`;
+        img.srcCardMobile = `/api/image-proxy?w=200&url=${encodeURIComponent(img.srcCardMobile)}`;
       }
     }
     return img;
