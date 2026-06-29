@@ -20,7 +20,7 @@ export default function Header({ onCartClick, onTabChange }: HeaderProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full bg-background/80 backdrop-blur-md border-b border-card-border relative">
+      <header className="sticky top-0 z-50 w-full bg-background/80 backdrop-blur-md border-b border-card-border relative">
         <div className="container mx-auto px-4 md:px-6 h-14 flex items-center justify-between gap-3 relative">
 
         {/* IZQUIERDA: placeholder vacío para mantener logo centrado */}
