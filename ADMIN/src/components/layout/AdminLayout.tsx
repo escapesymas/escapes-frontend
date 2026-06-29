@@ -83,7 +83,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-tech-carbon text-tech-text flex flex-col md:flex-row font-sans">
+    <div className="min-h-screen bg-tech-carbon text-tech-text flex flex-col md:flex-row font-sans relative">
       {/* Mobile Header Bar */}
       {isMobile && (
         <header className="flex md:hidden bg-tech-card border-b border-tech-border p-4 justify-between items-center sticky top-0 z-40">

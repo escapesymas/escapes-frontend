@@ -654,28 +654,92 @@ function diversifyByBrand(hits: CatalogHit[], maxPerBrand: number): CatalogHit[]
   return result;
 }
 
+export interface GarageEntry {
+  brand: string;
+  model: string;
+  year: string | number;
+  source: 'table' | 'jsonb';
+}
+
+function parseBikeString(s: string): { brand: string; model: string; year: string } {
+  const cleaned = s.trim();
+  const knownBrands = ['HONDA', 'YAMAHA', 'KAWASAKI', 'SUZUKI', 'BMW', 'DUCATI', 'KTM', 'APRILIA', 'TRIUMPH', 'HARLEY', 'VESPA', 'PIAGGIO', 'KYMCO', 'SYM'];
+  const upper = cleaned.toUpperCase();
+  for (const b of knownBrands) {
+    if (upper.startsWith(b + ' ')) {
+      const rest = cleaned.substring(b.length + 1).trim();
+      const yearMatch = rest.match(/\((\d{4})\)|\b(\d{4})\b/);
+      const year = yearMatch ? (yearMatch[1] || yearMatch[2]) : '';
+      const model = yearMatch ? rest.replace(yearMatch[0], '').trim() : rest;
+      return { brand: b.charAt(0) + b.slice(1).toLowerCase(), model, year };
+    }
+  }
+  const yearMatch = cleaned.match(/\((\d{4})\)|\b(\d{4})\b/);
+  const year = yearMatch ? (yearMatch[1] || yearMatch[2]) : '';
+  const model = yearMatch ? cleaned.replace(yearMatch[0], '').trim() : cleaned;
+  return { brand: '', model, year };
+}
+
 export async function getGarageContext(userId: number): Promise<string> {
   try {
-    const result = await pool.query(
+    const userRes = await pool.query(
       `SELECT first_name, last_name, garage FROM users WHERE id = $1`,
       [userId]
     );
-    if (result.rows.length === 0) return '';
-    const user = result.rows[0] as { first_name: string | null; last_name: string | null; garage: any };
+    if (userRes.rows.length === 0) return '';
+    const user = userRes.rows[0] as { first_name: string | null; last_name: string | null; garage: any };
 
-    const name = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
-    let garage: any[] = [];
+    const tableRes = await pool.query(
+      `SELECT brand, model, year FROM garage WHERE user_id = $1 ORDER BY created_at DESC LIMIT 20`,
+      [userId]
+    );
+    const fromTable: GarageEntry[] = (tableRes.rows as any[]).map((r) => ({
+      brand: String(r.brand || '').trim(),
+      model: String(r.model || '').trim(),
+      year: String(r.year || '').trim(),
+      source: 'table' as const,
+    }));
+
+    let fromJsonb: GarageEntry[] = [];
     try {
       if (user.garage) {
-        garage = typeof user.garage === 'string' ? JSON.parse(user.garage) : user.garage;
+        const raw = typeof user.garage === 'string' ? JSON.parse(user.garage) : user.garage;
+        if (Array.isArray(raw)) {
+          for (const e of raw) {
+            if (typeof e === 'string') {
+              const parsed = parseBikeString(e);
+              if (parsed.brand || parsed.model) {
+                fromJsonb.push({ ...parsed, source: 'jsonb' });
+              }
+            } else if (e && typeof e === 'object') {
+              fromJsonb.push({
+                brand: String(e.brand || '').trim(),
+                model: String(e.model || '').trim(),
+                year: String(e.year || '').trim(),
+                source: 'jsonb',
+              });
+            }
+          }
+        }
       }
     } catch {
-      garage = [];
+      // ignore parse errors
     }
 
+    const seen = new Set<string>();
+    const merged: GarageEntry[] = [];
+    for (const e of [...fromTable, ...fromJsonb]) {
+      const key = `${(e.brand || '').toLowerCase()}|${(e.model || '').toLowerCase()}|${e.year}`;
+      if (!seen.has(key) && (e.brand || e.model)) {
+        seen.add(key);
+        merged.push(e);
+      }
+    }
+
+    const name = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
     const namePart = name ? `Nombre del cliente: ${name}.` : '';
-    const garagePart = garage.length > 0
-      ? `Motos en su garaje: ${garage.map((m) => `${m.brand || ''} ${m.model || ''} ${m.year || ''}`.trim()).join(', ')}. RECOMIENDA productos del catálogo que sean compatibles con estas motos cuando aplique.`
+    const garagePart = merged.length > 0
+      ? `Motos en su garaje: ${merged.map((m) => `${m.brand} ${m.model}${m.year ? ` (${m.year})` : ''}`.trim()).join(', ')}. RECOMIENDA productos del catálogo que sean compatibles con estas motos cuando aplique.`
       : 'El cliente aún no tiene motos registradas en su garaje.';
 
     return `${namePart} ${garagePart}`.trim();
@@ -687,20 +751,78 @@ export async function getGarageContext(userId: number): Promise<string> {
 
 export function getGarageEntries(userId: number): Promise<string[]> {
   return pool
-    .query(`SELECT garage FROM users WHERE id = $1`, [userId])
+    .query(
+      `SELECT brand, model, year FROM garage WHERE user_id = $1
+       UNION
+       SELECT NULL as brand, NULL as model, NULL as year WHERE FALSE`,
+      [userId]
+    )
     .then((res) => {
-      if (res.rows.length === 0) return [];
-      const raw = res.rows[0].garage;
-      if (!raw) return [];
-      try {
-        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-        return Array.isArray(parsed) ? parsed.filter((e) => typeof e === 'string') : [];
-      } catch {
-        return [];
-      }
+      const tableEntries: string[] = (res.rows as any[])
+        .map((r) => [r.brand, r.model, r.year].filter(Boolean).join(' ').trim())
+        .filter(Boolean);
+
+      return pool
+        .query(`SELECT garage FROM users WHERE id = $1`, [userId])
+        .then((userRes) => {
+          const out: string[] = [...tableEntries];
+          if (userRes.rows.length > 0) {
+            const raw = userRes.rows[0].garage;
+            if (raw) {
+              try {
+                const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                if (Array.isArray(parsed)) {
+                  for (const e of parsed) {
+                    if (typeof e === 'string') {
+                      if (e.trim()) out.push(e.trim());
+                    } else if (e && typeof e === 'object') {
+                      const s = [e.brand, e.model, e.year].filter(Boolean).join(' ').trim();
+                      if (s) out.push(s);
+                    }
+                  }
+                }
+              } catch {}
+            }
+          }
+          const seen = new Set<string>();
+          return out.filter((s) => {
+            const k = s.toLowerCase();
+            if (seen.has(k)) return false;
+            seen.add(k);
+            return true;
+          });
+        });
     })
     .catch((err) => {
       console.error('[chatbot] garage entries fetch failed:', err);
       return [];
     });
+}
+
+export async function getRecentOrdersContext(userId: number): Promise<string> {
+  try {
+    const res = await pool.query(
+      `SELECT id, status, total, created_at FROM orders WHERE user_id = $1 ORDER BY created_at DESC LIMIT 3`,
+      [userId]
+    );
+    if (res.rows.length === 0) return 'El cliente aún no tiene pedidos registrados.';
+    const orders = res.rows as any[];
+    const statusMap: Record<string, string> = {
+      pending: 'pendiente de pago',
+      processing: 'en preparación',
+      completed: 'completado/enviado',
+      cancelled: 'cancelado',
+      failed: 'con problema',
+    };
+    const summary = orders.map((o) => {
+      const status = statusMap[o.status] || o.status;
+      const date = new Date(o.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+      const total = (parseInt(o.total) / 100).toFixed(2);
+      return `#${o.id} (${status}, ${total}€, ${date})`;
+    }).join(', ');
+    return `Pedidos recientes del cliente: ${summary}. Puedes ayudarle a consultar el estado de cualquiera de estos pedidos.`;
+  } catch (err) {
+    console.error('[chatbot] recent orders query failed:', err);
+    return '';
+  }
 }

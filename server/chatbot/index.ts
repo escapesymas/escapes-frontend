@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { minimaxClient, CHAT_MODEL, CHAT_LIMITS } from './minimax.js';
 import { sanitizeUserInput, containsPromptInjection, isOutOfScope } from './sanitize.js';
-import { getCatalogContext, getGarageContext, getGarageEntries, type CatalogHit } from './catalog.js';
+import { getCatalogContext, getGarageContext, getGarageEntries, getRecentOrdersContext, type CatalogHit } from './catalog.js';
 
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -16,12 +16,8 @@ interface ChatUser {
   role?: string;
 }
 
-function buildSystemPrompt(userContext: string, catalogContext: string): string {
-  return `Eres el asistente virtual de Escapes y Más (escapesymas.com), una tienda española especializada en escapes, recambios y accesorios para motos.
-
-IDIOMA: responde SIEMPRE en español, salvo que el usuario escriba en otro idioma (en cuyo caso, responde en ese idioma).
-
-PERSONALIDAD: profesional pero cercano. Trato de "tú", sin emojis excesivos, claro y resolutivo. Tono motero moderado: puedes usar términos como "escape", "tubo", "línea completa", "slip-on", pero sin jerga excesiva.
+function buildSystemPrompt(userContext: string, catalogContext: string, ordersContext: string): string {
+  return `Eres el asistente IA de Escapes y Más (escapesymas.com), una tienda online de recambios y accesorios para motos.
 
 ALCANCE ESTRICTO — solo puedes responder sobre:
 1. Catálogo de Escapes y Más (escapes, recambios, accesorios de moto).
@@ -38,12 +34,15 @@ PROHIBIDO:
 USUARIO ACTUAL:
 ${userContext || 'Usuario autenticado sin datos adicionales.'}
 
+${ordersContext}
+
 CATÁLOGO RELEVANTE PARA LA CONSULTA (puedes mencionar SKUs, precios y marcas exactas):
 ${catalogContext}
 
 REGLAS DE RESPUESTA:
 - Sé breve: 2-4 frases por respuesta salvo que pidan detalles.
 - Si preguntan por un producto que NO aparece en el catálogo relevante, di: "No tengo ese producto concreto, pero si me das más detalles (marca, modelo de moto, tipo de recambio) te ayudo a buscarlo."
+- Si preguntan por el estado de un pedido concreto, indícale el estado actual que aparece en la sección "Pedidos recientes del cliente". Si no tienen pedidos, dilo amablemente.
 - Si preguntan algo FUERA de tu alcance, responde EXACTAMENTE: "Lo siento, solo puedo ayudarte con temas de Escapes y Más (catálogo, pedidos o soporte web). ¿En qué producto o pedido te echo una mano?"
 - Si el cliente tiene motos en su garaje y pregunta por un producto que pueda depender de compatibilidad, recomienda SOLO productos del catálogo relevante que sean compatibles con sus motos.
 - NUNCA inventes datos. Si no lo sabes, dilo.
@@ -175,9 +174,10 @@ export async function chatHandler(req: Request, res: Response) {
   }
 
   try {
-    const [userContext, garageEntries, catalogResult] = await Promise.all([
+    const [userContext, garageEntries, ordersContext, catalogResult] = await Promise.all([
       getGarageContext(user.user_id),
       getGarageEntries(user.user_id),
+      getRecentOrdersContext(user.user_id),
       getCatalogContext(cleanInput, []),
     ]);
 
@@ -192,7 +192,7 @@ export async function chatHandler(req: Request, res: Response) {
       }
     }
 
-    const systemPrompt = buildSystemPrompt(userContext, catalogText);
+    const systemPrompt = buildSystemPrompt(userContext, catalogText, ordersContext);
     const history = truncateHistory(
       body.messages.map((m) => ({ role: m.role, content: sanitizeUserInput(m.content) }))
     );

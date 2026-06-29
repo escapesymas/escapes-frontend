@@ -22,12 +22,13 @@ export default function BrandCarousel({ brand, title, onAddToCart, onNotifyMe }:
     const load = async () => {
       setIsLoading(true);
       try {
-        const url = `/api/catalog/products?brand=${encodeURIComponent(brand)}&per_page=8&in_stock=true`;
+        const url = `/api/catalog/products?brand=${encodeURIComponent(brand)}&per_page=12`;
         const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
+          const list = Array.isArray(data) ? data : (data.products || []);
           if (!cancelled) {
-            setProducts((data.products || []).filter((p: Product) => p.price > 0 && p.image));
+            setProducts(list.filter((p: Product) => p.price > 0));
           }
         }
       } catch (err) {

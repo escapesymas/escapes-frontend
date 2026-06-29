@@ -18,6 +18,47 @@ import { useCart } from '../context/CartContext';
 import { Product, ProductCompatibility } from '../types';
 
 const BikeSelectorModal = dynamic(() => import('../components/BikeSelectorModal'), { ssr: false });
+
+const KNOWN_BRANDS = ['Honda', 'Yamaha', 'Kawasaki', 'Suzuki', 'BMW', 'Ducati', 'KTM', 'Aprilia', 'Triumph', 'Harley', 'Vespa', 'Piaggio', 'Kymco', 'SYM', 'Peugeot', 'Rieju', 'Gilera', 'Derbi', 'Moto Guzzi', 'Indian', 'Royal Enfield', 'Benelli', 'Mondial', 'QJ Motor', 'Lifan', 'Zontes', 'Voge', 'Mash', 'Motomel', 'Zanella', 'Corven', 'Bajaj', 'Hero', 'TVS', 'Husqvarna', 'KTM AG', 'SWM', 'Beta', 'Fantic', 'GasGas', 'Sherco', 'Vertigo', 'Scorpa', 'Montesa', 'Honda Motor'];
+
+function parseBike(bike: string): { brand: string; model: string; year: string } {
+  const cleaned = bike.trim();
+  for (const b of KNOWN_BRANDS) {
+    if (cleaned.toLowerCase().startsWith(b.toLowerCase() + ' ')) {
+      const rest = cleaned.substring(b.length + 1).trim();
+      const yearMatch = rest.match(/\((\d{4})\)|\b(\d{4})\b/);
+      const year = yearMatch ? (yearMatch[1] || yearMatch[2]) : '';
+      const model = yearMatch ? rest.replace(yearMatch[0], '').trim() : rest;
+      return { brand: b, model, year };
+    }
+  }
+  const yearMatch = cleaned.match(/\((\d{4})\)|\b(\d{4})\b/);
+  const year = yearMatch ? (yearMatch[1] || yearMatch[2]) : '';
+  const model = yearMatch ? cleaned.replace(yearMatch[0], '').trim() : cleaned;
+  return { brand: '', model, year };
+}
+
+async function syncGarageToServer(userEmail: string, garageList: string[]) {
+  try {
+    const existingRes = await fetch(`/api/garage?userEmail=${encodeURIComponent(userEmail)}`);
+    const existing: Array<{ id: number; brand: string; model: string; year: string }> = existingRes.ok ? await existingRes.json() : [];
+    const existingKeys = new Set(existing.map((v) => `${(v.brand || '').toLowerCase()}|${(v.model || '').toLowerCase()}|${v.year || ''}`));
+
+    for (const bike of garageList) {
+      const parsed = parseBike(bike);
+      if (!parsed.brand || !parsed.model) continue;
+      const key = `${parsed.brand.toLowerCase()}|${parsed.model.toLowerCase()}|${parsed.year}`;
+      if (existingKeys.has(key)) continue;
+      await fetch('/api/garage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userEmail, brand: parsed.brand, model: parsed.model, year: parsed.year || new Date().getFullYear() }),
+      }).catch(() => {});
+    }
+  } catch (e) {
+    console.error('syncGarageToServer error:', e);
+  }
+}
 const GarageView = dynamic(() => import('../components/GarageView'), { ssr: false });
 const AdvisorView = dynamic(() => import('../components/AdvisorView'), { ssr: false });
 const ProfileView = dynamic(() => import('../components/ProfileView'), { ssr: false });
@@ -118,6 +159,7 @@ export default function Home() {
       if (isAuthenticated && user) {
         try {
           await syncGarage(newList);
+          syncGarageToServer(user.email, newList).catch(() => {});
         } catch (e) {
           console.error('Error syncing garage', e);
         }

@@ -1472,13 +1472,12 @@ app.get('/api/search/suggestions', async (req, res) => {
 app.get('/api/catalog/products', catalogLimiter, async (req, res) => {
   try {
     const { search, category_id, page = '1', per_page = '20', universal, brand, min_price, max_price, in_stock, attrs } = req.query as any;
-    const pageNum = parseInt(page);
-    const perPage = parseInt(per_page);
+    const pageNum = parseInt(page) || 1;
+    const perPage = Math.min(parseInt(per_page) || 20, 50);
     const offset = (pageNum - 1) * perPage;
 
     const cacheKey = `/api/catalog/products?search=${search || ''}&category_id=${category_id || ''}&page=${page}&per_page=${per_page}&universal=${universal || ''}&brand=${brand || ''}&min_price=${min_price || ''}&max_price=${max_price || ''}&in_stock=${in_stock || ''}&attrs=${attrs || ''}`;
 
-    // Catálogo público: 1 min de datos frescos, 10 min de gracia SWR
     const result = await executeSWR(cacheKey, async () => {
       const conditions = sql`WHERE status IN ('published', 'active') AND name NOT LIKE 'Aplicaciones:%' AND name NOT LIKE 'Applications:%' AND sku NOT LIKE 'Aplicaciones:%' AND sku NOT LIKE 'Applications:%'`;
 
@@ -1543,18 +1542,17 @@ app.get('/api/catalog/products', catalogLimiter, async (req, res) => {
         }
       }
 
-      const countRes = await db.execute(sql`SELECT count(DISTINCT split_part(name, ',', 1)) as total FROM products ${conditions}`);
+      const countRes = await db.execute(sql`SELECT count(*) as total FROM (SELECT 1 FROM products ${conditions} LIMIT 10000) sub`);
       const total = Number(countRes.rows[0]?.total || 0);
-      const totalPages = Math.ceil(total / perPage) || 1;
+      const totalPages = total > 10000 ? Math.ceil(10000 / perPage) : Math.ceil(total / perPage) || 1;
 
       const productsRes = await db.execute(sql`
         SELECT * FROM (
           SELECT DISTINCT ON (split_part(p.name, ',', 1))
             p.*,
-            COALESCE(rs.avg_rating, 0) AS avg_rating,
-            COALESCE(rs.review_count, 0) AS review_count
+            COALESCE((SELECT avg_rating FROM product_rating_stats WHERE product_id = p.id), 0) AS avg_rating,
+            COALESCE((SELECT review_count FROM product_rating_stats WHERE product_id = p.id), 0) AS review_count
           FROM products p
-          LEFT JOIN product_rating_stats rs ON rs.product_id = p.id
           ${conditions}
           ORDER BY split_part(p.name, ',', 1), p.stock DESC, p.id ASC
         ) distinct_products
