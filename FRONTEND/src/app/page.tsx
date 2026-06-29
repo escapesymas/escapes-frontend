@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { Bike, Cpu, ChevronLeft, ChevronRight, AlertCircle, Wrench, Loader2 } from 'lucide-react';
+import { Bike, Cpu, ChevronLeft, ChevronRight, AlertCircle, Wrench, Loader2, X, ShieldCheck, Truck } from 'lucide-react';
 
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
@@ -107,7 +107,7 @@ export default function Home() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      const hasParams = params.has('tab') || params.has('payment_intent');
+      const hasParams = params.has('tab') || params.has('payment_intent') || params.has('emptyCart');
 
       if (hasParams) {
         const tab = params.get('tab');
@@ -126,6 +126,11 @@ export default function Home() {
           }));
         }
 
+        if (params.get('emptyCart') === '1') {
+          setShowEmptyCartBanner(true);
+          setTimeout(() => setShowEmptyCartBanner(false), 6000);
+        }
+
         setTimeout(() => {
           const cleanUrl = window.location.origin + window.location.pathname;
           window.history.replaceState({}, '', cleanUrl);
@@ -140,6 +145,7 @@ export default function Home() {
   ]);
 
   const [notifyProduct, setNotifyProduct] = useState<Product | null>(null);
+  const [showEmptyCartBanner, setShowEmptyCartBanner] = useState(false);
 
   const handleAddToCart = (product: Product) => {
     addToCart(product);
@@ -300,6 +306,23 @@ export default function Home() {
       >
         <div className="container mx-auto px-4 py-6 max-w-5xl">
 
+        {showEmptyCartBanner && (
+          <div className="mb-4 bg-accent/10 border border-accent/30 rounded-md p-3 flex items-center gap-3 animate-fade-in" role="status">
+            <AlertCircle className="w-5 h-5 text-accent shrink-0" aria-hidden="true" />
+            <p className="flex-1 text-xs font-mono text-foreground">
+              Tu carrito está vacío. <a href="/universales" className="text-accent hover:underline font-bold">Explora el catálogo</a> para añadir productos.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowEmptyCartBanner(false)}
+              className="p-1 hover:bg-icon-box rounded-full transition-colors"
+              aria-label="Cerrar aviso"
+            >
+              <X className="w-4 h-4 text-text-muted" />
+            </button>
+          </div>
+        )}
+
         {activeTab === 'shop' && (
           <div className="flex flex-col gap-8 animate-fade-in">
 
@@ -315,14 +338,14 @@ export default function Home() {
               </div>
               <div className="relative z-10 max-w-xl flex flex-col items-start text-left">
                 <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-accent-text bg-accent/10 border border-accent/20 px-3 py-1 rounded mb-4">
-                  Tu tienda de moto de confianza
+                  Distribuidor oficial · Envío 24/48h
                 </span>
                 <h1 className="font-mono font-bold uppercase tracking-tight text-2xl md:text-4xl mb-3 leading-tight text-foreground">
-                  Todo para tu moto<br />
-                  <span className="text-accent-text">y para el motero</span>
+                  Más de 100.000 recambios<br />
+                  <span className="text-accent-text">compatibles con tu moto</span>
                 </h1>
                 <p className="text-text-muted mb-6 text-xs md:text-sm max-w-md font-sans">
-                  Repuestos mecánicos, accesorios, cascos, equipación y mucho más. Miles de referencias con verificación de compatibilidad directa con tu moto.
+                  Cascos, escapes Akrapovič, kits de transmisión, frenos y equipamiento. Verificamos compatibilidad con tu moto antes de enviarte cualquier pieza.
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <button
@@ -338,10 +361,27 @@ export default function Home() {
                     }}
                     className="px-5 py-2.5 text-xs font-mono font-bold rounded-sm border border-card-border text-foreground hover:border-accent/50 hover:bg-select-bg transition-all cursor-pointer"
                   >
-                    Ver catálogo
+                    Explorar catálogo
                   </button>
                 </div>
               </div>
+            </section>
+
+            <section aria-label="Ventajas de comprar en Escapes y Más" className="grid grid-cols-2 md:grid-cols-4 gap-3 px-4 md:px-0">
+              {[
+                { icon: Truck, label: 'Envío gratis', sub: 'Pedidos +49€' },
+                { icon: ShieldCheck, label: 'Pago seguro', sub: 'Stripe · SSL' },
+                { icon: Bike, label: 'Compatibilidad', sub: 'Verificada por moto' },
+                { icon: Wrench, label: 'Asesor técnico', sub: 'IA + expertos' },
+              ].map(({ icon: Icon, label, sub }) => (
+                <div key={label} className="flex items-center gap-2 bg-card border border-card-border rounded p-3">
+                  <Icon className="w-5 h-5 text-accent shrink-0" aria-hidden="true" />
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-foreground truncate">{label}</div>
+                    <div className="text-[9px] text-text-muted font-mono truncate">{sub}</div>
+                  </div>
+                </div>
+              ))}
             </section>
 
             {/* Buscador de referencias */}
