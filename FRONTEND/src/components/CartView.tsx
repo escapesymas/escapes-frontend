@@ -310,6 +310,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
     if (!isCheckingOut) return;
     
     const estimateShipping = async () => {
+      if (!shippingData.postcode) return;
       setIsEstimatingShipping(true);
       try {
         const res = await fetch('/api/shipping-estimate', {
@@ -323,10 +324,13 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
         });
         if (res.ok) {
           const data = await res.json();
-          setDynamicShippingCost(data.shippingCost);
+          setDynamicShippingCost(typeof data.shippingCost === 'number' ? data.shippingCost : null);
+        } else {
+          setDynamicShippingCost(null);
         }
       } catch (err) {
-        console.error('Failed to estimate shipping', err);
+        console.warn('Failed to estimate shipping, using default', err);
+        setDynamicShippingCost(null);
       } finally {
         setIsEstimatingShipping(false);
       }

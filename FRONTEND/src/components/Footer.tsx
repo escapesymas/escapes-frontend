@@ -30,7 +30,7 @@ function YoutubeIcon() {
 export default function Footer() {
   return (
     <footer className="bg-card border-t border-card-border mt-auto">
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="max-w-[1400px] mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <h4 className="text-[10px] font-mono font-bold uppercase text-foreground tracking-wider mb-3">
@@ -51,6 +51,30 @@ export default function Footer() {
                   className="text-[10px] font-mono text-text-muted hover:text-foreground transition-colors"
                 >
                   Política de Privacidad
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/politica-cookies"
+                  className="text-[10px] font-mono text-text-muted hover:text-foreground transition-colors"
+                >
+                  Política de Cookies
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/terminos"
+                  className="text-[10px] font-mono text-text-muted hover:text-foreground transition-colors"
+                >
+                  Términos y Condiciones
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/devoluciones"
+                  className="text-[10px] font-mono text-text-muted hover:text-foreground transition-colors"
+                >
+                  Devoluciones
                 </Link>
               </li>
             </ul>

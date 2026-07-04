@@ -137,7 +137,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    const timeout = setTimeout(syncToDB, 500);
+    const timeout = setTimeout(syncToDB, 250);
     return () => clearTimeout(timeout);
   }, [cart, sessionToken, user, isInitialized, hasFetchedDB]);
 
