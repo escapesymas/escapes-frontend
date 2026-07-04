@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import ProductDetailClient from './ProductDetailClient';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3001';
@@ -26,7 +27,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     };
   }
 
-  const price = ((product.salePrice || product.price) / 100).toFixed(2);
+  const price = (product.salePrice ?? product.price).toFixed(2);
   const description = `${product.brand} ${product.name} a ${price}€. ${product.inStock ? 'En stock, envío 24-72h.' : 'Sin stock, vuelve pronto.'} Compatible con tu moto. Garantía oficial.`;
   const imageUrl = product.image || `${SITE_URL}/icon-512.svg`;
   const pageUrl = `${SITE_URL}/producto/${slug}`;
@@ -57,5 +58,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const product = await fetchProductBySlug(slug);
+  if (!product) {
+    notFound();
+  }
   return <ProductDetailClient slug={slug} initialProduct={product} />;
 }

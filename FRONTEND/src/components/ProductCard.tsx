@@ -10,6 +10,7 @@ interface ProductCardProps {
   product: Product;
   onAddToCart: (product: Product) => void;
   onNotifyMe: (product: Product) => void;
+  priority?: boolean;
 }
 
 function pickImage(img: ProductImageType) {
@@ -18,7 +19,7 @@ function pickImage(img: ProductImageType) {
   return { src, mobileSrc };
 }
 
-export default function ProductCard({ product, onAddToCart, onNotifyMe }: ProductCardProps) {
+export default function ProductCard({ product, onAddToCart, onNotifyMe, priority = false }: ProductCardProps) {
   const isOutOfStock = product.inStock === false || product.stock === 0;
   const images = product.images?.length ? product.images : [{ src: product.image, alt: product.name } as ProductImageType];
   const [imgIdx, setImgIdx] = useState(0);
@@ -100,10 +101,11 @@ export default function ProductCard({ product, onAddToCart, onNotifyMe }: Produc
           alt={product.name}
           className="w-full h-full object-contain p-2"
           wrapperClassName="w-full h-full absolute inset-0"
+          priority={priority}
         />
 
         {images.length > 1 && (
-          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-1.5 z-20" role="tablist" aria-label="Selector de imagen">
             {images.map((_, i) => (
               <button
                 key={i}
@@ -111,6 +113,10 @@ export default function ProductCard({ product, onAddToCart, onNotifyMe }: Produc
                 className={`w-3 h-3 rounded-full transition-all cursor-pointer shadow-sm ${
                   i === imgIdx ? 'bg-accent scale-110 ring-1 ring-white' : 'bg-white/80 hover:bg-white/95'
                 }`}
+                role="tab"
+                aria-label={`Imagen ${i + 1} de ${images.length}`}
+                aria-selected={i === imgIdx}
+                aria-current={i === imgIdx ? 'true' : 'false'}
               />
             ))}
           </div>

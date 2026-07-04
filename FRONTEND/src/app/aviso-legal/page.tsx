@@ -16,6 +16,13 @@ export default function AvisoLegalPage() {
         <title>Aviso Legal — Escapes y Más</title>
         <h1 className="font-mono text-2xl font-bold uppercase text-foreground mb-6">Aviso Legal</h1>
 
+        <div className="mb-6 p-4 rounded-md border-2 border-amber-500 bg-amber-50 text-amber-900">
+          <p className="font-mono text-xs font-bold uppercase mb-1">⚠️ Documento pendiente de completar</p>
+          <p className="text-xs leading-relaxed">
+            Este aviso legal contiene datos pendientes de actualización. <strong>No se puede desplegar a producción</strong> hasta que se completen los datos del titular (NIF/CIF, dirección social, registro mercantil, teléfono). El incumplimiento de la Ley 34/2002 (LSSI) puede acarrear sanciones de hasta 30.000 €.
+          </p>
+        </div>
+
         <div className="text-xs font-sans text-foreground/80 leading-relaxed space-y-4">
           <section>
             <h2 className="font-mono text-sm font-bold uppercase text-foreground mb-2">1. Identificación del Titular</h2>
@@ -23,11 +30,11 @@ export default function AvisoLegalPage() {
               En cumplimiento con el deber de información recogido en el artículo 10 de la Ley 34/2002, de 11 de julio, de Servicios de la Sociedad de la Información y del Comercio Electrónico, a continuación se exponen los datos identificativos del titular del sitio web <strong>escapesymas.com</strong>:
             </p>
             <ul className="list-disc pl-5 mt-2 space-y-1">
-              <li><strong>Denominación social:</strong> Escapes y Más</li>
-              <li><strong>NIF / CIF:</strong> [RELLENAR POR EL TITULAR]</li>
-              <li><strong>Domicilio social:</strong> [RELLENAR POR EL TITLAR — calle, número, código postal, ciudad, provincia, país]</li>
-              <li><strong>Registro Mercantil:</strong> [RELLENAR POR EL TITULAR — tomo, folio, hoja, inscripción]</li>
-              <li><strong>Teléfono de contacto:</strong> [RELLENAR POR EL TITULAR]</li>
+              <li><strong>Denominación social:</strong> Escapes y Más <span className="text-amber-700 font-bold">[RELLENAR: razón social exacta]</span></li>
+              <li><strong>NIF / CIF:</strong> <span className="bg-amber-100 px-1 rounded text-amber-900 font-bold">[PENDIENTE: NIF/CIF del titular]</span></li>
+              <li><strong>Domicilio social:</strong> <span className="bg-amber-100 px-1 rounded text-amber-900 font-bold">[PENDIENTE: calle, número, CP, ciudad, provincia, país]</span></li>
+              <li><strong>Registro Mercantil:</strong> <span className="bg-amber-100 px-1 rounded text-amber-900 font-bold">[PENDIENTE: tomo, folio, hoja, inscripción]</span></li>
+              <li><strong>Teléfono de contacto:</strong> <span className="bg-amber-100 px-1 rounded text-amber-900 font-bold">[PENDIENTE: teléfono]</span></li>
               <li><strong>Correo electrónico:</strong> info@escapesymas.com</li>
             </ul>
           </section>
