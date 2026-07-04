@@ -107,12 +107,16 @@ export default function Home() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      const hasParams = params.has('tab') || params.has('payment_intent') || params.has('emptyCart');
+      const hasParams = params.has('tab') || params.has('payment_intent') || params.has('emptyCart') || params.has('openSelector');
 
       if (hasParams) {
         const tab = params.get('tab');
         if (tab) {
           setActiveTab(tab);
+        }
+
+        if (params.get('openSelector') === 'true') {
+          setIsSelectorOpen(true);
         }
 
         if (params.has('payment_intent')) {

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
-import { Wrench, Loader2, ChevronLeft, ChevronRight, ShieldAlert, User, Package, ChevronRight as ChevronIcon, SlidersHorizontal, Settings, Wind, Disc3, Cpu, Bike, Fuel, Droplets, Truck, Palette, Shirt, Zap, Headphones, Globe, HardHat } from 'lucide-react';
+import { Wrench, Loader2, ChevronLeft, ChevronRight, ShieldAlert, Package, ChevronRight as ChevronIcon, SlidersHorizontal, Wind, Disc3, Bike, Droplets, Truck, Shirt, Zap, CircleDot, Cog, Layers, Tag, HardDrive } from 'lucide-react';
 
 import Header from '../../../components/Header';
 import BottomNav from '../../../components/BottomNav';
@@ -13,21 +13,21 @@ import { Category3, Product, FilterOptions } from '../../../types';
 
 const L1_ICONS: Record<number, { icon: React.ComponentType<{ className?: string }>; color: string }> = {
   1001: { icon: ShieldAlert, color: 'text-violet-500' },
-  1005: { icon: User, color: 'text-pink-500' },
+  1005: { icon: Shirt, color: 'text-pink-500' },
   1006: { icon: Package, color: 'text-amber-500' },
-  1002: { icon: Settings, color: 'text-blue-500' },
+  1002: { icon: Wrench, color: 'text-blue-500' },
   1007: { icon: Wind, color: 'text-cyan-500' },
   1008: { icon: Disc3, color: 'text-red-500' },
   1004: { icon: Zap, color: 'text-yellow-500' },
-  1012: { icon: Fuel, color: 'text-orange-500' },
-  1014: { icon: Globe, color: 'text-emerald-500' },
+  1012: { icon: Cog, color: 'text-orange-500' },
+  1014: { icon: CircleDot, color: 'text-emerald-500' },
   1009: { icon: Wrench, color: 'text-stone-500' },
   1010: { icon: Droplets, color: 'text-teal-500' },
   1003: { icon: Bike, color: 'text-lime-500' },
-  1016: { icon: Palette, color: 'text-fuchsia-500' },
-  1011: { icon: Headphones, color: 'text-indigo-500' },
-  1013: { icon: HardHat, color: 'text-sky-500' },
-  1015: { icon: Settings, color: 'text-rose-500' },
+  1016: { icon: Layers, color: 'text-fuchsia-500' },
+  1011: { icon: Tag, color: 'text-indigo-500' },
+  1013: { icon: Bike, color: 'text-sky-500' },
+  1015: { icon: HardDrive, color: 'text-rose-500' },
   1017: { icon: Truck, color: 'text-slate-500' },
 };
 
@@ -446,12 +446,14 @@ function CatalogContent({
                                   <a
                                     key={brand}
                                     href={filterHref({ brands: isChecked ? null : brand, page: '1' })}
-                                    className="flex items-center gap-2 text-[10px] font-mono uppercase cursor-pointer hover:text-accent-text text-foreground no-underline"
+                                    aria-label={`Filtrar por marca ${brand}${isChecked ? ' (activado)' : ''}`}
+                                    className="flex items-center gap-2 text-[10px] font-mono uppercase cursor-pointer hover:text-accent-text text-foreground no-underline min-h-[24px]"
                                   >
                                     <input
                                       type="checkbox"
                                       checked={isChecked}
                                       readOnly
+                                      aria-label={`Filtrar por marca ${brand}`}
                                       className="rounded border-card-border bg-select-bg text-accent focus:ring-0 focus:ring-offset-0 w-3 h-3 pointer-events-none"
                                     />
                                     <span className="truncate">{brand}</span>
@@ -603,8 +605,14 @@ function CatalogContent({
                         ) : (
                           <>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                              {searchResults.map((product) => (
-                                <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} onNotifyMe={handleNotifyMe} />
+                              {searchResults.map((product, idx) => (
+                                <ProductCard
+                                  key={product.id}
+                                  product={product}
+                                  onAddToCart={handleAddToCart}
+                                  onNotifyMe={handleNotifyMe}
+                                  priority={idx < 3}
+                                />
                               ))}
                             </div>
 

@@ -411,23 +411,32 @@ function isRemoteImageUrl(s: string | null | undefined): boolean {
   return true;
 }
 
-// Helper: devuelve la URL local "/uploads/optimized/{sku}-{variant}.webp" si el archivo existe.
+// Helper: devuelve la URL local "/uploads/optimized/{sku}_{idx}_{size}.webp" si el archivo existe.
+// Patrón nuevo (download_images_local.ts): {SKU}_{idx}_{size}.{format}
+// idx=0 es imagen principal, idx>0 son galerías adicionales.
 // Usa caché en memoria con TTL para evitar miles de stat por petición de catálogo.
+const VARIANT_TO_SIZE: Record<ImageVariant, number> = {
+  'desktop': 800,
+  'mobile': 600,
+  'card-desktop': 400,
+  'card-mobile': 200,
+};
 type ImageVariant = 'desktop' | 'mobile' | 'card-desktop' | 'card-mobile';
 const localImageCache = new Map<string, { result: string | null; expiresAt: number }>();
 const LOCAL_IMAGE_CACHE_TTL_MS = 60_000;
 const LOCAL_IMAGE_CACHE_MAX = 50_000;
 
-function localImageForSku(sku: string | null | undefined, variant: ImageVariant = 'desktop'): string | null {
+function localImageForSku(sku: string | null | undefined, variant: ImageVariant = 'desktop', idx: number = 0): string | null {
   if (!sku) return null;
   const safeSku = sanitizeSkuForFilename(sku);
   if (!safeSku) return null;
-  const key = `${safeSku}:${variant}`;
+  const size = VARIANT_TO_SIZE[variant];
+  const key = `${safeSku}:${idx}:${size}`;
   const cached = localImageCache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.result;
   if (localImageCache.size > LOCAL_IMAGE_CACHE_MAX) localImageCache.clear();
 
-  const filename = `${safeSku}-${variant}.webp`;
+  const filename = `${safeSku}_${idx}_${size}.webp`;
   let exists = false;
   try {
     exists = fs.existsSync(path.join(OPTIMIZED_DIR, filename));
@@ -826,7 +835,18 @@ app.get('/api/image-proxy', async (req, res) => {
     });
 
     if (!upstream.ok) {
-      return res.status(upstream.status).json({ error: `Upstream ${upstream.status}` });
+      console.warn(`[image-proxy] upstream ${upstream.status} for ${rawUrl.substring(0, 80)}`);
+      // Generar placeholder SVG para que la UI muestre algo en vez de imagen rota
+      const placeholder = Buffer.from(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${width}" viewBox="0 0 ${width} ${width}">` +
+        `<rect width="100%" height="100%" fill="#1a1a1a"/>` +
+        `<text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#666" font-family="monospace" font-size="14">Imagen no disponible</text>` +
+        `</svg>`
+      );
+      res.set('Content-Type', 'image/svg+xml');
+      res.set('Cache-Control', 'public, max-age=3600');
+      res.set('X-Image-Proxy', 'PLACEHOLDER');
+      return res.end(placeholder);
     }
 
     const ab = await upstream.arrayBuffer();
@@ -5773,9 +5793,9 @@ function mapProductToFrontend(row: any) {
     }
   }
   
-  images = (Array.isArray(images) ? images : []).map((img: any) => {
+  images = (Array.isArray(images) ? images : []).map((img: any, idx: number) => {
     if (typeof img === 'string') {
-      return { src: img, alt: row.name };
+      img = { src: img, alt: row.name };
     }
     if (img.srcSet && typeof img.srcSet === 'object') {
       img = {
@@ -5790,30 +5810,34 @@ function mapProductToFrontend(row: any) {
     if (img.url && !img.src) {
       img.src = img.url;
     }
+    // Auto-fill srcCardMobile/Desktop/Mobile from src si faltan (productos Bihr sin srcSet)
+    if (img.src && !img.srcCardMobile) img.srcCardMobile = img.src;
+    if (img.src && !img.srcCardDesktop) img.srcCardDesktop = img.src;
+    if (img.src && !img.srcMobile) img.srcMobile = img.src;
     // Reescritura a local: si src apunta a una URL remota y existe archivo local para este SKU/variante, sustituir.
     if (img.src && isRemoteImageUrl(img.src)) {
-      const local = localImageForSku(row.sku, 'desktop');
+      const local = localImageForSku(row.sku, 'desktop', idx);
       if (local) img.src = local;
       else if (/^https?:\/\/(api\.|cdn\.)?mybihr\.com\//i.test(img.src)) {
         img.src = `/api/image-proxy?w=800&url=${encodeURIComponent(img.src)}`;
       }
     }
     if (img.srcMobile && isRemoteImageUrl(img.srcMobile)) {
-      const local = localImageForSku(row.sku, 'mobile');
+      const local = localImageForSku(row.sku, 'mobile', idx);
       if (local) img.srcMobile = local;
       else if (/^https?:\/\/(api\.|cdn\.)?mybihr\.com\//i.test(img.srcMobile)) {
         img.srcMobile = `/api/image-proxy?w=600&url=${encodeURIComponent(img.srcMobile)}`;
       }
     }
     if (img.srcCardDesktop && isRemoteImageUrl(img.srcCardDesktop)) {
-      const local = localImageForSku(row.sku, 'card-desktop');
+      const local = localImageForSku(row.sku, 'card-desktop', idx);
       if (local) img.srcCardDesktop = local;
       else if (/^https?:\/\/(api\.|cdn\.)?mybihr\.com\//i.test(img.srcCardDesktop)) {
         img.srcCardDesktop = `/api/image-proxy?w=400&url=${encodeURIComponent(img.srcCardDesktop)}`;
       }
     }
     if (img.srcCardMobile && isRemoteImageUrl(img.srcCardMobile)) {
-      const local = localImageForSku(row.sku, 'card-mobile');
+      const local = localImageForSku(row.sku, 'card-mobile', idx);
       if (local) img.srcCardMobile = local;
       else if (/^https?:\/\/(api\.|cdn\.)?mybihr\.com\//i.test(img.srcCardMobile)) {
         img.srcCardMobile = `/api/image-proxy?w=200&url=${encodeURIComponent(img.srcCardMobile)}`;
