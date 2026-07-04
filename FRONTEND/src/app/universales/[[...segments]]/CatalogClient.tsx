@@ -165,7 +165,7 @@ function CatalogContent({
         setProductsTotalPages(totalPages);
       } catch (e: any) {
         if (e?.name !== 'AbortError') {
-          console.error('[CATALOG] Failed to load products:', e?.message);
+          console.warn('[CATALOG] Failed to load products:', e?.message || 'fetch error');
         }
       } finally {
         setIsProductsLoading(false);
@@ -284,7 +284,7 @@ function CatalogContent({
         className="flex-1 overflow-y-auto overscroll-contain"
         style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
       >
-        <div className="container mx-auto px-4 py-6 max-w-5xl">
+        <div className="container mx-auto px-4 py-6 max-w-[1400px]">
           <div className="flex flex-col gap-6 animate-fade-in">
             <section className="relative overflow-hidden bg-card border border-card-border rounded-md py-6 px-6 shadow-sm">
               <div className="relative z-10 max-w-xl flex flex-col items-start text-left">

@@ -65,9 +65,9 @@ export default function CookieBanner() {
       className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-t border-card-border shadow-2xl p-3 md:p-5"
       style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
     >
-      <div className="max-w-5xl mx-auto flex flex-col gap-3">
+      <div className="max-w-[1400px] mx-auto flex flex-col gap-3">
         <div className="flex items-start gap-3">
-          <Shield className="w-5 h-5 text-accent shrink-0 mt-0.5" aria-hidden="true" />
+          <Shield className="w-5 h-5 text-accent shrink-0 mt-0.5 hidden md:block" aria-hidden="true" />
           <div className="flex-1 text-xs font-sans text-foreground/85 leading-relaxed">
             <p className="font-bold text-foreground mb-1 text-sm">Tu privacidad importa</p>
             <p>
@@ -117,7 +117,7 @@ export default function CookieBanner() {
           <button
             type="button"
             onClick={() => save('reject_all')}
-            className="flex-1 px-3 py-2.5 text-xs font-mono uppercase font-bold rounded border border-card-border text-foreground hover:bg-icon-box transition-colors min-h-[44px]"
+            className="flex-1 px-3 py-2 text-xs font-mono uppercase font-bold rounded border border-card-border text-foreground hover:bg-icon-box transition-colors min-h-[40px]"
           >
             Solo necesarias
           </button>
@@ -130,7 +130,7 @@ export default function CookieBanner() {
               allAccepted.necessary = 'accepted';
               save('accept_all', allAccepted);
             }}
-            className="flex-1 px-3 py-2.5 text-xs font-mono uppercase font-bold rounded bg-accent text-accent-foreground hover:opacity-90 transition-opacity min-h-[44px]"
+            className="flex-1 px-3 py-2 text-xs font-mono uppercase font-bold rounded bg-accent text-slate-950 hover:opacity-90 transition-opacity min-h-[40px]"
           >
             Aceptar todas
           </button>
@@ -138,7 +138,7 @@ export default function CookieBanner() {
             <button
               type="button"
               onClick={() => save('custom')}
-              className="flex-1 px-3 py-2.5 text-xs font-mono uppercase font-bold rounded border border-accent text-accent hover:bg-accent/10 transition-colors min-h-[44px]"
+              className="flex-1 px-3 py-2 text-xs font-mono uppercase font-bold rounded border border-accent text-accent hover:bg-accent/10 transition-colors min-h-[40px]"
             >
               Guardar selección
             </button>

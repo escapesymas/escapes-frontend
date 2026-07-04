@@ -285,16 +285,16 @@ export default function Home() {
       />
 
       {!isAuthenticated && (
-        <div className="bg-accent/10 border-b border-accent/30 px-4 py-2.5 flex items-center justify-center gap-3 text-xs">
-          <span className="font-mono uppercase tracking-wider text-accent font-bold">
+        <div className="bg-accent/10 border-b border-accent/30 px-4 py-2 flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3 text-xs">
+          <span className="font-mono uppercase tracking-wider text-accent font-bold whitespace-nowrap">
             🤖 Asistente IA
           </span>
-          <span className="text-foreground/80">
-            Crea cuenta gratis y pregúntale sobre escapes y recambios para tu moto.
+          <span className="text-foreground/80 text-center md:text-left">
+            Crea cuenta gratis y pregúntale sobre escapes y recambios.
           </span>
           <a
             href="/login"
-            className="font-mono uppercase text-[10px] font-bold bg-accent text-accent-foreground px-3 py-1 rounded hover:bg-accent/90 transition-colors"
+            className="font-mono uppercase text-[10px] font-bold bg-accent text-slate-950 px-3 py-1 rounded hover:bg-accent/90 transition-colors whitespace-nowrap"
           >
             Iniciar sesión
           </a>
@@ -308,7 +308,7 @@ export default function Home() {
         className={activeTab === 'shop' ? 'flex-1' : 'flex-1 overflow-y-auto overscroll-contain'}
         style={activeTab === 'shop' ? undefined : { WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
       >
-        <div className="container mx-auto px-4 py-6 max-w-5xl">
+        <div className="container mx-auto px-4 py-6 max-w-[1400px]">
 
         {showEmptyCartBanner && (
           <div className="mb-4 bg-accent/10 border border-accent/30 rounded-md p-3 flex items-center gap-3 animate-fade-in" role="status">
@@ -524,7 +524,7 @@ export default function Home() {
                           Compra por categoría
                         </h3>
                       </div>
-                      <div className="grid grid-cols-3 md:grid-cols-6 gap-3 px-4 md:px-0">
+                      <div className="grid grid-cols-3 md:grid-cols-6 xl:grid-cols-9 gap-3 px-4 md:px-0">
                         {[
                           { id: 'cascos', name: 'Cascos', icon: '🪖' },
                           { id: 'chasis', name: 'Chasis', icon: '🏍️' },
