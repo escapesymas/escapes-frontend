@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation';
+import { redirect, notFound } from 'next/navigation';
 import CatalogClient from './CatalogClient';
 import { Category3, Product, FilterOptions } from '../../../types';
 
@@ -46,6 +46,21 @@ export default async function CatalogPage({
   }
 
   const categories = await fetchJson(`${API_BASE}/api/catalog/categories`) as Category3[] || [];
+
+  // Si hay segmento pero la categoría no existe → 404
+  if (segs.length > 0 && segs[0] !== 'buscar') {
+    const parentSlug = segs[0];
+    const parentCat = categories.find(c => c.slug === parentSlug);
+    if (!parentCat) {
+      notFound();
+    }
+    if (segs[1]) {
+      const subCat = categories.find(c => c.slug === segs[1] && c.parentId === parentCat.id);
+      if (!subCat) {
+        notFound();
+      }
+    }
+  }
 
   const { parentId, subId, searchTerm, isSearch } = resolveIds(segs, categories);
 

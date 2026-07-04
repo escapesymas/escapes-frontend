@@ -6296,17 +6296,17 @@ app.get('/api/reviews/:productId', async (req, res) => {
     const { limit = '10', offset = '0' } = req.query as any;
     
     const reviewsRes = await db.execute(sql`
-      SELECT r.*, u.username, u.avatar_url
+      SELECT r.id, r.product_id, r.user_email, r.username, r.rating, r.title, r.content,
+             r.verified_purchase, r.created_at
       FROM product_reviews r
-      LEFT JOIN users u ON r.user_id = u.id
-      WHERE r.product_id = ${productId} AND r.status = 'approved'
+      WHERE r.product_id = ${productId}
       ORDER BY r.created_at DESC
       LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}
     `);
     
     const countRes = await db.execute(sql`
       SELECT COUNT(*) as total FROM product_reviews 
-      WHERE product_id = ${productId} AND status = 'approved'
+      WHERE product_id = ${productId}
     `);
     
     const statsRes = await db.execute(sql`
@@ -6319,7 +6319,7 @@ app.get('/api/reviews/:productId', async (req, res) => {
         COUNT(CASE WHEN rating = 2 THEN 1 END) as two,
         COUNT(CASE WHEN rating = 1 THEN 1 END) as one
       FROM product_reviews 
-      WHERE product_id = ${productId} AND status = 'approved'
+      WHERE product_id = ${productId}
     `);
     
     const countRow = countRes.rows[0] as { total: string } | undefined;
@@ -6350,20 +6350,29 @@ app.get('/api/reviews/:productId', async (req, res) => {
 app.post('/api/reviews', async (req, res) => {
   try {
     const { product_id, rating, title, content } = req.body;
-    
+
     if (!product_id || !rating) {
       return res.status(400).json({ error: 'product_id and rating are required' });
     }
-    
+
     if (rating < 1 || rating > 5) {
       return res.status(400).json({ error: 'Rating must be between 1 and 5' });
     }
-    
+
     const userId = (req as any).userId || null;
     let verified_purchase = false;
-    let orderId = null;
-    
+    let userEmail: string | null = null;
+    let username: string | null = null;
+
     if (userId) {
+      const userRes = await db.execute(sql`
+        SELECT email, username FROM users WHERE id = ${userId} LIMIT 1
+      `);
+      if (userRes.rows.length > 0) {
+        userEmail = (userRes.rows[0] as any).email;
+        username = (userRes.rows[0] as any).username;
+      }
+
       const orderRes = await db.execute(sql`
         SELECT o.id FROM orders o
         JOIN order_items oi ON o.id = oi.order_id
@@ -6372,16 +6381,15 @@ app.post('/api/reviews', async (req, res) => {
       `);
       if (orderRes.rows.length > 0) {
         verified_purchase = true;
-        orderId = orderRes.rows[0].id;
       }
     }
-    
+
     const result = await db.execute(sql`
-      INSERT INTO product_reviews (product_id, user_id, order_id, rating, title, content, verified_purchase, status)
-      VALUES (${parseInt(product_id)}, ${userId}, ${orderId}, ${parseInt(rating)}, ${title || null}, ${content || null}, ${verified_purchase}, 'approved')
+      INSERT INTO product_reviews (product_id, user_email, username, rating, title, content, verified_purchase)
+      VALUES (${parseInt(product_id)}, ${userEmail}, ${username}, ${parseInt(rating)}, ${title || null}, ${content || null}, ${verified_purchase})
       RETURNING *
     `);
-    
+
     res.status(201).json(result.rows[0]);
   } catch (err: any) {
     console.error('[REVIEWS POST ERROR]:', err);
