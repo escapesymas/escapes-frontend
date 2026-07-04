@@ -19,20 +19,40 @@ export default function Header({ onCartClick, onTabChange }: HeaderProps) {
   const { user, isAuthenticated } = useAuth();
 
   return (
-    <>
-      <header className="sticky top-0 z-50 w-full bg-background/80 backdrop-blur-md border-b border-card-border relative">
-        <div className="container mx-auto px-4 md:px-6 h-14 flex items-center justify-between gap-3 relative">
+    <header className="sticky top-0 z-50 w-full bg-background border-b border-card-border relative">
+      <div className="container mx-auto px-4 md:px-6 h-14 flex items-center justify-between gap-3">
 
-        {/* IZQUIERDA: placeholder vacío para mantener logo centrado */}
-        <div className="w-9 h-9 shrink-0 md:w-10 md:h-10" aria-hidden="true" />
-
-        {/* CENTRO: Logo (acceso directo a home) */}
+        {/* IZQUIERDA (móvil): Logo  / (desktop): placeholder invisible */}
         <Link
           href="/"
           aria-label="Escapes y Más — Inicio"
-          className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 h-11 shrink-0 z-10"
+          className="md:hidden h-11 shrink-0 z-10 flex items-center"
         >
-          {/* Logo para tema claro (letras negras + amarillo) */}
+          <Image
+            src="/logo-cabecera-negro.svg"
+            alt="Escapes y Más"
+            width={150}
+            height={48}
+            priority
+            className="h-full w-auto object-contain block dark:hidden"
+          />
+          <Image
+            src="/logo-cabecera.svg"
+            alt="Escapes y Más"
+            width={150}
+            height={48}
+            priority
+            className="h-full w-auto object-contain hidden dark:block"
+          />
+        </Link>
+
+        {/* CENTRO (solo desktop): Logo absoluto centrado */}
+        <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 h-11 shrink-0 z-10 items-center pointer-events-none">
+          <Link
+            href="/"
+            aria-label="Escapes y Más — Inicio"
+            className="pointer-events-auto h-11 flex items-center"
+          >
             <Image
               src="/logo-cabecera-negro.svg"
               alt="Escapes y Más"
@@ -41,7 +61,6 @@ export default function Header({ onCartClick, onTabChange }: HeaderProps) {
               priority
               className="h-full w-auto object-contain block dark:hidden"
             />
-          {/* Logo para tema oscuro (letras blancas + amarillo) */}
             <Image
               src="/logo-cabecera.svg"
               alt="Escapes y Más"
@@ -50,10 +69,14 @@ export default function Header({ onCartClick, onTabChange }: HeaderProps) {
               priority
               className="h-full w-auto object-contain hidden dark:block"
             />
-        </Link>
+          </Link>
+        </div>
+
+        {/* ESPACIADOR desktop izquierdo para centrar el logo absoluto */}
+        <div className="hidden md:block w-9 h-9 shrink-0" aria-hidden="true" />
 
         {/* DERECHA: Carrito + Nav desktop */}
-        <div className="flex items-center gap-3 md:gap-4 shrink-0">
+        <div className="flex items-center gap-3 md:gap-4 shrink-0 md:ml-auto">
           {/* Carrito */}
           <button
             onClick={onCartClick}
@@ -104,6 +127,5 @@ export default function Header({ onCartClick, onTabChange }: HeaderProps) {
         </div>
       </div>
     </header>
-    </>
   );
 }

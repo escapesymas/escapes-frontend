@@ -139,7 +139,7 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
       />
 
       <div className="bg-card border-b border-card-border/60 py-2.5 shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 flex items-center gap-1.5 font-mono text-[9px] text-text-muted uppercase tracking-wider">
+        <div className="max-w-7xl mx-auto px-4 flex items-center gap-1.5 font-mono text-[9px] text-text-muted uppercase tracking-wider">
           <a href="/" className="hover:text-foreground transition-colors font-bold">Inicio</a>
           <span>/</span>
           <span className="text-text-muted">{product.category}</span>
@@ -148,7 +148,7 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
         </div>
       </div>
 
-      <main role="main" className="flex-grow max-w-5xl mx-auto px-0 py-0 w-full pb-24 md:pb-6">
+      <main role="main" className="flex-grow max-w-7xl mx-auto px-0 py-0 w-full pb-24 md:pb-6">
         <div className="md:hidden flex flex-col">
           <div className="relative bg-image-wrapper border-b border-card-border">
             <div className="max-h-[50vh] aspect-square flex items-center justify-center p-6">
@@ -310,14 +310,14 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
         </div>
 
         <div className="hidden md:grid md:grid-cols-2 gap-8 px-4">
-          <div className="flex gap-3">
+          <div className="flex gap-3 w-full">
             {images.length > 1 && (
-              <div className="flex flex-col gap-2 shrink-0 aspect-square">
+              <div className="flex flex-col gap-2 shrink-0">
                 {images.map((img, i) => (
                   <button
                     key={i}
                     onClick={() => setImgIdx(i)}
-                    className={`w-14 h-14 rounded border-2 overflow-hidden transition-all cursor-pointer ${
+                    className={`w-16 h-16 rounded border-2 overflow-hidden transition-all cursor-pointer ${
                       i === imgIdx ? 'border-accent' : 'border-card-border hover:border-foreground/30'
                     }`}
                   >
@@ -331,7 +331,7 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
                 ))}
               </div>
             )}
-            <div className="bg-image-wrapper border border-card-border rounded-md p-8 flex items-center justify-center min-h-[400px] aspect-square overflow-hidden relative flex-1">
+            <div className="bg-image-wrapper border border-card-border rounded-md p-8 flex items-center justify-center min-h-[500px] overflow-hidden relative flex-1">
               <ProductImage
                 src={pickImage(images[imgIdx]).src}
                 srcDesktop={images[imgIdx]?.srcCardDesktop}
