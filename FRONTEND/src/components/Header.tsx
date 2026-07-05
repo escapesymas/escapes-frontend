@@ -33,7 +33,6 @@ export default function Header({ onCartClick, onTabChange }: HeaderProps) {
             alt="Escapes y Más"
             width={150}
             height={48}
-            priority
             className="h-full w-auto object-contain block dark:hidden"
           />
           <Image
@@ -41,7 +40,6 @@ export default function Header({ onCartClick, onTabChange }: HeaderProps) {
             alt="Escapes y Más"
             width={150}
             height={48}
-            priority
             className="h-full w-auto object-contain hidden dark:block"
           />
         </Link>
@@ -58,7 +56,6 @@ export default function Header({ onCartClick, onTabChange }: HeaderProps) {
               alt="Escapes y Más"
               width={150}
               height={48}
-              priority
               className="h-full w-auto object-contain block dark:hidden"
             />
             <Image
@@ -66,7 +63,6 @@ export default function Header({ onCartClick, onTabChange }: HeaderProps) {
               alt="Escapes y Más"
               width={150}
               height={48}
-              priority
               className="h-full w-auto object-contain hidden dark:block"
             />
           </Link>
