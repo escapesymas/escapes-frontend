@@ -143,7 +143,7 @@ export default function ChatWidget() {
   return (
     <>
       <div
-        className="fixed bottom-24 right-4 md:bottom-6 md:right-20 z-40 group"
+        className="fixed bottom-28 right-4 md:bottom-6 md:right-20 z-40 group"
         role="presentation"
       >
         <div className="relative">
@@ -188,7 +188,7 @@ export default function ChatWidget() {
 
       {open && (
         <div
-          className="fixed bottom-32 md:bottom-24 right-4 md:right-20 z-40 w-[calc(100vw-2rem)] max-w-sm h-[70vh] max-h-[640px] flex flex-col bg-card border border-card-border rounded-2xl shadow-2xl overflow-hidden animate-fade-in"
+          className="fixed bottom-36 md:bottom-24 right-4 md:right-20 z-40 w-[calc(100vw-2rem)] max-w-sm h-[70vh] max-h-[640px] flex flex-col bg-card border border-card-border rounded-2xl shadow-2xl overflow-hidden animate-fade-in"
           role="dialog"
           aria-label="Asistente IA de Escapes y Más"
         >
