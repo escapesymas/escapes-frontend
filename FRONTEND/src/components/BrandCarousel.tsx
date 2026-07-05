@@ -95,10 +95,13 @@ export default function BrandCarousel({ brand, title, onAddToCart, onNotifyMe }:
 
       <div
         id={`carousel-${brand.replace(/\s+/g, '-')}`}
-        className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 pb-3"
+        className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth pb-3 gap-4 no-scrollbar"
       >
-        {products.slice(0, 8).map((product) => (
-          <div key={product.id}>
+        {products.slice(0, 12).map((product) => (
+          <div
+            key={product.id}
+            className="shrink-0 w-[78vw] sm:w-[42vw] md:w-[31vw] lg:w-[22vw] xl:w-[18vw] snap-start"
+          >
             <ProductCard product={product} onAddToCart={onAddToCart} onNotifyMe={onNotifyMe} />
           </div>
         ))}

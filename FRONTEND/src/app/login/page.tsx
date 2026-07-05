@@ -140,7 +140,7 @@ function LoginPageContent() {
       </div>
 
       <main
-        className="flex-1 overflow-y-auto overscroll-contain flex flex-col items-center py-8"
+        className="flex-1 overflow-y-auto overscroll-contain flex flex-col items-center py-8 pb-16 md:pb-8"
         style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
       >
         <div className="w-full max-w-sm px-4 my-auto">

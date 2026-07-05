@@ -301,11 +301,11 @@ export default function Home() {
         </div>
       )}
 
-      {/* El main tiene overflow-y:auto propio — así el BottomNav puede
-          estar en flujo normal al fondo sin necesitar position:fixed */}
+      {/* Main con padding-bottom en mobile para no chocar con BottomNav fixed */}
+      {/* El BottomNav está fixed en mobile, fuera del flujo del main */}
       <main
         id="main-content"
-        className={activeTab === 'shop' ? 'flex-1' : 'flex-1 overflow-y-auto overscroll-contain'}
+        className={`${activeTab === 'shop' ? 'flex-1 pb-16 md:pb-0' : 'flex-1 overflow-y-auto overscroll-contain pb-16 md:pb-0'}`}
         style={activeTab === 'shop' ? undefined : { WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
       >
         <div className="container mx-auto px-4 py-6 max-w-[1400px]">

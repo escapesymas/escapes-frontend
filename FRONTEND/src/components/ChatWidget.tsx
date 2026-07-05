@@ -142,46 +142,49 @@ export default function ChatWidget() {
 
   return (
     <>
-      <button
-        onClick={() => setOpen((v) => !v)}
+      <div
         className="fixed bottom-24 right-4 md:bottom-6 md:right-20 z-40 group"
-        aria-label="Abrir asistente IA"
-        aria-expanded={open}
+        role="presentation"
       >
         <div className="relative">
           {proactiveBike && !open && (
-            <button
-              onClick={() => { setOpen(true); setDismissedProactive(true); }}
-              className="absolute -top-12 -right-16 md:-top-10 md:-right-12 whitespace-nowrap bg-card border border-accent text-foreground text-[10px] font-mono uppercase font-bold px-3 py-1.5 rounded-full shadow-md animate-bounce hover:bg-accent hover:text-accent-foreground transition-colors"
-              aria-label="Abrir sugerencia del asistente"
+            <div
+              className="absolute -top-12 -right-16 md:-top-10 md:-right-12 z-10"
             >
-              💬 Sugerencia para tu {proactiveBike.split(' ').slice(0, 2).join(' ')}
-              <span
-                role="button"
-                tabIndex={0}
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setOpen(true); setDismissedProactive(true); }}
+                className="whitespace-nowrap bg-card border border-accent text-foreground text-[10px] font-mono uppercase font-bold px-3 py-1.5 rounded-full shadow-md animate-bounce hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                aria-label="Abrir sugerencia del asistente"
+              >
+                💬 Sugerencia para tu {proactiveBike.split(' ').slice(0, 2).join(' ')}
+              </button>
+              <button
+                type="button"
                 onClick={(e) => { e.stopPropagation(); setDismissedProactive(true); }}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); setDismissedProactive(true); } }}
                 className="ml-2 text-muted-foreground hover:text-foreground cursor-pointer"
                 aria-label="Cerrar sugerencia"
               >
                 ✕
-              </span>
-            </button>
+              </button>
+            </div>
           )}
-          <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full animate-pulse" />
-          <div
-            className={`bg-accent hover:bg-accent/90 text-accent-foreground rounded-full p-3.5 shadow-lg transition-all duration-300 group-hover:scale-110 ${
-              open ? 'shadow-accent/50' : ''
-            }`}
+          <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full animate-pulse pointer-events-none" />
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="bg-accent hover:bg-accent/90 text-accent-foreground rounded-full p-3.5 shadow-lg transition-all duration-300 group-hover:scale-110 cursor-pointer"
+            aria-label="Abrir asistente IA"
+            aria-expanded={open}
           >
             <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               <circle cx="9" cy="10" r="1" fill="currentColor" />
               <circle cx="15" cy="10" r="1" fill="currentColor" />
             </svg>
-          </div>
+          </button>
         </div>
-      </button>
+      </div>
 
       {open && (
         <div
