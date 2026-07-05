@@ -144,7 +144,7 @@ export default function ChatWidget() {
     <>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-20 md:bottom-6 right-20 md:right-20 z-40 group"
+        className="fixed bottom-24 right-4 md:bottom-6 md:right-20 z-40 group"
         aria-label="Abrir asistente IA"
         aria-expanded={open}
       >

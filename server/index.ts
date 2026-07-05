@@ -1476,7 +1476,7 @@ app.get('/api/search/suggestions', async (req, res) => {
     const limitNum = Math.min(parseInt(limit as string) || 5, 10);
 
     const exactResult = await db.execute(sql`
-      SELECT name, slug, brand, category
+      SELECT name, sku, brand
       FROM products
       WHERE status = 'published'
         AND name NOT LIKE 'Aplicaciones:%'
@@ -1484,7 +1484,6 @@ app.get('/api/search/suggestions', async (req, res) => {
         AND (
           LOWER(name) LIKE LOWER('%' || ${searchTerm} || '%') ESCAPE '\'
           OR LOWER(sku) LIKE LOWER('%' || ${searchTerm} || '%') ESCAPE '\'
-          OR LOWER(supplier_code) LIKE LOWER('%' || ${searchTerm} || '%') ESCAPE '\'
         )
       ORDER BY
         CASE WHEN LOWER(name) LIKE LOWER(${searchTerm} || '%') THEN 0 ELSE 1 END,
@@ -1495,36 +1494,34 @@ app.get('/api/search/suggestions', async (req, res) => {
     if (exactResult.rows.length > 0) {
       const results = exactResult.rows.map(row => ({
         name: row.name,
-        slug: row.slug,
-        category: row.category,
+        slug: row.sku,
+        category: row.brand || '',
       }));
       return res.json({ results });
     }
 
     const fuzzyResult = await db.execute(sql`
-      SELECT name, slug, brand, category,
+      SELECT name, sku, brand,
              GREATEST(similarity(LOWER(name), LOWER(${searchTerm})),
-                      similarity(LOWER(COALESCE(sku, '')), LOWER(${searchTerm})),
-                      similarity(LOWER(COALESCE(brand, '')), LOWER(${searchTerm}))) AS sim
+                      similarity(LOWER(COALESCE(sku, '')), LOWER(${searchTerm}))) AS sim
       FROM products
       WHERE status = 'published'
         AND name NOT LIKE 'Aplicaciones:%'
         AND name NOT LIKE 'Applications:%'
-        AND similarity(LOWER(name), LOWER(${searchTerm})) > 0.25
+        AND similarity(LOWER(name), LOWER(${searchTerm})) > 0.2
       ORDER BY sim DESC
       LIMIT ${limitNum}
     `);
 
-    const results = fuzzyResult.rows.map(row => ({
+    const fuzzyResults = fuzzyResult.rows.map(row => ({
       name: row.name,
-      slug: row.slug,
-      category: row.category,
+      slug: row.sku,
+      category: row.brand || '',
     }));
-
-    res.json({ results });
-  } catch (error) {
-    console.error('[SEARCH SUGGESTIONS ERROR]:', error);
-    res.status(500).json({ error: 'Failed to fetch search suggestions' });
+    return res.json({ results: fuzzyResults });
+  } catch (err: any) {
+    console.error('[SEARCH SUGGESTIONS ERROR]:', err);
+    res.status(500).json({ error: 'Failed to fetch search suggestions', results: [] });
   }
 });
 

@@ -133,15 +133,15 @@ export default function BikeSelectorModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-stretch md:items-center justify-center p-0 md:p-4 animate-fade-in">
       {/* Backdrop */}
-      <div 
-        onClick={onClose} 
+      <div
+        onClick={onClose}
         className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
       />
 
       {/* Drawer / Content Modal */}
-      <div className="relative w-full md:max-w-md bg-card border-t md:border border-card-border rounded-t-xl md:rounded-md shadow-2xl flex flex-col max-h-[85vh] md:max-h-[90vh] z-10 transition-transform duration-300 transform translate-y-0">
+      <div className="relative w-full md:max-w-md bg-card border-t md:border border-card-border md:rounded-md shadow-2xl flex flex-col h-full md:h-auto md:max-h-[90vh] z-10 transition-transform duration-300 transform translate-y-0">
         
         {/* Header */}
         <div className="p-4 border-b border-card-border flex items-center justify-between">
