@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "../context/AuthContext";
 import { CartProvider } from "../context/CartContext";
@@ -10,12 +9,6 @@ import CookieBanner from "../components/CookieBanner";
 import ChatWidget from "../components/ChatWidget";
 import Footer from "../components/Footer";
 import { GtmScript, GtmNoScript } from "../lib/analytics";
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://escapesymas.com'),
@@ -80,7 +73,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${geistMono.variable} h-full antialiased`}
+      className={`h-full antialiased`}
       suppressHydrationWarning
     >
 <body className="min-h-full flex flex-col">
