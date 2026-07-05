@@ -122,6 +122,7 @@ export default function SearchBar({
             }}
             onFocus={() => setShowSuggestions(true)}
             onKeyDown={handleKeyDown}
+            suppressHydrationWarning
             placeholder={placeholder}
             className="w-full pl-11 pr-24 py-3 bg-transparent text-foreground text-xs md:text-sm font-sans placeholder-text-muted/60 border-0 focus:outline-none focus:ring-0"
             autoComplete="off"
