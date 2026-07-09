@@ -1,5 +1,6 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
+COPY FRONTEND/.npmrc ./
 COPY FRONTEND/package.json FRONTEND/pnpm-lock.yaml ./
 RUN corepack enable && pnpm install
 COPY FRONTEND/. .
