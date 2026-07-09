@@ -1,7 +1,7 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 COPY FRONTEND/package.json FRONTEND/pnpm-lock.yaml ./
-RUN corepack enable && pnpm install --frozen-lockfile
+RUN corepack enable && pnpm install
 COPY FRONTEND/. .
 RUN pnpm build
 
