@@ -18,38 +18,41 @@ Para web browsing/QA usar siempre `gstack-browse` (no `playwright_*` ni `webfetc
 - **Frontend**: Next.js 16.2.6 (Turbopack) en `FRONTEND/`, TailwindCSS
 - **Backend**: Express/Node.js en `server/`, PostgreSQL
 - **Admin**: Vite/React en `admin/`
-- **DB**: PostgreSQL local + remoto en VPS, `escapes_db`
-- **VPS**: `212.227.134.161`, PM2 gestiona `escapes-frontend` (3000), `escapes-backend` (3001), `escapes-admin` (5174)
+- **DB**: PostgreSQL en Coolify, `escapes_db` (UUID: `hk6mt4abfh8ijg2vak6utvz2`)
+- **VPS**: `212.227.134.161`, Coolify 4.1.2 con Docker, Traefik v3.6
 - **CDN**: `api.mybihr.com` — no soporta redimensionado de imágenes
 
-## Estado actual (7 Jun 2026)
+## Estado actual (10 Jul 2026) — Migración a Coolify COMPLETADA
 
-### Completado
-- Backend funcional con puerto 3001, frontend en puerto 3000
-- Filtros dinámicos en `/universales` por categoría (brand, price, stock, attributes)
-- Galería multi-imagen en `ProductCard.tsx` (dots 12px visibles con `w-3 h-3`)
-- Galería con thumbnails en página detalle `producto/[id]/page.tsx`:
-  - Mobile: thumbnails superpuestos (absolute bottom, gradiente bg) con `max-h-[50vh]`
-  - Desktop: columna vertical de thumbnails a la izquierda
-- Cache key de filtros corregido (incluye brand, price range, stock, attrs)
-- MCPs configurados en `.opencode/opencode.json`: PostgreSQL, Git, Filesystem + comandos deploy
+### Producción (VPS 212.227.134.161)
+- **3 contenedores Docker** en red `coolify`: backend, frontend, admin
+- **Traefik** recibe en puertos 80/443, routing dinámico via `/data/coolify/proxy/dynamic/http.yaml`
+- **Let's Encrypt** SSL activo para todos los dominios
+- PM2 detenido y eliminado
+
+### Dominios y routing
+| Dominio | Servicio | HTTPS |
+|---------|----------|-------|
+| escapesymas.com | Frontend (3000) | ✅ Let's Encrypt |
+| www.escapesymas.com | Frontend (3000) | ✅ Let's Encrypt |
+| api.escapesymas.com | Backend (3001) | ✅ Let's Encrypt |
+| backendescapes.com | Backend (3001) | ✅ Let's Encrypt |
+| admin.escapesymas.com | Admin (80) | ✅ Let's Encrypt |
+
+### Dockerfiles (VPS)
+- `/root/escapes-react/FRONTEND/Dockerfile` — Next.js standalone, `HOSTNAME=0.0.0.0`
+- `/root/escapes-react/server/Dockerfile` — Node 22, `--user root` para uploads
+- `/root/escapes-react/ADMIN/Dockerfile` — Vite→nginx:alpine
 
 ### Pendiente
-- Sync periódico de Bihr (actualmente manual con `ts-node bihrService.ts`)
-- Manejo de imágenes: CDN no soporta thumbnails — todas las imágenes son 800×800
-- Atributos solo en 8.302 productos (helmets + RiderGear); HardPart tiene `{}`
+- Sync periódico de Bihr (manual con `ts-node bihrService.ts`)
+- Admin muestra `(unhealthy)` — healthcheck de nginx requiere `/` path
+- `restart=always` no configurado en contenedores (no survive a reboot de Docker)
 
-### Servicios locales
-- Puerto 3000: Frontend Next.js
-- Puerto 3001: Backend Express
-- Puerto 5174: Admin Dashboard
-- PostgreSQL: localhost:5432
-
-### Comandos opencode disponibles
-- `deploy-backend` / `deploy-frontend` / `deploy-admin`: despliegue al VPS
-- `versions`: lista tags de deploy
-- `rollback`: revierte a un tag anterior
-- `git-push-vps`: backup git al VPS
+### Comandos VPS útiles
+- `docker ps --filter 'name=escapes'` — estado contenedores
+- `docker exec coolify-proxy cat /traefik/dynamic/http.yaml` — ver routing
+- `ssh root@212.227.134.161` — acceso SSH
 
 ## Notas clave
 - El cache de Next.js (`.next/cache`) debe limpiarse si hay errores de chunk stale
