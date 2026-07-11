@@ -1,0 +1,142 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  
+  --card: #ffffff;
+  --card-border: #e2e8f0;
+  
+  --accent: #eab308;
+  --accent-hover: #ca8a04;
+  --accent-text: #ca8a04;
+  
+  --badge: #f0fdf4;
+  --badge-text: #16a34a;
+  --badge-border: #bbf7d0;
+
+  --tag: #f1f5f9;
+  --tag-text: #475569;
+  --tag-border: #cbd5e1;
+
+  --text-muted: #475569;
+  --select-bg: #f8fafc;
+  --select-border: #cbd5e1;
+
+  --image-wrapper: #f1f5f9;
+  --icon-box: #e2e8f0;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-border: var(--card-border);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-text: var(--accent-text);
+  --color-badge: var(--badge);
+  --color-badge-text: var(--badge-text);
+  --color-badge-border: var(--badge-border);
+  --color-tag: var(--tag);
+  --color-tag-text: var(--tag-text);
+  --color-tag-border: var(--tag-border);
+  --color-text-muted: var(--text-muted);
+  --color-select-bg: var(--select-bg);
+  --color-select-border: var(--select-border);
+  --color-image-wrapper: var(--image-wrapper);
+  --color-icon-box: var(--icon-box);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0b;
+    --foreground: #f1f5f9;
+    
+    --card: #121315;
+    --card-border: #1e293b;
+    
+    --accent: #facc15;
+    --accent-hover: #eab308;
+    --accent-text: #facc15;
+    
+    --badge: rgba(16, 185, 129, 0.15);
+    --badge-text: #34d399;
+    --badge-border: rgba(16, 185, 129, 0.3);
+
+    --tag: #1e293b;
+    --tag-text: #cbd5e1;
+    --tag-border: #334155;
+
+    --text-muted: #94a3b8;
+    --select-bg: #1e293b;
+    --select-border: #334155;
+
+    --image-wrapper: #0a0a0b;
+    --icon-box: #1e293b;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  /* Evita scroll extra en iOS cuando el chrome del navegador se oculta */
+  overscroll-behavior-y: none;
+}
+
+/* Altura dinámica del viewport (dvh) — se adapta cuando Safari/Chrome iOS
+   oculta su barra inferior. A diferencia de `vh`, `dvh` siempre refleja
+   el área visible real. */
+.min-h-dvh {
+  min-height: 100dvh;
+}
+
+/* Extensor del fondo del BottomNav para cubrir la safe area de iOS */
+.bottom-nav-extender {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-bottom, 0px);
+  background-color: var(--card);
+  z-index: 49;
+}
+
+/* Ocultar barra de desplazamiento en contenedores deslizables */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Stripe Elements Styling */
+.StripeElement {
+  padding: 12px;
+  border: 1px solid var(--card-border, #334155);
+  border-radius: 4px;
+  background: var(--background, #0f172a);
+}
+
+.StripeElement--focus {
+  border-color: var(--accent, #ff4500);
+}
+
+.StripeElement--invalid {
+  border-color: #ef4444;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
