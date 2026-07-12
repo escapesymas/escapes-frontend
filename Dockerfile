@@ -1,8 +1,7 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
-# Load env vars from .env file at build time (for Vite/Next.js public vars)
-COPY .env.build ./
-RUN set -a && . ./.env.build && set +a
+COPY env.build ./
+RUN set -a && . ./env.build && set +a
 COPY .npmrc ./
 COPY package.json pnpm-lock.yaml ./
 RUN npm install
