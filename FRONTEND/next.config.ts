@@ -26,16 +26,30 @@ const nextConfig: NextConfig = {
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(self)' },
         ],
       },
-    ];
-  },
-  async rewrites() {
-    return [
       {
-        source: '/api/:path*',
-        destination: 'http://127.0.0.1:3001/api/:path*',
+        source: '/(.*)',
+        locale: false,
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=0, s-maxage=60, stale-while-revalidate=300' },
+        ],
       },
     ];
   },
+  async rewrites() {
+    const apiUrl = process.env.API_URL || 'http://backend:3001';
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${apiUrl}/api/:path*`,
+      },
+      {
+        source: '/uploads/:path*',
+        destination: `${apiUrl}/uploads/:path*`,
+      },
+    ];
+  },
+  skipMiddlewareUrlNormalize: true,
+  skipTrailingSlashRedirect: true,
   experimental: {
     inlineCss: true,
   },
