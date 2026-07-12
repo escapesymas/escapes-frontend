@@ -10,8 +10,7 @@ FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production PORT=3000
 ENV HOSTNAME=0.0.0.0
-ENV NEXT_PUBLIC_API_URL=https://api.escapesymas.com
-ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_placeholder
+# No env baked with defaults - all config from Coolify env_file
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 USER nextjs
