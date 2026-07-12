@@ -1,7 +1,15 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 COPY env.build ./
-RUN set -a && . ./env.build && set +a
+# Set env vars from env.build, these become baked in
+RUN set -a && . ./env.build && set +a && \
+    echo "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL" >> /etc/environment && \
+    echo "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY" >> /etc/environment && \
+    echo "NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL" >> /etc/environment
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
+ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+ENV NEXT_PUBLIC_GTM_ID=${NEXT_PUBLIC_GTM_ID}
 COPY .npmrc ./
 COPY package.json pnpm-lock.yaml ./
 RUN npm install
