@@ -25,16 +25,16 @@ import io
 # CONFIGURACION
 # ================================================================
 BIHR_API_BASE = 'https://api.bihr.net'
-BIHR_USERNAME = 'info@escapesymas.com'
-BIHR_MACKEY = '3799B392-3934-4514-ABF0-9EF7F544A117'
+BIHR_USERNAME = os.environ.get('BIHR_USERNAME', 'info@escapesymas.com')
+BIHR_MACKEY = os.environ.get('BIHR_MACKEY', '')
 
-DB_HOST = 'localhost'
-DB_PORT = '5432'
-DB_NAME = 'escapes_db'
-DB_USER = 'postgres'
-DB_PASSWORD = 'EscapesPostgres2026Vercel'
+DB_HOST = os.environ.get('DB_HOST', 'localhost')
+DB_PORT = os.environ.get('DB_PORT', '5432')
+DB_NAME = os.environ.get('DB_NAME', 'escapes_db')
+DB_USER = os.environ.get('DB_USER', 'postgres')
+DB_PASSWORD = os.environ.get('DB_PASSWORD', '')
 
-UPLOADS_DIR = '/var/www/vhosts/backendescapes.com/server/uploads/optimized'
+UPLOADS_DIR = os.environ.get('UPLOADS_DIR', '/var/www/vhosts/backendescapes.com/server/uploads/optimized')
 
 SIZES = {
     'desktop': (800, 800),
