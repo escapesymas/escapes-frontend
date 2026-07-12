@@ -6,7 +6,7 @@ const csp = [
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://*.stripe.com",
   "frame-src https://js.stripe.com https://hooks.stripe.com https://*.stripe.com",
   "style-src 'self' 'unsafe-inline'",
-  "connect-src 'self' http://127.0.0.1:3001 http://localhost:3001 https://api.stripe.com",
+  "connect-src 'self' http://127.0.0.1:3001 http://localhost:3001 https://api.escapesymas.com https://backendescapes.com https://api.stripe.com",
   "font-src 'self' data:",
 ].join('; ');
 
@@ -39,11 +39,11 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://127.0.0.1:3001/api/:path*',
+        destination: 'https://api.escapesymas.com/api/:path*',
       },
       {
         source: '/uploads/:path*',
-        destination: 'http://127.0.0.1:3001/uploads/:path*',
+        destination: 'https://api.escapesymas.com/uploads/:path*',
       },
     ];
   },
