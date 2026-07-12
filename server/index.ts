@@ -26,6 +26,7 @@ import {
   getLiveStockLevel, getLiveStockValue, checkProductsInfo, createBihrOrder, syncBihrCatalog
 } from './bihrService.js';
 import { checkRateLimit } from './redis.js';
+import { createRedisCache, type CacheStore } from './cache/redisCache.js';
 import Stripe from 'stripe';
 import rateLimit from 'express-rate-limit';
 
@@ -536,7 +537,7 @@ class SWRMemoryCache {
   private cache = new Map<string, CacheEntry<any>>();
   private maxEntries = 1000;
 
-  public get<T>(key: string): { data: T; isStale: boolean } | null {
+  public async get<T>(key: string): Promise<{ data: T; isStale: boolean } | null> {
     const entry = this.cache.get(key);
     if (!entry) return null;
     const now = Date.now();
@@ -550,7 +551,7 @@ class SWRMemoryCache {
     };
   }
 
-  public set(key: string, data: any, ttlSeconds: number, staleGraceSeconds: number): void {
+  public async set(key: string, data: any, ttlSeconds: number, staleGraceSeconds: number): Promise<void> {
     if (this.cache.size >= this.maxEntries) {
       const firstKey = this.cache.keys().next().value;
       if (firstKey) this.cache.delete(firstKey);
@@ -563,7 +564,7 @@ class SWRMemoryCache {
     });
   }
 
-  public invalidatePattern(pattern: string): void {
+  public async invalidatePattern(pattern: string): Promise<void> {
     for (const key of this.cache.keys()) {
       if (key.includes(pattern)) {
         this.cache.delete(key);
@@ -574,19 +575,49 @@ class SWRMemoryCache {
 
 const swrCache = new SWRMemoryCache();
 
+let cacheStore: CacheStore | null = null;
+let cacheInitPromise: Promise<void> | null = null;
+
+async function initCacheStore(): Promise<void> {
+  if (cacheStore) return;
+  const store = await createRedisCache();
+  cacheStore = store;
+  if (store) {
+    console.log('[CACHE] Redis cache initialized');
+  } else {
+    console.log('[CACHE] Falling back to in-memory SWR cache');
+  }
+}
+
+function getCache(): CacheStore {
+  return cacheStore ?? swrCache;
+}
+
+async function invalidateCache(pattern: string): Promise<void> {
+  if (!cacheStore) {
+    await initCacheStore();
+  }
+  await getCache().invalidatePattern(pattern);
+}
+
 async function executeSWR<T>(
   key: string,
   fetchFn: () => Promise<T>,
   ttlSeconds: number,
   staleGraceSeconds: number
 ): Promise<T> {
-  const cached = swrCache.get<T>(key);
+  if (!cacheStore) {
+    initCacheStore().catch(() => {});
+  }
+
+  const cache = getCache();
+  const cached = await cache.get<T>(key);
 
   if (cached) {
     if (cached.isStale) {
       fetchFn()
         .then(freshData => {
-          swrCache.set(key, freshData, ttlSeconds, staleGraceSeconds);
+          cache.set(key, freshData, ttlSeconds, staleGraceSeconds);
         })
         .catch(err => {
           console.error(`[SWR] Background fetch failed for key ${key}:`, err);
@@ -596,7 +627,7 @@ async function executeSWR<T>(
   }
 
   const freshData = await fetchFn();
-  swrCache.set(key, freshData, ttlSeconds, staleGraceSeconds);
+  await cache.set(key, freshData, ttlSeconds, staleGraceSeconds);
   return freshData;
 }
 
@@ -937,8 +968,10 @@ app.post('/api/bihr/sync-catalog', async (req: any, res: any) => {
   const { catalogType } = req.body;
   try {
     syncBihrCatalog(catalogType || 'HardPart')
-      .then(success => {
+      .then(async (success) => {
         console.log(`[BIHR SYNC BACKGROUND]: Sincronización finalizada con éxito: ${success}`);
+        await invalidateCache('/api/catalog/products');
+        console.log('[BIHR SYNC] Cache de productos invalidado');
       })
       .catch(err => {
         console.error('[BIHR SYNC BACKGROUND ERROR]:', err);
@@ -2720,6 +2753,7 @@ app.all('/api/admin', adminLimiter, async (req, res) => {
           }
         }
 
+        await invalidateCache('/api/catalog/products');
         return res.json({ success: true, id: newId });
       }
 
@@ -3726,7 +3760,7 @@ app.all('/api/admin', adminLimiter, async (req, res) => {
           }
         }
         // Invalidate forum cache
-        swrCache.invalidatePattern('/api/forum');
+        invalidateCache('/api/forum');
         return res.json({ success: true });
       }
 
@@ -3736,7 +3770,7 @@ app.all('/api/admin', adminLimiter, async (req, res) => {
         if (!replyId) return res.status(400).json({ error: 'Falta replyId' });
         await db.execute(sql`DELETE FROM forum_replies WHERE id = ${parseInt(replyId)}`);
         // Invalidate forum cache
-        swrCache.invalidatePattern('/api/forum');
+        invalidateCache('/api/forum');
         return res.json({ success: true });
       }
 
@@ -3751,6 +3785,7 @@ app.all('/api/admin', adminLimiter, async (req, res) => {
         await db.execute(sql`
           DELETE FROM products WHERE id = ${parseInt(productId)}
         `);
+        await invalidateCache('/api/catalog/products');
         return res.json({ success: true });
       }
 
@@ -3878,6 +3913,7 @@ app.all('/api/admin', adminLimiter, async (req, res) => {
           }
         }
 
+        await invalidateCache('/api/catalog/products');
         return res.json({ success: true, id: productId });
       }
 
@@ -4596,7 +4632,7 @@ app.all('/api/forum', async (req, res) => {
         await db.update(users).set({ rankXp: sql`${users.rankXp} + ${XP.POST}` }).where(eq(users.id, userId));
         
         // Purgar de inmediato la caché del foro al haber escritura
-        swrCache.invalidatePattern('/api/forum');
+        invalidateCache('/api/forum');
 
         return res.json({ success: true, id: newPost.id });
       }
@@ -4615,7 +4651,7 @@ app.all('/api/forum', async (req, res) => {
         await db.update(users).set({ rankXp: sql`${users.rankXp} + ${XP.REPLY}` }).where(eq(users.id, replyUserId));
         
         // Purgar de inmediato la caché del foro al haber escritura
-        swrCache.invalidatePattern('/api/forum');
+        invalidateCache('/api/forum');
 
         return res.json({ success: true });
       }
@@ -4631,14 +4667,14 @@ app.all('/api/forum', async (req, res) => {
           await db.delete(forumLikes).where(eq(forumLikes.id, existing[0].id));
           if (targetType === 'post') await db.update(forumPosts).set({ likes: sql`${forumPosts.likes} - 1` }).where(eq(forumPosts.id, targetId));
           
-          swrCache.invalidatePattern('/api/forum');
+          invalidateCache('/api/forum');
           return res.json({ success: true, liked: false });
         } else {
           await db.insert(forumLikes).values({ userId: currentUserId, contentType: targetType, contentId: targetId });
           if (targetType === 'post') await db.update(forumPosts).set({ likes: sql`${forumPosts.likes} + 1` }).where(eq(forumPosts.id, targetId));
           await db.update(users).set({ rankXp: sql`${users.rankXp} + ${XP.GIVE_LIKE}` }).where(eq(users.id, currentUserId));
           
-          swrCache.invalidatePattern('/api/forum');
+          invalidateCache('/api/forum');
           return res.json({ success: true, liked: true });
         }
       }
