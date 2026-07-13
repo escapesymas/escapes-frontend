@@ -6329,9 +6329,10 @@ app.get('/api/reviews/:productId', async (req, res) => {
     const { limit = '10', offset = '0' } = req.query as any;
     
     const reviewsRes = await db.execute(sql`
-      SELECT r.id, r.product_id, r.user_email, r.username, r.rating, r.title, r.content,
+      SELECT r.id, r.product_id, u.email as user_email, u.username, r.rating, r.title, r.content,
              r.verified_purchase, r.created_at
       FROM product_reviews r
+      LEFT JOIN users u ON u.id = r.user_id
       WHERE r.product_id = ${productId}
       ORDER BY r.created_at DESC
       LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}
@@ -6418,8 +6419,8 @@ app.post('/api/reviews', async (req, res) => {
     }
 
     const result = await db.execute(sql`
-      INSERT INTO product_reviews (product_id, user_email, username, rating, title, content, verified_purchase)
-      VALUES (${parseInt(product_id)}, ${userEmail}, ${username}, ${parseInt(rating)}, ${title || null}, ${content || null}, ${verified_purchase})
+      INSERT INTO product_reviews (product_id, user_id, rating, title, content, verified_purchase)
+      VALUES (${parseInt(product_id)}, ${userId}, ${parseInt(rating)}, ${title || null}, ${content || null}, ${verified_purchase})
       RETURNING *
     `);
 
