@@ -3943,38 +3943,40 @@ app.all('/api/admin', adminLimiter, async (req, res) => {
 
       // --- TAXONOMÍAS: CATEGORÍAS ---
       case 'get-categories': {
-        const catRes = await pool.query(`
-          WITH RECURSIVE category_tree AS (
-            -- Base case: L1 categories (parent_id IS NULL)
+        const cacheKey = '/api/taxonomies/categories';
+        const categories = await executeSWR(cacheKey, async () => {
+          const catRes = await pool.query(`
+            WITH RECURSIVE category_tree AS (
+              SELECT 
+                c.*, 
+                1 as depth,
+                ARRAY[c.name]::text[] AS path_names
+              FROM categories c
+              WHERE c.parent_id IS NULL
+              
+              UNION ALL
+              
+              SELECT 
+                c.*, 
+                t.depth + 1 as depth,
+                t.path_names || c.name AS path_names
+              FROM categories c
+              JOIN category_tree t ON c.parent_id = t.id
+            )
             SELECT 
-              c.*, 
-              1 as depth,
-              ARRAY[c.name]::text[] AS path_names
-            FROM categories c
-            WHERE c.parent_id IS NULL
-            
-            UNION ALL
-            
-            -- Recursive step
-            SELECT 
-              c.*, 
-              t.depth + 1 as depth,
-              t.path_names || c.name AS path_names
-            FROM categories c
-            JOIN category_tree t ON c.parent_id = t.id
-          )
-          SELECT 
-            ct.*,
-            COALESCE(pc.cnt, 0) as product_count
-          FROM category_tree ct
-          LEFT JOIN (
-            SELECT category_id, COUNT(*) as cnt
-            FROM products
-            GROUP BY category_id
-          ) pc ON ct.id = pc.category_id
-          ORDER BY ct.path_names ASC
-        `);
-        return res.json(catRes.rows);
+              ct.*,
+              COALESCE(pc.cnt, 0) as product_count
+            FROM category_tree ct
+            LEFT JOIN (
+              SELECT category_id, COUNT(*) as cnt
+              FROM products
+              GROUP BY category_id
+            ) pc ON ct.id = pc.category_id
+            ORDER BY ct.path_names ASC
+          `);
+          return catRes.rows;
+        }, 3600, 1800);
+        return res.json(categories);
       }
       case 'save-category': {
         if (req.method !== 'POST') return res.status(405).end();
@@ -3992,12 +3994,14 @@ app.all('/api/admin', adminLimiter, async (req, res) => {
             [name, slug, parent_id || null, description || null]
           );
         }
+        await invalidateCache('/api/taxonomies/categories');
         return res.json({ success: true });
       }
       case 'delete-category': {
         if (req.method !== 'POST') return res.status(405).end();
         const { id } = req.body;
         await pool.query('DELETE FROM categories WHERE id = $1', [id]);
+        await invalidateCache('/api/taxonomies/categories');
         return res.json({ success: true });
       }
 
