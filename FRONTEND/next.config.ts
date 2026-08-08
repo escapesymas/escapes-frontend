@@ -6,7 +6,7 @@ const csp = [
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://*.stripe.com",
   "frame-src https://js.stripe.com https://hooks.stripe.com https://*.stripe.com",
   "style-src 'self' 'unsafe-inline'",
-  "connect-src 'self' http://127.0.0.1:3001 http://localhost:3001 https://api.stripe.com",
+  "connect-src 'self' http://127.0.0.1:3001 http://localhost:3001 https://api.stripe.com https://api.escapesymas.com",
   "font-src 'self' data:",
 ].join('; ');
 
@@ -36,7 +36,7 @@ const nextConfig: NextConfig = {
     ];
   },
   async rewrites() {
-    const apiUrl = process.env.API_URL || 'http://backend:3001';
+    const apiUrl = process.env.API_URL || 'https://api.escapesymas.com';
     return [
       {
         source: '/api/:path*',
