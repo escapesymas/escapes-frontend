@@ -228,7 +228,7 @@ const db = drizzle(pool);
     console.log('✅ Database schema aligned successfully!');
     // Cargar mapa de categorías e índice de compatibilidades en segundo plano
     initCategoryMap().catch(e => console.error('[CATEGORY MAP INITIAL LOAD ERROR]:', e));
-    initCompatIndex().catch(e => console.error('[COMPAT INDEX INITIAL LOAD ERROR]:', e));
+    setImmediate(() => initCompatIndex().catch(e => console.error('[COMPAT INDEX INITIAL LOAD ERROR]:', e)));
   } catch (err) {
     console.error('❌ Failed to align database schema:', err);
   }
@@ -735,6 +735,11 @@ function authenticateRequest(req: any): any | null {
 }
 
 // ================================================================
+// FAVICON — redirect to frontend
+app.get('/favicon.ico', (_req, res) => {
+  res.redirect(301, 'https://escapesymas.com/favicon.ico');
+});
+
 // HEALTH CHECK
 // ================================================================
 app.get('/api/health', async (_req, res) => {
@@ -1217,7 +1222,12 @@ async function initCompatIndex() {
 }
 
 // Recargar el índice cada 15 minutos para capturar importaciones externas
+// Skip reload if a load is already in progress (mutex pattern)
 setInterval(() => {
+  if (isIndexLoading) {
+    console.log('[COMPAT INDEX] Skipping scheduled reload — load already in progress');
+    return;
+  }
   initCompatIndex().catch(e => console.error('[COMPAT INDEX AUTO REFRESH ERROR]:', e));
 }, 15 * 60 * 1000);
 
@@ -5382,7 +5392,8 @@ app.post('/api/cart', async (req: any, res: any) => {
       const safeItems = Array.isArray(items) ? items.filter((it: any) => it && (it.id || it.product_id)) : [];
       if (safeEmail && safeItems.length > 0) {
         const cartTotalCents = safeItems.reduce((acc: number, it: any) => {
-          const cents = typeof it.price === 'number' ? it.price : (parseInt(it.price) || 0);
+          const priceNum = typeof it.price === 'number' ? it.price : (parseFloat(it.price) || 0);
+          const cents = Math.round(priceNum * 100);
           const qty = parseInt(it.quantity) || 1;
           return acc + cents * qty;
         }, 0);
@@ -5423,11 +5434,12 @@ app.post('/api/cart', async (req: any, res: any) => {
       const safeEmailForTrack = (userEmail && userEmail !== 'undefined' && userEmail.includes('@')) ? userEmail : undefined;
       if (safeItemsForTrack.length > 0 && safeEmailForTrack) {
         const itemForEvent = safeItemsForTrack[safeItemsForTrack.length - 1] as any;
-        const itemCents = typeof itemForEvent.price === 'number' ? itemForEvent.price : (parseInt(itemForEvent.price) || 0);
+        const itemCents = typeof itemForEvent.price === 'number' ? itemForEvent.price : (parseFloat(itemForEvent.price) || 0);
         const itemQty = parseInt(itemForEvent.quantity) || 1;
         const itemProductId = itemForEvent.id || itemForEvent.product_id;
         const cartTotalCents = safeItemsForTrack.reduce((acc: number, it: any) => {
-          const cents = typeof it.price === 'number' ? it.price : (parseInt(it.price) || 0);
+          const priceNum = typeof it.price === 'number' ? it.price : (parseFloat(it.price) || 0);
+          const cents = Math.round(priceNum * 100);
           const qty = parseInt(it.quantity) || 1;
           return acc + cents * qty;
         }, 0);
