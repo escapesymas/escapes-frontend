@@ -2,7 +2,7 @@ import { redirect, notFound } from 'next/navigation';
 import CatalogClient from './CatalogClient';
 import { Category3, Product, FilterOptions } from '../../../types';
 
-const API_BASE = process.env.API_URL || 'http://127.0.0.1:3001';
+const API_BASE = process.env.API_URL || 'https://api.escapesymas.com';
 
 async function fetchJson(url: string) {
   try {
