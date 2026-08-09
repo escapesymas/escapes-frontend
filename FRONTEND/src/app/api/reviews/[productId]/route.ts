@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_BASE = process.env.API_URL || 'http://127.0.0.1:3001';
+const API_BASE = process.env.API_URL || 'https://api.escapesymas.com';
 
 export async function GET(
   request: NextRequest,
