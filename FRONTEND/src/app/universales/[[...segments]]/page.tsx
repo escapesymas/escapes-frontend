@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { redirect, notFound } from 'next/navigation';
 import CatalogClient from './CatalogClient';
 import { Category3, Product, FilterOptions } from '../../../types';
@@ -46,6 +47,15 @@ export default async function CatalogPage({
   }
 
   const categories = await fetchJson(`${API_BASE}/api/catalog/categories`) as Category3[] || [];
+
+  // Pre-compute L1 (root) categories on the server so the client doesn't have to re-filter
+  const initialMainCategories = categories
+    .filter(c => c.parentId === 0)
+    .map(c => ({
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+    }));
 
   // Si hay segmento pero la categoría no existe → 404
   if (segs.length > 0 && segs[0] !== 'buscar') {
@@ -111,14 +121,26 @@ export default async function CatalogPage({
   const initialSearchParamsStr = initialSearchParams.toString();
 
   return (
-    <CatalogClient
-      segments={segs}
-      initialCategories={categories}
-      initialProducts={products}
-      initialFilterOptions={filterOptions}
-      initialSearchTotal={products?.total || 0}
-      initialSearchTotalPages={products?.totalPages || 0}
-      initialSearchParamsStr={initialSearchParamsStr}
-    />
+    <Suspense
+      fallback={
+        <div className="flex justify-center items-center h-screen bg-background">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs font-mono text-text-muted">Cargando catálogo...</p>
+          </div>
+        </div>
+      }
+    >
+      <CatalogClient
+        segments={segs}
+        initialCategories={categories}
+        initialMainCategories={initialMainCategories}
+        initialProducts={products}
+        initialFilterOptions={filterOptions}
+        initialSearchTotal={products?.total || 0}
+        initialSearchTotalPages={products?.totalPages || 0}
+        initialSearchParamsStr={initialSearchParamsStr}
+      />
+    </Suspense>
   );
 }

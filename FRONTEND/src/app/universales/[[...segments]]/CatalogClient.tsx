@@ -44,6 +44,7 @@ const CYCLING_COLORS = [
 function CatalogContent({
   segments,
   initialCategories,
+  initialMainCategories,
   initialProducts,
   initialFilterOptions,
   initialSearchTotal,
@@ -52,6 +53,7 @@ function CatalogContent({
 }: {
   segments: string[];
   initialCategories: Category3[];
+  initialMainCategories: { id: number; name: string; slug: string }[];
   initialProducts: { products: Product[]; total: number; totalPages: number } | null;
   initialFilterOptions: FilterOptions | null;
   initialSearchTotal: number;
@@ -127,7 +129,7 @@ function CatalogContent({
     const loadProducts = async () => {
       setIsProductsLoading(true);
       try {
-        const paramsObj: Record<string, string> = { universal: 'true', per_page: '24' };
+        const paramsObj: Record<string, string> = { universal: 'true', per_page: '12' };
         const page = Number(getSearchParam('page')) || 1;
         paramsObj.page = String(page);
         const q = searchQuery || getSearchParam('q');
@@ -195,8 +197,7 @@ function CatalogContent({
   };
 
   const mainCategories = useMemo(() => {
-    const l1s = categories.filter(c => c.parentId === 0);
-    return l1s.map((cat, idx) => ({
+    return initialMainCategories.map((cat, idx) => ({
       id: cat.id,
       name: cat.name,
       label: cat.name,
@@ -204,7 +205,7 @@ function CatalogContent({
       icon: L1_ICONS[cat.id]?.icon || DEFAULT_ICON,
       color: L1_ICONS[cat.id]?.color || CYCLING_COLORS[idx % CYCLING_COLORS.length],
     }));
-  }, [categories]);
+  }, [initialMainCategories]);
 
   const visibleSubcategories = categories.filter(cat => cat.parentId === selectedParentId);
 
@@ -678,6 +679,7 @@ function CatalogContent({
 export default function CatalogClient({
   segments,
   initialCategories,
+  initialMainCategories,
   initialProducts,
   initialFilterOptions,
   initialSearchTotal,
@@ -686,6 +688,7 @@ export default function CatalogClient({
 }: {
   segments: string[];
   initialCategories: Category3[];
+  initialMainCategories: { id: number; name: string; slug: string }[];
   initialProducts: { products: Product[]; total: number; totalPages: number } | null;
   initialFilterOptions: FilterOptions | null;
   initialSearchTotal: number;
@@ -704,6 +707,7 @@ export default function CatalogClient({
       <CatalogContent
         segments={segments}
         initialCategories={initialCategories}
+        initialMainCategories={initialMainCategories}
         initialProducts={initialProducts}
         initialFilterOptions={initialFilterOptions}
         initialSearchTotal={initialSearchTotal}
