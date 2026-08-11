@@ -509,7 +509,13 @@ export default function Home() {
                     </section>
 
                     <section className="mt-8">
-                      <BrandCarousel brand="RST" title="RST — Casual & Sport" onAddToCart={handleAddToCart} onNotifyMe={handleNotifyMe} />
+                      <BrandCarousel
+                        brand={['RST', 'ARAI', 'BELL', 'SCORPION', 'SHAD']}
+                        title="Equipamiento destacado para el piloto"
+                        sort="random"
+                        onAddToCart={handleAddToCart}
+                        onNotifyMe={handleNotifyMe}
+                      />
                     </section>
                     <section className="mt-8">
                       <BrandCarousel brand="AKRAPOVIC" title="Akrapovič — Escapes" onAddToCart={handleAddToCart} onNotifyMe={handleNotifyMe} />
@@ -555,7 +561,13 @@ export default function Home() {
                       <BrandCarousel brand="SHARK" title="SHARK — Cascos" onAddToCart={handleAddToCart} onNotifyMe={handleNotifyMe} />
                     </section>
                     <section className="mt-8">
-                      <BrandCarousel brand="RST" title="RST — Equipación" onAddToCart={handleAddToCart} onNotifyMe={handleNotifyMe} />
+                      <BrandCarousel
+                        brand={['RST', 'ARAI', 'BELL', 'SCORPION']}
+                        title="Equipación para el piloto"
+                        sort="random"
+                        onAddToCart={handleAddToCart}
+                        onNotifyMe={handleNotifyMe}
+                      />
                     </section>
                   </>
                 )}

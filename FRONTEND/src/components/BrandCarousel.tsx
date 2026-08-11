@@ -6,23 +6,42 @@ import { Product } from '../types';
 import ProductCard from './ProductCard';
 
 interface BrandCarouselProps {
-  brand: string;
+  /** Single brand ("RST") or list of brands (["RST", "SHARK", "Held"]).
+   *  Multiple brands are joined with a comma and routed through the catalog
+   *  endpoint's `brand=` param, which produces an IN/OR chain server-side. */
+  brand: string | string[];
   title?: string;
+  /** "random" picks from the matching pool with ORDER BY RANDOM() so the
+   *  carousel shows category variety instead of the brand's dominant type. */
+  sort?: 'random';
   onAddToCart: (product: Product) => void;
   onNotifyMe: (product: Product) => void;
 }
 
-export default function BrandCarousel({ brand, title, onAddToCart, onNotifyMe }: BrandCarouselProps) {
+export default function BrandCarousel({ brand, title, sort, onAddToCart, onNotifyMe }: BrandCarouselProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [scrollPosition, setScrollPosition] = useState(0);
+
+  const brandParam = Array.isArray(brand) ? brand.join(',') : brand;
+  const carouselId = `carousel-${brandParam.replace(/[\s,]+/g, '-')}`;
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       setIsLoading(true);
       try {
-        const url = `/api/catalog/products?brand=${encodeURIComponent(brand)}&per_page=12`;
+        // Only products with a real image AND stock. The backend exposes
+        // `in_stock=true` and `has_image=true` query params; passing them
+        // keeps the carousel tidy (no "Imagen no disponible" placeholders).
+        const params = new URLSearchParams({
+          brand: brandParam,
+          per_page: '12',
+          in_stock: 'true',
+          has_image: 'true',
+        });
+        if (sort === 'random') params.set('sort', 'random');
+        const url = `/api/catalog/products?${params.toString()}`;
         const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
@@ -39,10 +58,10 @@ export default function BrandCarousel({ brand, title, onAddToCart, onNotifyMe }:
     };
     load();
     return () => { cancelled = true; };
-  }, [brand]);
+  }, [brandParam, sort]);
 
   const scroll = (direction: 'left' | 'right') => {
-    const container = document.getElementById(`carousel-${brand.replace(/\s+/g, '-')}`);
+    const container = document.getElementById(carouselId);
     if (container) {
       const scrollAmount = 300;
       container.scrollBy({
@@ -94,7 +113,7 @@ export default function BrandCarousel({ brand, title, onAddToCart, onNotifyMe }:
       </div>
 
       <div
-        id={`carousel-${brand.replace(/\s+/g, '-')}`}
+        id={carouselId}
         className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth pb-3 gap-4 no-scrollbar"
       >
         {products.slice(0, 12).map((product) => (
