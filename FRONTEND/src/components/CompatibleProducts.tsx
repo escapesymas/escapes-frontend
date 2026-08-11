@@ -249,8 +249,8 @@ export default function CompatibleProducts({ selectedBike, onAddToCart, onNotify
 
                           {!isSubCollapsed && (
                             <div className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth pb-2 gap-3 md:grid md:grid-cols-2 lg:grid-cols-4 md:overflow-visible no-scrollbar">
-                              {subProducts.map((product) => (
-                                <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} onNotifyMe={onNotifyMe} />
+                              {subProducts.map((product, idx) => (
+                                <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} onNotifyMe={onNotifyMe} priority={idx < 4} />
                               ))}
                             </div>
                           )}
@@ -266,8 +266,8 @@ export default function CompatibleProducts({ selectedBike, onAddToCart, onNotify
       ) : (
         <div>
           <div className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth pb-2 px-4 md:px-0 gap-3 md:grid md:grid-cols-2 lg:grid-cols-4 md:overflow-visible no-scrollbar">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} onNotifyMe={onNotifyMe} />
+            {products.map((product, idx) => (
+              <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} onNotifyMe={onNotifyMe} priority={idx < 4} />
             ))}
           </div>
           <div className="mt-3 px-4 md:px-0 text-center">
