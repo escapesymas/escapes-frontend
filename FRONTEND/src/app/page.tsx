@@ -431,12 +431,13 @@ export default function Home() {
                 ) : (
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 px-4 md:px-0">
-                      {processedSearchResults.map((product) => (
+                      {processedSearchResults.map((product, idx) => (
                         <ProductCard
                           key={product.id}
                           product={product}
                           onAddToCart={handleAddToCart}
                           onNotifyMe={handleNotifyMe}
+                          priority={idx < 4}
                         />
                       ))}
                     </div>

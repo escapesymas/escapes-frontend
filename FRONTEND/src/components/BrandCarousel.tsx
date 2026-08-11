@@ -116,12 +116,12 @@ export default function BrandCarousel({ brand, title, sort, onAddToCart, onNotif
         id={carouselId}
         className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth pb-3 gap-4 no-scrollbar"
       >
-        {products.slice(0, 12).map((product) => (
+        {products.slice(0, 12).map((product, idx) => (
           <div
             key={product.id}
             className="shrink-0 w-[78vw] sm:w-[42vw] md:w-[31vw] lg:w-[22vw] xl:w-[18vw] snap-start"
           >
-            <ProductCard product={product} onAddToCart={onAddToCart} onNotifyMe={onNotifyMe} />
+            <ProductCard product={product} onAddToCart={onAddToCart} onNotifyMe={onNotifyMe} priority={idx < 4} />
           </div>
         ))}
       </div>
