@@ -1,3 +1,7 @@
+allowBuilds:
+  sharp: set this to true or false
+  unrs-resolver: set this to true or false
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
+storeDir: /home/adrian/.local/share/pnpm/store/v11
