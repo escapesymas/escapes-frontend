@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import withBundleAnalyzer from "@next/bundle-analyzer";
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -63,4 +64,13 @@ const nextConfig: NextConfig = {
   output: 'standalone',
 };
 
-export default nextConfig;
+// Bundle analyzer — only wraps when ANALYZE=true so production builds stay lean.
+// Usage: `pnpm analyze` (alias for `ANALYZE=true pnpm build`)
+const bundleAnalyzer = withBundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+  openAnalyzer: false,
+  analyzerMode: 'static',
+  logLevel: 'warn',
+});
+
+export default bundleAnalyzer(nextConfig);
