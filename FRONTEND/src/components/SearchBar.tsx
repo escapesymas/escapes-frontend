@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, Loader2 } from 'lucide-react';
+import { trackEvent as trackUmami } from '../lib/umami';
 
 interface SearchSuggestion {
   name: string;
@@ -70,8 +71,10 @@ export default function SearchBar({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const q = query.trim();
     setShowSuggestions(false);
-    onSearch(query.trim());
+    if (q) trackUmami('search', { query: q });
+    onSearch(q);
   };
 
   const handleClear = () => {
@@ -92,6 +95,7 @@ export default function SearchBar({
       e.preventDefault();
       setQuery(suggestions[selectedIndex].name);
       setShowSuggestions(false);
+      trackUmami('search', { query: suggestions[selectedIndex].name });
       onSearch(suggestions[selectedIndex].name);
     } else if (e.key === 'Escape') {
       setShowSuggestions(false);
@@ -161,6 +165,7 @@ export default function SearchBar({
                 onClick={() => {
                   setQuery(suggestion.name);
                   setShowSuggestions(false);
+                  trackUmami('search', { query: suggestion.name });
                   onSearch(suggestion.name);
                 }}
                 className={`w-full px-4 py-2.5 text-left flex items-center gap-3 transition-colors ${

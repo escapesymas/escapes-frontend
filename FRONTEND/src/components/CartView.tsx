@@ -5,6 +5,7 @@ import Image from 'next/image';
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps, @next/next/no-img-element, @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 import { Trash2, Plus, Minus, ShoppingBag, Truck, ArrowLeft, ArrowRight, AlertCircle, RotateCcw, Loader2, Package, ShieldCheck, Lock, Repeat } from 'lucide-react';
 import { trackEvent } from '../lib/analytics';
+import { trackEvent as trackUmami } from '../lib/umami';
 import { useCart, CartItem } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import Link from 'next/link';
@@ -1096,7 +1097,13 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
                 </div>
 
                 <button
-                  onClick={() => setIsCheckingOut(true)}
+                  onClick={() => {
+                    trackUmami('checkout_start', {
+                      cart_total: subtotal,
+                      items_count: itemsCount,
+                    });
+                    setIsCheckingOut(true);
+                  }}
                   className="w-full bg-accent text-slate-950 font-mono font-bold uppercase tracking-widest py-4 rounded hover:bg-accent-hover transition-colors flex items-center justify-center gap-2 cursor-pointer group"
                 >
                   Tramitar Pedido{' '}
