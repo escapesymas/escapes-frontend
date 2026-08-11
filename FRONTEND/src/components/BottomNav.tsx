@@ -104,7 +104,7 @@ export default function BottomNav({ activeTab, onTabChange, selectedBike }: Bott
                     {user.avatarUrl.substring(6)}
                   </div>
                 ) : user.avatarUrl ? (
-                  <img src={user.avatarUrl} alt={user.username} className="w-full h-full object-cover" />
+                  <img src={user.avatarUrl} alt={user.username} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full bg-accent flex items-center justify-center text-slate-950 font-mono font-bold text-[10px]">
                     {(user.firstName ? user.firstName[0] : user.username[0]).toUpperCase()}

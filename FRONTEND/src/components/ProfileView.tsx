@@ -393,7 +393,7 @@ export default function ProfileView() {
           </div>
         );
       }
-      return <img src={user.avatarUrl} alt={user.username} className="w-full h-full object-cover" />;
+      return <img src={user.avatarUrl} alt={user.username} loading="lazy" decoding="async" className="w-full h-full object-cover" />;
     }
     return initials;
   };
@@ -584,7 +584,7 @@ export default function ProfileView() {
                     {selectedOrder.items.map((item) => (
                       <div key={item.id} className="flex items-center gap-3 p-2 bg-background border border-card-border rounded">
                         {item.image && (
-                          <img src={item.image} alt={item.productName} className="w-10 h-10 object-contain rounded bg-slate-950" />
+                          <img src={item.image} alt={item.productName} loading="lazy" decoding="async" className="w-10 h-10 object-contain rounded bg-slate-950" />
                         )}
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-mono text-foreground truncate">{item.productName}</p>
