@@ -5,6 +5,7 @@ import { ShoppingCart, Check, Bell } from 'lucide-react';
 import { Product, ProductImage as ProductImageType } from '../types';
 import ProductImage from './ProductImage';
 import RatingStars from './RatingStars';
+import { useHoverPrefetch } from '../lib/useHoverPrefetch';
 
 interface ProductCardProps {
   product: Product;
@@ -21,6 +22,9 @@ function pickImage(img: ProductImageType) {
 
 export default function ProductCard({ product, onAddToCart, onNotifyMe, priority = false }: ProductCardProps) {
   const isOutOfStock = product.inStock === false || product.stock === 0;
+  // Hover-triggered prefetch so clicking a card feels instant without
+  // burning prefetches on every card the user scrolls past.
+  const hoverPrefetchProps = useHoverPrefetch(`/producto/${product.slug}`, 80);
   const images = product.images?.length ? product.images : [{ src: product.image, alt: product.name } as ProductImageType];
   const [imgIdx, setImgIdx] = useState(0);
   const current = pickImage(images[imgIdx]);
@@ -37,6 +41,7 @@ export default function ProductCard({ product, onAddToCart, onNotifyMe, priority
       href={`/producto/${product.slug}`}
       className="bg-card border rounded-md overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-md transition-all group cursor-pointer snap-start shrink-0 w-[75vw] md:w-auto"
       style={{ borderColor: product.isCompatible ? 'var(--badge-border)' : 'var(--card-border)' }}
+      {...hoverPrefetchProps}
     >
       <div className="p-4 bg-image-wrapper flex items-center justify-center relative min-h-[160px] overflow-hidden">
         <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
