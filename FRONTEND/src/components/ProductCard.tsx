@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ShoppingCart, Check, Bell } from 'lucide-react';
 import { Product, ProductImage as ProductImageType } from '../types';
 import ProductImage from './ProductImage';
 import RatingStars from './RatingStars';
 import { useHoverPrefetch } from '../lib/useHoverPrefetch';
+import { trackEvent as trackUmami } from '../lib/umami';
 
 interface ProductCardProps {
   product: Product;
@@ -28,6 +29,17 @@ export default function ProductCard({ product, onAddToCart, onNotifyMe, priority
   const images = product.images?.length ? product.images : [{ src: product.image, alt: product.name } as ProductImageType];
   const [imgIdx, setImgIdx] = useState(0);
   const current = pickImage(images[imgIdx]);
+
+  // Umami — privacy-first analytics. Fire-and-forget; the helper no-ops if
+  // Umami isn't loaded (env disabled, still loading, or ad-blocked).
+  useEffect(() => {
+    trackUmami('view_product', {
+      product_id: product.id,
+      product_brand: product.brand,
+      product_price: product.price,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
 
   const handleDotClick = (e: React.MouseEvent, idx: number) => {
     e.preventDefault();
@@ -166,6 +178,11 @@ export default function ProductCard({ product, onAddToCart, onNotifyMe, priority
             <button
               onClick={(e) => {
                 e.preventDefault();
+                trackUmami('add_to_cart', {
+                  product_id: product.id,
+                  product_price: product.price,
+                  quantity: 1,
+                });
                 onAddToCart(product);
               }}
               className="p-2 rounded bg-accent text-slate-950 hover:bg-accent-hover active:scale-95 transition-all shadow-sm cursor-pointer"

@@ -8,6 +8,7 @@ import ServiceWorkerRegistration from "../components/ServiceWorkerRegistration";
 import CookieBanner from "../components/CookieBanner";
 import ChatWidget from "../components/ChatWidget";
 import Footer from "../components/Footer";
+import UmamiScript from "../components/UmamiScript";
 import { GtmScript, GtmNoScript } from "../lib/analytics";
 
 export const metadata: Metadata = {
@@ -80,6 +81,7 @@ export default function RootLayout({
 <body className="min-h-full flex flex-col">
         <GtmScript />
         <GtmNoScript />
+        <UmamiScript />
         <SchemaMarkup />
         <ServiceWorkerRegistration />
         <a

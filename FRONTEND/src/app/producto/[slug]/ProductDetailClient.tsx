@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShoppingCart, Bell, Bike, ChevronLeft, AlertCircle, Ruler, Weight, Package, Check } from 'lucide-react';
 import { trackEvent } from '../../../lib/analytics';
+import { trackEvent as trackUmami } from '../../../lib/umami';
 import FrequentlyBoughtTogether from '../../../components/FrequentlyBoughtTogether';
 import { Product, ProductCompatibility, ProductImage as ProductImageType } from '../../../types';
 import { fetchProductBySlug } from '../../../lib/api';
@@ -59,7 +60,16 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
   }, [compatSearch]);
 
   useEffect(() => {
-    if (product) trackEvent.viewItem(product);
+    if (product) {
+      trackEvent.viewItem(product);
+      // Umami — distinct event from the card impression so we can see
+      // click-through vs scroll-past separately in the dashboard.
+      trackUmami('view_product_detail', {
+        product_id: product.id,
+        product_brand: product.brand,
+        product_price: product.price,
+      });
+    }
   }, [product]);
 
   useEffect(() => {
