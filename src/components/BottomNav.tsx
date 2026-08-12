@@ -26,9 +26,14 @@ export default function BottomNav({ activeTab, onTabChange, selectedBike }: Bott
   return (
     <>
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-[60] bg-card border-t border-card-border shadow-[0_-4px_24px_rgba(0,0,0,0.08)]"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        className="md:hidden fixed bottom-0 left-0 right-0 z-[60] bg-card border-t border-card-border shadow-[0_-4px_24px_rgba(0,0,0,0.08)] transform-gpu"
+        style={{
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          transform: 'translate3d(0, 0, 0)',
+          WebkitTransform: 'translate3d(0, 0, 0)',
+        }}
       >
+
         <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-4">
         {navItems.map((item) => {
           const Icon = item.icon;
