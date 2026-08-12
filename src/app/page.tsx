@@ -343,16 +343,9 @@ export default function Home() {
               <div className="relative z-10 max-w-xl flex flex-col items-start text-left">
                 {selectedBike ? (
                   <>
-                    <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-accent-text bg-accent/10 border border-accent/20 px-3 py-1 rounded mb-4 flex items-center gap-1.5">
-                      <Bike className="w-3.5 h-3.5 text-accent" />
-                      Moto activa · Compatibilidad verificada
-                    </span>
-                    <h1 className="font-mono font-bold uppercase tracking-tight text-2xl md:text-4xl mb-3 leading-tight text-foreground">
+                    <h1 className="font-mono font-bold uppercase tracking-tight text-2xl md:text-4xl mb-6 leading-tight text-foreground">
                       Aquí están los recambios y accesorios compatibles con tu <span className="text-accent-text">{selectedBike}</span>
                     </h1>
-                    <p className="text-text-muted mb-6 text-xs md:text-sm max-w-md font-sans">
-                      Catálogo filtrado para {selectedBike}. Verificamos la compatibilidad de cada pieza antes de enviártela a casa.
-                    </p>
                     <div className="flex flex-wrap gap-3">
                       <button
                         onClick={() => setIsSelectorOpen(true)}
@@ -367,14 +360,6 @@ export default function Home() {
                       >
                         <Wrench className="w-4 h-4" />
                         Mi Garaje
-                      </button>
-                      <button
-                        onClick={() => {
-                          document.getElementById('buscador-inicio')?.scrollIntoView({ behavior: 'smooth' });
-                        }}
-                        className="px-5 py-2.5 text-xs font-mono font-bold rounded-sm border border-card-border text-foreground hover:border-accent/50 hover:bg-select-bg transition-all cursor-pointer"
-                      >
-                        Explorar catálogo
                       </button>
                     </div>
                   </>
@@ -412,23 +397,6 @@ export default function Home() {
               </div>
             </section>
 
-
-            <section aria-label="Ventajas de comprar en Escapes y Más" className="grid grid-cols-2 md:grid-cols-4 gap-3 px-4 md:px-0">
-              {[
-                { icon: Truck, label: 'Envío gratis', sub: 'Pedidos +49€' },
-                { icon: ShieldCheck, label: 'Pago seguro', sub: 'Stripe · SSL' },
-                { icon: Bike, label: 'Compatibilidad', sub: 'Verificada por moto' },
-                { icon: Wrench, label: 'Asesor técnico', sub: 'IA + expertos' },
-              ].map(({ icon: Icon, label, sub }) => (
-                <div key={label} className="flex items-center gap-2 bg-card border border-card-border rounded p-3">
-                  <Icon className="w-5 h-5 text-accent shrink-0" aria-hidden="true" />
-                  <div className="min-w-0">
-                    <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-foreground truncate">{label}</div>
-                    <div className="text-[9px] text-text-muted font-mono truncate">{sub}</div>
-                  </div>
-                </div>
-              ))}
-            </section>
 
             {/* Buscador de referencias */}
             <section id="buscador-inicio" className="px-4 md:px-0 -mt-4">
