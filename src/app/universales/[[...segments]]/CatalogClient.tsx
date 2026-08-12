@@ -270,10 +270,7 @@ function CatalogContent({
   };
 
   return (
-    <div
-      className="bg-background text-foreground flex flex-col font-sans"
-      style={{ height: '100dvh' }}
-    >
+    <div className="bg-background text-foreground flex flex-col font-sans min-h-screen">
       <Header
         selectedBike={selectedBike}
         onOpenBikeSelector={() => navigate('/?openSelector=true')}
@@ -281,10 +278,8 @@ function CatalogContent({
         onTabChange={(tab) => navigate(`/?tab=${tab}`)}
       />
 
-      <main
-        className="flex-1 overflow-y-auto overscroll-contain"
-        style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
-      >
+      <main className="flex-1 pb-28 md:pb-0">
+
         <div className="container mx-auto px-4 py-6 max-w-[1400px]">
           <div className="flex flex-col gap-6 animate-fade-in">
             <section className="relative overflow-hidden bg-card border border-card-border rounded-md py-6 px-6 shadow-sm">
