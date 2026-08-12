@@ -305,9 +305,9 @@ export default function Home() {
       {/* El BottomNav está fixed en mobile, fuera del flujo del main */}
       <main
         id="main-content"
-        className={`${activeTab === 'shop' ? 'flex-1 pb-16 md:pb-0' : 'flex-1 overflow-y-auto overscroll-contain pb-16 md:pb-0'}`}
-        style={activeTab === 'shop' ? undefined : { WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
+        className="flex-1 pb-24 md:pb-0 min-h-[100dvh]"
       >
+
         <div className="container mx-auto px-4 py-6 max-w-[1400px]">
 
         {showEmptyCartBanner && (
