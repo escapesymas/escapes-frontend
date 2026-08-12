@@ -398,10 +398,6 @@ export default function Home() {
             </section>
 
 
-            {/* Buscador de referencias */}
-            <section id="buscador-inicio" className="px-4 md:px-0 -mt-4">
-              <SearchBar onSearch={(q) => handleSearch(q, 1)} isLoading={isSearchLoading} initialValue={searchQuery} />
-            </section>
 
             {searchQuery || searchCategoryId ? (
               <section className="flex flex-col gap-6">
