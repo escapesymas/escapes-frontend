@@ -150,26 +150,7 @@ export default function CompatibleProducts({ selectedBike, onAddToCart, onNotify
 
   return (
     <div className="w-full">
-      <div className="mb-4 px-4 md:px-0 flex items-baseline justify-between">
-        <div>
-          <h3 className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider">
-            {selectedBike ? 'Recambios Compatibles' : 'Recambios Destacados'}
-          </h3>
-          {selectedBike && (
-            <p className="text-[9px] font-mono text-badge-text font-bold uppercase mt-0.5">
-              Filtrado para {selectedBike}
-            </p>
-          )}
-        </div>
-        {selectedBike && hasGroupedProducts && (
-          <Link
-            href="/universales"
-            className="text-[10px] font-mono uppercase tracking-wider text-accent hover:underline"
-          >
-            Ver catálogo completo →
-          </Link>
-        )}
-      </div>
+
 
       {selectedBike ? (
         !hasGroupedProducts ? (
