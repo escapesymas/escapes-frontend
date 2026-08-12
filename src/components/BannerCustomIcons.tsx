@@ -1,109 +1,109 @@
 import React from 'react';
 
-// 1. ESCAPES & ITV — Escape deportivo de titanio & carbono con llama/gases
+// 1. ESCAPES & ITV — Silenciador de Escape Deportivo de Carreras (100% Reconocible)
 export function IconExhaustITV({ className = 'w-8 h-8' }: { className?: string }) {
   return (
     <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
       <defs>
-        <linearGradient id="exhaustBody" x1="6" y1="30" x2="38" y2="16" gradientUnits="userSpaceOnUse">
+        <linearGradient id="exhaustBodyGrad" x1="12" y1="20" x2="36" y2="28" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#F59E0B" />
           <stop offset="50%" stopColor="#FBBF24" />
           <stop offset="100%" stopColor="#D97706" />
         </linearGradient>
-        <linearGradient id="exhaustCap" x1="34" y1="18" x2="44" y2="12" gradientUnits="userSpaceOnUse">
+        <linearGradient id="carbonCapGrad" x1="33" y1="15" x2="44" y2="28" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#334155" />
           <stop offset="100%" stopColor="#0F172A" />
         </linearGradient>
-        <linearGradient id="flameGrad" x1="40" y1="14" x2="47" y2="6" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.9" />
-          <stop offset="100%" stopColor="#EF4444" stopOpacity="0" />
-        </linearGradient>
       </defs>
 
-      {/* Tubo de colectivo de entrada */}
-      <path d="M4 33C8 33 11 31 14 28.5" stroke="#D97706" strokeWidth="3" strokeLinecap="round" />
-      <path d="M6 37C10 37 13 35 16 32.5" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" />
+      {/* Colectores de entrada dobles en acero inox */}
+      <path d="M4 29C8 29 11 27.5 14 25.5" stroke="#D97706" strokeWidth="3" strokeLinecap="round" />
+      <path d="M5 34C9 34 13 32 16 29.5" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" />
 
-      {/* Silenciador principal */}
+      {/* Silenciador principal de titanio estilo Akrapovic */}
       <path
-        d="M13 29.5L34 16.5C35.5 15.5 37 16.5 37 18.5L35.5 25.5C35 27 33.5 28 32 29L11 41C9.5 42 7.5 41 7.5 39.5L9.5 32.5C10 30.5 11.5 29.5 13 29.5Z"
-        fill="url(#exhaustBody)"
+        d="M13.5 21L34 16.5C35.5 16 37 17 37 18.5L36.5 26.5C36.5 28 35 29 33.5 29.5L14 31C12.5 31.5 11.5 30 11.8 28.5L12.8 23.5C13 22 13.5 21 13.5 21Z"
+        fill="url(#exhaustBodyGrad)"
         stroke="#B45309"
-        strokeWidth="1.5"
-      />
-
-      {/* Tapa trasera estilo Carbono */}
-      <path
-        d="M34 16.5L42 12C43.5 11 45 12.5 44 14.5L40 22.5C39.5 23.5 38.5 24 37.5 24.5L35.5 25.5"
-        fill="url(#exhaustCap)"
-        stroke="#1E293B"
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
-      {/* Salida del tubo */}
-      <ellipse cx="41.5" cy="14" rx="2.5" ry="4" transform="rotate(-30 41.5 14)" fill="#0F172A" stroke="#F59E0B" strokeWidth="1" />
 
-      {/* Chapa / Placa ITV de homologación */}
-      <rect x="20" y="21" width="8" height="4.5" rx="1" transform="rotate(-30 20 21)" fill="#FEF3C7" stroke="#B45309" strokeWidth="1" />
-      <circle cx="21.5" cy="22" r="0.5" fill="#B45309" />
-      <circle cx="26" cy="19.5" r="0.5" fill="#B45309" />
+      {/* Tapa cónica trasera de fibra de carbono */}
+      <path
+        d="M34 16.5L42 18.5C43.5 19 44.5 20.5 44 22L41.5 27.5C41 28.5 39.5 29 38 28.8L33.5 29.5"
+        fill="url(#carbonCapGrad)"
+        stroke="#0F172A"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
 
-      {/* Abrazadera de fijación con muelle */}
-      <path d="M25 15.5L20 25.5" stroke="#78350F" strokeWidth="2.5" strokeLinecap="round" />
+      {/* Salida del tubo de escape */}
+      <ellipse cx="42.5" cy="23" rx="2" ry="3.5" transform="rotate(-15 42.5 23)" fill="#0F172A" stroke="#F59E0B" strokeWidth="1" />
 
-      {/* Ráfaga de gas/llama de escape */}
-      <path d="M42 12C45 9 46 6 44.5 4C43 2 40 4 38 7" fill="url(#flameGrad)" />
+      {/* Chapa / Placa ITV de homologación con remaches */}
+      <rect x="20" y="22" width="9" height="5" rx="1" transform="rotate(-12 20 22)" fill="#FEF3C7" stroke="#B45309" strokeWidth="1" />
+      <circle cx="21.5" cy="23" r="0.6" fill="#B45309" />
+      <circle cx="27.5" cy="21.8" r="0.6" fill="#B45309" />
+
+      {/* Abrazaderas de montaje en carbono/titanio */}
+      <path d="M18 20L16.5 30.5" stroke="#78350F" strokeWidth="2" strokeLinecap="round" />
+      <path d="M28 17.5L26.5 29.5" stroke="#78350F" strokeWidth="2" strokeLinecap="round" />
+
+      {/* Ondas / Gases de flujo de escape */}
+      <path d="M44.5 20C46.5 18.5 47 17 46 16" stroke="#F59E0B" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.8" />
+      <path d="M44 25C46.5 24.5 47.5 23 46.5 21.5" stroke="#F59E0B" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.5" />
     </svg>
   );
 }
 
-// 2. CASCOS & ROPA — Casco integral deportivo aerodinámico con visera iridium
+// 2. CASCOS & ROPA — Casco Integral Deportivo Limpio, Elegante y 100% Reconocible
 export function IconHelmetGear({ className = 'w-8 h-8' }: { className?: string }) {
   return (
     <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
       <defs>
-        <linearGradient id="helmetShell" x1="8" y1="8" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+        <linearGradient id="helmetShellGrad" x1="8" y1="5" x2="40" y2="43" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#10B981" />
           <stop offset="50%" stopColor="#059669" />
           <stop offset="100%" stopColor="#047857" />
         </linearGradient>
-        <linearGradient id="visorIridium" x1="14" y1="18" x2="38" y2="28" gradientUnits="userSpaceOnUse">
+        <linearGradient id="visorIridiumGrad" x1="10" y1="19" x2="38" y2="33" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#F59E0B" />
           <stop offset="50%" stopColor="#EC4899" />
           <stop offset="100%" stopColor="#6366F1" />
         </linearGradient>
       </defs>
 
-      {/* Calota exterior del casco */}
+      {/* Calota exterior suave y redondeada del casco */}
       <path
-        d="M24 6C13.5 6 5 14.5 5 25C5 32 8.5 38 14 41.5L18 43H30C37 43 43 37 43 30V25C43 14.5 34.5 6 24 6Z"
-        fill="url(#helmetShell)"
-        stroke="#065F46"
-        strokeWidth="1.5"
-      />
-
-      {/* Visera de carreras espejo/iridium */}
-      <path
-        d="M13 19H36C38 19 39.5 20.5 39 22.5C38 27 34.5 30.5 29 30.5H18C14.5 30.5 12 28 12 24.5V20.5C12 19.5 12.5 19 13 19Z"
-        fill="url(#visorIridium)"
+        d="M24 5C13.5 5 5 13.5 5 24C5 31 8.5 37 14 41L18 43H30L34 41C39.5 37 43 31 43 24C43 13.5 34.5 5 24 5Z"
+        fill="url(#helmetShellGrad)"
         stroke="#064E3B"
-        strokeWidth="1.5"
+        strokeWidth="2"
+        strokeLinejoin="round"
       />
-      {/* Detalle reflejo espejo en visera */}
-      <path d="M16 21H28C32 21 34 23 34 25" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.7" />
 
-      {/* Alerón / spoiler trasero aerodinámico */}
-      <path d="M10 13C16 10 24 10 30 12" stroke="#A7F3D0" strokeWidth="2.5" strokeLinecap="round" />
+      {/* Visera frontal panorámica oscura/iridium */}
+      <path
+        d="M11 19H37C39.2 19 40.5 21 40 23.5C38.5 29.5 32.5 33.5 24 33.5C15.5 33.5 9.5 29.5 8 23.5C7.5 21 8.8 19 11 19Z"
+        fill="url(#visorIridiumGrad)"
+        stroke="#065F46"
+        strokeWidth="1.75"
+        strokeLinejoin="round"
+      />
 
-      {/* Toma de aire superior */}
-      <rect x="20" y="8" width="8" height="2.5" rx="1" fill="#064E3B" />
+      {/* Reflejo espejo curvado de luz en la visera */}
+      <path d="M14 22C20 20.5 28 20.5 34 22" stroke="#FFFFFF" strokeWidth="1.75" strokeLinecap="round" strokeOpacity="0.8" />
 
-      {/* Mentonera y rejillas de ventilación frontal */}
-      <path d="M19 37H29M20 40H28" stroke="#A7F3D0" strokeWidth="2" strokeLinecap="round" />
+      {/* Mecanismos laterales de bisagra de visera */}
+      <circle cx="10.5" cy="22" r="1.5" fill="#F8FAFC" stroke="#064E3B" strokeWidth="0.8" />
+      <circle cx="37.5" cy="22" r="1.5" fill="#F8FAFC" stroke="#064E3B" strokeWidth="0.8" />
 
-      {/* Pin de fijación visera tear-off */}
-      <circle cx="14" cy="23" r="1.5" fill="#F1F5F9" />
-      <circle cx="36" cy="23" r="1.5" fill="#F1F5F9" />
+      {/* Toma de aire superior discreta */}
+      <rect x="20" y="8" width="8" height="2.5" rx="1.2" fill="#047857" stroke="#A7F3D0" strokeWidth="0.8" />
+
+      {/* Rejillas de ventilación de la mentonera */}
+      <path d="M19 37.5H29M21 40H27" stroke="#A7F3D0" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -154,64 +154,70 @@ export function IconChainTransmission({ className = 'w-8 h-8' }: { className?: s
   );
 }
 
-// 4. FRENADO PRO — Disco Wave ventilado con pinza roja racing tipo Brembo
+// 4. FRENADO PRO — Disco de Freno 100% Redondo Ventilado con Pinza Roja Racing
 export function IconWaveBrake({ className = 'w-8 h-8' }: { className?: string }) {
   return (
     <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
       <defs>
-        <linearGradient id="discMetal" x1="8" y1="8" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#94A3B8" />
-          <stop offset="50%" stopColor="#CBD5E1" />
+        <linearGradient id="discSteel" x1="6" y1="8" x2="38" y2="40" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#E2E8F0" />
+          <stop offset="40%" stopColor="#CBD5E1" />
           <stop offset="100%" stopColor="#64748B" />
         </linearGradient>
-        <linearGradient id="caliperRed" x1="28" y1="4" x2="44" y2="20" gradientUnits="userSpaceOnUse">
+        <linearGradient id="caliperBrembo" x1="26" y1="4" x2="44" y2="20" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#EF4444" />
-          <stop offset="100%" stopColor="#B91C1C" />
+          <stop offset="100%" stopColor="#991B1B" />
         </linearGradient>
       </defs>
 
-      {/* Disco floreado Wave */}
-      <path
-        d="M24 6C27 6 29 8 32 7.5C35 7 37.5 9.5 37 12.5C36.5 15.5 38.5 17.5 39 20.5C39.5 23.5 37.5 26 37 29C36.5 32 34.5 34 32 34.5C29.5 35 27 37 24 37C21 37 18.5 35 16 34.5C13.5 34 11.5 32 11 29C10.5 26 8.5 23.5 9 20.5C9.5 17.5 11.5 15.5 11 12.5C10.5 9.5 13 7 16 7.5C19 8 21 6 24 6Z"
-        fill="url(#discMetal)"
-        stroke="#475569"
+      {/* Disco de freno 100% REDONDO circulo principal */}
+      <circle
+        cx="22"
+        cy="24"
+        r="16.5"
+        fill="url(#discSteel)"
+        stroke="#334155"
         strokeWidth="1.5"
-        strokeLinejoin="round"
       />
 
-      {/* Pista de frenado con ranuras de dispersión de calor */}
-      <path d="M24 11C30.5 11 35.5 16 35.5 22.5C35.5 29 30.5 34 24 34C17.5 34 12.5 29 12.5 22.5C12.5 16 17.5 11 24 11Z" fill="#F1F5F9" fillOpacity="0.4" stroke="#475569" strokeWidth="1" />
+      {/* Banda de fricción de las pastillas con ranuras direccionales */}
+      <circle cx="22" cy="24" r="11.5" stroke="#475569" strokeWidth="1" strokeDasharray="6 3" />
+      <circle cx="22" cy="24" r="7" stroke="#475569" strokeWidth="1" />
 
-      {/* Perforaciones de ventilación del disco */}
-      <circle cx="24" cy="13" r="1" fill="#1E293B" />
-      <circle cx="32" cy="17" r="1" fill="#1E293B" />
-      <circle cx="33" cy="26" r="1" fill="#1E293B" />
-      <circle cx="25" cy="31" r="1" fill="#1E293B" />
-      <circle cx="16" cy="29" r="1" fill="#1E293B" />
-      <circle cx="14" cy="19" r="1" fill="#1E293B" />
+      {/* Agujeros de ventilación dispuestos simétricamente en 360 grados */}
+      <circle cx="22" cy="10.5" r="1.2" fill="#1E293B" />
+      <circle cx="31.5" cy="14.5" r="1.2" fill="#1E293B" />
+      <circle cx="35.5" cy="24" r="1.2" fill="#1E293B" />
+      <circle cx="31.5" cy="33.5" r="1.2" fill="#1E293B" />
+      <circle cx="22" cy="37.5" r="1.2" fill="#1E293B" />
+      <circle cx="12.5" cy="33.5" r="1.2" fill="#1E293B" />
+      <circle cx="8.5" cy="24" r="1.2" fill="#1E293B" />
+      <circle cx="12.5" cy="14.5" r="1.2" fill="#1E293B" />
 
-      {/* Núcleo central del disco en aluminio anodizado */}
-      <circle cx="24" cy="22.5" r="6" fill="#0F172A" stroke="#94A3B8" strokeWidth="1.5" />
-      <circle cx="24" cy="22.5" r="2.5" fill="#E2E8F0" />
+      {/* Núcleo central del disco mecanizado en aluminio oscuro */}
+      <circle cx="22" cy="24" r="6" fill="#0F172A" stroke="#94A3B8" strokeWidth="1.5" />
+      <circle cx="22" cy="24" r="2.5" fill="#F8FAFC" />
 
-      {/* Remaches flotantes del disco */}
-      <circle cx="24" cy="16.5" r="1" fill="#F59E0B" />
-      <circle cx="30" cy="22.5" r="1" fill="#F59E0B" />
-      <circle cx="24" cy="28.5" r="1" fill="#F59E0B" />
-      <circle cx="18" cy="22.5" r="1" fill="#F59E0B" />
+      {/* Remaches flotantes en dorado/aluminio */}
+      <circle cx="22" cy="18" r="1.2" fill="#F59E0B" stroke="#B45309" strokeWidth="0.5" />
+      <circle cx="27.2" cy="21" r="1.2" fill="#F59E0B" stroke="#B45309" strokeWidth="0.5" />
+      <circle cx="27.2" cy="27" r="1.2" fill="#F59E0B" stroke="#B45309" strokeWidth="0.5" />
+      <circle cx="22" cy="30" r="1.2" fill="#F59E0B" stroke="#B45309" strokeWidth="0.5" />
+      <circle cx="16.8" cy="27" r="1.2" fill="#F59E0B" stroke="#B45309" strokeWidth="0.5" />
+      <circle cx="16.8" cy="21" r="1.2" fill="#F59E0B" stroke="#B45309" strokeWidth="0.5" />
 
-      {/* Pinza de freno deportiva racing (Monobloc 4 pistones) */}
+      {/* Pinza de freno monobloc deportiva roja superpuesta en la esquina superior derecha */}
       <path
-        d="M30 4H42C43.5 4 45 5.5 45 7V17C45 18.5 43.5 20 42 20H36L30 14V4Z"
-        fill="url(#caliperRed)"
+        d="M27 4H41C43 4 44.5 5.5 44.5 7.5V17.5C44.5 19.5 43 21 41 21H34.5L27 13.5V4Z"
+        fill="url(#caliperBrembo)"
         stroke="#7F1D1D"
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
-      {/* Pistones de la pinza */}
-      <circle cx="35" cy="9" r="2" fill="#FEF2F2" stroke="#991B1B" strokeWidth="1" />
-      <circle cx="40" cy="13" r="2" fill="#FEF2F2" stroke="#991B1B" strokeWidth="1" />
-      <path d="M32 6H40" stroke="#FCA5A5" strokeWidth="1.5" strokeLinecap="round" />
+      {/* Detalle de pistones dobles de la pinza */}
+      <circle cx="33" cy="10" r="2" fill="#FFFFFF" stroke="#991B1B" strokeWidth="1" />
+      <circle cx="39" cy="14" r="2" fill="#FFFFFF" stroke="#991B1B" strokeWidth="1" />
+      <path d="M30 6.5H38" stroke="#FCA5A5" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
 }
