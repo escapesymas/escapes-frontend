@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+.gitignore
+*.log
+.env*
+test-results
+coverage
+README.md
+MIGRATION_PLAN.md
+SESSION_*.md
+AGENTS.md
+CLAUDE.md
