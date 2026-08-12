@@ -51,7 +51,7 @@ export default function ProductCard({ product, onAddToCart, onNotifyMe, priority
     <a
       key={product.id}
       href={`/producto/${product.slug}`}
-      className="bg-card border rounded-md overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-md transition-all group cursor-pointer snap-start shrink-0 w-[75vw] md:w-auto"
+      className="bg-card border rounded-md overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-md transition-all group cursor-pointer snap-start shrink-0 w-full mx-auto"
       style={{ borderColor: product.isCompatible ? 'var(--badge-border)' : 'var(--card-border)' }}
       {...hoverPrefetchProps}
     >

@@ -1,8 +1,8 @@
 import { FilterOptions } from '../types';
 
-const API_BASE = typeof window !== 'undefined' && window.location.port === '3000'
-  ? 'http://localhost:3001/api'
-  : '/api';
+const API_BASE = '/api';
+
+
 
 async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
   return fetch(`${API_BASE}${path.startsWith('/') ? path : '/' + path}`, {
