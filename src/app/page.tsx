@@ -341,35 +341,77 @@ export default function Home() {
                 </div>
               </div>
               <div className="relative z-10 max-w-xl flex flex-col items-start text-left">
-                <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-accent-text bg-accent/10 border border-accent/20 px-3 py-1 rounded mb-4">
-                  Distribuidor oficial · Envío 24/48h
-                </span>
-                <h1 className="font-mono font-bold uppercase tracking-tight text-2xl md:text-4xl mb-3 leading-tight text-foreground">
-                  Más de 100.000 recambios<br />
-                  <span className="text-accent-text">compatibles con tu moto</span>
-                </h1>
-                <p className="text-text-muted mb-6 text-xs md:text-sm max-w-md font-sans">
-                  Cascos, escapes Akrapovič, kits de transmisión, frenos y equipamiento. Verificamos compatibilidad con tu moto antes de enviarte cualquier pieza.
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    onClick={() => setIsSelectorOpen(true)}
-                    className="px-5 py-2.5 text-xs font-mono font-bold rounded-sm bg-accent text-slate-950 hover:bg-accent-hover transition-all flex items-center gap-2 cursor-pointer"
-                  >
-                    <Bike className="w-4 h-4" />
-                    Selecciona tu moto
-                  </button>
-                  <button
-                    onClick={() => {
-                      document.getElementById('buscador-inicio')?.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                    className="px-5 py-2.5 text-xs font-mono font-bold rounded-sm border border-card-border text-foreground hover:border-accent/50 hover:bg-select-bg transition-all cursor-pointer"
-                  >
-                    Explorar catálogo
-                  </button>
-                </div>
+                {selectedBike ? (
+                  <>
+                    <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-accent-text bg-accent/10 border border-accent/20 px-3 py-1 rounded mb-4 flex items-center gap-1.5">
+                      <Bike className="w-3.5 h-3.5 text-accent" />
+                      Moto activa · Compatibilidad verificada
+                    </span>
+                    <h1 className="font-mono font-bold uppercase tracking-tight text-2xl md:text-4xl mb-3 leading-tight text-foreground">
+                      Aquí están los recambios y accesorios compatibles con tu <span className="text-accent-text">{selectedBike}</span>
+                    </h1>
+                    <p className="text-text-muted mb-6 text-xs md:text-sm max-w-md font-sans">
+                      Catálogo filtrado para {selectedBike}. Verificamos la compatibilidad de cada pieza antes de enviártela a casa.
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        onClick={() => setIsSelectorOpen(true)}
+                        className="px-5 py-2.5 text-xs font-mono font-bold rounded-sm bg-accent text-slate-950 hover:bg-accent-hover transition-all flex items-center gap-2 cursor-pointer"
+                      >
+                        <Bike className="w-4 h-4" />
+                        Cambiar moto
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('garage')}
+                        className="px-5 py-2.5 text-xs font-mono font-bold rounded-sm border border-accent/40 text-accent-text hover:bg-accent/10 transition-all flex items-center gap-2 cursor-pointer"
+                      >
+                        <Wrench className="w-4 h-4" />
+                        Mi Garaje
+                      </button>
+                      <button
+                        onClick={() => {
+                          document.getElementById('buscador-inicio')?.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                        className="px-5 py-2.5 text-xs font-mono font-bold rounded-sm border border-card-border text-foreground hover:border-accent/50 hover:bg-select-bg transition-all cursor-pointer"
+                      >
+                        Explorar catálogo
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-accent-text bg-accent/10 border border-accent/20 px-3 py-1 rounded mb-4">
+                      Distribuidor oficial · Envío 24/48h
+                    </span>
+                    <h1 className="font-mono font-bold uppercase tracking-tight text-2xl md:text-4xl mb-3 leading-tight text-foreground">
+                      Más de 100.000 recambios<br />
+                      <span className="text-accent-text">compatibles con tu moto</span>
+                    </h1>
+                    <p className="text-text-muted mb-6 text-xs md:text-sm max-w-md font-sans">
+                      Cascos, escapes Akrapovič, kits de transmisión, frenos y equipamiento. Verificamos compatibilidad con tu moto antes de enviarte cualquier pieza.
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        onClick={() => setIsSelectorOpen(true)}
+                        className="px-5 py-2.5 text-xs font-mono font-bold rounded-sm bg-accent text-slate-950 hover:bg-accent-hover transition-all flex items-center gap-2 cursor-pointer"
+                      >
+                        <Bike className="w-4 h-4" />
+                        Selecciona tu moto
+                      </button>
+                      <button
+                        onClick={() => {
+                          document.getElementById('buscador-inicio')?.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                        className="px-5 py-2.5 text-xs font-mono font-bold rounded-sm border border-card-border text-foreground hover:border-accent/50 hover:bg-select-bg transition-all cursor-pointer"
+                      >
+                        Explorar catálogo
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </section>
+
 
             <section aria-label="Ventajas de comprar en Escapes y Más" className="grid grid-cols-2 md:grid-cols-4 gap-3 px-4 md:px-0">
               {[
