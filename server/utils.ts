@@ -1,7 +1,10 @@
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'escapes-y-mas-default-secret-change-in-production';
+export const DEFAULT_JWT_SECRET = 'escapes-y-mas-default-secret-change-in-production';
+export const getJwtSecret = () => process.env.JWT_SECRET || DEFAULT_JWT_SECRET;
+const JWT_SECRET = getJwtSecret();
+
 
 export function sanitizeString(str: string): string {
   if (!str || typeof str !== 'string') return '';
