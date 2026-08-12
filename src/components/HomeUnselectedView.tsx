@@ -128,41 +128,12 @@ export default function HomeUnselectedView({
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-accent uppercase tracking-wider shrink-0">
-              <span>Seleccionar Moto</span>
-              <ArrowUpRight className="w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-            </div>
+            <ArrowUpRight className="w-5 h-5 text-accent opacity-50 group-hover:opacity-100 group-hover:translate-x-1 group-hover:-translate-y-1 transition-all shrink-0 hidden sm:block" />
           </button>
         </ScrollReveal>
 
-        {/* Card 2: Cascos & Ropa (Equipamiento Piloto) */}
+        {/* Card 2: Transmisión */}
         <ScrollReveal animation="fade-up" delay={150}>
-          <a
-            href="/universales/cascos"
-            className="group relative bg-card/40 hover:bg-card border border-card-border/60 hover:border-accent/60 rounded-2xl p-7 sm:p-8 transition-all duration-500 hover:-translate-y-2 shadow-sm hover:shadow-2xl text-left flex flex-col sm:flex-row sm:items-center justify-between gap-6 w-full no-underline cursor-pointer overflow-hidden"
-          >
-            <div className="flex items-start sm:items-center gap-5">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:shadow-emerald-500/20 transition-all duration-300 shadow-md">
-                <IconHelmetGear className="w-9 h-9 drop-shadow-sm" />
-              </div>
-              <div>
-                <h3 className="font-mono font-bold text-lg uppercase text-foreground mb-1 group-hover:text-accent-text transition-colors">
-                  CASCOS & ROPA MOTERO
-                </h3>
-                <p className="text-text-muted text-xs sm:text-sm font-sans leading-relaxed max-w-lg">
-                  Cascos homologados ECE 22.06, chaquetas con protecciones, guantes y equipamiento de seguridad.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-accent uppercase tracking-wider shrink-0">
-              <span>Ver Cascos y Ropa</span>
-              <ArrowUpRight className="w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-            </div>
-          </a>
-        </ScrollReveal>
-
-        {/* Card 3: Transmisión */}
-        <ScrollReveal animation="fade-up" delay={200}>
           <button
             onClick={onOpenSelector}
             className="group relative bg-card/40 hover:bg-card border border-card-border/60 hover:border-accent/60 rounded-2xl p-7 sm:p-8 transition-all duration-500 hover:-translate-y-2 shadow-sm hover:shadow-2xl text-left flex flex-col sm:flex-row sm:items-center justify-between gap-6 w-full cursor-pointer overflow-hidden"
@@ -180,15 +151,12 @@ export default function HomeUnselectedView({
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-accent uppercase tracking-wider shrink-0">
-              <span>Seleccionar Moto</span>
-              <ArrowUpRight className="w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-            </div>
+            <ArrowUpRight className="w-5 h-5 text-accent opacity-50 group-hover:opacity-100 group-hover:translate-x-1 group-hover:-translate-y-1 transition-all shrink-0 hidden sm:block" />
           </button>
         </ScrollReveal>
 
-        {/* Card 4: Frenado Pro */}
-        <ScrollReveal animation="fade-up" delay={250}>
+        {/* Card 3: Frenado Pro */}
+        <ScrollReveal animation="fade-up" delay={200}>
           <button
             onClick={onOpenSelector}
             className="group relative bg-card/40 hover:bg-card border border-card-border/60 hover:border-accent/60 rounded-2xl p-7 sm:p-8 transition-all duration-500 hover:-translate-y-2 shadow-sm hover:shadow-2xl text-left flex flex-col sm:flex-row sm:items-center justify-between gap-6 w-full cursor-pointer overflow-hidden"
@@ -206,11 +174,31 @@ export default function HomeUnselectedView({
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-accent uppercase tracking-wider shrink-0">
-              <span>Seleccionar Moto</span>
-              <ArrowUpRight className="w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-            </div>
+            <ArrowUpRight className="w-5 h-5 text-accent opacity-50 group-hover:opacity-100 group-hover:translate-x-1 group-hover:-translate-y-1 transition-all shrink-0 hidden sm:block" />
           </button>
+        </ScrollReveal>
+
+        {/* Card 4: Cascos & Ropa (Equipamiento Piloto) */}
+        <ScrollReveal animation="fade-up" delay={250}>
+          <a
+            href="/universales/cascos"
+            className="group relative bg-card/40 hover:bg-card border border-card-border/60 hover:border-accent/60 rounded-2xl p-7 sm:p-8 transition-all duration-500 hover:-translate-y-2 shadow-sm hover:shadow-2xl text-left flex flex-col sm:flex-row sm:items-center justify-between gap-6 w-full no-underline cursor-pointer overflow-hidden"
+          >
+            <div className="flex items-start sm:items-center gap-5">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:shadow-emerald-500/20 transition-all duration-300 shadow-md">
+                <IconHelmetGear className="w-9 h-9 drop-shadow-sm" />
+              </div>
+              <div>
+                <h3 className="font-mono font-bold text-lg uppercase text-foreground mb-1 group-hover:text-accent-text transition-colors">
+                  CASCOS & ROPA MOTERO
+                </h3>
+                <p className="text-text-muted text-xs sm:text-sm font-sans leading-relaxed max-w-lg">
+                  Cascos homologados ECE 22.06, chaquetas con protecciones, guantes y equipamiento de seguridad.
+                </p>
+              </div>
+            </div>
+            <ArrowUpRight className="w-5 h-5 text-accent opacity-50 group-hover:opacity-100 group-hover:translate-x-1 group-hover:-translate-y-1 transition-all shrink-0 hidden sm:block" />
+          </a>
         </ScrollReveal>
       </div>
 
