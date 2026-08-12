@@ -1,10 +1,12 @@
 FROM node:22-alpine AS builder
 WORKDIR /app/FRONTEND
-COPY FRONTEND/.npmrc ./
-COPY FRONTEND/package.json FRONTEND/pnpm-lock.yaml ./
-RUN npm install
+COPY FRONTEND/package*.json ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline || npm install
 COPY FRONTEND/. .
-RUN npm run build
+RUN --mount=type=cache,target=/app/FRONTEND/.next/cache \
+    npm run build
+
 
 FROM node:22-alpine AS runner
 WORKDIR /app
