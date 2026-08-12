@@ -14,7 +14,8 @@ interface HeaderProps {
   onTabChange?: (tab: string) => void;
 }
 
-export default function Header({ onCartClick, onTabChange }: HeaderProps) {
+export default function Header({ selectedBike, onCartClick, onTabChange }: HeaderProps) {
+
   const { cartCount } = useCart();
   const { user, isAuthenticated } = useAuth();
 
@@ -109,6 +110,19 @@ export default function Header({ onCartClick, onTabChange }: HeaderProps) {
             >
               Catálogo
             </Link>
+            <button
+              onClick={() => onTabChange && onTabChange('garage')}
+              className={`text-xs font-mono font-bold uppercase tracking-wider cursor-pointer border-0 bg-transparent transition-colors flex items-center gap-1.5 ${
+                selectedBike ? 'text-accent-text font-bold' : 'text-foreground hover:text-accent-text'
+              }`}
+            >
+              <span>Mi Garaje</span>
+              {selectedBike && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-accent/20 border border-accent/40 text-accent font-normal max-w-[120px] truncate">
+                  {selectedBike}
+                </span>
+              )}
+            </button>
             {isAuthenticated && user ? (
               <button
                 onClick={() => onTabChange ? onTabChange('profile') : window.location.href = '/?tab=profile'}
@@ -122,6 +136,7 @@ export default function Header({ onCartClick, onTabChange }: HeaderProps) {
               </Link>
             )}
           </nav>
+
         </div>
       </div>
     </header>
