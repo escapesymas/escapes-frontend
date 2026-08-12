@@ -8,7 +8,9 @@ import { Bike, Cpu, ChevronLeft, ChevronRight, AlertCircle, Wrench, Loader2, X, 
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
 import CompatibleProducts from '../components/CompatibleProducts';
+import HomeUnselectedView from '../components/HomeUnselectedView';
 import BrandCarousel from '../components/BrandCarousel';
+
 import SearchBar from '../components/SearchBar';
 import ProductCard from '../components/ProductCard';
 import NotifyMeModal from '../components/NotifyMeModal';
@@ -284,22 +286,6 @@ export default function Home() {
         onTabChange={(tab) => setActiveTab(tab)}
       />
 
-      {!isAuthenticated && (
-        <div className="bg-accent/10 border-b border-accent/30 px-4 py-2 flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3 text-xs">
-          <span className="font-mono uppercase tracking-wider text-accent font-bold whitespace-nowrap">
-            🤖 Asistente IA
-          </span>
-          <span className="text-foreground/80 text-center md:text-left">
-            Crea cuenta gratis y pregúntale sobre escapes y recambios.
-          </span>
-          <a
-            href="/login"
-            className="font-mono uppercase text-[10px] font-bold bg-accent text-slate-950 px-3 py-1 rounded hover:bg-accent/90 transition-colors whitespace-nowrap"
-          >
-            Iniciar sesión
-          </a>
-        </div>
-      )}
 
       {/* Main con padding-bottom en mobile para no chocar con BottomNav fixed */}
       {/* El BottomNav está fixed en mobile, fuera del flujo del main */}
@@ -308,7 +294,8 @@ export default function Home() {
         className="flex-1 pb-24 md:pb-0 min-h-[100dvh]"
       >
 
-        <div className="container mx-auto px-4 py-6 max-w-[1400px]">
+        <div className="container mx-auto px-4 py-2 md:py-6 max-w-[1400px]">
+
 
         {showEmptyCartBanner && (
           <div className="mb-4 bg-accent/10 border border-accent/30 rounded-md p-3 flex items-center gap-3 animate-fade-in" role="status">
@@ -329,76 +316,6 @@ export default function Home() {
 
         {activeTab === 'shop' && (
           <div className="flex flex-col gap-8 animate-fade-in">
-
-            <section className="relative overflow-hidden bg-card border border-card-border rounded-md py-10 px-6 md:py-14 md:px-10 shadow-sm">
-              {/* Decoración de fondo */}
-              <div className="absolute right-0 top-0 bottom-0 w-1/3 pointer-events-none hidden md:block" aria-hidden="true">
-                <div className="absolute inset-0 bg-gradient-to-l from-accent/5 to-transparent" />
-                <div className="absolute right-8 top-1/2 -translate-y-1/2 grid grid-cols-4 gap-2 opacity-10">
-                  {Array.from({ length: 16 }).map((_, i) => (
-                    <div key={i} className="w-5 h-5 border border-accent rounded-sm" />
-                  ))}
-                </div>
-              </div>
-              <div className="relative z-10 max-w-xl flex flex-col items-start text-left">
-                {selectedBike ? (
-                  <>
-                    <h1 className="font-mono font-bold uppercase tracking-tight text-2xl md:text-4xl mb-6 leading-tight text-foreground">
-                      Aquí están los recambios y accesorios compatibles con tu <span className="text-accent-text">{selectedBike}</span>
-                    </h1>
-                    <div className="flex flex-wrap gap-3">
-                      <button
-                        onClick={() => setIsSelectorOpen(true)}
-                        className="px-5 py-2.5 text-xs font-mono font-bold rounded-sm bg-accent text-slate-950 hover:bg-accent-hover transition-all flex items-center gap-2 cursor-pointer"
-                      >
-                        <Bike className="w-4 h-4" />
-                        Cambiar moto
-                      </button>
-                      <button
-                        onClick={() => setActiveTab('garage')}
-                        className="px-5 py-2.5 text-xs font-mono font-bold rounded-sm border border-accent/40 text-accent-text hover:bg-accent/10 transition-all flex items-center gap-2 cursor-pointer"
-                      >
-                        <Wrench className="w-4 h-4" />
-                        Mi Garaje
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-accent-text bg-accent/10 border border-accent/20 px-3 py-1 rounded mb-4">
-                      Distribuidor oficial · Envío 24/48h
-                    </span>
-                    <h1 className="font-mono font-bold uppercase tracking-tight text-2xl md:text-4xl mb-3 leading-tight text-foreground">
-                      Más de 100.000 recambios<br />
-                      <span className="text-accent-text">compatibles con tu moto</span>
-                    </h1>
-                    <p className="text-text-muted mb-6 text-xs md:text-sm max-w-md font-sans">
-                      Cascos, escapes Akrapovič, kits de transmisión, frenos y equipamiento. Verificamos compatibilidad con tu moto antes de enviarte cualquier pieza.
-                    </p>
-                    <div className="flex flex-wrap gap-3">
-                      <button
-                        onClick={() => setIsSelectorOpen(true)}
-                        className="px-5 py-2.5 text-xs font-mono font-bold rounded-sm bg-accent text-slate-950 hover:bg-accent-hover transition-all flex items-center gap-2 cursor-pointer"
-                      >
-                        <Bike className="w-4 h-4" />
-                        Selecciona tu moto
-                      </button>
-                      <button
-                        onClick={() => {
-                          document.getElementById('buscador-inicio')?.scrollIntoView({ behavior: 'smooth' });
-                        }}
-                        className="px-5 py-2.5 text-xs font-mono font-bold rounded-sm border border-card-border text-foreground hover:border-accent/50 hover:bg-select-bg transition-all cursor-pointer"
-                      >
-                        Explorar catálogo
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            </section>
-
-
-
             {searchQuery || searchCategoryId ? (
               <section className="flex flex-col gap-6">
                 <div className="flex items-center justify-between border-b border-card-border/60 pb-4 px-4 md:px-0">
@@ -507,6 +424,38 @@ export default function Home() {
               <>
                 {selectedBike ? (
                   <>
+                    <section className="relative overflow-hidden bg-card border border-card-border rounded-md py-10 px-6 md:py-14 md:px-10 shadow-sm">
+                      <div className="absolute right-0 top-0 bottom-0 w-1/3 pointer-events-none hidden md:block" aria-hidden="true">
+                        <div className="absolute inset-0 bg-gradient-to-l from-accent/5 to-transparent" />
+                        <div className="absolute right-8 top-1/2 -translate-y-1/2 grid grid-cols-4 gap-2 opacity-10">
+                          {Array.from({ length: 16 }).map((_, i) => (
+                            <div key={i} className="w-5 h-5 border border-accent rounded-sm" />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="relative z-10 max-w-xl flex flex-col items-start text-left">
+                        <h1 className="font-mono font-bold uppercase tracking-tight text-2xl md:text-4xl mb-6 leading-tight text-foreground">
+                          Aquí están los recambios y accesorios compatibles con tu <span className="text-accent-text">{selectedBike}</span>
+                        </h1>
+                        <div className="flex flex-wrap gap-3">
+                          <button
+                            onClick={() => setIsSelectorOpen(true)}
+                            className="px-5 py-2.5 text-xs font-mono font-bold rounded-sm bg-accent text-slate-950 hover:bg-accent-hover transition-all flex items-center gap-2 cursor-pointer"
+                          >
+                            <Bike className="w-4 h-4" />
+                            Cambiar moto
+                          </button>
+                          <button
+                            onClick={() => setActiveTab('garage')}
+                            className="px-5 py-2.5 text-xs font-mono font-bold rounded-sm border border-accent/40 text-accent-text hover:bg-accent/10 transition-all flex items-center gap-2 cursor-pointer"
+                          >
+                            <Wrench className="w-4 h-4" />
+                            Mi Garaje
+                          </button>
+                        </div>
+                      </div>
+                    </section>
+
                     <section>
                       <CompatibleProducts
                         selectedBike={selectedBike}
@@ -529,57 +478,15 @@ export default function Home() {
                     </section>
                   </>
                 ) : (
-                  <>
-                    {/* Categorías principales (sin moto seleccionada) */}
-                    <section className="mt-2">
-                      <div className="flex items-center justify-between mb-4 px-4 md:px-0">
-                        <h3 className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider">
-                          Compra por categoría
-                        </h3>
-                      </div>
-                      <div className="grid grid-cols-3 md:grid-cols-6 xl:grid-cols-9 gap-3 px-4 md:px-0">
-                        {[
-                          { id: 'cascos', name: 'Cascos', icon: '🪖' },
-                          { id: 'chasis', name: 'Chasis', icon: '🏍️' },
-                          { id: 'electricidad', name: 'Electricidad', icon: '⚡' },
-                          { id: 'equipamiento-piloto', name: 'Equipamiento', icon: '🧥' },
-                          { id: 'aceite-fluidos', name: 'Aceites', icon: '🛢️' },
-                          { id: 'neumaticos', name: 'Neumáticos', icon: '⚙️' },
-                          { id: 'herramientas', name: 'Herramientas', icon: '🔧' },
-                          { id: 'escapes', name: 'Escapes', icon: '💨' },
-                          { id: 'frenos', name: 'Frenos', icon: '🛑' },
-                        ].map((cat) => (
-                          <a
-                            key={cat.id}
-                            href={`/universales/${cat.id}`}
-                            className="aspect-square bg-card border border-card-border rounded-md flex flex-col items-center justify-center gap-1 p-2 hover:border-accent hover:bg-select-bg transition-all text-center no-underline"
-                          >
-                            <span className="text-2xl">{cat.icon}</span>
-                            <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-foreground">{cat.name}</span>
-                          </a>
-                        ))}
-                      </div>
-                    </section>
-
-                    <section className="mt-10">
-                      <BrandCarousel brand="AKRAPOVIC" title="Akrapovič — Escapes premium" onAddToCart={handleAddToCart} onNotifyMe={handleNotifyMe} />
-                    </section>
-                    <section className="mt-8">
-                      <BrandCarousel brand="SHARK" title="SHARK — Cascos" onAddToCart={handleAddToCart} onNotifyMe={handleNotifyMe} />
-                    </section>
-                    <section className="mt-8">
-                      <BrandCarousel
-                        brand={['RST', 'ARAI', 'BELL', 'SCORPION']}
-                        title="Equipación para el piloto"
-                        sort="random"
-                        onAddToCart={handleAddToCart}
-                        onNotifyMe={handleNotifyMe}
-                      />
-                    </section>
-                  </>
+                  <HomeUnselectedView
+                    onOpenSelector={() => setIsSelectorOpen(true)}
+                    onAddToCart={handleAddToCart}
+                    onNotifyMe={handleNotifyMe}
+                  />
                 )}
               </>
             )}
+
 
           </div>
         )}
