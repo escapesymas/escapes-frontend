@@ -122,10 +122,7 @@ function LoginPageContent() {
   }
 
   return (
-    <div
-      className="bg-background text-foreground flex flex-col font-sans"
-      style={{ height: '100dvh' }}
-    >
+    <div className="bg-background text-foreground flex flex-col font-sans min-h-screen">
       <Header
         selectedBike=""
         onOpenBikeSelector={() => router.push('/?openSelector=true')}
@@ -139,10 +136,8 @@ function LoginPageContent() {
         </span>
       </div>
 
-      <main
-        className="flex-1 overflow-y-auto overscroll-contain flex flex-col items-center py-8 pb-16 md:pb-8"
-        style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
-      >
+      <main className="flex-1 flex flex-col items-center py-8 pb-28 md:pb-8">
+
         <div className="w-full max-w-sm px-4 my-auto">
           {/* Tabs */}
           <div className="flex border border-card-border rounded-md overflow-hidden mb-6">
