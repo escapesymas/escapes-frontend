@@ -37,7 +37,23 @@ build/
 ADMIN/accesos.txt
 **/accesos.txt
 
-# Backend
+# Backend & Uploads
 BACKEND/
+server/uploads/
+
+# Database dumps & analysis
+*.dump
+*.sql.gz
+ARCHIVOS DE ANALISIS/
+
+# Legacy scripts & temporary files
+patch_admin.py
+migrate_phase3.js
+prompt
+tables.txt
+deploy*.sh
+ecosystem.config.cjs
+server/ecosystem.config.cjs
 
 .gstack/
+

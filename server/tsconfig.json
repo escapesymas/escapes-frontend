@@ -3,6 +3,9 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "node",
+    "ignoreDeprecations": "6.0",
+    "types": ["node"],
+
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": false,

@@ -29,6 +29,7 @@ import { checkRateLimit } from './redis.js';
 import { createRedisCache, type CacheStore } from './cache/redisCache.js';
 import Stripe from 'stripe';
 import rateLimit from 'express-rate-limit';
+import { DEFAULT_JWT_SECRET } from './utils.js';
 
 const stripeLiveKey = process.env.STRIPE_SECRET_KEY;
 if (!stripeLiveKey) {
@@ -672,7 +673,7 @@ async function verifyPassword(password: string, hash: string): Promise<boolean> 
 }
 
 function generateJWT(user: any): string {
-  const secret = process.env.JWT_SECRET || 'insecure-default-secret-change-me';
+  const secret = process.env.JWT_SECRET || DEFAULT_JWT_SECRET;
   return jwt.sign(
     {
       user_id: user.id,
@@ -684,6 +685,7 @@ function generateJWT(user: any): string {
     { expiresIn: '7d' }
   );
 }
+
 
 function setAuthCookie(res: any, token: string) {
   res.cookie('eym_jwt', token, {
@@ -707,12 +709,13 @@ function clearAuthCookie(res: any) {
 
 function verifyJWT(token: string): any | null {
   try {
-    const secret = process.env.JWT_SECRET || 'insecure-default-secret-change-me';
+    const secret = process.env.JWT_SECRET || DEFAULT_JWT_SECRET;
     return jwt.verify(token, secret);
   } catch {
     return null;
   }
 }
+
 
 function authenticateRequest(req: any): any | null {
   const authHeader = req.headers?.authorization;
@@ -1081,12 +1084,26 @@ app.post('/api/bihr/sync-images/control', async (req: any, res: any) => {
     }
 
     console.log(`[BIHR CONTROL]: Ejecutando comando: ${command}`);
-    const { stdout } = await execPromise(command);
+    let stdout = '';
+    try {
+      const result = await execPromise(command);
+      stdout = result.stdout;
+    } catch (cmdErr: any) {
+      if (cmdErr.message?.includes('pm2: not found') || cmdErr.message?.includes('command not found')) {
+        return res.status(200).json({
+          success: false,
+          message: 'PM2 no está disponible en este entorno de contenedor (Docker/Coolify). Las imágenes se gestionan vía sidecar o proceso nativo.',
+          dockerManaged: true
+        });
+      }
+      throw cmdErr;
+    }
     res.json({ success: true, message: `Acción ${action} ejecutada correctamente`, output: stdout });
   } catch (error: any) {
     res.status(500).json({ error: `Fallo al ejecutar acción ${action} de imágenes`, details: error.message });
   }
 });
+
 
 // Estado del downloader de imágenes Andreani (lee BD + PM2)
 app.get('/api/andreani/sync-images/status', async (req: any, res: any) => {

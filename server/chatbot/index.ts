@@ -271,9 +271,12 @@ export async function chatHandler(req: Request, res: Response) {
   }
 }
 
+import { DEFAULT_JWT_SECRET } from '../utils.js';
+
 function verifyChatJWT(token: string): ChatUser | null {
   try {
-    const secret = process.env.JWT_SECRET || 'insecure-default-secret-change-me';
+    const secret = process.env.JWT_SECRET || DEFAULT_JWT_SECRET;
+
     const decoded = jwt.verify(token, secret) as any;
     if (!decoded || typeof decoded !== 'object' || !decoded.user_id) return null;
     return {
