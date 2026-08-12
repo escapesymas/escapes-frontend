@@ -107,7 +107,7 @@ export default function HomeUnselectedView({
         </section>
       </ScrollReveal>
 
-      {/* ── 2. BANNERS CON ICONOS PERSONALIZADOS (SCROLL ANIMADO PROGRESIVO) ── */}
+      {/* ── 2. BANNERS CON ICONOS PERSONALIZADOS HD (SCROLL ANIMADO PROGRESIVO) ── */}
       <div className="flex flex-col gap-6 pt-2">
         {/* Card 1: Escapes & ITV */}
         <ScrollReveal animation="fade-up" delay={100}>
@@ -116,8 +116,8 @@ export default function HomeUnselectedView({
             className="group relative bg-card/40 hover:bg-card border border-card-border/60 hover:border-accent/60 rounded-2xl p-7 sm:p-8 transition-all duration-500 hover:-translate-y-2 shadow-sm hover:shadow-2xl text-left flex flex-col sm:flex-row sm:items-center justify-between gap-6 w-full cursor-pointer overflow-hidden"
           >
             <div className="flex items-start sm:items-center gap-5">
-              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform shadow-inner">
-                <IconExhaustITV className="w-7 h-7" />
+              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-500 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:shadow-amber-500/20 transition-all duration-300 shadow-md">
+                <IconExhaustITV className="w-9 h-9 drop-shadow-sm" />
               </div>
               <div>
                 <h3 className="font-mono font-bold text-lg uppercase text-foreground mb-1 group-hover:text-accent-text transition-colors">
@@ -142,8 +142,8 @@ export default function HomeUnselectedView({
             className="group relative bg-card/40 hover:bg-card border border-card-border/60 hover:border-accent/60 rounded-2xl p-7 sm:p-8 transition-all duration-500 hover:-translate-y-2 shadow-sm hover:shadow-2xl text-left flex flex-col sm:flex-row sm:items-center justify-between gap-6 w-full no-underline cursor-pointer overflow-hidden"
           >
             <div className="flex items-start sm:items-center gap-5">
-              <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform shadow-inner">
-                <IconHelmetGear className="w-7 h-7" />
+              <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:shadow-emerald-500/20 transition-all duration-300 shadow-md">
+                <IconHelmetGear className="w-9 h-9 drop-shadow-sm" />
               </div>
               <div>
                 <h3 className="font-mono font-bold text-lg uppercase text-foreground mb-1 group-hover:text-accent-text transition-colors">
@@ -168,8 +168,8 @@ export default function HomeUnselectedView({
             className="group relative bg-card/40 hover:bg-card border border-card-border/60 hover:border-accent/60 rounded-2xl p-7 sm:p-8 transition-all duration-500 hover:-translate-y-2 shadow-sm hover:shadow-2xl text-left flex flex-col sm:flex-row sm:items-center justify-between gap-6 w-full cursor-pointer overflow-hidden"
           >
             <div className="flex items-start sm:items-center gap-5">
-              <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/25 text-blue-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform shadow-inner">
-                <IconChainTransmission className="w-7 h-7" />
+              <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/30 text-blue-500 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:shadow-blue-500/20 transition-all duration-300 shadow-md">
+                <IconChainTransmission className="w-9 h-9 drop-shadow-sm" />
               </div>
               <div>
                 <h3 className="font-mono font-bold text-lg uppercase text-foreground mb-1 group-hover:text-accent-text transition-colors">
@@ -194,8 +194,8 @@ export default function HomeUnselectedView({
             className="group relative bg-card/40 hover:bg-card border border-card-border/60 hover:border-accent/60 rounded-2xl p-7 sm:p-8 transition-all duration-500 hover:-translate-y-2 shadow-sm hover:shadow-2xl text-left flex flex-col sm:flex-row sm:items-center justify-between gap-6 w-full cursor-pointer overflow-hidden"
           >
             <div className="flex items-start sm:items-center gap-5">
-              <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/25 text-rose-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform shadow-inner">
-                <IconWaveBrake className="w-7 h-7" />
+              <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:shadow-rose-500/20 transition-all duration-300 shadow-md">
+                <IconWaveBrake className="w-9 h-9 drop-shadow-sm" />
               </div>
               <div>
                 <h3 className="font-mono font-bold text-lg uppercase text-foreground mb-1 group-hover:text-accent-text transition-colors">
