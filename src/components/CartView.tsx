@@ -18,11 +18,17 @@ import StripePaymentForm from './StripePaymentForm';
 import OrderSuccessView from './OrderSuccessView';
 import EmptyCartView from './EmptyCartView';
 
-const stripePromise = loadStripe(
-  typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === 'test.escapesymas.com')
-    ? (process.env.NEXT_PUBLIC_STRIPE_TEST_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
-    : (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
-);
+const getStripeKey = () => {
+  return (
+    process.env.NEXT_PUBLIC_STRIPE_TEST_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
+    'pk_live_51TXr6bPhkRo6LHVFUN0bBbnYDsRMczJeaJNiup7ZkINwvqr1s30BrSE5cgO3wJ2sSS5xUnrtptkVpik3mJdg5qvh00IyGe4Q22'
+  );
+};
+
+const stripePromise = loadStripe(getStripeKey());
+
+
 
 interface CartViewProps {
   onContinueShopping?: () => void;
@@ -1156,6 +1162,8 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
                 onCancel={() => setShowPaymentModal(false)}
               />
             </Elements>
+
+
           </div>
         </div>
       )}
