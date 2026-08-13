@@ -1,28 +1,10 @@
-/* Escapes y Más — Service Worker v4
- *
- * v3 was a self-unregistering stub because v1/v2 broke installs (missing
- * icons + cache.addAll failure → "Maximum call stack size exceeded" on
- * cached HTML). v4 introduces real caching with safe fallbacks:
- *
- *   - Static assets (/_next/static/*, /icon-*.svg, /manifest.json):
- *     cache-first. They are fingerprinted by Next, so stale means old,
- *     but that only matters if the user stays offline across a deploy.
- *
- *   - HTML pages (navigations): network-first with the last cached
- *     version as a fallback, then a dedicated /offline page if neither
- *     works. This is the strategy Google's PWA docs recommend.
- *
- *   - Other GETs (images, API): network-first with cache fallback for
- *     product images so catalog browsing keeps working offline.
- *
- *   - SKIP_WAITING message: lets a new SW take over after activate so
- *     deploys pick up without the user closing every tab.
- */
+/* Escapes y Más — Service Worker v5 */
 
-const SW_VERSION = 'v4';
+const SW_VERSION = 'v5';
 const STATIC_CACHE = `static-${SW_VERSION}`;
 const RUNTIME_CACHE = `runtime-${SW_VERSION}`;
 const HTML_FALLBACK = '/offline';
+
 
 const STATIC_ASSETS = [
   '/',
