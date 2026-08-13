@@ -18,16 +18,19 @@ import StripePaymentForm from './StripePaymentForm';
 import OrderSuccessView from './OrderSuccessView';
 import EmptyCartView from './EmptyCartView';
 
-const getStripeKey = () => {
-  return (
-    process.env.NEXT_PUBLIC_STRIPE_TEST_PUBLISHABLE_KEY ||
-    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
-    'pk_live_51TXr6bPhkRo6LHVF9zMat1q9ooZBYw5xOApZbAvKG0B7jIu01t3PhgqRnGIx1kcdtgZckZVM6jRXgDVGnv4HqZ5W00otz3AKYd'
-  );
+const ACTIVE_STRIPE_LIVE_KEY = 'pk_live_51TXr6bPhkRo6LHVF9zMat1q9ooZBYw5xOApZbAvKG0B7jIu01t3PhgqRnGIx1kcdtgZckZVM6jRXgDVGnv4HqZ5W00otz3AKYd';
+
+const getStripeKey = (overrideKey?: string) => {
+  if (overrideKey && typeof overrideKey === 'string' && overrideKey.startsWith('pk_')) {
+    return overrideKey;
+  }
+  const envKey = process.env.NEXT_PUBLIC_STRIPE_TEST_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+  if (envKey && envKey.startsWith('pk_')) {
+    return envKey;
+  }
+  return ACTIVE_STRIPE_LIVE_KEY;
 };
 
-
-const stripePromise = loadStripe(getStripeKey());
 
 
 
@@ -92,9 +95,11 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
   });
 
   // Stripe payment state
+  const [stripePromise, setStripePromise] = useState<Promise<any> | null>(() => loadStripe(getStripeKey()));
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [stripePaymentOrderId, setStripePaymentOrderId] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
@@ -452,10 +457,13 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
         throw new Error(piData.error || 'Error al iniciar la pasarela de pago');
       }
 
+      const activeKey = getStripeKey(piData.publishableKey);
+      setStripePromise(loadStripe(activeKey));
       setClientSecret(piData.clientSecret);
       setStripePaymentOrderId(String(orderData.orderId));
       sessionStorage.removeItem('stripe_pending_order');
       setShowPaymentModal(true);
+
     } catch (err) {
       setOrderError(err instanceof Error ? err.message : 'Error de conexión');
     } finally {
