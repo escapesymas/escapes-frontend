@@ -48,11 +48,23 @@ function SuccessContent() {
     let cancelled = false;
 
     (async () => {
+
+
       try {
+        const pendingOrderRaw = sessionStorage.getItem('stripe_pending_order');
+        let pendingOrderId: string | null = null;
+        if (pendingOrderRaw) {
+          try {
+            const parsed = JSON.parse(pendingOrderRaw);
+            pendingOrderId = parsed.orderId || null;
+          } catch (e) {}
+        }
+
         const res = await fetch('/api/orders/finalize', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            orderId: pendingOrderId || undefined,
             paymentId: paymentIntentId,
             status: 'processing',
           }),
@@ -61,6 +73,7 @@ function SuccessContent() {
         if (cancelled) return;
 
         const data = await res.json();
+
 
         if (res.ok) {
           setOrderId(data.orderId || data.id);
