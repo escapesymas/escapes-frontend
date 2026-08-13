@@ -22,9 +22,10 @@ const getStripeKey = () => {
   return (
     process.env.NEXT_PUBLIC_STRIPE_TEST_PUBLISHABLE_KEY ||
     process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
-    'pk_live_51TXr6bPhkRo6LHVFUN0bBbnYDsRMczJeaJNiup7ZkINwvqr1s30BrSE5cgO3wJ2sSS5xUnrtptkVpik3mJdg5qvh00IyGe4Q22'
+    'pk_live_51TXr6bPhkRo6LHVF9zMat1q9ooZBYw5xOApZbAvKG0B7jIu01t3PhgqRnGIx1kcdtgZckZVM6jRXgDVGnv4HqZ5W00otz3AKYd'
   );
 };
+
 
 const stripePromise = loadStripe(getStripeKey());
 
