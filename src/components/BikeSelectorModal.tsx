@@ -31,11 +31,15 @@ export default function BikeSelectorModal({
   const [isLoading, setIsLoading] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
 
-  const filteredBrands = brands.filter((b) =>
-    b.toLowerCase().includes(searchFilter.toLowerCase())
+  const safeBrands = Array.isArray(brands) ? brands : [];
+  const safeModels = Array.isArray(models) ? models : [];
+  const safeYears = Array.isArray(years) ? years : [];
+
+  const filteredBrands = safeBrands.filter((b) =>
+    typeof b === 'string' && b.toLowerCase().includes(searchFilter.toLowerCase())
   );
-  const filteredModels = models.filter((m) =>
-    m.toLowerCase().includes(searchFilter.toLowerCase())
+  const filteredModels = safeModels.filter((m) =>
+    typeof m === 'string' && m.toLowerCase().includes(searchFilter.toLowerCase())
   );
 
   // Cargar marcas iniciales al abrir
@@ -52,9 +56,12 @@ export default function BikeSelectorModal({
         try {
           const res = await fetch(`${API_BASE}/vehicles?action=brands`);
           const data = await res.json();
-          if (!cancelled) setBrands(data);
+          if (!cancelled) setBrands(Array.isArray(data) ? data : []);
         } catch (err) {
-          if (!cancelled) console.error('Error fetching brands:', err);
+          if (!cancelled) {
+            console.error('Error fetching brands:', err);
+            setBrands([]);
+          }
         } finally {
           if (!cancelled) setIsLoading(false);
         }
@@ -73,9 +80,12 @@ export default function BikeSelectorModal({
         try {
           const res = await fetch(`${API_BASE}/vehicles?action=models&brand=${encodeURIComponent(selectedBrand)}`);
           const data = await res.json();
-          if (!cancelled) setModels(data);
+          if (!cancelled) setModels(Array.isArray(data) ? data : []);
         } catch (err) {
-          if (!cancelled) console.error('Error fetching models:', err);
+          if (!cancelled) {
+            console.error('Error fetching models:', err);
+            setModels([]);
+          }
         } finally {
           if (!cancelled) setIsLoading(false);
         }
@@ -94,9 +104,12 @@ export default function BikeSelectorModal({
         try {
           const res = await fetch(`${API_BASE}/vehicles?action=years&brand=${encodeURIComponent(selectedBrand)}&model=${encodeURIComponent(selectedModel)}`);
           const data = await res.json();
-          if (!cancelled) setYears(data);
+          if (!cancelled) setYears(Array.isArray(data) ? data : []);
         } catch (err) {
-          if (!cancelled) console.error('Error fetching years:', err);
+          if (!cancelled) {
+            console.error('Error fetching years:', err);
+            setYears([]);
+          }
         } finally {
           if (!cancelled) setIsLoading(false);
         }
