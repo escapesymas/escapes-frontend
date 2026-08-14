@@ -53,7 +53,7 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  skipMiddlewareUrlNormalize: true,
+  skipProxyUrlNormalize: true,
   skipTrailingSlashRedirect: true,
   experimental: {
     inlineCss: true,

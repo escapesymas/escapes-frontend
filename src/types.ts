@@ -98,3 +98,10 @@ export interface FilterOptions {
   price_max: number;
   attributes: Record<string, string[]>;
 }
+
+export interface SelectedBike {
+  brand: string;
+  model: string;
+  year: string;
+  displayName: string;
+}

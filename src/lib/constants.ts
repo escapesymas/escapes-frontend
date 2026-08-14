@@ -47,3 +47,50 @@ export function isValidRedirect(url: string | null): string {
 
 export const PHONE_REGEX = /^[+]?[\d\s()-]{6,20}$/;
 export const POSTCODE_REGEX = /^\d{5}$/;
+
+export const KNOWN_MOTORCYCLE_BRANDS = [
+  'Harley-Davidson', 'Harley Davidson', 'Harley',
+  'Royal Enfield', 'Moto Guzzi', 'MV Agusta', 'Gas Gas', 'GasGas',
+  'Honda Motor', 'Honda', 'Yamaha', 'Kawasaki', 'Suzuki', 'BMW', 'Ducati', 'KTM',
+  'Aprilia', 'Triumph', 'Vespa', 'Piaggio', 'Kymco', 'SYM', 'Peugeot', 'Rieju',
+  'Gilera', 'Derbi', 'Indian', 'Benelli', 'Mondial', 'QJ Motor', 'Lifan',
+  'Zontes', 'Voge', 'Mash', 'Motomel', 'Zanella', 'Corven', 'Bajaj', 'Hero',
+  'TVS', 'Husqvarna', 'KTM AG', 'SWM', 'Beta', 'Fantic', 'Sherco', 'Vertigo',
+  'Scorpa', 'Montesa', 'CFMoto', 'Macbor', 'Keeway', 'Brixton', 'Mitt', 'UM'
+];
+
+export function parseBike(bike: string | null | undefined): { brand: string; model: string; year: string } {
+  if (!bike || typeof bike !== 'string') return { brand: '', model: '', year: '' };
+  const cleaned = bike.trim();
+  if (!cleaned) return { brand: '', model: '', year: '' };
+
+  if (cleaned.startsWith('{') && cleaned.endsWith('}')) {
+    try {
+      const obj = JSON.parse(cleaned);
+      if (obj.brand && obj.model) {
+        return { brand: String(obj.brand), model: String(obj.model), year: String(obj.year || '') };
+      }
+    } catch {}
+  }
+
+  const sortedBrands = [...KNOWN_MOTORCYCLE_BRANDS].sort((a, b) => b.length - a.length);
+  for (const b of sortedBrands) {
+    if (cleaned.toLowerCase().startsWith(b.toLowerCase() + ' ')) {
+      const rest = cleaned.substring(b.length + 1).trim();
+      const yearMatch = rest.match(/\((\d{4})\)|\b(\d{4})\b/);
+      const year = yearMatch ? (yearMatch[1] || yearMatch[2]) : '';
+      const model = yearMatch ? rest.replace(yearMatch[0], '').trim() : rest;
+      return { brand: b, model, year };
+    }
+  }
+
+  const yearMatch = cleaned.match(/\((\d{4})\)|\b(\d{4})\b$/);
+  const year = yearMatch ? (yearMatch[1] || yearMatch[2]) : '';
+  const withoutYear = yearMatch ? cleaned.replace(yearMatch[0], '').trim() : cleaned;
+  const parts = withoutYear.split(/\s+/);
+  const brand = parts[0] || '';
+  const model = parts.slice(1).join(' ');
+
+  return { brand, model, year };
+}
+

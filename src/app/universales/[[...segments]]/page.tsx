@@ -46,16 +46,27 @@ export default async function CatalogPage({
     redirect(`/universales/buscar/${encodeURIComponent(sp.q.trim())}`);
   }
 
-  const categories = await fetchJson(`${API_BASE}/api/catalog/categories`) as Category3[] || [];
+  const isPromoCategory = (c: Category3) =>
+    c.id === 1011 ||
+    c.id === 634 ||
+    c.parentId === 1011 ||
+    c.parentId === 634 ||
+    c.slug.includes('promocional') ||
+    c.name.toLowerCase().includes('promocional');
+
+  const allCategories = await fetchJson(`${API_BASE}/api/catalog/categories`) as Category3[] || [];
+  const categories = allCategories.filter(c => !isPromoCategory(c));
 
   // Pre-compute L1 (root) categories on the server so the client doesn't have to re-filter
   const initialMainCategories = categories
-    .filter(c => c.parentId === 0)
+    .filter(c => c.parentId === 0 && (c.id >= 1000 || !c.slug.startsWith('old-')) && !isPromoCategory(c))
     .map(c => ({
       id: c.id,
       name: c.name,
       slug: c.slug,
     }));
+
+
 
   // Si hay segmento pero la categoría no existe → 404
   if (segs.length > 0 && segs[0] !== 'buscar') {
@@ -86,31 +97,36 @@ export default async function CatalogPage({
   const catId = subId || parentId || undefined;
   const q = searchTerm || (typeof sp.q === 'string' ? sp.q : '');
 
-  if (catId || q) {
-    const paramsObj: Record<string, string> = { universal: 'true', per_page: '12', page: String(page) };
-    if (q) paramsObj.search = q;
-    if (catId) paramsObj.category_id = String(catId);
-    if (brands) paramsObj.brand = brands;
-    if (maxPrice) paramsObj.max_price = maxPrice;
-    if (inStock) paramsObj.in_stock = '1';
-    if (attrsRaw) paramsObj.attrs = attrsRaw;
+  const paramsObj: Record<string, string> = { universal: 'true', per_page: '12', page: String(page) };
+  if (q) paramsObj.search = q;
+  if (catId) paramsObj.category_id = String(catId);
+  if (brands) paramsObj.brand = brands;
+  if (maxPrice) paramsObj.max_price = maxPrice;
+  if (inStock) paramsObj.in_stock = '1';
+  if (attrsRaw) paramsObj.attrs = attrsRaw;
 
-    const qs = new URLSearchParams(paramsObj).toString();
-    const [prodRes, filterRes] = await Promise.all([
-      fetch(`${API_BASE}/api/catalog/products?${qs}`, { next: { revalidate: 60 } }),
-      fetch(`${API_BASE}/api/catalog/filters?${new URLSearchParams({ category_id: String(catId), universal: 'true', ...(q ? { search: q } : {}) }).toString()}`, { next: { revalidate: 60 } })
-    ]);
+  const qs = new URLSearchParams(paramsObj).toString();
+  const filterQs = new URLSearchParams({
+    universal: 'true',
+    ...(catId ? { category_id: String(catId) } : {}),
+    ...(q ? { search: q } : {})
+  }).toString();
 
-    if (prodRes.ok) {
-      const total = Number(prodRes.headers.get('X-WP-Total') || 0);
-      const totalPages = Number(prodRes.headers.get('X-WP-TotalPages') || 0);
-      const prodData = await prodRes.json();
-      products = { products: prodData || [], total, totalPages };
-    }
-    if (filterRes.ok) {
-      filterOptions = await filterRes.json() as FilterOptions;
-    }
+  const [prodRes, filterRes] = await Promise.all([
+    fetch(`${API_BASE}/api/catalog/products?${qs}`, { next: { revalidate: 60 } }),
+    fetch(`${API_BASE}/api/catalog/filters?${filterQs}`, { next: { revalidate: 60 } })
+  ]);
+
+  if (prodRes.ok) {
+    const total = Number(prodRes.headers.get('X-WP-Total') || 0);
+    const totalPages = Number(prodRes.headers.get('X-WP-TotalPages') || 0);
+    const prodData = await prodRes.json();
+    products = { products: prodData || [], total, totalPages };
   }
+  if (filterRes.ok) {
+    filterOptions = await filterRes.json() as FilterOptions;
+  }
+
 
   const initialSearchParams = new URLSearchParams();
   if (brands) initialSearchParams.set('brands', brands);

@@ -1,13 +1,20 @@
 import { MetadataRoute } from 'next';
-import { getAllProductsSitemap } from '../lib/sitemap-data';
 
 const SITE_URL = 'https://escapesymas.com';
+const API_BASE = process.env.API_URL || 'https://api.escapesymas.com';
+const PRODUCTS_PER_SITEMAP = 25000;
+const TOTAL_SITEMAPS = 6; // Cubre hasta 150.000 productos
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+export async function generateSitemaps() {
+  return Array.from({ length: TOTAL_SITEMAPS }, (_, id) => ({ id }));
+}
+
+export default async function sitemap(props?: { id?: number }): Promise<MetadataRoute.Sitemap> {
+  const sitemapId = Number(props?.id ?? 0) || 0;
   const now = new Date();
 
-  // Páginas estáticas principales
-  const staticPages: MetadataRoute.Sitemap = [
+  // Páginas estáticas principales solo en la partición 0
+  const staticPages: MetadataRoute.Sitemap = sitemapId === 0 ? [
     { url: SITE_URL, lastModified: now, changeFrequency: 'daily', priority: 1.0 },
     { url: `${SITE_URL}/universales`, lastModified: now, changeFrequency: 'daily', priority: 0.9 },
     { url: `${SITE_URL}/universales/cascos`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
@@ -26,19 +33,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/terminos`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${SITE_URL}/devoluciones`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${SITE_URL}/login`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
-  ];
+  ] : [];
 
   let productPages: MetadataRoute.Sitemap = [];
   try {
-    const slugs = await getAllProductsSitemap(50000);
-    productPages = slugs.map((slug) => ({
-      url: `${SITE_URL}/producto/${slug}`,
-      lastModified: now,
-      changeFrequency: 'weekly',
-      priority: 0.6,
-    }));
+    const page = sitemapId + 1;
+    const res = await fetch(`${API_BASE}/api/catalog/sitemap-skus?page=${page}&limit=${PRODUCTS_PER_SITEMAP}`, {
+      next: { revalidate: 86400 } // 24h
+    });
+    if (res.ok) {
+      const rows = await res.json();
+      if (Array.isArray(rows)) {
+        productPages = rows
+          .filter((r: any) => r.slug)
+          .map((r: any) => ({
+            url: `${SITE_URL}/producto/${r.slug}`,
+            lastModified: r.updated_at ? new Date(r.updated_at) : now,
+            changeFrequency: 'weekly' as const,
+            priority: 0.6,
+          }));
+      }
+    }
   } catch (err) {
-    console.error('Sitemap: error cargando slugs', err);
+    console.error(`Sitemap [${sitemapId}]: error cargando productos`, err);
   }
 
   return [...staticPages, ...productPages];
