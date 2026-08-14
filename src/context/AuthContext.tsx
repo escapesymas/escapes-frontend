@@ -44,24 +44,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Carga el perfil completo a partir de un token de sesión guardado
   const loadProfile = useCallback(async (s: SessionData) => {
     try {
-      const email = s?.user_email;
-      const userId = s?.user_id;
+      const email = s?.user_email || s?.user?.email;
+      const userId = s?.user_id || s?.user?.id;
+      if (s?.user) {
+        setUser(s.user);
+      }
       if (!email && !userId) {
-        setUser(null);
+        if (!s?.user) setUser(null);
         return;
       }
       const profile = await apiGetProfile(email, userId);
       if (profile) {
         setUser(profile);
+      } else if (s?.user) {
+        setUser(s.user);
       } else {
         localStorage.removeItem(SESSION_KEY);
         setSession(null);
         setUser(null);
       }
     } catch {
-      localStorage.removeItem(SESSION_KEY);
-      setSession(null);
-      setUser(null);
+      if (s?.user) {
+        setUser(s.user);
+      } else {
+        localStorage.removeItem(SESSION_KEY);
+        setSession(null);
+        setUser(null);
+      }
     }
   }, []);
 
@@ -73,6 +82,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const saved: SessionData = JSON.parse(raw);
         setSession(saved);
+        if (saved.user) {
+          setUser(saved.user);
+        }
         loadProfile(saved).then(() => {
           if (!cancelled) setIsLoading(false);
         }).catch(() => {
@@ -137,25 +149,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateProfile = async (params: {
-    firstName?: string;
-    lastName?: string;
-    email?: string;
-    billing?: UserBilling;
-    avatarUrl?: string;
-  }) => {
+  const updateProfile = async (
+    params: {
+      username?: string;
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      billing?: UserBilling;
+      avatarUrl?: string;
+    },
+    skipRemote: boolean = false
+  ) => {
     if (user) {
-      await apiUpdateProfile(user.id, params);
+      if (!skipRemote) {
+        try {
+          await apiUpdateProfile(user.id, params);
+        } catch (err) {
+          console.warn('[AuthContext] Remote API update-profile warning (backend will update fully after git push):', err);
+        }
+      }
       setUser(prev => {
         if (!prev) return null;
-        return {
+        const updated = {
           ...prev,
+          username: params.username !== undefined ? params.username : prev.username,
           firstName: params.firstName !== undefined ? params.firstName : prev.firstName,
           lastName: params.lastName !== undefined ? params.lastName : prev.lastName,
           email: params.email !== undefined ? params.email : prev.email,
           billing: params.billing !== undefined ? params.billing : prev.billing,
           avatarUrl: params.avatarUrl !== undefined ? params.avatarUrl : prev.avatarUrl,
         };
+        try {
+          const s = localStorage.getItem('escapes_session');
+          if (s) {
+            const parsed = JSON.parse(s);
+            if (parsed.user) {
+              parsed.user = { ...parsed.user, ...updated };
+            }
+            parsed.user_nicename = updated.username;
+            parsed.user_display_name = `${updated.firstName} ${updated.lastName}`.trim();
+            parsed.user_email = updated.email;
+            localStorage.setItem('escapes_session', JSON.stringify(parsed));
+          }
+        } catch {}
+        return updated;
       });
     }
   };

@@ -124,12 +124,12 @@ export default function Header({ selectedBike, onCartClick, onTabChange }: Heade
               )}
             </button>
             {isAuthenticated && user ? (
-              <button
-                onClick={() => onTabChange ? onTabChange('profile') : window.location.href = '/?tab=profile'}
+              <Link
+                href="/perfil"
                 className="hidden md:flex items-center gap-1.5 px-4 py-2 text-xs font-mono font-bold rounded-sm bg-accent text-slate-950 hover:bg-accent-hover transition-all cursor-pointer border-0"
               >
                 Mi Perfil
-              </button>
+              </Link>
             ) : (
               <Link href="/login" className="hidden md:flex items-center gap-1.5 px-4 py-2 text-xs font-mono font-bold rounded-sm bg-accent text-slate-950 hover:bg-accent-hover transition-all">
                 Acceder

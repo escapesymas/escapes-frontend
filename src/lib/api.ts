@@ -117,6 +117,7 @@ export interface SessionData {
   user_display_name: string;
   avatarUrl: string;
   role: string;
+  user?: UserProfile;
 }
 
 export interface UserBilling {
@@ -144,6 +145,21 @@ export interface UserProfile {
   cart: Record<string, unknown>[];
 }
 
+function normalizeSession(data: any): SessionData {
+  if (!data) return { token: '', user_id: 0, user_email: '', user_nicename: '', user_display_name: '', avatarUrl: '', role: '' };
+  const user = data.user || {};
+  return {
+    token: data.token || '',
+    user_id: data.user_id || user.id || 0,
+    user_email: data.user_email || user.email || '',
+    user_nicename: data.user_nicename || user.username || '',
+    user_display_name: data.user_display_name || user.firstName || user.username || '',
+    avatarUrl: data.avatarUrl || user.avatarUrl || '',
+    role: data.role || user.role || 'customer',
+    user: user.id ? user : undefined,
+  };
+}
+
 export async function apiLogin(username: string, password: string): Promise<SessionData> {
   const res = await apiFetch(`/auth?action=login`, {
     method: 'POST',
@@ -152,7 +168,7 @@ export async function apiLogin(username: string, password: string): Promise<Sess
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Error al iniciar sesión');
-  return data as SessionData;
+  return normalizeSession(data);
 }
 
 export async function apiRegister(
@@ -170,7 +186,7 @@ export async function apiRegister(
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Error al crear la cuenta');
-  return data as SessionData;
+  return normalizeSession(data);
 }
 
 export async function apiGetProfile(email?: string, userId?: number): Promise<UserProfile | null> {
@@ -191,6 +207,7 @@ export async function apiGetProfile(email?: string, userId?: number): Promise<Us
 export async function apiUpdateProfile(
   userId: number,
   params: {
+    username?: string;
     firstName?: string;
     lastName?: string;
     email?: string;
