@@ -136,7 +136,7 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(getBreadcrumbSchema([
             { name: 'Inicio', url: '/' },
-            { name: product.category, url: `/${product.category.toLowerCase()}` },
+            { name: product.category || 'General', url: `/${(product.category || '').toLowerCase()}` },
             { name: product.name, url: `/producto/${slug}` },
           ])),
         }}
@@ -152,7 +152,7 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
         <div className="max-w-7xl mx-auto px-4 flex items-center gap-1.5 font-mono text-[9px] text-text-muted uppercase tracking-wider">
           <a href="/" className="hover:text-foreground transition-colors font-bold">Inicio</a>
           <span>/</span>
-          <span className="text-text-muted">{product.category}</span>
+          <span className="text-text-muted">{product.category || 'General'}</span>
           <span>/</span>
           <span className="text-foreground font-bold truncate max-w-[200px] sm:max-w-none">{product.name}</span>
         </div>
@@ -555,10 +555,10 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
           const filtered = normalized.filter(item => {
             if (!query) return true;
             return (
-              item.brand.toLowerCase().includes(query) ||
-              item.model.toLowerCase().includes(query) ||
-              item.year.toLowerCase().includes(query) ||
-              item.cc.toLowerCase().includes(query)
+              (item.brand || '').toLowerCase().includes(query) ||
+              (item.model || '').toLowerCase().includes(query) ||
+              (item.year || '').toLowerCase().includes(query) ||
+              (item.cc || '').toLowerCase().includes(query)
             );
           });
 

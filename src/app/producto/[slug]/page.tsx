@@ -10,8 +10,20 @@ async function fetchProductBySlug(slug: string) {
     const res = await fetch(`${API_BASE}/api/catalog/product-by-slug/${slug}`, {
       next: { revalidate: 60 }
     });
-    if (!res.ok) return null;
-    return res.json();
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.id) return data;
+    }
+
+    // Fallback: consultar por SKU directamente si la búsqueda por slug falla
+    const resSkus = await fetch(`${API_BASE}/api/catalog/products-by-skus?skus=${encodeURIComponent(slug)}`, {
+      next: { revalidate: 60 }
+    });
+    if (resSkus.ok) {
+      const items = await resSkus.json();
+      if (Array.isArray(items) && items.length > 0) return items[0];
+    }
+    return null;
   } catch {
     return null;
   }
@@ -58,8 +70,5 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const product = await fetchProductBySlug(slug);
-  if (!product) {
-    notFound();
-  }
   return <ProductDetailClient slug={slug} initialProduct={product} />;
 }
