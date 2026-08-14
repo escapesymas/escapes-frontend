@@ -18,27 +18,9 @@ import { fetchProducts } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { Product, ProductCompatibility } from '../types';
+import { parseBike } from '../lib/constants';
 
 const BikeSelectorModal = dynamic(() => import('../components/BikeSelectorModal'), { ssr: false });
-
-const KNOWN_BRANDS = ['Honda', 'Yamaha', 'Kawasaki', 'Suzuki', 'BMW', 'Ducati', 'KTM', 'Aprilia', 'Triumph', 'Harley', 'Vespa', 'Piaggio', 'Kymco', 'SYM', 'Peugeot', 'Rieju', 'Gilera', 'Derbi', 'Moto Guzzi', 'Indian', 'Royal Enfield', 'Benelli', 'Mondial', 'QJ Motor', 'Lifan', 'Zontes', 'Voge', 'Mash', 'Motomel', 'Zanella', 'Corven', 'Bajaj', 'Hero', 'TVS', 'Husqvarna', 'KTM AG', 'SWM', 'Beta', 'Fantic', 'GasGas', 'Sherco', 'Vertigo', 'Scorpa', 'Montesa', 'Honda Motor'];
-
-function parseBike(bike: string): { brand: string; model: string; year: string } {
-  const cleaned = bike.trim();
-  for (const b of KNOWN_BRANDS) {
-    if (cleaned.toLowerCase().startsWith(b.toLowerCase() + ' ')) {
-      const rest = cleaned.substring(b.length + 1).trim();
-      const yearMatch = rest.match(/\((\d{4})\)|\b(\d{4})\b/);
-      const year = yearMatch ? (yearMatch[1] || yearMatch[2]) : '';
-      const model = yearMatch ? rest.replace(yearMatch[0], '').trim() : rest;
-      return { brand: b, model, year };
-    }
-  }
-  const yearMatch = cleaned.match(/\((\d{4})\)|\b(\d{4})\b/);
-  const year = yearMatch ? (yearMatch[1] || yearMatch[2]) : '';
-  const model = yearMatch ? cleaned.replace(yearMatch[0], '').trim() : cleaned;
-  return { brand: '', model, year };
-}
 
 async function syncGarageToServer(userEmail: string, garageList: string[]) {
   try {

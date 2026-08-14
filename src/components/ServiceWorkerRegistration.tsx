@@ -24,9 +24,24 @@ export default function ServiceWorkerRegistration() {
     };
     window.addEventListener('error', handleChunkError);
 
+    // En entorno de desarrollo (localhost), desregistrar cualquier SW activo para evitar caches stale
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const reg of registrations) {
+            reg.unregister();
+          }
+        });
+        if ('caches' in window) {
+          caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
+        }
+      }
+      return;
+    }
+
     if (!('serviceWorker' in navigator)) return;
     navigator.serviceWorker
-      .register('/sw.js?v=5')
+      .register('/sw.js?v=6')
       .then((registration) => {
         if (registration.waiting) {
           registration.waiting.postMessage({ type: 'SKIP_WAITING' });

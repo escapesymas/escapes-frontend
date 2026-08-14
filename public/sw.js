@@ -1,10 +1,9 @@
-/* Escapes y Más — Service Worker v5 */
+/* Escapes y Más — Service Worker v6 */
 
-const SW_VERSION = 'v5';
+const SW_VERSION = 'v6';
 const STATIC_CACHE = `static-${SW_VERSION}`;
 const RUNTIME_CACHE = `runtime-${SW_VERSION}`;
 const HTML_FALLBACK = '/offline';
-
 
 const STATIC_ASSETS = [
   '/',
@@ -20,8 +19,6 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE).then(async (cache) => {
-      // addAll rejects if any asset 404s. Use individual put() so a single
-      // missing file doesn't break the whole install.
       await Promise.all(
         STATIC_ASSETS.map((url) =>
           fetch(url, { credentials: 'same-origin' })
@@ -79,7 +76,6 @@ async function cacheFirst(request) {
     }
     return response;
   } catch (err) {
-    // Last-resort: any cached version we might have.
     const fallback = await caches.match(request);
     if (fallback) return fallback;
     throw err;
@@ -123,16 +119,16 @@ async function navigationStrategy(request) {
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-
-  // Only handle GET; let everything else pass through.
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
 
-  // Same-origin only. Cross-origin (Stripe, Bunny CDN) goes straight to network.
-  if (url.origin !== self.location.origin) return;
+  // Bypass SW completely in local dev (localhost / 127.0.0.1)
+  if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+    return;
+  }
 
-  // Skip Next internals that should never be cached (HMR, RSC).
+  if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/_next/data/')) return;
 
   if (isNavigation(request)) {

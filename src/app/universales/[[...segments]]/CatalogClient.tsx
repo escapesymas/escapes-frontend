@@ -1,37 +1,18 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
-import { Wrench, Loader2, ChevronLeft, ChevronRight, ShieldAlert, Package, ChevronRight as ChevronIcon, SlidersHorizontal, Wind, Disc3, Bike, Droplets, Truck, Shirt, Zap, CircleDot, Cog, Layers, Tag, HardDrive } from 'lucide-react';
+import { Wrench, Loader2, ChevronLeft, ChevronRight, ChevronRight as ChevronIcon, SlidersHorizontal } from 'lucide-react';
 
 import Header from '../../../components/Header';
 import BottomNav from '../../../components/BottomNav';
 import SearchBar from '../../../components/SearchBar';
 import ProductCard from '../../../components/ProductCard';
 import NotifyMeModal from '../../../components/NotifyMeModal';
+import { CATEGORY_HD_ICONS, IconHerramientas } from '../../../components/CategoryCustomIcons';
 import { useCart } from '../../../context/CartContext';
 import { Category3, Product, FilterOptions } from '../../../types';
 
-const L1_ICONS: Record<number, { icon: React.ComponentType<{ className?: string }>; color: string }> = {
-  1001: { icon: ShieldAlert, color: 'text-violet-500' },
-  1005: { icon: Shirt, color: 'text-pink-500' },
-  1006: { icon: Package, color: 'text-amber-500' },
-  1002: { icon: Wrench, color: 'text-blue-500' },
-  1007: { icon: Wind, color: 'text-cyan-500' },
-  1008: { icon: Disc3, color: 'text-red-500' },
-  1004: { icon: Zap, color: 'text-yellow-500' },
-  1012: { icon: Cog, color: 'text-orange-500' },
-  1014: { icon: CircleDot, color: 'text-emerald-500' },
-  1009: { icon: Wrench, color: 'text-stone-500' },
-  1010: { icon: Droplets, color: 'text-teal-500' },
-  1003: { icon: Bike, color: 'text-lime-500' },
-  1016: { icon: Layers, color: 'text-fuchsia-500' },
-  1011: { icon: Tag, color: 'text-indigo-500' },
-  1013: { icon: Bike, color: 'text-sky-500' },
-  1015: { icon: HardDrive, color: 'text-rose-500' },
-  1017: { icon: Truck, color: 'text-slate-500' },
-};
-
-const DEFAULT_ICON = Package;
+const DEFAULT_ICON = IconHerramientas;
 const DEFAULT_COLOR = 'text-gray-500';
 const CYCLING_COLORS = [
   'text-violet-500', 'text-pink-500', 'text-amber-500', 'text-blue-500',
@@ -92,12 +73,40 @@ function CatalogContent({
   }, [selectedSubId, categories]);
 
   const isCategoriesLoading = false;
-  const searchResults = products;
+
+  const [sortBy, setSortBy] = useState<'default' | 'price_asc' | 'price_desc' | 'name_asc'>('default');
+
+  const sortedProducts = useMemo(() => {
+    const list = [...products];
+    if (sortBy === 'price_asc') {
+      return list.sort((a, b) => a.price - b.price);
+    }
+    if (sortBy === 'price_desc') {
+      return list.sort((a, b) => b.price - a.price);
+    }
+    if (sortBy === 'name_asc') {
+      return list.sort((a, b) => a.title.localeCompare(b.title));
+    }
+    return list;
+  }, [products, sortBy]);
+
+  const searchResults = sortedProducts;
   const searchTotal = productsTotal;
   const searchTotalPages = productsTotalPages;
 
+  const [searchParamsStr, setSearchParamsStr] = useState<string>(initialSearchParamsStr);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const qs = window.location.search.replace(/^\?/, '');
+      setSearchParamsStr(qs);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const getSearchParam = (key: string): string => {
-    const p = new URLSearchParams(initialSearchParamsStr);
+    const p = new URLSearchParams(searchParamsStr);
     return p.get(key) || '';
   };
 
@@ -106,6 +115,12 @@ function CatalogContent({
     const parsed = fp ? Number(fp) : null;
     return parsed !== null ? parsed : (filterOptions?.price_max ?? 1000);
   })();
+
+  const [sliderPrice, setSliderPrice] = useState<number>(maxPrice);
+
+  useEffect(() => {
+    setSliderPrice(maxPrice);
+  }, [maxPrice]);
 
   const searchPage = Number(getSearchParam('page')) || 1;
   const selectedBrands: string[] = getSearchParam('brands') ? getSearchParam('brands').split(',').filter(Boolean) : [];
@@ -145,8 +160,8 @@ function CatalogContent({
         }
         const brands = getSearchParam('brands');
         if (brands) paramsObj.brand = brands;
-        const maxPrice = getSearchParam('maxPrice');
-        if (maxPrice) paramsObj.max_price = maxPrice;
+        const maxPriceParam = getSearchParam('maxPrice');
+        if (maxPriceParam) paramsObj.max_price = maxPriceParam;
         if (getSearchParam('inStock') === '1') paramsObj.in_stock = '1';
         const attrs = getSearchParam('attrs');
         if (attrs) paramsObj.attrs = attrs;
@@ -176,15 +191,30 @@ function CatalogContent({
     loadProducts();
     return () => ctrl.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [segments.join('/'), selectedParentId, selectedSubId, searchQuery, initialSearchParamsStr]);
+  }, [segments.join('/'), selectedParentId, selectedSubId, searchQuery, searchParamsStr]);
 
   const basePath = useMemo(() => {
     if (segments.length === 0) return '/universales';
     return '/universales/' + segments.join('/');
   }, [segments]);
 
+  const updateFilters = (updates: Record<string, string | null | undefined | false>) => {
+    const params = new URLSearchParams(searchParamsStr);
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === undefined || value === '' || value === false) {
+        params.delete(key);
+      } else {
+        params.set(key, String(value));
+      }
+    });
+    const newQs = params.toString();
+    setSearchParamsStr(newQs);
+    const newUrl = newQs ? `${basePath}?${newQs}` : basePath;
+    window.history.pushState({}, '', newUrl);
+  };
+
   const filterHref = (updates: Record<string, string | null | undefined | false>): string => {
-    const params = new URLSearchParams(initialSearchParamsStr);
+    const params = new URLSearchParams(searchParamsStr);
     Object.entries(updates).forEach(([key, value]) => {
       if (value === null || value === undefined || value === '' || value === false) {
         params.delete(key);
@@ -196,18 +226,30 @@ function CatalogContent({
     return qs ? `${basePath}?${qs}` : basePath;
   };
 
-  const mainCategories = useMemo(() => {
-    return initialMainCategories.map((cat, idx) => ({
-      id: cat.id,
-      name: cat.name,
-      label: cat.name,
-      slug: cat.slug,
-      icon: L1_ICONS[cat.id]?.icon || DEFAULT_ICON,
-      color: L1_ICONS[cat.id]?.color || CYCLING_COLORS[idx % CYCLING_COLORS.length],
-    }));
-  }, [initialMainCategories]);
+  const isPromoCat = (id: number, slug: string, name: string) =>
+    id === 1011 || id === 634 || slug.includes('promocional') || name.toLowerCase().includes('promocional');
 
-  const visibleSubcategories = categories.filter(cat => cat.parentId === selectedParentId);
+  const mainCategories = useMemo(() => {
+    return initialMainCategories
+      .filter(cat => !isPromoCat(cat.id, cat.slug, cat.name))
+      .map((cat, idx) => {
+        const hd = CATEGORY_HD_ICONS[cat.id];
+        const subCount = categories.filter(c => c.parentId === cat.id && !isPromoCat(c.id, c.slug, c.name)).length;
+        return {
+          id: cat.id,
+          name: cat.name,
+          label: cat.name,
+          slug: cat.slug,
+          icon: hd?.icon || DEFAULT_ICON,
+          color: hd?.color || CYCLING_COLORS[idx % CYCLING_COLORS.length],
+          subCount,
+        };
+      });
+  }, [initialMainCategories, categories]);
+
+  const visibleSubcategories = categories.filter(
+    cat => cat.parentId === selectedParentId && !isPromoCat(cat.id, cat.slug, cat.name)
+  );
 
   const getParentLabel = (parentId: number): string => {
     const l1 = categories.find(c => c.id === parentId);
@@ -331,99 +373,177 @@ function CatalogContent({
               </div>
             ) : (
               <>
-                {!parentSlug && !searchQuery && (
-                  <div className="flex flex-col gap-4">
-                    <h3 className="text-xs font-mono font-bold text-text-muted uppercase tracking-wider px-4 md:px-0">
-                      Selecciona una categoría
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 px-4 md:px-0">
-                      {mainCategories.map((cat) => {
-                        const Icon = cat.icon;
-                        return (
-                          <a
-                            key={cat.id}
-                            href={`/universales/${cat.slug}`}
-                            className="p-8 bg-card border border-card-border hover:border-accent hover:bg-select-bg rounded-md flex flex-col items-center justify-center gap-4 transition-all cursor-pointer shadow-sm group text-center no-underline"
-                          >
-                            <div className="w-14 h-14 rounded-full bg-icon-box flex items-center justify-center border border-card-border group-hover:bg-accent/10 transition-colors">
-                              <Icon className={`w-7 h-7 ${cat.color} group-hover:scale-110 transition-transform`} />
-                            </div>
-                            <span className="text-xs font-mono font-bold uppercase tracking-wider text-foreground">
-                              {cat.label}
-                            </span>
-                          </a>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {parentSlug && !selectedSubCategory && !isSearch && (
-                  <div className="flex flex-col gap-4">
-                    <div className="flex items-center justify-between px-4 md:px-0">
-                      <h3 className="text-xs font-mono font-bold text-text-muted uppercase tracking-wider">
-                        Subcategorías de {parentCategory?.name || parentSlug}
-                      </h3>
-                      <a href="/universales" className="text-[10px] font-mono uppercase text-accent-text hover:underline cursor-pointer">
-                        Volver al inicio
-                      </a>
-                    </div>
-                    {visibleSubcategories.length === 0 ? (
-                      <div className="py-12 text-center text-xs text-text-muted font-mono">
-                        No hay subcategorías disponibles.
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 px-4 md:px-0">
-                        {visibleSubcategories.map((sub) => (
-                          <a
-                            key={sub.id}
-                            href={`/universales/${parentSlug}/${sub.slug}`}
-                            className="p-4 bg-card border border-card-border hover:border-accent hover:bg-select-bg rounded-md flex items-center justify-between transition-all cursor-pointer group text-left no-underline"
-                          >
-                            <span className="text-[11px] font-mono font-bold uppercase text-foreground">
-                              {sub.name}
-                            </span>
-                            <ChevronIcon className="w-4 h-4 text-text-muted group-hover:text-accent-text transition-colors" />
-                          </a>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {(selectedSubCategory || isSearch) && (
-                  <section className="flex flex-col gap-6">
-                    <div className="flex items-center justify-between border-b border-card-border/60 pb-4 px-4 md:px-0">
-                      <div>
-                        <h3 className="text-sm font-mono font-bold uppercase text-foreground">
-                          {isSearch ? (
-                            <>Búsqueda Universal: <span className="text-accent-text">&ldquo;{searchQuery}&rdquo;</span></>
-                          ) : (
-                            <>Productos: <span className="text-accent-text">{selectedSubCategory?.name}</span></>
-                          )}
-                        </h3>
-                        <p className="text-[10px] text-text-muted font-mono mt-1">
-                          {searchTotal} producto{searchTotal !== 1 ? 's' : ''} universal{searchTotal !== 1 ? 'es' : ''}
+                {/* 1. Header Banner & Category / Subcategory Navigation Bar */}
+                <div className="flex flex-col gap-6 mb-6">
+                  {!parentSlug && !isSearch ? (
+                    /* Root /universales Page Header & Grid of Categories */
+                    <div className="flex flex-col gap-5">
+                      <div className="flex flex-col gap-1 px-4 md:px-0">
+                        <h2 className="text-base md:text-lg font-mono font-bold uppercase tracking-wider text-foreground">
+                          Categorías de Productos Universales
+                        </h2>
+                        <p className="text-xs font-mono text-text-muted">
+                          Explora recambios, accesorios y equipamiento universal por categoría
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setIsSidebarOpenMobile(!isSidebarOpenMobile)}
-                          className="md:hidden p-2 border border-card-border rounded bg-card text-text-muted hover:text-foreground cursor-pointer"
-                          aria-label="Filtros"
-                        >
-                          <SlidersHorizontal className="w-4 h-4" />
-                        </button>
-                        <a
-                          href="/universales"
-                          className="px-3 py-1.5 border border-card-border rounded hover:bg-icon-box/40 text-xs font-mono font-bold uppercase text-text-muted hover:text-foreground cursor-pointer transition-all inline-block"
-                        >
-                          Cerrar
-                        </a>
+
+                      {/* 17 Main Categories Grid with HD Vector Icons */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 px-4 md:px-0">
+                        {mainCategories.map((cat) => {
+                          const Icon = cat.icon;
+                          return (
+                            <a
+                              key={cat.id}
+                              href={`/universales/${cat.slug}`}
+                              className="p-4 bg-card border border-card-border hover:border-accent hover:bg-select-bg rounded-lg flex flex-col items-center justify-center gap-2.5 transition-all cursor-pointer shadow-sm group text-center no-underline"
+                            >
+                              <div className="w-12 h-12 rounded-full bg-icon-box flex items-center justify-center border border-card-border group-hover:border-accent/40 group-hover:scale-105 transition-all">
+                                <Icon className="w-7 h-7 group-hover:scale-110 transition-transform" />
+                              </div>
+                              <div className="flex flex-col items-center gap-0.5">
+                                <span className="text-[11px] font-mono font-bold uppercase tracking-tight text-foreground line-clamp-1">
+                                  {cat.label}
+                                </span>
+                                {cat.subCount > 0 && (
+                                  <span className="text-[9px] font-mono text-text-muted">
+                                    {cat.subCount} subcat.
+                                  </span>
+                                )}
+                              </div>
+                            </a>
+                          );
+                        })}
                       </div>
                     </div>
+                  ) : parentSlug && !isSearch ? (
+                    /* Parent Category / Subcategory Active View Banner */
+                    <div className="flex flex-col gap-4 px-4 md:px-0 bg-card border border-card-border rounded-lg p-5 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          {(() => {
+                            const hd = parentCategory ? CATEGORY_HD_ICONS[parentCategory.id] : null;
+                            const Icon = hd?.icon || IconHerramientas;
+                            return (
+                              <div className="w-12 h-12 rounded-full bg-icon-box flex items-center justify-center border border-card-border shrink-0">
+                                <Icon className="w-7 h-7" />
+                              </div>
+                            );
+                          })()}
+                          <div>
+                            <h2 className="text-base md:text-lg font-mono font-bold uppercase tracking-wider text-foreground">
+                              {selectedSubCategory ? selectedSubCategory.name : (parentCategory?.name || parentSlug)}
+                            </h2>
+                            <p className="text-[11px] font-mono text-text-muted">
+                              {selectedSubCategory ? `Subcategoría de ${parentCategory?.name}` : `Categoría Principal · ${visibleSubcategories.length} subcategorías`}
+                            </p>
+                          </div>
+                        </div>
 
-                    <div className="flex flex-col md:flex-row gap-6">
+                        <a
+                          href="/universales"
+                          className="px-3 py-1.5 border border-card-border rounded hover:bg-icon-box/40 text-[10px] font-mono font-bold uppercase text-text-muted hover:text-foreground cursor-pointer transition-all no-underline"
+                        >
+                          Ver todas las categorías
+                        </a>
+                      </div>
+
+                      {/* Subcategory Pills */}
+                      {visibleSubcategories.length > 0 && (
+                        <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-2 no-scrollbar border-t border-card-border/60">
+                          <a
+                            href={`/universales/${parentSlug}`}
+                            className={`px-3 py-1.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider transition-all whitespace-nowrap no-underline border ${
+                              !selectedSubCategory
+                                ? 'bg-accent text-white border-accent shadow-sm'
+                                : 'bg-card border-card-border text-text-muted hover:border-accent hover:text-foreground'
+                            }`}
+                          >
+                            Todas
+                          </a>
+                          {visibleSubcategories.map((sub) => {
+                            const isActive = selectedSubCategory?.id === sub.id;
+                            return (
+                              <a
+                                key={sub.id}
+                                href={`/universales/${parentSlug}/${sub.slug}`}
+                                className={`px-3 py-1.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider transition-all whitespace-nowrap no-underline border ${
+                                  isActive
+                                    ? 'bg-accent text-white border-accent shadow-sm'
+                                    : 'bg-card border-card-border text-text-muted hover:border-accent hover:text-foreground'
+                                }`}
+                              >
+                                {sub.name}
+                              </a>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ) : isSearch ? (
+                    /* Search Active Banner */
+                    <div className="flex items-center justify-between px-4 md:px-0 bg-card border border-card-border rounded-lg p-5 shadow-sm">
+                      <div>
+                        <h2 className="text-base md:text-lg font-mono font-bold uppercase text-foreground">
+                          Búsqueda Universal: <span className="text-accent-text">&ldquo;{searchQuery}&rdquo;</span>
+                        </h2>
+                        <p className="text-[11px] font-mono text-text-muted mt-1">
+                          {searchTotal} producto{searchTotal !== 1 ? 's' : ''} encontrado{searchTotal !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                      <a
+                        href="/universales"
+                        className="px-3 py-1.5 border border-card-border rounded hover:bg-icon-box/40 text-[10px] font-mono font-bold uppercase text-text-muted hover:text-foreground cursor-pointer transition-all no-underline"
+                      >
+                        Limpiar Búsqueda
+                      </a>
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* 2. Main Products Catalog Section (ALWAYS VISIBLE) */}
+                <section className="flex flex-col gap-6">
+                  <div className="flex items-center justify-between border-b border-card-border/60 pb-3 px-4 md:px-0">
+                    <div>
+                      <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-foreground">
+                        {isSearch ? (
+                          <>Resultados para: <span className="text-accent-text">&ldquo;{searchQuery}&rdquo;</span></>
+                        ) : selectedSubCategory ? (
+                          <>Productos en <span className="text-accent-text">{selectedSubCategory.name}</span></>
+                        ) : parentCategory ? (
+                          <>Productos en <span className="text-accent-text">{parentCategory.name}</span></>
+                        ) : (
+                          <>Todos los productos universales</>
+                        )}
+                      </h3>
+                      <p className="text-[10px] text-text-muted font-mono mt-0.5">
+                        {searchTotal} producto{searchTotal !== 1 ? 's' : ''} disponible{searchTotal !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as any)}
+                        className="px-2.5 py-1 text-[10px] font-mono bg-card border border-card-border rounded text-foreground cursor-pointer focus:outline-none focus:border-accent"
+                        aria-label="Ordenar productos"
+                      >
+                        <option value="default">Orden por defecto</option>
+                        <option value="price_asc">Precio: Menor a Mayor</option>
+                        <option value="price_desc">Precio: Mayor a Menor</option>
+                        <option value="name_asc">Nombre: A-Z</option>
+                      </select>
+
+                      <button
+                        onClick={() => setIsSidebarOpenMobile(!isSidebarOpenMobile)}
+                        className="md:hidden p-1.5 border border-card-border rounded bg-card text-text-muted hover:text-foreground cursor-pointer flex items-center gap-1 text-[10px] font-mono"
+                        aria-label="Filtros"
+                      >
+                        <SlidersHorizontal className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col md:flex-row gap-6">
+
                       <aside className={`w-full md:w-56 shrink-0 bg-card border border-card-border rounded-md p-4 flex-col gap-5 self-start shadow-sm md:flex ${
                         isSidebarOpenMobile ? 'flex' : 'hidden'
                       }`}>
@@ -439,11 +559,17 @@ function CatalogContent({
                               {filterOptions.brands.map(brand => {
                                 const isChecked = selectedBrands.includes(brand);
                                 return (
-                                  <a
+                                  <button
                                     key={brand}
-                                    href={filterHref({ brands: isChecked ? null : brand, page: '1' })}
+                                    type="button"
+                                    onClick={() => {
+                                      const next = isChecked
+                                        ? selectedBrands.filter(b => b !== brand)
+                                        : [...selectedBrands, brand];
+                                      updateFilters({ brands: next.length > 0 ? next.join(',') : null, page: '1' });
+                                    }}
                                     aria-label={`Filtrar por marca ${brand}${isChecked ? ' (activado)' : ''}`}
-                                    className="flex items-center gap-2 text-[10px] font-mono uppercase cursor-pointer hover:text-accent-text text-foreground no-underline min-h-[24px]"
+                                    className="flex items-center gap-2 text-[10px] font-mono uppercase cursor-pointer hover:text-accent-text text-foreground no-underline min-h-[24px] text-left bg-transparent border-0 p-0 w-full"
                                   >
                                     <input
                                       type="checkbox"
@@ -453,7 +579,7 @@ function CatalogContent({
                                       className="rounded border-card-border bg-select-bg text-accent focus:ring-0 focus:ring-offset-0 w-3 h-3 pointer-events-none"
                                     />
                                     <span className="truncate">{brand}</span>
-                                  </a>
+                                  </button>
                                 );
                               })}
                             </div>
@@ -471,25 +597,25 @@ function CatalogContent({
                               min="0"
                               max={filterOptions?.price_max ?? 1000}
                               step={10}
-                              value={Math.min(maxPrice, filterOptions?.price_max ?? 1000)}
-                              onChange={(e) => {
-                                const link = filterHref({ maxPrice: String(e.target.value), page: '1' });
-                                window.location.href = link;
-                              }}
+                              value={Math.min(sliderPrice, filterOptions?.price_max ?? 1000)}
+                              onChange={(e) => setSliderPrice(Number(e.target.value))}
+                              onMouseUp={() => updateFilters({ maxPrice: String(sliderPrice), page: '1' })}
+                              onTouchEnd={() => updateFilters({ maxPrice: String(sliderPrice), page: '1' })}
                               className="w-full accent-accent bg-card-border h-1 rounded-lg cursor-pointer"
                             />
                             <div className="flex justify-between text-[9px] font-mono text-text-muted">
                               <span>0 €</span>
-                              <span className="text-foreground font-bold">{maxPrice} €</span>
+                              <span className="text-foreground font-bold">{sliderPrice} €</span>
                             </div>
                           </div>
                         </div>
 
                         {/* In Stock Toggle */}
                         <div>
-                          <a
-                            href={filterHref({ inStock: inStockOnly ? null : '1', page: '1' })}
-                            className="flex items-center gap-2 text-[10px] font-mono uppercase cursor-pointer hover:text-accent-text text-foreground no-underline"
+                          <button
+                            type="button"
+                            onClick={() => updateFilters({ inStock: inStockOnly ? null : '1', page: '1' })}
+                            className="flex items-center gap-2 text-[10px] font-mono uppercase cursor-pointer hover:text-accent-text text-foreground no-underline bg-transparent border-0 p-0 text-left"
                           >
                             <input
                               type="checkbox"
@@ -498,7 +624,7 @@ function CatalogContent({
                               className="rounded border-card-border bg-select-bg text-accent focus:ring-0 focus:ring-offset-0 w-3 h-3 pointer-events-none"
                             />
                             Solo disponible
-                          </a>
+                          </button>
                         </div>
 
                         {/* Dynamic Attribute Filters */}
@@ -513,9 +639,16 @@ function CatalogContent({
                                   {values.map(val => {
                                     const isActive = selectedAttrs[key] === val;
                                     return (
-                                      <a
+                                      <button
                                         key={val}
-                                        href={attrsHref(key, val)}
+                                        type="button"
+                                        onClick={() => {
+                                          const next = { ...selectedAttrs };
+                                          if (next[key] === val) delete next[key];
+                                          else next[key] = val;
+                                          const attrsStr = Object.keys(next).length > 0 ? encodeURIComponent(JSON.stringify(next)) : null;
+                                          updateFilters({ attrs: attrsStr, page: '1' });
+                                        }}
                                         className={`px-2.5 py-1 text-[9px] font-mono font-bold uppercase rounded border transition-all cursor-pointer inline-block no-underline ${
                                           isActive
                                             ? 'bg-accent text-white border-accent'
@@ -523,7 +656,7 @@ function CatalogContent({
                                         }`}
                                       >
                                         {val}
-                                      </a>
+                                      </button>
                                     );
                                   })}
                                 </div>
@@ -532,10 +665,17 @@ function CatalogContent({
                                   {values.map(val => {
                                     const isActive = selectedAttrs[key] === val;
                                     return (
-                                      <a
+                                      <button
                                         key={val}
-                                        href={attrsHref(key, val)}
-                                        className="flex items-center gap-2 text-[10px] font-mono uppercase cursor-pointer hover:text-accent-text text-foreground no-underline"
+                                        type="button"
+                                        onClick={() => {
+                                          const next = { ...selectedAttrs };
+                                          if (next[key] === val) delete next[key];
+                                          else next[key] = val;
+                                          const attrsStr = Object.keys(next).length > 0 ? encodeURIComponent(JSON.stringify(next)) : null;
+                                          updateFilters({ attrs: attrsStr, page: '1' });
+                                        }}
+                                        className="flex items-center gap-2 text-[10px] font-mono uppercase cursor-pointer hover:text-accent-text text-foreground no-underline bg-transparent border-0 p-0 text-left w-full"
                                       >
                                         <input
                                           type="checkbox"
@@ -563,7 +703,7 @@ function CatalogContent({
                                             {val}
                                           </span>
                                         ) : val}</span>
-                                      </a>
+                                      </button>
                                     );
                                   })}
                                 </div>
@@ -573,23 +713,88 @@ function CatalogContent({
                         )}
 
                         {/* Clear Filters */}
-                          {(selectedBrands.length > 0 || inStockOnly || Object.keys(selectedAttrs).length > 0 || (() => {
-                            const fp = getSearchParam('maxPrice');
-                            return fp !== '' && filterOptions && Number(fp) < (filterOptions?.price_max ?? 1000);
-                          })()) && (
-                          <a
-                            href={filterHref({ brands: null, maxPrice: null, inStock: null, attrs: null, page: '1' })}
-                            className="w-full py-1 text-[9px] font-mono font-bold uppercase tracking-wider text-center text-text-muted hover:text-foreground border border-dashed border-card-border rounded block"
+                        {(selectedBrands.length > 0 || inStockOnly || Object.keys(selectedAttrs).length > 0 || maxPrice < (filterOptions?.price_max ?? 1000)) && (
+                          <button
+                            type="button"
+                            onClick={() => updateFilters({ brands: null, maxPrice: null, inStock: null, attrs: null, page: '1' })}
+                            className="w-full py-1 text-[9px] font-mono font-bold uppercase tracking-wider text-center text-text-muted hover:text-foreground border border-dashed border-card-border rounded block bg-transparent cursor-pointer"
                           >
                             Limpiar Filtros
-                          </a>
+                          </button>
                         )}
                       </aside>
 
-                      <div className="flex-1 flex flex-col gap-6">
+                      <div className="flex-1 flex flex-col gap-5">
+                        {/* Active Filter Tags */}
+                        {(selectedBrands.length > 0 || inStockOnly || maxPrice < (filterOptions?.price_max ?? 1000) || Object.keys(selectedAttrs).length > 0) && (
+                          <div className="flex flex-wrap items-center gap-2 bg-card border border-card-border/80 rounded-md p-2.5 text-[10px] font-mono">
+                            <span className="text-text-muted uppercase font-bold text-[9px] mr-1">Filtros:</span>
+                            {selectedBrands.map(b => (
+                              <button
+                                key={b}
+                                type="button"
+                                onClick={() => {
+                                  const next = selectedBrands.filter(x => x !== b);
+                                  updateFilters({ brands: next.length > 0 ? next.join(',') : null, page: '1' });
+                                }}
+                                className="px-2 py-0.5 rounded bg-accent/10 border border-accent/30 text-accent font-bold flex items-center gap-1 hover:bg-accent/20 transition-all cursor-pointer"
+                              >
+                                Marca: {b} <span className="text-[11px]">×</span>
+                              </button>
+                            ))}
+                            {inStockOnly && (
+                              <button
+                                type="button"
+                                onClick={() => updateFilters({ inStock: null, page: '1' })}
+                                className="px-2 py-0.5 rounded bg-accent/10 border border-accent/30 text-accent font-bold flex items-center gap-1 hover:bg-accent/20 transition-all cursor-pointer"
+                              >
+                                En Stock <span className="text-[11px]">×</span>
+                              </button>
+                            )}
+                            {maxPrice < (filterOptions?.price_max ?? 1000) && (
+                              <button
+                                type="button"
+                                onClick={() => updateFilters({ maxPrice: null, page: '1' })}
+                                className="px-2 py-0.5 rounded bg-accent/10 border border-accent/30 text-accent font-bold flex items-center gap-1 hover:bg-accent/20 transition-all cursor-pointer"
+                              >
+                                ≤ {maxPrice}€ <span className="text-[11px]">×</span>
+                              </button>
+                            )}
+                            {Object.entries(selectedAttrs).map(([k, v]) => (
+                              <button
+                                key={k}
+                                type="button"
+                                onClick={() => {
+                                  const next = { ...selectedAttrs };
+                                  delete next[k];
+                                  const attrsStr = Object.keys(next).length > 0 ? encodeURIComponent(JSON.stringify(next)) : null;
+                                  updateFilters({ attrs: attrsStr, page: '1' });
+                                }}
+                                className="px-2 py-0.5 rounded bg-accent/10 border border-accent/30 text-accent font-bold flex items-center gap-1 hover:bg-accent/20 transition-all cursor-pointer"
+                              >
+                                {k}: {v} <span className="text-[11px]">×</span>
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => updateFilters({ brands: null, maxPrice: null, inStock: null, attrs: null, page: '1' })}
+                              className="text-[9px] uppercase font-bold text-text-muted hover:text-foreground underline ml-auto cursor-pointer bg-transparent border-0 p-0"
+                            >
+                              Limpiar todo
+                            </button>
+                          </div>
+                        )}
+
                         {isProductsLoading ? (
-                          <div className="flex justify-center items-center py-20">
-                            <Loader2 className="w-8 h-8 text-accent animate-spin" />
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {Array.from({ length: 6 }).map((_, i) => (
+                              <div key={i} className="bg-card border border-card-border rounded-md p-4 animate-pulse flex flex-col gap-3">
+                                <div className="w-full h-40 bg-icon-box/80 rounded" />
+                                <div className="h-3 bg-icon-box rounded w-1/3" />
+                                <div className="h-4 bg-icon-box/90 rounded w-3/4" />
+                                <div className="h-5 bg-icon-box rounded w-1/4 mt-auto" />
+                              </div>
+                            ))}
                           </div>
                         ) : searchResults.length === 0 ? (
                           <div className="flex flex-col items-center justify-center py-16 gap-3 border border-dashed border-card-border rounded-md">
@@ -615,12 +820,13 @@ function CatalogContent({
                             {searchTotalPages > 1 && (
                               <div className="flex items-center justify-center gap-3 mt-8">
                                 {searchPage > 1 ? (
-                                  <a
-                                    href={`?page=${Math.max(1, searchPage - 1)}`}
+                                  <button
+                                    type="button"
+                                    onClick={() => updateFilters({ page: String(Math.max(1, searchPage - 1)) })}
                                     className="p-2 border border-card-border rounded bg-card hover:bg-icon-box/40 transition-all cursor-pointer inline-block"
                                   >
                                     <ChevronLeft className="w-4 h-4" />
-                                  </a>
+                                  </button>
                                 ) : (
                                   <span className="p-2 border border-card-border rounded bg-card opacity-40 inline-block">
                                     <ChevronLeft className="w-4 h-4" />
@@ -630,12 +836,13 @@ function CatalogContent({
                                   Página {searchPage} de {searchTotalPages}
                                 </span>
                                 {searchPage < searchTotalPages ? (
-                                  <a
-                                    href={`?page=${searchPage + 1}`}
+                                  <button
+                                    type="button"
+                                    onClick={() => updateFilters({ page: String(searchPage + 1) })}
                                     className="p-2 border border-card-border rounded bg-card hover:bg-icon-box/40 transition-all cursor-pointer inline-block"
                                   >
                                     <ChevronRight className="w-4 h-4" />
-                                  </a>
+                                  </button>
                                 ) : (
                                   <span className="p-2 border border-card-border rounded bg-card opacity-40 inline-block">
                                     <ChevronRight className="w-4 h-4" />
@@ -648,8 +855,7 @@ function CatalogContent({
                       </div>
                     </div>
                   </section>
-                )}
-              </>
+                </>
             )}
           </div>
         </div>

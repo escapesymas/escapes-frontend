@@ -5,6 +5,7 @@ import { Wrench, Loader2, AlertCircle, ChevronDown, ChevronUp, RefreshCw } from 
 import Link from 'next/link';
 import { Product } from '../types';
 import { fetchCategories, fetchProducts, fetchProductsBySkus } from '../lib/api';
+import { parseBike } from '../lib/constants';
 import ProductCard from './ProductCard';
 
 interface CompatibleProductsProps {
@@ -50,12 +51,7 @@ export default function CompatibleProducts({ selectedBike, onAddToCart, onNotify
       setCollapsedSubcategories({});
       try {
         if (selectedBike) {
-          const parts = selectedBike.split(' ');
-          const brand = parts[0];
-          const bikeWithoutBrand = parts.slice(1).join(' ');
-          const model = bikeWithoutBrand.replace(/\s*\([^)]*\)\s*$/, '').trim();
-          const yearMatch = bikeWithoutBrand.match(/\(([^)]+)\)/);
-          const year = yearMatch ? yearMatch[1] : '';
+          const { brand, model, year } = parseBike(selectedBike);
 
           const skusUrl = `/api/vehicles?action=compatible-skus&brand=${encodeURIComponent(brand)}&model=${encodeURIComponent(model)}&year=${encodeURIComponent(year)}`;
           const skusRes = await fetch(skusUrl);

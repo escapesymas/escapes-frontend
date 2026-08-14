@@ -24,11 +24,10 @@ const getStripeKey = (overrideKey?: string) => {
   if (overrideKey && typeof overrideKey === 'string' && overrideKey.startsWith('pk_')) {
     return overrideKey;
   }
-  const testKey = process.env.NEXT_PUBLIC_STRIPE_TEST_PUBLISHABLE_KEY;
-  if (testKey && testKey.startsWith('pk_test_')) {
-    return testKey;
+  const envKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_TEST_PUBLISHABLE_KEY;
+  if (envKey && envKey.startsWith('pk_')) {
+    return envKey;
   }
-  // Usar siempre la clave publica activa que coincide con el backend
   return ACTIVE_STRIPE_LIVE_KEY;
 };
 
