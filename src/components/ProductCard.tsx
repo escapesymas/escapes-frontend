@@ -23,9 +23,10 @@ function pickImage(img: ProductImageType) {
 
 export default function ProductCard({ product, onAddToCart, onNotifyMe, priority = false }: ProductCardProps) {
   const isOutOfStock = product.inStock === false || product.stock === 0;
+  const productSlug = product.slug || product.sku || String(product.id);
   // Hover-triggered prefetch so clicking a card feels instant without
   // burning prefetches on every card the user scrolls past.
-  const hoverPrefetchProps = useHoverPrefetch(`/producto/${product.slug}`, 80);
+  const hoverPrefetchProps = useHoverPrefetch(`/producto/${productSlug}`, 80);
   const images = product.images?.length ? product.images : [{ src: product.image, alt: product.name } as ProductImageType];
   const [imgIdx, setImgIdx] = useState(0);
   const current = pickImage(images[imgIdx]);
@@ -50,7 +51,7 @@ export default function ProductCard({ product, onAddToCart, onNotifyMe, priority
   return (
     <a
       key={product.id}
-      href={`/producto/${product.slug}`}
+      href={`/producto/${productSlug}`}
       className="bg-card border rounded-md overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-md transition-all group cursor-pointer snap-start shrink-0 w-full mx-auto"
       style={{ borderColor: product.isCompatible ? 'var(--badge-border)' : 'var(--card-border)' }}
       {...hoverPrefetchProps}

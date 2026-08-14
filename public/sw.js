@@ -1,6 +1,6 @@
-/* Escapes y Más — Service Worker v6 */
+/* Escapes y Más — Service Worker v7 */
 
-const SW_VERSION = 'v6';
+const SW_VERSION = 'v7';
 const STATIC_CACHE = `static-${SW_VERSION}`;
 const RUNTIME_CACHE = `runtime-${SW_VERSION}`;
 const HTML_FALLBACK = '/offline';
@@ -78,7 +78,7 @@ async function cacheFirst(request) {
   } catch (err) {
     const fallback = await caches.match(request);
     if (fallback) return fallback;
-    throw err;
+    return new Response('', { status: 404 });
   }
 }
 
@@ -93,7 +93,10 @@ async function networkFirst(request) {
   } catch (err) {
     const cached = await caches.match(request);
     if (cached) return cached;
-    throw err;
+    return new Response(JSON.stringify({ error: 'Network unavailable' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
 
