@@ -173,15 +173,19 @@ export async function apiRegister(
   return data as SessionData;
 }
 
-export async function apiGetProfile(email: string): Promise<UserProfile> {
-  const res = await apiFetch(`/auth?action=get-profile`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Error al cargar el perfil');
-  return data as UserProfile;
+export async function apiGetProfile(email?: string, userId?: number): Promise<UserProfile | null> {
+  if (!email && !userId) return null;
+  try {
+    const res = await apiFetch(`/auth?action=get-profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, id: userId }),
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as UserProfile;
+  } catch {
+    return null;
+  }
 }
 
 export async function apiUpdateProfile(
