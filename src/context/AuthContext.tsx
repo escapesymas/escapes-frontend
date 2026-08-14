@@ -44,10 +44,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Carga el perfil completo a partir de un token de sesión guardado
   const loadProfile = useCallback(async (s: SessionData) => {
     try {
-      const profile = await apiGetProfile(s.user_email);
-      setUser(profile);
+      const email = s?.user_email;
+      const userId = s?.user_id;
+      if (!email && !userId) {
+        setUser(null);
+        return;
+      }
+      const profile = await apiGetProfile(email, userId);
+      if (profile) {
+        setUser(profile);
+      } else {
+        localStorage.removeItem(SESSION_KEY);
+        setSession(null);
+        setUser(null);
+      }
     } catch {
-      // Si el perfil falla, limpiamos la sesión (token inválido / usuario borrado)
       localStorage.removeItem(SESSION_KEY);
       setSession(null);
       setUser(null);
