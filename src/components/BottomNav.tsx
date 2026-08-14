@@ -92,8 +92,8 @@ export default function BottomNav({ activeTab, onTabChange, selectedBike }: Bott
 
         {/* Perfil / Login */}
         {isAuthenticated && user ? (
-          <button
-            onClick={() => onTabChange('profile')}
+          <Link
+            href="/perfil"
             className="flex flex-col items-center justify-center flex-1 py-1 px-2 h-full transition-all relative group"
             aria-label="Perfil"
           >
@@ -125,7 +125,7 @@ export default function BottomNav({ activeTab, onTabChange, selectedBike }: Bott
             {isProfileActive && (
               <span className="absolute bottom-0 w-8 h-[2px] bg-accent rounded-t-full shadow-[0_-2px_4px_rgba(250,204,21,0.5)]" />
             )}
-          </button>
+          </Link>
         ) : (
           <Link
             href="/login"
