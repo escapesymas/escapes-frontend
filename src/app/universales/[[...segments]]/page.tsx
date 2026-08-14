@@ -3,11 +3,14 @@ import { redirect, notFound } from 'next/navigation';
 import CatalogClient from './CatalogClient';
 import { Category3, Product, FilterOptions } from '../../../types';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 const API_BASE = process.env.API_URL || 'https://api.escapesymas.com';
 
 async function fetchJson(url: string) {
   try {
-    const res = await fetch(url, { next: { revalidate: 60 } });
+    const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) return null;
     return res.json();
   } catch {
@@ -113,8 +116,8 @@ export default async function CatalogPage({
   }).toString();
 
   const [prodRes, filterRes] = await Promise.all([
-    fetch(`${API_BASE}/api/catalog/products?${qs}`, { next: { revalidate: 60 } }),
-    fetch(`${API_BASE}/api/catalog/filters?${filterQs}`, { next: { revalidate: 60 } })
+    fetch(`${API_BASE}/api/catalog/products?${qs}`, { cache: 'no-store' }),
+    fetch(`${API_BASE}/api/catalog/filters?${filterQs}`, { cache: 'no-store' })
   ]);
 
   if (prodRes.ok) {
