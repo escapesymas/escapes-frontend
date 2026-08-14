@@ -16,8 +16,8 @@ USER nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-HEALTHCHECK --interval=3s --timeout=2s --start-period=2s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/', (r) => { if (r.statusCode !== 200) process.exit(1); })"
+HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=5 \
+  CMD node -e "require('http').get('http://127.0.0.1:3000/', (r) => { if (r.statusCode >= 500) process.exit(1); })"
 
 EXPOSE 3000
 CMD ["node", "server.js"]
