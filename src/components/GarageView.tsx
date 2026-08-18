@@ -145,30 +145,7 @@ export default function GarageView({
         )}
       </div>
 
-      {/* TAREAS DE MANTENIMIENTO */}
-      {selectedBike && (
-        <div className="p-6 bg-card border border-card-border rounded-md shadow-sm">
-          <h3 className="font-mono text-xs font-bold uppercase text-foreground mb-4">
-            Tareas de mantenimiento recomendadas
-          </h3>
-          <div className="flex flex-col gap-3">
-            <div className="p-3 border border-card-border rounded flex justify-between items-center bg-background/50">
-              <div className="flex items-center gap-3">
-                <span className="w-2 h-2 rounded-full bg-amber-500" />
-                <span className="text-xs font-mono font-bold text-foreground">Revisión de escape (Carbonilla y Juntas)</span>
-              </div>
-              <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-accent/10 text-accent border border-accent/20">Pendiente</span>
-            </div>
-            <div className="p-3 border border-card-border rounded flex justify-between items-center bg-background/50">
-              <div className="flex items-center gap-3">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span className="text-xs font-mono font-bold text-foreground">Cambio de Filtro de Aire de Competición</span>
-              </div>
-              <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-badge text-badge-text border border-badge-border">Al día</span>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }
