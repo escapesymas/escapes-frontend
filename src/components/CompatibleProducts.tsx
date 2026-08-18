@@ -200,14 +200,39 @@ export default function CompatibleProducts({ selectedBike, onAddToCart, onNotify
     setError('');
   };
 
+  const [loadingStep, setLoadingStep] = useState(0);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setLoadingStep(0);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setLoadingStep(1);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [isLoading, selectedBike]);
+
   if (isLoading) {
     return (
       <div className="w-full">
         <h3 className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-4 px-4 md:px-0">
           {selectedBike ? 'Recambios Compatibles' : 'Recambios Destacados'}
         </h3>
-        <div className="flex justify-center items-center py-16">
-          <Loader2 className="w-6 h-6 text-accent animate-spin" />
+        <div className="flex flex-col justify-center items-center py-16 gap-3.5 min-h-[160px] bg-card/40 border border-card-border/40 rounded-lg my-2">
+          <Loader2 className="w-7 h-7 text-accent animate-spin" />
+          <div className="text-center px-4 transition-all duration-300">
+            {loadingStep === 0 ? (
+              <p className="text-xs font-mono font-semibold text-foreground tracking-wide animate-fade-in flex items-center justify-center gap-1.5">
+                <span>Estamos asegurando la compatibilidad</span>
+                <span className="inline-flex">...</span>
+              </p>
+            ) : (
+              <p className="text-xs font-mono font-bold text-accent tracking-wide animate-fade-in flex items-center justify-center gap-1">
+                <span>No te vayas 😉</span>
+              </p>
+            )}
+          </div>
         </div>
       </div>
     );
