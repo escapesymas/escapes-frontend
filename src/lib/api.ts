@@ -66,19 +66,28 @@ export async function fetchFilterOptions(params?: {
 }
 
 export async function fetchProductsBySkus(skus: string[], category_id?: number) {
-  if (skus.length === 0) return { products: [], total: 0, totalPages: 0 };
-  const searchParams = new URLSearchParams();
-  searchParams.set('skus', skus.join(','));
-  if (category_id) searchParams.set('category_id', String(category_id));
+  if (!skus || skus.length === 0) return { products: [], total: 0, totalPages: 0 };
   
-  const url = `${API_BASE}/catalog/products-by-skus?${searchParams.toString()}`;
-  const res = await fetch(url);
+  const res = await apiFetch(`/catalog/products-by-skus`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ skus, category_id }),
+  });
+  if (!res.ok) return { products: [], total: 0, totalPages: 0 };
   const products = await res.json();
-  return { products, total: products.length, totalPages: 1 };
+  return { products, total: Array.isArray(products) ? products.length : 0, totalPages: 1 };
 }
 
 export async function fetchProduct(id: number) {
   const res = await apiFetch(`/catalog/product/${id}`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function refreshProductStock(id: number): Promise<{ stock: number; inStock: boolean } | null> {
+  const res = await apiFetch(`/catalog/product/${id}/refresh-stock`, {
+    method: 'POST',
+  });
   if (!res.ok) return null;
   return res.json();
 }

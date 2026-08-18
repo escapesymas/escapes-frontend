@@ -7,7 +7,7 @@ import { trackEvent } from '../../../lib/analytics';
 import { trackEvent as trackUmami } from '../../../lib/umami';
 import FrequentlyBoughtTogether from '../../../components/FrequentlyBoughtTogether';
 import { Product, ProductCompatibility, ProductImage as ProductImageType } from '../../../types';
-import { fetchProductBySlug } from '../../../lib/api';
+import { fetchProductBySlug, refreshProductStock } from '../../../lib/api';
 import { useCart } from '../../../context/CartContext';
 import { useToast } from '../../../context/ToastContext';
 import { sanitizeHTML } from '../../../lib/constants';
@@ -95,6 +95,38 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
     load();
     return () => { cancelled = true; };
   }, [slug]);
+
+  // Sincronizar stock en tiempo real en segundo plano al cargar el producto
+  useEffect(() => {
+    if (!product || (!product.dropshipping && !product.ondemand)) return;
+
+    let active = true;
+    const refresh = async () => {
+      try {
+        const data = await refreshProductStock(product.id);
+        if (active && data && typeof data.stock === 'number') {
+          setProduct((prev) => {
+            if (!prev) return null;
+            if (prev.stock === data.stock && prev.inStock === data.inStock) return prev;
+            return {
+              ...prev,
+              stock: data.stock,
+              inStock: data.inStock,
+            };
+          });
+        }
+      } catch (err) {
+        console.error('[STOCK REFRESH ERROR]:', err);
+      }
+    };
+
+    // Pequeño retardo de 1 segundo para no interferir con la pintura inicial
+    const timer = setTimeout(refresh, 1000);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [product?.id]);
 
   if (isLoading) {
     return <ProductDetailSkeleton />;

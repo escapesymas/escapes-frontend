@@ -325,7 +325,7 @@ export default function ProfileView() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al subir la imagen');
       
-      await updateProfile({ avatarUrl: data.url }, true);
+      await updateProfile({ avatarUrl: data.url });
       setSuccess('Avatar personalizado subido con éxito.');
       setIsAvatarPanelOpen(false);
     } catch (err) {

@@ -2,8 +2,10 @@ import { MetadataRoute } from 'next';
 
 const SITE_URL = 'https://escapesymas.com';
 const API_BASE = process.env.API_URL || 'https://api.escapesymas.com';
-const PRODUCTS_PER_SITEMAP = 25000;
-const TOTAL_SITEMAPS = 6; // Cubre hasta 150.000 productos
+const PRODUCTS_PER_SITEMAP = 5000;
+const TOTAL_SITEMAPS = 30; // Cubre hasta 150.000 productos sin exceder el límite de 2 MB de caché de Next.js
+
+export const revalidate = 86400; // Revalidar cada 24 horas
 
 export async function generateSitemaps() {
   return Array.from({ length: TOTAL_SITEMAPS }, (_, id) => ({ id }));
@@ -39,7 +41,7 @@ export default async function sitemap(props?: { id?: number }): Promise<Metadata
   try {
     const page = sitemapId + 1;
     const res = await fetch(`${API_BASE}/api/catalog/sitemap-skus?page=${page}&limit=${PRODUCTS_PER_SITEMAP}`, {
-      next: { revalidate: 86400 } // 24h
+      next: { revalidate: 86400 }
     });
     if (res.ok) {
       const rows = await res.json();

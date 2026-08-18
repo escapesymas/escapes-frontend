@@ -18,17 +18,22 @@ import StripePaymentForm from './StripePaymentForm';
 import OrderSuccessView from './OrderSuccessView';
 import EmptyCartView from './EmptyCartView';
 
-const ACTIVE_STRIPE_LIVE_KEY = 'pk_live_51TXr6bPhkRo6LHVF9zMat1q9ooZBYw5xOApZbAvKG0B7jIu01t3PhgqRnGIx1kcdtgZckZVM6jRXgDVGnv4HqZ5W00otz3AKYd';
-
+// Audit 2026-08-15, finding #41: hardcoded pk_live_ was committed.
+// Fix: NEVER bake a real publishable key into the bundle. The key MUST come
+// from NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY at build time. If it is missing we
+// surface a clear runtime error instead of silently falling back to a secret.
 const getStripeKey = (overrideKey?: string) => {
   if (overrideKey && typeof overrideKey === 'string' && overrideKey.startsWith('pk_')) {
     return overrideKey;
   }
   const envKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_TEST_PUBLISHABLE_KEY;
-  if (envKey && envKey.startsWith('pk_')) {
-    return envKey;
+  if (!envKey || !envKey.startsWith('pk_')) {
+    if (typeof window !== 'undefined') {
+      console.error('[STRIPE] Falta NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY. Configúrala en el build.');
+    }
+    return null;
   }
-  return ACTIVE_STRIPE_LIVE_KEY;
+  return envKey;
 };
 
 
@@ -96,7 +101,10 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
   });
 
   // Stripe payment state
-  const [stripePromise, setStripePromise] = useState<Promise<any> | null>(() => loadStripe(getStripeKey()));
+  const initialStripeKey = getStripeKey();
+  const [stripePromise, setStripePromise] = useState<Promise<any> | null>(() =>
+    initialStripeKey ? loadStripe(initialStripeKey) : null
+  );
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [stripePaymentOrderId, setStripePaymentOrderId] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -459,6 +467,9 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
       }
 
       const activeKey = getStripeKey(piData.publishableKey);
+      if (!activeKey) {
+        throw new Error('Stripe no está configurado. Falta NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY en el build.');
+      }
       setStripePromise(loadStripe(activeKey));
       setClientSecret(piData.clientSecret);
       setStripePaymentOrderId(String(orderData.orderId));
