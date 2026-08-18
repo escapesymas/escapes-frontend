@@ -5,7 +5,7 @@ const API_BASE = process.env.API_URL || 'https://api.escapesymas.com';
 export async function getAllProductsSitemap(limit = 50000): Promise<string[]> {
   try {
     const res = await fetch(`${API_BASE}/api/catalog/sitemap-skus?page=1&limit=${limit}`, {
-      next: { revalidate: 86400 }
+      cache: 'no-store'
     });
     if (!res.ok) return [];
     const rows = await res.json();

@@ -30,16 +30,118 @@ export default function CompatibleProducts({ selectedBike, onAddToCart, onNotify
     }).catch(() => {});
   }, []);
 
-  function findL1(catId: number): string {
-    if (!categoriesById[catId]) return 'Otros Recambios';
-    let current = categoriesById[catId];
-    let depth = 0;
-    while (current.parentId !== 0 && current.parentId && depth < 10) {
-      current = categoriesById[current.parentId];
-      if (!current) return 'Otros Recambios';
-      depth++;
+  function getCategoryNames(product: Product): { parentName: string; subName: string } {
+    const cat = categoriesById[product.categoryId];
+    if (cat && cat.id !== 1 && cat.id !== 2) {
+      if (cat.parentId === 1 || cat.parentId === 2) {
+        return { parentName: cat.name, subName: getSubNameFromProduct(product, cat.name) };
+      } else if (cat.parentId && categoriesById[cat.parentId]) {
+        const parent = categoriesById[cat.parentId];
+        return { parentName: parent.name, subName: cat.name };
+      }
+      return { parentName: cat.name, subName: 'General' };
     }
-    return current.name || 'Otros Recambios';
+
+    const n = (product.name || '').toLowerCase();
+
+    if (n.includes('escape') || n.includes('silenciador') || n.includes('colector') || n.includes('db-killer') || n.includes('db killer') || n.includes('catalizador')) {
+      let sub = 'Escapes Completos';
+      if (n.includes('silenciador')) sub = 'Silenciadores';
+      else if (n.includes('colector')) sub = 'Colectores';
+      else if (n.includes('db-killer') || n.includes('db killer')) sub = 'Accesorios de Escape';
+      return { parentName: 'Escapes', subName: sub };
+    }
+
+    if (n.includes('retrovisor') || n.includes('espejo')) {
+      let sub = 'Retrovisores';
+      if (n.includes('contrapeso') || n.includes('manillar')) sub = 'Retrovisores de Manillar';
+      else if (n.includes('oem') || n.includes('vicma')) sub = 'Retrovisores tipo OEM';
+      return { parentName: 'Espejos Retrovisores', subName: sub };
+    }
+
+    if (n.includes('contrapeso') || n.includes('puño') || n.includes('puno') || n.includes('maneta') || n.includes('manillar') || n.includes('palanca') || n.includes('mando') || n.includes('lever')) {
+      let sub = 'Manillares y Mandos';
+      if (n.includes('contrapeso')) sub = 'Contrapesos de Manillar';
+      else if (n.includes('puño') || n.includes('puno')) sub = 'Puños';
+      else if (n.includes('maneta') || n.includes('lever') || n.includes('palanca')) sub = 'Manetas y Levas';
+      return { parentName: 'Manillares y Mandos', subName: sub };
+    }
+
+    if (n.includes('freno') || n.includes('pastilla') || n.includes('zapata') || n.includes('disco') || n.includes('pinza') || n.includes('brake')) {
+      let sub = 'Frenos';
+      if (n.includes('pastilla') || n.includes('pad')) sub = 'Pastillas de Freno';
+      else if (n.includes('zapata') || n.includes('shoe')) sub = 'Zapatas de Freno';
+      else if (n.includes('disco') || n.includes('disc')) sub = 'Discos de Freno';
+      return { parentName: 'Frenos', subName: sub };
+    }
+
+    if (n.includes('batería') || n.includes('bateria') || n.includes('claxon') || n.includes('intermitente') || n.includes('estator') || n.includes('regulador') || n.includes('faro') || n.includes('luz') || n.includes('stator')) {
+      let sub = 'Baterías y Electricidad';
+      if (n.includes('batería') || n.includes('bateria')) sub = 'Baterías';
+      else if (n.includes('claxon')) sub = 'Claxons y Avisadores';
+      else if (n.includes('estator') || n.includes('stator')) sub = 'Estatores y Encendido';
+      else if (n.includes('luz') || n.includes('faro') || n.includes('intermitente')) sub = 'Iluminación e Intermitentes';
+      return { parentName: 'Baterías y Electricidad', subName: sub };
+    }
+
+    if (n.includes('correa') || n.includes('cadena') || n.includes('piñón') || n.includes('pinon') || n.includes('corona') || n.includes('variador') || n.includes('embrague') || n.includes('transmision') || n.includes('transmisión')) {
+      let sub = 'Transmisión';
+      if (n.includes('correa')) sub = 'Correas de Transmisión';
+      else if (n.includes('cadena')) sub = 'Cadenas de Transmisión';
+      else if (n.includes('variador')) sub = 'Variadores';
+      return { parentName: 'Transmisión', subName: sub };
+    }
+
+    if (n.includes('aceite') || n.includes('filtro') || n.includes('bujía') || n.includes('bujia') || n.includes('junta') || n.includes('pistón') || n.includes('piston') || n.includes('cilindro')) {
+      let sub = 'Motor y Filtración';
+      if (n.includes('aceite')) sub = 'Aceites y Químicos';
+      else if (n.includes('filtro')) sub = 'Filtros';
+      else if (n.includes('bujía') || n.includes('bujia')) sub = 'Bujías';
+      return { parentName: 'Motor y Filtración', subName: sub };
+    }
+
+    if (n.includes('cúpula') || n.includes('cupula') || n.includes('parabrisas') || n.includes('carenado') || n.includes('quilla') || n.includes('guardabarros') || n.includes('plástica') || n.includes('plastica')) {
+      return { parentName: 'Cúpulas y Carenados', subName: 'Carenados y Carrocería' };
+    }
+
+    if (n.includes('maleta') || n.includes('baúl') || n.includes('baul') || n.includes('alforja') || n.includes('mochila') || n.includes('soporte')) {
+      return { parentName: 'Maletas y Alforjas', subName: 'Equipaje y Soportes' };
+    }
+
+    return { parentName: 'Otros Recambios', subName: 'General' };
+  }
+
+  function getSubNameFromProduct(product: Product, parentCategoryName: string): string {
+    const n = (product.name || '').toLowerCase();
+    if (parentCategoryName === 'Escapes') {
+      if (n.includes('silenciador')) return 'Silenciadores';
+      if (n.includes('colector')) return 'Colectores';
+      if (n.includes('db-killer') || n.includes('db killer')) return 'Accesorios de Escape';
+      return 'Escapes Completos';
+    }
+    if (parentCategoryName === 'Espejos Retrovisores') {
+      if (n.includes('contrapeso') || n.includes('manillar')) return 'Retrovisores de Manillar';
+      return 'Retrovisores tipo OEM';
+    }
+    if (parentCategoryName === 'Manillares y Mandos') {
+      if (n.includes('contrapeso')) return 'Contrapesos de Manillar';
+      if (n.includes('puño') || n.includes('puno')) return 'Puños';
+      if (n.includes('maneta') || n.includes('lever')) return 'Manetas y Levas';
+      return 'Mandos y Manillares';
+    }
+    if (parentCategoryName === 'Frenos') {
+      if (n.includes('pastilla') || n.includes('pad')) return 'Pastillas de Freno';
+      if (n.includes('zapata') || n.includes('shoe')) return 'Zapatas de Freno';
+      if (n.includes('disco') || n.includes('disc')) return 'Discos de Freno';
+      return 'Recambios de Freno';
+    }
+    if (parentCategoryName === 'Baterías y Electricidad') {
+      if (n.includes('batería') || n.includes('bateria')) return 'Baterías';
+      if (n.includes('claxon')) return 'Claxons y Avisadores';
+      if (n.includes('estator') || n.includes('stator')) return 'Estatores y Encendido';
+      return 'Electricidad General';
+    }
+    return product.category || 'General';
   }
 
   useEffect(() => {
@@ -58,7 +160,7 @@ export default function CompatibleProducts({ selectedBike, onAddToCart, onNotify
           const compatibleSkus = await skusRes.json();
 
           if (!cancelled && compatibleSkus && compatibleSkus.length > 0) {
-            const data = await fetchProductsBySkus(compatibleSkus.slice(0, 100));
+            const data = await fetchProductsBySkus(compatibleSkus.slice(0, 500));
             if (!cancelled) {
               setProducts((data.products || []).filter((p: Product) => p.price > 0).map((p: Product) => ({ ...p, isCompatible: true })));
             }
@@ -135,19 +237,46 @@ export default function CompatibleProducts({ selectedBike, onAddToCart, onNotify
   const nestedGrouped: Record<string, Record<string, Product[]>> = {};
   if (selectedBike) {
     products.forEach((product) => {
-      const parentName = findL1(product.categoryId);
-      const subName = product.category || 'General';
+      const { parentName, subName } = getCategoryNames(product);
       if (!nestedGrouped[parentName]) nestedGrouped[parentName] = {};
       if (!nestedGrouped[parentName][subName]) nestedGrouped[parentName][subName] = [];
       nestedGrouped[parentName][subName].push(product);
     });
   }
+  const preferredCategoryOrder = [
+    'Escapes',
+    'Espejos Retrovisores',
+    'Manillares y Mandos',
+    'Frenos',
+    'Pastillas de freno',
+    'Transmisión',
+    'Motor y Filtración',
+    'Baterías y Electricidad',
+    'Plástica',
+    'Chasis',
+    'Cúpulas y Carenados',
+    'Maletas y Alforjas',
+    'Otros Recambios'
+  ];
+
   const hasGroupedProducts = Object.keys(nestedGrouped).length > 0;
+
+  const sortedCategories = Object.entries(nestedGrouped).sort(([catA], [catB]) => {
+    const isEscapeA = catA.toLowerCase().includes('escape');
+    const isEscapeB = catB.toLowerCase().includes('escape');
+    if (isEscapeA && !isEscapeB) return -1;
+    if (!isEscapeA && isEscapeB) return 1;
+
+    const idxA = preferredCategoryOrder.indexOf(catA);
+    const idxB = preferredCategoryOrder.indexOf(catB);
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+    if (idxA !== -1) return -1;
+    if (idxB !== -1) return 1;
+    return catA.localeCompare(catB);
+  });
 
   return (
     <div className="w-full">
-
-
       {selectedBike ? (
         !hasGroupedProducts ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 bg-card border border-dashed border-card-border rounded-md px-4 text-center">
@@ -177,7 +306,7 @@ export default function CompatibleProducts({ selectedBike, onAddToCart, onNotify
             </div>
           </div>
         ) : (
-          Object.entries(nestedGrouped).map(([categoryName, subgroups]) => {
+          sortedCategories.map(([categoryName, subgroups]) => {
             const isCollapsed = !!collapsedCategories[categoryName];
             const totalCount = Object.values(subgroups).reduce((sum, list) => sum + list.length, 0);
             return (

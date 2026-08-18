@@ -40,6 +40,9 @@ build/
 # Credentials
 ADMIN/accesos.txt
 **/accesos.txt
+.env.build
+*.env.build
+**/secrets/
 
 # Backend & Uploads
 BACKEND/

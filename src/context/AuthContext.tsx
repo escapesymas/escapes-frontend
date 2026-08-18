@@ -25,6 +25,7 @@ interface AuthContextValue extends AuthState {
   logout: () => void;
   syncGarage: (newGarage: string[]) => Promise<void>;
   updateProfile: (params: {
+    username?: string;
     firstName?: string;
     lastName?: string;
     email?: string;
@@ -140,6 +141,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
     setSession(null);
     setUser(null);
+    // Notify CartContext (and any other listener) that they must drop their
+    // state — without this the next user on a shared device inherits the
+    // previous session's cart. See audit 2026-08-15, finding #12.
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('escapes:user-changed'));
+      localStorage.removeItem('escapesymas_cart');
+    }
   };
 
   const syncGarage = async (newGarage: string[]) => {

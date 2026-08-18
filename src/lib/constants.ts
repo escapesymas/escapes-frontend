@@ -80,7 +80,7 @@ export function parseBike(bike: string | null | undefined): { brand: string; mod
       const yearMatch = rest.match(/\((\d{4})\)|\b(\d{4})\b/);
       const year = yearMatch ? (yearMatch[1] || yearMatch[2]) : '';
       const model = yearMatch ? rest.replace(yearMatch[0], '').trim() : rest;
-      return { brand: b, model, year };
+      return { brand: b.toUpperCase(), model, year };
     }
   }
 
@@ -88,7 +88,7 @@ export function parseBike(bike: string | null | undefined): { brand: string; mod
   const year = yearMatch ? (yearMatch[1] || yearMatch[2]) : '';
   const withoutYear = yearMatch ? cleaned.replace(yearMatch[0], '').trim() : cleaned;
   const parts = withoutYear.split(/\s+/);
-  const brand = parts[0] || '';
+  const brand = (parts[0] || '').toUpperCase();
   const model = parts.slice(1).join(' ');
 
   return { brand, model, year };

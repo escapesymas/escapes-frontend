@@ -78,28 +78,42 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setIsInitialized(true);
   }, []);
 
-  // Fetch cart from PostgreSQL when sessionToken or user changes
+  // Cross-context cleanup: when the auth session changes (login OR logout),
+  // drop whatever cart we had so a new user on a shared device doesn't
+  // inherit the previous session. See audit 2026-08-15, findings #11/#12.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handler = () => {
+      setCart([]);
+      try { localStorage.removeItem('escapesymas_cart'); } catch {}
+    };
+    window.addEventListener('escapes:user-changed', handler);
+    return () => window.removeEventListener('escapes:user-changed', handler);
+  }, []);
+
+  // Fetch cart from PostgreSQL when user logs in.
+  // IMPORTANT: we never merge local (guest) cart with the server cart. On a
+  // shared device a previous guest session would otherwise leak its items
+  // into the next user's account. See audit 2026-08-15, finding #11.
   useEffect(() => {
     if (!sessionToken || !isInitialized) return;
     let cancelled = false;
 
     const fetchDBCart = async () => {
       try {
-        const res = await fetch(`/api/cart?sessionToken=${encodeURIComponent(sessionToken)}`);
-        if (!cancelled && res.ok) {
-          const data = await res.json();
-          if (data.items && Array.isArray(data.items)) {
-            setCart((prev) => {
-              const merged = [...data.items];
-              for (const local of prev) {
-                if (!merged.find((m: any) => m.id === local.id)) {
-                  merged.push(local);
-                }
-              }
-              return merged;
-            });
+        if (user) {
+          // Logged-in user: server is the source of truth, replace local.
+          const res = await fetch(
+            `/api/cart?userId=${encodeURIComponent(String(user.id))}&sessionToken=${encodeURIComponent(sessionToken)}`
+          );
+          if (!cancelled && res.ok) {
+            const data = await res.json();
+            if (data.items && Array.isArray(data.items)) {
+              setCart(data.items);
+            }
           }
         }
+        // Guests keep their localStorage cart as-is.
       } catch (e) {
         console.error('Failed to sync PostgreSQL cart on mount:', e);
       } finally {

@@ -42,6 +42,7 @@ export default function Header({ selectedBike, onCartClick, onTabChange }: Heade
             alt="Escapes y Más"
             width={150}
             height={48}
+            priority
             className="h-full w-auto object-contain hidden dark:block"
           />
         </Link>
@@ -66,6 +67,7 @@ export default function Header({ selectedBike, onCartClick, onTabChange }: Heade
               alt="Escapes y Más"
               width={150}
               height={48}
+              priority
               className="h-full w-auto object-contain hidden dark:block"
             />
           </Link>
