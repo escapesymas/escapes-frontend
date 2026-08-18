@@ -207,10 +207,10 @@ export default function CompatibleProducts({ selectedBike, onAddToCart, onNotify
       setLoadingStep(0);
       return;
     }
-    const timer = setTimeout(() => {
-      setLoadingStep(1);
-    }, 2500);
-    return () => clearTimeout(timer);
+    const interval = setInterval(() => {
+      setLoadingStep((prev) => (prev === 0 ? 1 : 0));
+    }, 5000);
+    return () => clearInterval(interval);
   }, [isLoading, selectedBike]);
 
   if (isLoading) {
