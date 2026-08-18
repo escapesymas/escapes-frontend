@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { Bike, Cpu, ChevronLeft, ChevronRight, AlertCircle, Wrench, Loader2, X, ShieldCheck, Truck } from 'lucide-react';
+import { Bike, Cpu, ChevronLeft, ChevronRight, AlertCircle, Wrench, Loader2, X, ShieldCheck, Truck, Plus } from 'lucide-react';
 
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
@@ -54,6 +54,7 @@ export default function Home() {
   const [selectedBike, setSelectedBike] = useState<string>('');
   const [garageList, setGarageList] = useState<string[]>([]);
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
+  const [isSelectorForGarage, setIsSelectorForGarage] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('shop');
 
   // Estados de búsqueda
@@ -143,23 +144,42 @@ export default function Home() {
     setNotifyProduct(product);
   };
 
+  const handleOpenSelectorForSearch = () => {
+    setIsSelectorForGarage(false);
+    setIsSelectorOpen(true);
+  };
+
+  const handleOpenSelectorForGarage = () => {
+    setIsSelectorForGarage(true);
+    setIsSelectorOpen(true);
+  };
+
+  const handleAddBikeToGarage = async (bikeToAdd: string) => {
+    if (!bikeToAdd || garageList.includes(bikeToAdd)) return;
+    const newList = [bikeToAdd, ...garageList];
+    setGarageList(newList);
+    if (isAuthenticated && user) {
+      try {
+        await syncGarage(newList);
+        syncGarageToServer(user.email, newList).catch(() => {});
+      } catch (e) {
+        console.error('Error syncing garage', e);
+      }
+    } else {
+      localStorage.setItem('tg_garage_history', JSON.stringify(newList));
+    }
+  };
+
   const handleSelectBike = async (bike: string) => {
     setSelectedBike(bike);
-    localStorage.setItem('tg_selected_bike', bike);
+    if (bike) {
+      localStorage.setItem('tg_selected_bike', bike);
+    } else {
+      localStorage.removeItem('tg_selected_bike');
+    }
 
-    if (bike && !garageList.includes(bike)) {
-      const newList = [bike, ...garageList];
-      setGarageList(newList);
-      if (isAuthenticated && user) {
-        try {
-          await syncGarage(newList);
-          syncGarageToServer(user.email, newList).catch(() => {});
-        } catch (e) {
-          console.error('Error syncing garage', e);
-        }
-      } else {
-        localStorage.setItem('tg_garage_history', JSON.stringify(newList));
-      }
+    if (isSelectorForGarage && bike) {
+      await handleAddBikeToGarage(bike);
     }
   };
 
@@ -263,7 +283,7 @@ export default function Home() {
 
       <Header
         selectedBike={selectedBike}
-        onOpenBikeSelector={() => setIsSelectorOpen(true)}
+        onOpenBikeSelector={handleOpenSelectorForSearch}
         onCartClick={() => setActiveTab('cart')}
         onTabChange={(tab) => setActiveTab(tab)}
       />
@@ -421,12 +441,21 @@ export default function Home() {
                         </h1>
                         <div className="flex flex-wrap gap-3">
                           <button
-                            onClick={() => setIsSelectorOpen(true)}
+                            onClick={handleOpenSelectorForSearch}
                             className="px-5 py-2.5 text-xs font-mono font-bold rounded-sm bg-accent text-slate-950 hover:bg-accent-hover transition-all flex items-center gap-2 cursor-pointer"
                           >
                             <Bike className="w-4 h-4" />
                             Cambiar moto
                           </button>
+                          {!garageList.includes(selectedBike) && (
+                            <button
+                              onClick={() => handleAddBikeToGarage(selectedBike)}
+                              className="px-5 py-2.5 text-xs font-mono font-bold rounded-sm bg-accent/20 border border-accent text-accent-text hover:bg-accent/30 transition-all flex items-center gap-2 cursor-pointer"
+                            >
+                              <Plus className="w-4 h-4" />
+                              Añadir a Mi Garaje
+                            </button>
+                          )}
                           <button
                             onClick={() => setActiveTab('garage')}
                             className="px-5 py-2.5 text-xs font-mono font-bold rounded-sm border border-accent/40 text-accent-text hover:bg-accent/10 transition-all flex items-center gap-2 cursor-pointer"
@@ -461,7 +490,7 @@ export default function Home() {
                   </>
                 ) : (
                   <HomeUnselectedView
-                    onOpenSelector={() => setIsSelectorOpen(true)}
+                    onOpenSelector={handleOpenSelectorForSearch}
                     onAddToCart={handleAddToCart}
                     onNotifyMe={handleNotifyMe}
                   />
@@ -477,7 +506,7 @@ export default function Home() {
           <GarageView
             selectedBike={selectedBike}
             garageList={garageList}
-            onOpenSelector={() => setIsSelectorOpen(true)}
+            onOpenSelector={handleOpenSelectorForGarage}
             onClearBike={() => handleRemoveBike(selectedBike)}
             onRemoveBike={handleRemoveBike}
             onSetActiveBike={handleSetActiveBike}
