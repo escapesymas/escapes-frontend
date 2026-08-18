@@ -74,22 +74,38 @@ export function parseBike(bike: string | null | undefined): { brand: string; mod
   }
 
   const sortedBrands = [...KNOWN_MOTORCYCLE_BRANDS].sort((a, b) => b.length - a.length);
+  let brand = '';
+  let rest = cleaned;
+
   for (const b of sortedBrands) {
     if (cleaned.toLowerCase().startsWith(b.toLowerCase() + ' ')) {
-      const rest = cleaned.substring(b.length + 1).trim();
-      const yearMatch = rest.match(/\((\d{4})\)|\b(\d{4})\b/);
-      const year = yearMatch ? (yearMatch[1] || yearMatch[2]) : '';
-      const model = yearMatch ? rest.replace(yearMatch[0], '').trim() : rest;
-      return { brand: b.toUpperCase(), model, year };
+      brand = b.toUpperCase();
+      rest = cleaned.substring(b.length + 1).trim();
+      break;
     }
   }
 
-  const yearMatch = cleaned.match(/\((\d{4})\)|\b(\d{4})\b$/);
-  const year = yearMatch ? (yearMatch[1] || yearMatch[2]) : '';
-  const withoutYear = yearMatch ? cleaned.replace(yearMatch[0], '').trim() : cleaned;
-  const parts = withoutYear.split(/\s+/);
-  const brand = (parts[0] || '').toUpperCase();
-  const model = parts.slice(1).join(' ');
+  if (!brand) {
+    const parts = cleaned.split(/\s+/);
+    brand = (parts[0] || '').toUpperCase();
+    rest = parts.slice(1).join(' ');
+  }
+
+  let year = '';
+  let model = rest;
+
+  const parenYearMatch = rest.match(/\((19[6-9]\d|20[0-3]\d)\)/);
+  if (parenYearMatch) {
+    year = parenYearMatch[1];
+    model = rest.replace(parenYearMatch[0], '').trim();
+  } else {
+    const yearMatch = rest.match(/\b(19[6-9]\d|20[0-3]\d)\b/g);
+    if (yearMatch && yearMatch.length > 0) {
+      year = yearMatch[yearMatch.length - 1];
+      const lastYearIdx = rest.lastIndexOf(year);
+      model = (rest.substring(0, lastYearIdx) + rest.substring(lastYearIdx + year.length)).replace(/\(\s*\)/g, '').trim();
+    }
+  }
 
   return { brand, model, year };
 }
