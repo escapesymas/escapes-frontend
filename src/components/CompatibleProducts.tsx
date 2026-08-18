@@ -155,15 +155,12 @@ export default function CompatibleProducts({ selectedBike, onAddToCart, onNotify
         if (selectedBike) {
           const { brand, model, year } = parseBike(selectedBike);
 
-          const skusUrl = `/api/vehicles?action=compatible-skus&brand=${encodeURIComponent(brand)}&model=${encodeURIComponent(model)}&year=${encodeURIComponent(year)}`;
-          const skusRes = await fetch(skusUrl);
-          const compatibleSkus = await skusRes.json();
+          const prodUrl = `/api/vehicles?action=compatible-products&brand=${encodeURIComponent(brand)}&model=${encodeURIComponent(model)}&year=${encodeURIComponent(year)}`;
+          const prodRes = await fetch(prodUrl);
+          const data = await prodRes.json();
 
-          if (!cancelled && compatibleSkus && compatibleSkus.length > 0) {
-            const data = await fetchProductsBySkus(compatibleSkus.slice(0, 500));
-            if (!cancelled) {
-              setProducts((data.products || []).filter((p: Product) => p.price > 0).map((p: Product) => ({ ...p, isCompatible: true })));
-            }
+          if (!cancelled && Array.isArray(data)) {
+            setProducts(data.filter((p: Product) => p.price > 0).map((p: Product) => ({ ...p, isCompatible: true })));
           } else if (!cancelled) {
             setProducts([]);
           }
