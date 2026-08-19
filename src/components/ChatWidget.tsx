@@ -16,6 +16,7 @@ const SUGGESTIONS = [
 ];
 
 export default function ChatWidget() {
+  return null;
   const { isAuthenticated, user, isLoading } = useAuth();
   const { addToCart } = useCart();
   const { showToast } = useToast();
