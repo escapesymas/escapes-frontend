@@ -9,7 +9,7 @@ import { trackEvent as trackUmami } from '../lib/umami';
 import { useCart, CartItem } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import Link from 'next/link';
-import { MARKETING_TIERS, PHONE_REGEX, POSTCODE_REGEX } from '../lib/constants';
+import { MARKETING_TIERS, PHONE_REGEX, POSTCODE_REGEX, getImageUrl, getApiUrl } from '../lib/constants';
 import { Product } from '../types';
 import CartProgressBar from './CartProgressBar';
 import { Elements } from '@stripe/react-stripe-js';
@@ -237,7 +237,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
 
   const finalizeStripeOrder = async (orderId: string, paymentIntentId: string) => {
     try {
-      const finalizeRes = await fetch('/api/orders/finalize', {
+      const finalizeRes = await fetch(getApiUrl('/orders/finalize'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -272,7 +272,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
     const loadRecs = async () => {
       setLoadingRecs(true);
       try {
-        const res = await fetch('/api/catalog/products?per_page=6');
+        const res = await fetch(getApiUrl('/catalog/products?per_page=6'));
         if (res.ok) {
           const data = await res.json();
           // Filter out items already in the cart and select cheap ones
@@ -297,7 +297,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
     const upperCode = code.trim().toUpperCase();
 
     try {
-      const res = await fetch('/api/coupons/validate', {
+      const res = await fetch(getApiUrl('/coupons/validate'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: upperCode }),
@@ -335,7 +335,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
       if (!shippingData.postcode) return;
       setIsEstimatingShipping(true);
       try {
-        const res = await fetch('/api/shipping-estimate', {
+        const res = await fetch(getApiUrl('/shipping-estimate'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -425,7 +425,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
     }
 
     try {
-      const res = await fetch('/api/orders/create', {
+      const res = await fetch(getApiUrl('/orders/create'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -449,7 +449,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
         cartTotal
       );
 
-      const piRes = await fetch('/api/create-payment-intent', {
+      const piRes = await fetch(getApiUrl('/create-payment-intent'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -904,7 +904,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
                     >
                       <div className="w-20 h-20 bg-white rounded overflow-hidden flex-shrink-0 p-1.5 border border-card-border flex items-center justify-center">
                         <img
-                          src={item.image}
+                          src={getImageUrl(item.image)}
                           alt={item.title}
                           loading="lazy"
                           decoding="async"

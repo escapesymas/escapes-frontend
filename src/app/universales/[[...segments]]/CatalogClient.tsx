@@ -449,10 +449,10 @@ function CatalogContent({
 
                       {/* Subcategory Pills */}
                       {visibleSubcategories.length > 0 && (
-                        <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-2 no-scrollbar border-t border-card-border/60">
+                        <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-card-border/60">
                           <a
                             href={`/universales/${parentSlug}`}
-                            className={`px-3 py-1.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider transition-all whitespace-nowrap no-underline border ${
+                            className={`px-3 py-1.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider transition-all no-underline border ${
                               !selectedSubCategory
                                 ? 'bg-accent text-white border-accent shadow-sm'
                                 : 'bg-card border-card-border text-text-muted hover:border-accent hover:text-foreground'
@@ -466,7 +466,7 @@ function CatalogContent({
                               <a
                                 key={sub.id}
                                 href={`/universales/${parentSlug}/${sub.slug}`}
-                                className={`px-3 py-1.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider transition-all whitespace-nowrap no-underline border ${
+                                className={`px-3 py-1.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider transition-all no-underline border ${
                                   isActive
                                     ? 'bg-accent text-white border-accent shadow-sm'
                                     : 'bg-card border-card-border text-text-muted hover:border-accent hover:text-foreground'

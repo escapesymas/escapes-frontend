@@ -5,6 +5,8 @@ import { ShoppingCart } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useHoverPrefetch } from '../lib/useHoverPrefetch';
 
+import { getImageUrl } from '../lib/constants';
+
 interface RelatedItem {
   id: number;
   sku: string;
@@ -93,7 +95,7 @@ function RelatedProductCard({ item: it, onAddToCart }: RelatedProductCardProps) 
         {it.image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={it.image}
+            src={getImageUrl(it.image)}
             alt={it.name}
             loading="lazy"
             className="w-full h-full object-contain p-2"

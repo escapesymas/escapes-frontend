@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
+import { getApiUrl } from '../lib/constants';
 
 export interface CartItem {
   id: number;
@@ -104,7 +105,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         if (user) {
           // Logged-in user: server is the source of truth, replace local.
           const res = await fetch(
-            `/api/cart?userId=${encodeURIComponent(String(user.id))}&sessionToken=${encodeURIComponent(sessionToken)}`
+            getApiUrl(`/cart?userId=${encodeURIComponent(String(user.id))}&sessionToken=${encodeURIComponent(sessionToken)}`)
           );
           if (!cancelled && res.ok) {
             const data = await res.json();
@@ -133,7 +134,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     const syncToDB = async () => {
       try {
-        await fetch('/api/cart', {
+        await fetch(getApiUrl('/cart'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

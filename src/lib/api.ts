@@ -1,11 +1,8 @@
 import { FilterOptions } from '../types';
-
-const API_BASE = '/api';
-
-
+import { getApiUrl } from './constants';
 
 async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
-  return fetch(`${API_BASE}${path.startsWith('/') ? path : '/' + path}`, {
+  return fetch(getApiUrl(path), {
     credentials: 'include',
     ...init,
     headers: {
@@ -41,8 +38,7 @@ export async function fetchProducts(params?: {
     searchParams.set('attrs', JSON.stringify(params.attrs));
   }
 
-  const url = `${API_BASE}/catalog/products${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
-  const res = await fetch(url);
+  const res = await apiFetch(`/catalog/products${searchParams.toString() ? '?' + searchParams.toString() : ''}`);
   const total = Number(res.headers.get('X-WP-Total') || 0);
   const totalPages = Number(res.headers.get('X-WP-TotalPages') || 0);
   const products = await res.json();
@@ -59,8 +55,7 @@ export async function fetchFilterOptions(params?: {
   if (params?.search) searchParams.set('search', params.search);
   if (params?.universal) searchParams.set('universal', 'true');
 
-  const url = `${API_BASE}/catalog/filters?${searchParams.toString()}`;
-  const res = await fetch(url);
+  const res = await apiFetch(`/catalog/filters?${searchParams.toString()}`);
   if (!res.ok) return { brands: [], price_min: 0, price_max: 1000, attributes: {} };
   return res.json();
 }

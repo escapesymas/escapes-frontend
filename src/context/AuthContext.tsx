@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { apiLogin, apiRegister, apiGetProfile, apiUpdateProfile, apiDeleteAccount, SessionData, UserProfile, UserBilling } from '../lib/api';
+import { getApiUrl } from '../lib/constants';
 
 const SESSION_KEY = 'tg_session';
 
@@ -138,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem(SESSION_KEY);
-    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+    fetch(getApiUrl('/auth/logout'), { method: 'POST', credentials: 'include' }).catch(() => {});
     setSession(null);
     setUser(null);
     // Notify CartContext (and any other listener) that they must drop their
