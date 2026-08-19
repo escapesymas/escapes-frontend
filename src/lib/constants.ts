@@ -48,6 +48,23 @@ export function isValidRedirect(url: string | null): string {
 export const PHONE_REGEX = /^[+]?[\d\s()-]{6,20}$/;
 export const POSTCODE_REGEX = /^\d{5}$/;
 
+export function getImageUrl(url: string | undefined | null): string {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (url.startsWith('/')) {
+    const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'https://api.escapesymas.com').replace(/\/$/, '');
+    return `${baseUrl}${url}`;
+  }
+  return url;
+}
+
+export function getApiUrl(path: string): string {
+  if (!path) return '/api';
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  return cleanPath.startsWith('/api') ? cleanPath : `/api${cleanPath}`;
+}
+
 export const KNOWN_MOTORCYCLE_BRANDS = [
   'Harley-Davidson', 'Harley Davidson', 'Harley',
   'Royal Enfield', 'Moto Guzzi', 'MV Agusta', 'Gas Gas', 'GasGas',

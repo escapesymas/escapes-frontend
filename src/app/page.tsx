@@ -18,13 +18,13 @@ import { fetchProducts } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { Product, ProductCompatibility } from '../types';
-import { parseBike } from '../lib/constants';
+import { parseBike, getApiUrl } from '../lib/constants';
 
 const BikeSelectorModal = dynamic(() => import('../components/BikeSelectorModal'), { ssr: false });
 
 async function syncGarageToServer(userEmail: string, garageList: string[]) {
   try {
-    const existingRes = await fetch(`/api/garage?userEmail=${encodeURIComponent(userEmail)}`);
+    const existingRes = await fetch(getApiUrl(`/garage?userEmail=${encodeURIComponent(userEmail)}`));
     const existing: Array<{ id: number; brand: string; model: string; year: string }> = existingRes.ok ? await existingRes.json() : [];
     const existingKeys = new Set(existing.map((v) => `${(v.brand || '').toLowerCase()}|${(v.model || '').toLowerCase()}|${v.year || ''}`));
 
@@ -33,7 +33,7 @@ async function syncGarageToServer(userEmail: string, garageList: string[]) {
       if (!parsed.brand || !parsed.model) continue;
       const key = `${parsed.brand.toLowerCase()}|${parsed.model.toLowerCase()}|${parsed.year}`;
       if (existingKeys.has(key)) continue;
-      await fetch('/api/garage', {
+      await fetch(getApiUrl('/garage'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userEmail, brand: parsed.brand, model: parsed.model, year: parsed.year || new Date().getFullYear() }),

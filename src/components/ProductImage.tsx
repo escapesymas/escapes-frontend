@@ -15,13 +15,29 @@ interface ProductImageProps {
   srcCardMobile?: string;
 }
 
+function normalizeImgSrc(url: string | undefined): string {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (url.startsWith('/')) {
+    const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'https://api.escapesymas.com').replace(/\/$/, '');
+    return `${baseUrl}${url}`;
+  }
+  return url;
+}
+
 export default function ProductImage({
   src, alt, className = '', wrapperClassName = '', priority,
   srcDesktop, srcMobile, srcCardDesktop, srcCardMobile,
 }: ProductImageProps) {
   const [failed, setFailed] = useState(false);
 
-  if (!src || failed) {
+  const mainSrc = normalizeImgSrc(src);
+  const cardMobile = normalizeImgSrc(srcCardMobile);
+  const cardDesktop = normalizeImgSrc(srcCardDesktop);
+  const mobile = normalizeImgSrc(srcMobile);
+  const desktop = normalizeImgSrc(srcDesktop);
+
+  if (!mainSrc || failed) {
     return (
       <div className={`flex flex-col items-center justify-center gap-2 ${wrapperClassName || 'w-full h-full'}`}>
         <div className="w-16 h-16 rounded bg-icon-box flex items-center justify-center border border-card-border">
@@ -32,16 +48,16 @@ export default function ProductImage({
     );
   }
 
-  if (srcCardMobile || srcCardDesktop || srcDesktop || srcMobile) {
+  if (cardMobile || cardDesktop || desktop || mobile) {
     return (
       <div className={wrapperClassName}>
         <picture>
-          {srcCardMobile && <source media="(max-width: 767px)" srcSet={srcCardMobile} />}
-          {srcCardDesktop && <source media="(min-width: 768px)" srcSet={srcCardDesktop} />}
-          {srcMobile && <source media="(max-width: 767px)" srcSet={srcMobile} />}
-          {srcDesktop && <source media="(min-width: 768px)" srcSet={srcDesktop} />}
+          {cardMobile && <source media="(max-width: 767px)" srcSet={cardMobile} />}
+          {cardDesktop && <source media="(min-width: 768px)" srcSet={cardDesktop} />}
+          {mobile && <source media="(max-width: 767px)" srcSet={mobile} />}
+          {desktop && <source media="(min-width: 768px)" srcSet={desktop} />}
           <img
-            src={src}
+            src={mainSrc}
             alt={alt}
             fetchPriority={priority ? 'high' : undefined}
             loading={priority ? 'eager' : 'lazy'}
@@ -59,7 +75,7 @@ export default function ProductImage({
   return (
     <div className={wrapperClassName}>
       <img
-        src={src}
+        src={mainSrc}
         alt={alt}
         className={className}
         loading={priority ? 'eager' : 'lazy'}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Star, ThumbsUp, Loader2 } from 'lucide-react';
+import { getApiUrl, getImageUrl } from '../lib/constants';
 
 interface Review {
   id: number;
@@ -41,7 +42,7 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
 
   const fetchReviews = async () => {
     try {
-      const res = await fetch(`/api/reviews/${productId}`);
+      const res = await fetch(getApiUrl(`/reviews/${productId}`));
       if (res.ok) {
         const data = await res.json();
         setReviews(data.reviews);
@@ -60,7 +61,7 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
     setError('');
 
     try {
-      const res = await fetch('/api/reviews', {
+      const res = await fetch(getApiUrl('/reviews'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -144,10 +145,23 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
           <div key={review.id} className="bg-card rounded-lg p-4 border border-card-border">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
-                  <span className="text-sm font-medium text-accent">
-                    {review.username?.[0]?.toUpperCase() || 'A'}
-                  </span>
+                <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center overflow-hidden border border-card-border/60 shrink-0">
+                  {review.avatar_url ? (
+                    review.avatar_url.startsWith('emoji:') ? (
+                      <span className="text-base leading-none">{review.avatar_url.substring(6)}</span>
+                    ) : (
+                      <img
+                        src={getImageUrl(review.avatar_url)}
+                        alt={review.username || 'Usuario'}
+                        loading="lazy"
+                        className="w-full h-full object-cover"
+                      />
+                    )
+                  ) : (
+                    <span className="text-xs font-bold font-mono text-accent">
+                      {(review.username?.[0] || 'A').toUpperCase()}
+                    </span>
+                  )}
                 </div>
                 <div>
                   <p className="font-medium text-sm">{review.username || 'Anónimo'}</p>

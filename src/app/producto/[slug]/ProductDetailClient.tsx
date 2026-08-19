@@ -10,7 +10,7 @@ import { Product, ProductCompatibility, ProductImage as ProductImageType } from 
 import { fetchProductBySlug, refreshProductStock } from '../../../lib/api';
 import { useCart } from '../../../context/CartContext';
 import { useToast } from '../../../context/ToastContext';
-import { sanitizeHTML } from '../../../lib/constants';
+import { sanitizeHTML, getImageUrl } from '../../../lib/constants';
 import { getProductSchema, getBreadcrumbSchema } from '../../../components/SchemaMarkup';
 import Header from '../../../components/Header';
 import ProductImage from '../../../components/ProductImage';
@@ -39,8 +39,8 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
       : [];
 
   const pickImage = (img: ProductImageType) => {
-    const src = img.srcCardDesktop || img.srcMobile || img.src || '';
-    const mobileSrc = img.srcCardMobile || img.srcMobile || '';
+    const src = getImageUrl(img.srcCardDesktop || img.srcMobile || img.src || '');
+    const mobileSrc = getImageUrl(img.srcCardMobile || img.srcMobile || '');
     return { src, mobileSrc };
   };
 

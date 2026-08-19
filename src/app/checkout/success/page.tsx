@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useCart } from '../../../context/CartContext';
 import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { getApiUrl } from '../../../lib/constants';
 
 type Status = 'loading' | 'ok' | 'error' | 'pending';
 
@@ -60,7 +61,7 @@ function SuccessContent() {
           } catch (e) {}
         }
 
-        const res = await fetch('/api/orders/finalize', {
+        const res = await fetch(getApiUrl('/orders/finalize'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

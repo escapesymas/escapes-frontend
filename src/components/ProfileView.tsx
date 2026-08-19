@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { User, LogOut, Trophy, ShoppingBag, Bike, Edit3, Save, X, Trash2, ShieldCheck, Download, Camera, Loader2, MapPin, Key, Plus, Package } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiChangePassword, apiGetMyOrders, OrderSummary, OrderDetail } from '../lib/api';
+import { getApiUrl } from '../lib/constants';
 import ProfileSkeleton from './ProfileSkeleton';
 import ProfileUnauthenticated from './ProfileUnauthenticated';
 
@@ -318,7 +319,7 @@ export default function ProfileView() {
     formData.append('userId', String(user.id));
 
     try {
-      const res = await fetch('/api/upload/avatar', {
+      const res = await fetch(getApiUrl('/upload/avatar'), {
         method: 'POST',
         body: formData
       });
