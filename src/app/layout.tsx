@@ -98,7 +98,7 @@ export default function RootLayout({
               </div>
               <Footer />
               <CookieBanner />
-              <ChatWidget />
+              {/* <ChatWidget /> */}
             </CartProvider>
           </ToastProvider>
         </AuthProvider>
