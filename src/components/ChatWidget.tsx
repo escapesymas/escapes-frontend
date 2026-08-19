@@ -158,7 +158,7 @@ export default function ChatWidget() {
                 className="whitespace-nowrap bg-card border border-accent text-foreground text-[10px] font-mono uppercase font-bold px-3 py-1.5 rounded-full shadow-md animate-bounce hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
                 aria-label="Abrir sugerencia del asistente"
               >
-                💬 Sugerencia para tu {proactiveBike.split(' ').slice(0, 2).join(' ')}
+                💬 Sugerencia para tu {proactiveBike?.split(' ').slice(0, 2).join(' ')}
               </button>
               <button
                 type="button"
