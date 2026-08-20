@@ -59,10 +59,14 @@ export function getImageUrl(url: string | undefined | null): string {
 }
 
 export function getApiUrl(path: string): string {
-  if (!path) return '/api';
+  if (!path) return '';
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  const baseUrl = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL
+    ? process.env.NEXT_PUBLIC_API_URL
+    : 'https://api.escapesymas.com').replace(/\/$/, '');
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  return cleanPath.startsWith('/api') ? cleanPath : `/api${cleanPath}`;
+  const finalPath = cleanPath.startsWith('/api') ? cleanPath : `/api${cleanPath}`;
+  return `${baseUrl}${finalPath}`;
 }
 
 export const KNOWN_MOTORCYCLE_BRANDS = [
