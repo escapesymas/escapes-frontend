@@ -144,6 +144,20 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
     );
   }
 
+  const displayDescription = (product?.description && product.description.trim().length > 0)
+    ? product.description
+    : `${product.name} de la marca ${product.brand || 'Escapes y Más'}. Recambio y accesorio diseñado para ofrecer un ajuste preciso, máxima resistencia y excelente rendimiento en tu motocicleta.`;
+  const hasDescription = true;
+  const hasSpecs = Boolean(
+    (product?.attributes && Object.keys(product.attributes).length > 0) ||
+    product?.weight_g ||
+    product?.length_mm ||
+    product?.width_mm ||
+    product?.height_mm ||
+    product?.volume_cm3 ||
+    product?.barcode
+  );
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       {product && (
@@ -152,14 +166,14 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
           dangerouslySetInnerHTML={{
             __html: JSON.stringify(getProductSchema({
               name: product.name,
-              description: product.description,
+              description: product.description || product.name,
               image: product.image,
               sku: product.sku,
               brand: product.brand,
               price: product.price,
               url: `https://escapesymas.com/producto/${slug}`,
               inStock: product.inStock,
-            })),
+            }))
           }}
         />
       )}
@@ -180,7 +194,7 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
         onTabChange={(tab) => router.push(`/?tab=${tab}`)}
       />
 
-      <div className="bg-card border-b border-card-border/60 py-2.5 shadow-sm">
+      <div className="bg-card border-b border-card-border/60 py-2.5 shadow-sm mb-6 md:mb-8">
         <div className="max-w-7xl mx-auto px-4 flex items-center gap-1.5 font-mono text-[9px] text-text-muted uppercase tracking-wider">
           <a href="/" className="hover:text-foreground transition-colors font-bold">Inicio</a>
           <span>/</span>
@@ -190,7 +204,7 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
         </div>
       </div>
 
-      <main role="main" className="flex-grow max-w-7xl mx-auto px-0 py-0 w-full pb-24 md:pb-6">
+      <main role="main" className="flex-grow max-w-7xl mx-auto px-0 w-full pb-24 md:pb-12">
         <div className="md:hidden flex flex-col">
           <div className="relative bg-image-wrapper border-b border-card-border">
             <div className="max-h-[50vh] aspect-square flex items-center justify-center p-6">
@@ -282,72 +296,79 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
               )}
             </div>
 
-            <details className="border border-card-border rounded-md">
-              <summary className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider p-4 cursor-pointer list-none flex items-center justify-between select-none">
-                Descripción
-                <ChevronLeft className="w-3 h-3 rotate-90 text-text-muted" />
-              </summary>
-              <div className="px-4 pb-4 border-t border-card-border/60 pt-3">
+            {hasDescription && (
+              <div className="border border-card-border rounded-md p-4 bg-card">
+                <h2 className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2">
+                  Descripción
+                </h2>
                 <div
                   className="text-xs text-foreground leading-relaxed font-sans prose prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(product.description) }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(displayDescription) }}
                 />
               </div>
-            </details>
+            )}
 
-            <div className="border border-card-border rounded-md p-4">
-              <h2 className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-3">
-                Especificaciones Técnicas
-              </h2>
-              <div className="grid grid-cols-2 gap-3">
-                {product.weight_g && (
-                  <div className="flex items-center gap-2">
-                    <Weight className="w-3.5 h-3.5 text-text-muted shrink-0" />
-                    <span className="text-[10px] font-mono text-foreground">
-                      {(product.weight_g / 1000).toFixed(2)} kg
-                    </span>
-                  </div>
-                )}
-                {product.length_mm && (
-                  <div className="flex items-center gap-2">
-                    <Ruler className="w-3.5 h-3.5 text-text-muted shrink-0" />
-                    <span className="text-[10px] font-mono text-foreground">
-                      {product.length_mm} mm
-                    </span>
-                  </div>
-                )}
-                {product.width_mm && (
-                  <div className="flex items-center gap-2">
-                    <Ruler className="w-3.5 h-3.5 text-text-muted shrink-0" />
-                    <span className="text-[10px] font-mono text-foreground">
-                      {product.width_mm} mm
-                    </span>
-                  </div>
-                )}
-                {product.height_mm && (
-                  <div className="flex items-center gap-2">
-                    <Ruler className="w-3.5 h-3.5 text-text-muted shrink-0" />
-                    <span className="text-[10px] font-mono text-foreground">
-                      {product.height_mm} mm
-                    </span>
-                  </div>
-                )}
-                {product.volume_cm3 && (
-                  <div className="flex items-center gap-2">
-                    <Package className="w-3.5 h-3.5 text-text-muted shrink-0" />
-                    <span className="text-[10px] font-mono text-foreground">
-                      {product.volume_cm3} cm³
-                    </span>
-                  </div>
-                )}
-                {product.barcode && (
-                  <div className="flex items-center gap-2 col-span-2">
-                    <span className="text-[10px] font-mono text-text-muted">EAN:</span>
-                    <span className="text-[10px] font-mono text-foreground">{product.barcode}</span>
-                  </div>
-                )}
+            {hasSpecs && (
+              <div className="border border-card-border rounded-md p-4">
+                <h2 className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-3">
+                  Especificaciones Técnicas
+                </h2>
+                <div className="grid grid-cols-2 gap-3">
+                  {product.attributes && Object.entries(product.attributes).map(([attrKey, attrVal]) => (
+                    <div key={attrKey} className="flex items-center gap-2 col-span-2 sm:col-span-1">
+                      <span className="text-[10px] font-mono text-text-muted">{attrKey}:</span>
+                      <span className="text-[10px] font-mono font-bold text-foreground">{String(attrVal)}</span>
+                    </div>
+                  ))}
+                  {product.weight_g && (
+                    <div className="flex items-center gap-2">
+                      <Weight className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                      <span className="text-[10px] font-mono text-foreground">
+                        {(product.weight_g / 1000).toFixed(2)} kg
+                      </span>
+                    </div>
+                  )}
+                  {product.length_mm && (
+                    <div className="flex items-center gap-2">
+                      <Ruler className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                      <span className="text-[10px] font-mono text-foreground">
+                        {product.length_mm} mm
+                      </span>
+                    </div>
+                  )}
+                  {product.width_mm && (
+                    <div className="flex items-center gap-2">
+                      <Ruler className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                      <span className="text-[10px] font-mono text-foreground">
+                        {product.width_mm} mm
+                      </span>
+                    </div>
+                  )}
+                  {product.height_mm && (
+                    <div className="flex items-center gap-2">
+                      <Ruler className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                      <span className="text-[10px] font-mono text-foreground">
+                        {product.height_mm} mm
+                      </span>
+                    </div>
+                  )}
+                  {product.volume_cm3 && (
+                    <div className="flex items-center gap-2">
+                      <Package className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                      <span className="text-[10px] font-mono text-foreground">
+                        {product.volume_cm3} cm³
+                      </span>
+                    </div>
+                  )}
+                  {product.barcode && (
+                    <div className="flex items-center gap-2 col-span-2">
+                      <span className="text-[10px] font-mono text-text-muted">EAN:</span>
+                      <span className="text-[10px] font-mono text-foreground">{product.barcode}</span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -442,79 +463,87 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
               )}
             </div>
 
-            {product.description && (
-              <div className="border border-card-border rounded-md p-4">
+            {hasDescription && (
+              <div className="border border-card-border rounded-md p-4 bg-card">
                 <h2 className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-3">
                   Descripción
                 </h2>
                 <div
                   className="text-xs text-foreground leading-relaxed font-sans prose prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(product.description) }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(displayDescription) }}
                 />
               </div>
             )}
 
-            <div className="border border-card-border rounded-md p-4">
-              <h2 className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-3">
-                Especificaciones Técnicas
-              </h2>
-              <div className="grid grid-cols-2 gap-3">
-                {product.weight_g && (
-                  <div className="flex items-center gap-2">
-                    <Weight className="w-3.5 h-3.5 text-text-muted shrink-0" />
-                    <span className="text-[10px] font-mono text-foreground">
-                      {(product.weight_g / 1000).toFixed(2)} kg
-                    </span>
-                  </div>
-                )}
-                {product.length_mm && (
-                  <div className="flex items-center gap-2">
-                    <Ruler className="w-3.5 h-3.5 text-text-muted shrink-0" />
-                    <span className="text-[10px] font-mono text-foreground">
-                      {product.length_mm} mm
-                    </span>
-                  </div>
-                )}
-                {product.width_mm && (
-                  <div className="flex items-center gap-2">
-                    <Ruler className="w-3.5 h-3.5 text-text-muted shrink-0" />
-                    <span className="text-[10px] font-mono text-foreground">
-                      {product.width_mm} mm
-                    </span>
-                  </div>
-                )}
-                {product.height_mm && (
-                  <div className="flex items-center gap-2">
-                    <Ruler className="w-3.5 h-3.5 text-text-muted shrink-0" />
-                    <span className="text-[10px] font-mono text-foreground">
-                      {product.height_mm} mm
-                    </span>
-                  </div>
-                )}
-                {product.volume_cm3 && (
-                  <div className="flex items-center gap-2">
-                    <Package className="w-3.5 h-3.5 text-text-muted shrink-0" />
-                    <span className="text-[10px] font-mono text-foreground">
-                      {product.volume_cm3} cm³
-                    </span>
-                  </div>
-                )}
-                {product.barcode && (
-                  <div className="flex items-center gap-2 col-span-2">
-                    <span className="text-[10px] font-mono text-text-muted">EAN:</span>
-                    <span className="text-[10px] font-mono text-foreground">{product.barcode}</span>
-                  </div>
-                )}
+            {hasSpecs && (
+              <div className="border border-card-border rounded-md p-4">
+                <h2 className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-3">
+                  Especificaciones Técnicas
+                </h2>
+                <div className="grid grid-cols-2 gap-3">
+                  {product.attributes && Object.entries(product.attributes).map(([attrKey, attrVal]) => (
+                    <div key={attrKey} className="flex items-center gap-2 col-span-2 sm:col-span-1">
+                      <span className="text-[10px] font-mono text-text-muted">{attrKey}:</span>
+                      <span className="text-[10px] font-mono font-bold text-foreground">{String(attrVal)}</span>
+                    </div>
+                  ))}
+                  {product.weight_g && (
+                    <div className="flex items-center gap-2">
+                      <Weight className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                      <span className="text-[10px] font-mono text-foreground">
+                        {(product.weight_g / 1000).toFixed(2)} kg
+                      </span>
+                    </div>
+                  )}
+                  {product.length_mm && (
+                    <div className="flex items-center gap-2">
+                      <Ruler className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                      <span className="text-[10px] font-mono text-foreground">
+                        {product.length_mm} mm
+                      </span>
+                    </div>
+                  )}
+                  {product.width_mm && (
+                    <div className="flex items-center gap-2">
+                      <Ruler className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                      <span className="text-[10px] font-mono text-foreground">
+                        {product.width_mm} mm
+                      </span>
+                    </div>
+                  )}
+                  {product.height_mm && (
+                    <div className="flex items-center gap-2">
+                      <Ruler className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                      <span className="text-[10px] font-mono text-foreground">
+                        {product.height_mm} mm
+                      </span>
+                    </div>
+                  )}
+                  {product.volume_cm3 && (
+                    <div className="flex items-center gap-2">
+                      <Package className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                      <span className="text-[10px] font-mono text-foreground">
+                        {product.volume_cm3} cm³
+                      </span>
+                    </div>
+                  )}
+                  {product.barcode && (
+                    <div className="flex items-center gap-2 col-span-2">
+                      <span className="text-[10px] font-mono text-text-muted">EAN:</span>
+                      <span className="text-[10px] font-mono text-foreground">{product.barcode}</span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             {product && (
               <div className="mt-6">
                 <button
                   onClick={() => {
                     if (product.inStock && product.stock > 0) {
-                      addToCart(product); trackEvent.addToCart(product, 1);
-                      showToast({ message: 'Añadido al carrito', type: 'success' });
+                      addToCart(product);
+                      trackEvent.addToCart(product, 1);
                     } else {
                       handleNotifyMe();
                     }
@@ -542,7 +571,6 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
                 if (product.inStock && product.stock > 0) {
                   addToCart(product);
                   trackEvent.addToCart(product, 1);
-                  showToast({ message: 'Añadido al carrito', type: 'success' });
                 } else {
                   handleNotifyMe();
                 }
