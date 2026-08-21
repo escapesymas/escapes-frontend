@@ -76,7 +76,7 @@ export default function DevolucionesPage() {
             <h2 className="font-mono text-sm font-bold uppercase text-foreground mb-2">7. Modelos oficiales de desistimiento</h2>
             <p>Conforme al artículo 68.2 del TRLGDCU, ponemos a tu disposición el siguiente modelo de formulario de desistimiento (puedes usarlo o enviar uno con contenido equivalente):</p>
             <blockquote className="border-l-4 border-card-border pl-4 my-4 text-foreground/70 italic">
-              <p>A la atención de Escapes y Más, con domicilio social en <span className="bg-amber-100 px-1 rounded text-amber-900 font-bold not-italic">[PENDIENTE: dirección social completa del titular]</span>:</p>
+              <p>A la atención de Escapes y Más (a través del correo electrónico <strong>info@escapesymas.com</strong>):</p>
               <p>Por la presente le comunico que desisto del contrato de venta del siguiente bien:</p>
               <ul className="list-none mt-2">
                 <li>- Pedido nº: [_______________]</li>

@@ -75,9 +75,8 @@ export function getOrganizationSchema(): OrganizationSchema {
       contactType: 'customer service',
     },
     sameAs: [
-      'https://www.facebook.com/escapesymas',
       'https://www.instagram.com/escapesymas',
-      'https://www.youtube.com/escapesymas',
+      'https://www.tiktok.com/@escapesymas',
     ],
   };
 }
