@@ -9,7 +9,7 @@ import { trackEvent as trackUmami } from '../lib/umami';
 import { useCart, CartItem } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import Link from 'next/link';
-import { MARKETING_TIERS, PHONE_REGEX, POSTCODE_REGEX, getImageUrl, getApiUrl } from '../lib/constants';
+import { MARKETING_TIERS, PHONE_REGEX, POSTCODE_REGEX, getImageUrl, getApiUrl, formatOrderNumber } from '../lib/constants';
 import { Product } from '../types';
 import CartProgressBar from './CartProgressBar';
 import { Elements } from '@stripe/react-stripe-js';
@@ -1157,7 +1157,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
                 </div>
               </div>
               <span className="font-mono text-xs font-bold text-accent-text bg-accent/5 px-2.5 py-1 rounded border border-accent/10">
-                #{stripePaymentOrderId}
+                #{formatOrderNumber(stripePaymentOrderId)}
               </span>
             </div>
 

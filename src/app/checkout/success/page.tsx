@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useCart } from '../../../context/CartContext';
 import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
-import { getApiUrl } from '../../../lib/constants';
+import { getApiUrl, formatOrderNumber } from '../../../lib/constants';
 
 type Status = 'loading' | 'ok' | 'error' | 'pending';
 
@@ -167,7 +167,7 @@ function SuccessContent() {
         ¡Pago Completado!
       </h1>
       <p className="text-lg text-slate-600 mb-4">
-        Tu pedido{orderId ? ` #${orderId}` : ''} se ha confirmado correctamente.
+        Tu pedido{orderId ? ` #${formatOrderNumber(orderId)}` : ''} se ha confirmado correctamente.
       </p>
       <p className="text-sm text-slate-500 mb-8">
         Te enviaremos un email con los detalles del envío. ¡Gracias por tu compra!

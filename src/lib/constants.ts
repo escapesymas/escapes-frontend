@@ -69,6 +69,25 @@ export function getApiUrl(path: string): string {
   return `${baseUrl}${finalPath}`;
 }
 
+export function formatOrderNumber(orderId: number | string | null | undefined, dateInput?: Date | string | null): string {
+  if (orderId === null || orderId === undefined || orderId === '') return '';
+  const strId = String(orderId).trim();
+  if (/^\d{14}$/.test(strId)) return strId;
+
+  const cleanId = strId.replace(/\D/g, '');
+  const idNum = parseInt(cleanId || '0', 10);
+  const paddedId = String(idNum).padStart(6, '0');
+
+  const d = dateInput ? new Date(dateInput) : new Date();
+  const validDate = isNaN(d.getTime()) ? new Date() : d;
+
+  const mm = String(validDate.getMonth() + 1).padStart(2, '0');
+  const yyyy = String(validDate.getFullYear());
+  const dd = String(validDate.getDate()).padStart(2, '0');
+
+  return `${mm}${yyyy}${dd}${paddedId}`;
+}
+
 export const KNOWN_MOTORCYCLE_BRANDS = [
   'Harley-Davidson', 'Harley Davidson', 'Harley',
   'Royal Enfield', 'Moto Guzzi', 'MV Agusta', 'Gas Gas', 'GasGas',
