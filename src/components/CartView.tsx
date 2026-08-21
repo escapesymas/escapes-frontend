@@ -391,9 +391,11 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
   // Use dynamic shipping cost if available, otherwise fallback to tier logic for initial render
   const baseShippingCost = dynamicShippingCost !== null ? dynamicShippingCost : currentTier.shipping;
   const shippingCost = isFreeShippingPromo ? 0 : baseShippingCost;
+  const isFreeShipping = shippingCost === 0;
   
   const discountAmount = tierDiscount + promoDiscount;
-  const total = Math.max(0, subtotal + shippingCost - discountAmount);
+  const effectiveShippingCostInCart = (!isCheckingOut && !isFreeShipping) ? 0 : shippingCost;
+  const total = Math.max(0, subtotal + effectiveShippingCostInCart - discountAmount);
   const itemsCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   const formatPrice = (amount: number) => {
@@ -1043,16 +1045,16 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
                     </div>
                   )}
 
-                  <div className="flex justify-between text-text-muted text-xs font-bold uppercase tracking-wider">
+                  <div className="flex justify-between text-text-muted text-xs font-bold uppercase tracking-wider items-center gap-2">
                     <span>Envío</span>
                     <span
                       className={
-                        shippingCost === 0
+                        isFreeShipping
                           ? 'text-emerald-500 font-bold italic'
-                          : 'text-foreground font-mono'
+                          : 'text-text-muted text-[10px] font-sans font-normal text-right normal-case tracking-normal'
                       }
                     >
-                      {isEstimatingShipping ? 'Calculando...' : (shippingCost === 0 ? 'GRATIS' : formatPrice(shippingCost))}
+                      {isFreeShipping ? 'GRATIS' : 'Se calcularán en la pantalla de pago'}
                     </span>
                   </div>
 
@@ -1117,7 +1119,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
                         {formatPrice(total)}
                       </span>
                       <span className="text-text-muted text-[8px] uppercase tracking-widest font-bold mt-1.5 block">
-                        IVA Incluido
+                        {isFreeShipping ? 'IVA Incluido' : 'IVA Incluido · Envío a calcular al pagar'}
                       </span>
                     </div>
                   </div>
