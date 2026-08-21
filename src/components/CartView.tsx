@@ -387,12 +387,13 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
   }
 
   const isFreeShippingPromo = appliedPromo && promoType === 'free_shipping';
-  
+  const qualifiesFor150FreeShipping = afterTierSubtotal >= 150 || subtotal >= 150;
+  const isFreeShipping = isFreeShippingPromo || qualifiesFor150FreeShipping || currentTier.shipping === 0 || dynamicShippingCost === 0;
+
   // Use dynamic shipping cost if available, otherwise fallback to tier logic for initial render
-  const baseShippingCost = dynamicShippingCost !== null ? dynamicShippingCost : currentTier.shipping;
-  const shippingCost = isFreeShippingPromo ? 0 : baseShippingCost;
-  const isFreeShipping = shippingCost === 0;
-  
+  const baseShippingCost = isFreeShipping ? 0 : (dynamicShippingCost !== null ? dynamicShippingCost : currentTier.shipping);
+  const shippingCost = baseShippingCost;
+
   const discountAmount = tierDiscount + promoDiscount;
   const effectiveShippingCostInCart = (!isCheckingOut && !isFreeShipping) ? 0 : shippingCost;
   const total = Math.max(0, subtotal + effectiveShippingCostInCart - discountAmount);
@@ -881,19 +882,6 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Shipping banner */}
-            <div className="lg:col-span-3 bg-accent/5 border border-accent/30 rounded-md p-3 md:p-4 flex items-start gap-3">
-              <Truck className="w-5 h-5 text-accent shrink-0 mt-0.5" />
-              <div className="text-xs flex-1">
-                <p className="font-mono font-bold uppercase tracking-wider text-foreground mb-1">
-                  Gastos de envío
-                </p>
-                <p className="text-foreground/85 leading-snug">
-                  <span className="font-bold text-accent">Envío GRATIS</span> en pedidos superiores a 150€ (Península y Baleares).
-                  Envío estándar 6,99€ · Canarias, Ceuta y Melilla consultar.
-                </p>
-              </div>
-            </div>
 
             {/* Cart Items List */}
             <div className="lg:col-span-2 space-y-4">
