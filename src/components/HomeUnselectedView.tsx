@@ -74,15 +74,10 @@ export default function HomeUnselectedView({
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[360px] sm:w-[520px] h-[360px] sm:h-[520px] bg-accent/15 rounded-full blur-[100px] sm:blur-[140px] pointer-events-none animate-pulse" />
 
           <div className="relative z-10 flex flex-col items-center max-w-2xl mx-auto my-auto py-4 sm:py-8">
-            <span className="inline-flex items-center gap-2 text-[9px] sm:text-xs font-mono font-bold uppercase tracking-[0.2em] sm:tracking-[0.25em] text-accent-text bg-accent/10 border border-accent/20 px-3.5 sm:px-4 py-1 sm:py-1.5 rounded-full mb-5 sm:mb-8 shadow-sm">
-              <Sparkles className="w-3.5 h-3.5 text-accent animate-spin" style={{ animationDuration: '6s' }} />
-              Compatibilidad 100% Verificada
-            </span>
-
             <h1 className="font-mono font-black uppercase tracking-tight text-3xl sm:text-5xl lg:text-6xl text-foreground mb-4 sm:mb-6 leading-none">
               TU MOTO. <br />
               <span className="text-accent-text bg-gradient-to-r from-accent via-amber-300 to-accent bg-clip-text text-transparent">
-                TUS RECAMBIOS.
+                TU IDENTIDAD.
               </span>
             </h1>
 
