@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { User, LogOut, Trophy, ShoppingBag, Bike, Edit3, Save, X, Trash2, ShieldCheck, Download, Camera, Loader2, MapPin, Key, Plus, Package } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiChangePassword, apiGetMyOrders, OrderSummary, OrderDetail } from '../lib/api';
-import { getApiUrl } from '../lib/constants';
+import { getApiUrl, formatOrderNumber } from '../lib/constants';
 import ProfileSkeleton from './ProfileSkeleton';
 import ProfileUnauthenticated from './ProfileUnauthenticated';
 
@@ -690,7 +690,7 @@ export default function ProfileView() {
                     <div className="flex items-center gap-2.5">
                       <Package className="w-3.5 h-3.5 text-accent shrink-0" />
                       <div>
-                        <span className="text-foreground font-bold">#{order.id}</span>
+                        <span className="text-foreground font-bold">#{formatOrderNumber(order.id, order.createdAt)}</span>
                         <span className={`ml-2 text-[8px] px-1.5 py-0.5 rounded font-bold uppercase ${
                           order.status === 'completed' || order.status === 'processing'
                             ? 'bg-emerald-500/10 text-emerald-500'
@@ -715,7 +715,7 @@ export default function ProfileView() {
                 <div className="p-3.5 bg-background/50 border border-card-border/50 rounded-xl space-y-2">
                   <div className="flex justify-between items-center text-xs font-mono">
                     <span className="text-text-muted">Último Pedido</span>
-                    <span className="text-foreground font-bold">#{orders[0].id}</span>
+                    <span className="text-foreground font-bold">#{formatOrderNumber(orders[0].id, orders[0].createdAt)}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs font-mono">
                     <span className="text-text-muted">Fecha</span>

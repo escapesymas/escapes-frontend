@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ShieldCheck } from 'lucide-react';
+import { formatOrderNumber } from '../lib/constants';
 
 interface OrderSuccessViewProps {
   orderId: string;
@@ -13,6 +14,7 @@ interface OrderSuccessViewProps {
 }
 
 export default function OrderSuccessView({ orderId, total, address, city, onContinueShopping, onReset }: OrderSuccessViewProps) {
+  const displayOrderId = formatOrderNumber(orderId);
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4 animate-fade-in font-sans">
       <div className="bg-emerald-500/10 border border-emerald-500/30 p-6 rounded-full mb-6">
@@ -20,7 +22,7 @@ export default function OrderSuccessView({ orderId, total, address, city, onCont
       </div>
       <h2 className="text-2xl font-mono font-bold text-foreground mb-2 uppercase italic">¡Pedido Completado!</h2>
       <p className="text-text-muted mb-4 max-w-md text-sm">
-        Tu pedido <span className="text-foreground font-bold font-mono">#{orderId}</span> ha sido recibido correctamente. Hemos enviado un correo con el resumen y la factura del pedido.
+        Tu pedido <span className="text-foreground font-bold font-mono">#{displayOrderId}</span> ha sido recibido correctamente. Hemos enviado un correo con el resumen y la factura del pedido.
       </p>
       <div className="bg-card border border-card-border p-4 rounded text-left w-full max-w-md mb-8 font-mono text-xs text-text-muted space-y-1">
         <p><span className="font-bold text-foreground">Importe total:</span> {total}</p>
