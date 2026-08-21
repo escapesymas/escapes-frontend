@@ -1154,7 +1154,6 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
                 </div>
                 <div>
                   <h3 className="font-mono font-bold text-sm uppercase tracking-wide text-foreground">Pago Seguro</h3>
-                  <p className="text-[10px] text-text-muted font-sans">Stripe • Tarjeta, Bizum, Klarna</p>
                 </div>
               </div>
               <span className="font-mono text-xs font-bold text-accent-text bg-accent/5 px-2.5 py-1 rounded border border-accent/10">
