@@ -156,6 +156,45 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(timeout);
   }, [cart, sessionToken, user, isInitialized, hasFetchedDB]);
 
+  // 10-Minute Inactivity Timer for Abandoned Cart Push Notification
+  useEffect(() => {
+    if (!isInitialized || cart.length === 0) return;
+
+    let timer: NodeJS.Timeout;
+    let hasNotified = false;
+
+    const sendInactivityNotice = async () => {
+      if (hasNotified) return;
+      hasNotified = true;
+      try {
+        await fetch(getApiUrl('/auth?action=inactivity-notification'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user?.id ? String(user.id) : null, sessionToken })
+        });
+      } catch (e) {
+        console.error('Error enviando notificación de inactividad:', e);
+      }
+    };
+
+    const resetTimer = () => {
+      hasNotified = false;
+      if (timer) clearTimeout(timer);
+      // 10 minutos = 600,000 ms
+      timer = setTimeout(sendInactivityNotice, 10 * 60 * 1000);
+    };
+
+    resetTimer();
+
+    const activityEvents = ['mousemove', 'keydown', 'scroll', 'click', 'touchstart'];
+    activityEvents.forEach(evt => window.addEventListener(evt, resetTimer, { passive: true }));
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      activityEvents.forEach(evt => window.removeEventListener(evt, resetTimer));
+    };
+  }, [cart, user, sessionToken, isInitialized]);
+
   const addToCart = (product: any, quantity: number = 1) => {
     const itemTitle = product.name || product.title || 'Producto';
     const itemImage = product.image || (product.images && product.images[0]?.src) || '';
