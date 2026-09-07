@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { Package } from 'lucide-react';
 
 interface ProductImageProps {
@@ -62,8 +63,8 @@ export default function ProductImage({
             fetchPriority={priority ? 'high' : undefined}
             loading={priority ? 'eager' : 'lazy'}
             decoding="async"
-            width={200}
-            height={200}
+            width={600}
+            height={600}
             className={className}
             onError={() => setFailed(true)}
           />
@@ -72,19 +73,34 @@ export default function ProductImage({
     );
   }
 
+  const isExternalRemote = mainSrc.startsWith('http://') || mainSrc.startsWith('https://');
+
   return (
-    <div className={wrapperClassName}>
-      <img
-        src={mainSrc}
-        alt={alt}
-        className={className}
-        loading={priority ? 'eager' : 'lazy'}
-        decoding="async"
-        fetchPriority={priority ? 'high' : undefined}
-        width={200}
-        height={200}
-        onError={() => setFailed(true)}
-      />
+    <div className={`relative ${wrapperClassName}`}>
+      {isExternalRemote ? (
+        <Image
+          src={mainSrc}
+          alt={alt}
+          priority={priority}
+          sizes="(max-width: 768px) 90vw, (max-width: 1200px) 50vw, 600px"
+          fill
+          decoding="async"
+          className={className}
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <img
+          src={mainSrc}
+          alt={alt}
+          className={className}
+          loading={priority ? 'eager' : 'lazy'}
+          decoding="async"
+          fetchPriority={priority ? 'high' : undefined}
+          width={600}
+          height={600}
+          onError={() => setFailed(true)}
+        />
+      )}
     </div>
   );
 }

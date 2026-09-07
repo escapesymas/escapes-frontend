@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ShoppingCart, Bell, Bike, ChevronLeft, AlertCircle, Ruler, Weight, Package, Check } from 'lucide-react';
 import { trackEvent } from '../../../lib/analytics';
 import { trackEvent as trackUmami } from '../../../lib/umami';
-import FrequentlyBoughtTogether from '../../../components/FrequentlyBoughtTogether';
+import dynamic from 'next/dynamic';
 import { Product, ProductCompatibility, ProductImage as ProductImageType } from '../../../types';
 import { fetchProductBySlug, refreshProductStock } from '../../../lib/api';
 import { useCart } from '../../../context/CartContext';
@@ -16,7 +16,16 @@ import Header from '../../../components/Header';
 import ProductImage from '../../../components/ProductImage';
 import ProductDetailSkeleton from '../../../components/ProductDetailSkeleton';
 import NotifyMeModal from '../../../components/NotifyMeModal';
-import ProductReviews from '../../../components/ProductReviews';
+
+const FrequentlyBoughtTogether = dynamic(
+  () => import('../../../components/FrequentlyBoughtTogether'),
+  { ssr: false, loading: () => <div className="h-24 my-6 bg-card/20 animate-pulse rounded border border-card-border" /> }
+);
+
+const ProductReviews = dynamic(
+  () => import('../../../components/ProductReviews'),
+  { ssr: false, loading: () => <div className="h-32 my-6 bg-card/20 animate-pulse rounded border border-card-border" /> }
+);
 
 export default function ProductDetailClient({ slug, initialProduct }: { slug: string; initialProduct?: Product | null }) {
   const router = useRouter();
