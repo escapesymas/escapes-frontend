@@ -70,12 +70,36 @@ const nextConfig: NextConfig = {
   skipProxyUrlNormalize: true,
   skipTrailingSlashRedirect: true,
   experimental: {
+    cpus: 1,
+    workerThreads: false,
     inlineCss: true,
   },
-  compiler: {
-    removeConsole: { exclude: ['error'] },
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.parallelism = 1;
+    }
+    return config;
   },
+  turbopack: {
+    root: process.cwd(),
+  },
+  compiler: process.env.NODE_ENV === 'production'
+    ? { removeConsole: { exclude: ['error'] } }
+    : {},
   output: 'standalone',
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'api.escapesymas.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'escapesymas.com',
+      },
+    ],
+  },
 };
 
 // Bundle analyzer — only wraps when ANALYZE=true so production builds stay lean.
