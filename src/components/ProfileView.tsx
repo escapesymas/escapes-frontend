@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { User, LogOut, Trophy, ShoppingBag, Bike, Edit3, Save, X, Trash2, ShieldCheck, Download, Camera, Loader2, MapPin, Key, Plus, Package } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiChangePassword, apiGetMyOrders, OrderSummary, OrderDetail } from '../lib/api';
-import { getApiUrl, formatOrderNumber } from '../lib/constants';
+import { formatOrderNumber, apiRequest } from '../lib/constants';
 import ProfileSkeleton from './ProfileSkeleton';
 import ProfileUnauthenticated from './ProfileUnauthenticated';
 
@@ -82,7 +82,7 @@ export default function ProfileView() {
       if (!user?.email) return;
       setOrdersLoading(true);
       try {
-        const ordersData = await apiGetMyOrders(user.email);
+        const ordersData = await apiGetMyOrders();
         setOrders(ordersData);
       } catch (e) {
         // handle error silently
@@ -316,10 +316,9 @@ export default function ProfileView() {
     setError('');
     const formData = new FormData();
     formData.append('avatar', file);
-    formData.append('userId', String(user.id));
 
     try {
-      const res = await fetch(getApiUrl('/upload/avatar'), {
+      const res = await apiRequest('/upload/avatar', {
         method: 'POST',
         body: formData
       });
@@ -520,7 +519,7 @@ export default function ProfileView() {
               type="file"
               ref={fileInputRef}
               onChange={handleImageUpload}
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp"
               className="hidden"
             />
             <button

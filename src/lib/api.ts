@@ -290,8 +290,8 @@ export async function apiGetOrders(userId: number): Promise<OrderSummary[]> {
   return res.json();
 }
 
-export async function apiGetMyOrders(userEmail: string): Promise<OrderDetail[]> {
-  const res = await apiFetch(`/orders/my-orders?userEmail=${encodeURIComponent(userEmail)}`);
+export async function apiGetMyOrders(): Promise<OrderDetail[]> {
+  const res = await apiFetch('/orders/my-orders');
   if (!res.ok) return [];
   return res.json();
 }
