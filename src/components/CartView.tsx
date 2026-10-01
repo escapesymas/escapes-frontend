@@ -9,7 +9,7 @@ import { trackEvent as trackUmami } from '../lib/umami';
 import { useCart, CartItem } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import Link from 'next/link';
-import { MARKETING_TIERS, PHONE_REGEX, POSTCODE_REGEX, getImageUrl, getApiUrl, formatOrderNumber } from '../lib/constants';
+import { MARKETING_TIERS, PHONE_REGEX, POSTCODE_REGEX, getImageUrl, formatOrderNumber, apiRequest } from '../lib/constants';
 import { Product } from '../types';
 import CartProgressBar from './CartProgressBar';
 import { Elements } from '@stripe/react-stripe-js';
@@ -237,7 +237,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
 
   const finalizeStripeOrder = async (orderId: string, paymentIntentId: string) => {
     try {
-      const finalizeRes = await fetch(getApiUrl('/orders/finalize'), {
+      const finalizeRes = await apiRequest('/orders/finalize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -272,7 +272,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
     const loadRecs = async () => {
       setLoadingRecs(true);
       try {
-        const res = await fetch(getApiUrl('/catalog/products?per_page=6'));
+        const res = await apiRequest('/catalog/products?per_page=6');
         if (res.ok) {
           const data = await res.json();
           // Filter out items already in the cart and select cheap ones
@@ -297,7 +297,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
     const upperCode = code.trim().toUpperCase();
 
     try {
-      const res = await fetch(getApiUrl('/coupons/validate'), {
+      const res = await apiRequest('/coupons/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: upperCode }),
@@ -335,7 +335,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
       if (!shippingData.postcode) return;
       setIsEstimatingShipping(true);
       try {
-        const res = await fetch(getApiUrl('/shipping-estimate'), {
+        const res = await apiRequest('/shipping-estimate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -428,11 +428,10 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
     }
 
     try {
-      const res = await fetch(getApiUrl('/orders/create'), {
+      const res = await apiRequest('/orders/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userEmail: user?.email || shippingData.email,
           cart: cart.map((item) => ({ id: item.id, quantity: item.quantity })),
           shippingData,
           billingData: billingDifferent ? billingData : null,
@@ -452,7 +451,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
         cartTotal
       );
 
-      const piRes = await fetch(getApiUrl('/create-payment-intent'), {
+      const piRes = await apiRequest('/create-payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

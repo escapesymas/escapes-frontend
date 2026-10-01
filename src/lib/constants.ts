@@ -69,6 +69,15 @@ export function getApiUrl(path: string): string {
   return `${baseUrl}${finalPath}`;
 }
 
+/**
+ * fetch contra el backend enviando siempre la cookie de sesión (eym_jwt).
+ * La API vive en otro origen (api.escapesymas.com), así que sin
+ * `credentials: 'include'` el backend trata la petición como anónima.
+ */
+export function apiRequest(path: string, init: RequestInit = {}): Promise<Response> {
+  return fetch(getApiUrl(path), { credentials: 'include', ...init });
+}
+
 export function formatOrderNumber(orderId: number | string | null | undefined, dateInput?: Date | string | null): string {
   if (orderId === null || orderId === undefined || orderId === '') return '';
   const strId = String(orderId).trim();

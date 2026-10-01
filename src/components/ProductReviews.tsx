@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Star, ThumbsUp, Loader2 } from 'lucide-react';
-import { getApiUrl, getImageUrl } from '../lib/constants';
+import { getImageUrl, apiRequest } from '../lib/constants';
 
 interface Review {
   id: number;
@@ -42,7 +42,7 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
 
   const fetchReviews = async () => {
     try {
-      const res = await fetch(getApiUrl(`/reviews/${productId}`));
+      const res = await apiRequest(`/reviews/${productId}`);
       if (res.ok) {
         const data = await res.json();
         setReviews(data.reviews);
@@ -61,7 +61,7 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
     setError('');
 
     try {
-      const res = await fetch(getApiUrl('/reviews'), {
+      const res = await apiRequest('/reviews', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

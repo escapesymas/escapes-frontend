@@ -18,13 +18,13 @@ import { fetchProducts } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { Product, ProductCompatibility } from '../types';
-import { parseBike, getApiUrl } from '../lib/constants';
+import { parseBike, apiRequest } from '../lib/constants';
 
 const BikeSelectorModal = dynamic(() => import('../components/BikeSelectorModal'), { ssr: false });
 
-async function syncGarageToServer(userEmail: string, garageList: string[]) {
+async function syncGarageToServer(garageList: string[]) {
   try {
-    const existingRes = await fetch(getApiUrl(`/garage?userEmail=${encodeURIComponent(userEmail)}`));
+    const existingRes = await apiRequest('/garage');
     const existing: Array<{ id: number; brand: string; model: string; year: string }> = existingRes.ok ? await existingRes.json() : [];
     const existingKeys = new Set(existing.map((v) => `${(v.brand || '').toLowerCase()}|${(v.model || '').toLowerCase()}|${v.year || ''}`));
 
@@ -33,10 +33,10 @@ async function syncGarageToServer(userEmail: string, garageList: string[]) {
       if (!parsed.brand || !parsed.model) continue;
       const key = `${parsed.brand.toLowerCase()}|${parsed.model.toLowerCase()}|${parsed.year}`;
       if (existingKeys.has(key)) continue;
-      await fetch(getApiUrl('/garage'), {
+      await apiRequest('/garage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userEmail, brand: parsed.brand, model: parsed.model, year: parsed.year || new Date().getFullYear() }),
+        body: JSON.stringify({ brand: parsed.brand, model: parsed.model, year: parsed.year || new Date().getFullYear() }),
       }).catch(() => {});
     }
   } catch (e) {
@@ -161,7 +161,7 @@ export default function Home() {
     if (isAuthenticated && user) {
       try {
         await syncGarage(newList);
-        syncGarageToServer(user.email, newList).catch(() => {});
+        syncGarageToServer(newList).catch(() => {});
       } catch (e) {
         console.error('Error syncing garage', e);
       }

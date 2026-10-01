@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
-import { getApiUrl } from '../lib/constants';
+import { apiRequest } from '../lib/constants';
 
 export interface CartItem {
   id: number;
@@ -104,9 +104,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       try {
         if (user) {
           // Logged-in user: server is the source of truth, replace local.
-          const res = await fetch(
-            getApiUrl(`/cart?userId=${encodeURIComponent(String(user.id))}&sessionToken=${encodeURIComponent(sessionToken)}`)
-          );
+          // El backend identifica al usuario por la cookie de sesión.
+          const res = await apiRequest(`/cart?sessionToken=${encodeURIComponent(sessionToken)}`);
           if (!cancelled && res.ok) {
             const data = await res.json();
             if (data.items && Array.isArray(data.items)) {
@@ -134,18 +133,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     const syncToDB = async () => {
       try {
-        await fetch(getApiUrl('/cart'), {
+        await apiRequest('/cart', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: user?.id ? String(user.id) : null,
-            sessionToken,
-            items: cart,
-            userEmail: user?.email || null,
-            userFirstName: user?.firstName || null,
-            userLastName: user?.lastName || null,
-            userUsername: user?.username || null,
-          }),
+          body: JSON.stringify({ sessionToken, items: cart }),
         });
       } catch (e) {
         console.error('Failed to sync cart to database:', e);
@@ -167,7 +158,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (hasNotified) return;
       hasNotified = true;
       try {
-        await fetch(getApiUrl('/auth?action=inactivity-notification'), {
+        await apiRequest('/auth?action=inactivity-notification', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: user?.id ? String(user.id) : null, sessionToken })
