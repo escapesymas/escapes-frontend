@@ -25,7 +25,7 @@ export default function CompatibleProducts({ selectedBike, onAddToCart, onNotify
   useEffect(() => {
     fetchCategories().then(cats => {
       const map: Record<number, { id: number; parentId: number; name: string; slug: string }> = {};
-      cats.forEach((c: any) => { map[c.id] = c; });
+      cats.forEach((c: { id: number; parentId: number; name: string; slug: string }) => { map[c.id] = c; });
       setCategoriesById(map);
     }).catch(() => {});
   }, []);

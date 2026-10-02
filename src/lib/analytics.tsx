@@ -6,12 +6,12 @@ const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID || '';
 
 declare global {
   interface Window {
-    dataLayer: any[];
-    gtag?: (...args: any[]) => void;
+    dataLayer: unknown[];
+    gtag?: (...args: unknown[]) => void;
   }
 }
 
-function pushEvent(event: string, payload: Record<string, any> = {}) {
+function pushEvent(event: string, payload: Record<string, unknown> = {}) {
   if (typeof window === 'undefined') return;
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push({ event, ...payload });

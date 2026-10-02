@@ -18,7 +18,7 @@ export default function TerminosPage() {
           <section>
             <h2 className="font-mono text-sm font-bold uppercase text-foreground mb-2">1. Información general</h2>
             <p>
-              Los presentes términos y condiciones de venta regulan el uso del sitio web <strong>escapesymas.com</strong> y la contratación de productos ofrecidos a través del mismo, en adelante "Escapes y Más", por parte de los usuarios que realicen pedidos o adquieran productos.
+              Los presentes términos y condiciones de venta regulan el uso del sitio web <strong>escapesymas.com</strong> y la contratación de productos ofrecidos a través del mismo, en adelante &ldquo;Escapes y Más&rdquo;, por parte de los usuarios que realicen pedidos o adquieran productos.
             </p>
             <p>
               Al realizar un pedido a través de este sitio web, el cliente acepta expresamente los presentes términos y condiciones. La contratación de los productos ofertados se regirá por las presentes condiciones generales de venta.

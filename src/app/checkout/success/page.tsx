@@ -88,10 +88,10 @@ function SuccessContent() {
           setStatus('error');
           setErrorMsg(data.error || 'Error al procesar el pago');
         }
-      } catch (err: any) {
+      } catch (err) {
         if (cancelled) return;
         setStatus('error');
-        setErrorMsg(err?.message || 'Error de red al procesar el pago');
+        setErrorMsg((err as Error)?.message || 'Error de red al procesar el pago');
       }
     })();
 

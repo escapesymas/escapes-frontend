@@ -129,7 +129,7 @@ function RelatedProductCard({ item: it, onAddToCart }: RelatedProductCardProps) 
               inStock: it.stock > 0,
               stock: it.stock,
               category: it.brand,
-            } as any, 1);
+            }, 1);
           }}
           className="mt-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] font-mono uppercase font-bold rounded bg-accent text-accent-foreground hover:opacity-90 transition-opacity"
           aria-label={`Añadir ${it.name} al carrito`}

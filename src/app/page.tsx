@@ -1,3 +1,4 @@
+import Link from 'next/link';
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps, @next/next/no-img-element, @typescript-eslint/no-unused-vars */
 'use client';
 
@@ -303,7 +304,7 @@ export default function Home() {
           <div className="mb-4 bg-accent/10 border border-accent/30 rounded-md p-3 flex items-center gap-3 animate-fade-in" role="status">
             <AlertCircle className="w-5 h-5 text-accent shrink-0" aria-hidden="true" />
             <p className="flex-1 text-xs font-mono text-foreground">
-              Tu carrito está vacío. <a href="/universales" className="text-accent hover:underline font-bold">Explora el catálogo</a> para añadir productos.
+              Tu carrito está vacío. <Link href="/universales" className="text-accent hover:underline font-bold">Explora el catálogo</Link> para añadir productos.
             </p>
             <button
               type="button"
@@ -325,7 +326,7 @@ export default function Home() {
                     <h3 className="text-sm font-mono font-bold uppercase text-foreground">
                       {searchCategoryName
                         ? <>Categoría: <span className="text-accent-text">{searchCategoryName}</span></>
-                        : <>Resultados para: <span className="text-accent-text">"{searchQuery}"</span></>
+                        : <>Resultados para: <span className="text-accent-text">&ldquo;{searchQuery}&rdquo;</span></>
                       }
                     </h3>
                     <p className="text-[10px] text-text-muted font-mono mt-1">
