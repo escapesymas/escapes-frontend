@@ -253,6 +253,11 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
               )}
               <span className="text-[11px] text-text-muted">IVA incl.</span>
             </div>
+            {product.onPromotion && product.usualPrice != null && product.usualPrice > price && (
+              <p className="-mt-2 text-xs text-accent-text font-semibold">
+                Precio de promoción · habitual {formatEuro(product.usualPrice)}
+              </p>
+            )}
 
             <p className="flex items-center gap-2 text-sm text-foreground">
               <span className={`w-2 h-2 rounded-full ${availability.dot}`} aria-hidden="true" />
