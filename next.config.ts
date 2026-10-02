@@ -46,7 +46,9 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: '/(.*)',
+        // Páginas: caché corta en el proxy. Excluye /_next/static (llevan hash y Next
+        // las sirve como immutable; esta regla las dejaba en max-age=0).
+        source: '/((?!_next/static|_next/image).*)',
         locale: false,
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=0, s-maxage=60, stale-while-revalidate=300' },

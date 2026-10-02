@@ -5,9 +5,10 @@ import ProductDetailClient from './ProductDetailClient';
 const API_BASE = process.env.API_URL || 'https://api.escapesymas.com';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://escapesymas.com';
 
+/** null = no se pudo consultar (se intenta en el cliente); { missing } = no existe (404). */
 async function fetchProductBySlug(slug: string) {
   try {
-    const res = await fetch(`${API_BASE}/api/catalog/product-by-slug/${slug}`, {
+    const res = await fetch(`${API_BASE}/api/catalog/product-by-slug/${encodeURIComponent(slug)}`, {
       next: { revalidate: 60 }
     });
     if (res.ok) {
@@ -24,6 +25,7 @@ async function fetchProductBySlug(slug: string) {
     if (resSkus.ok) {
       const items = await resSkus.json();
       if (Array.isArray(items) && items.length > 0) return items[0];
+      if (res.status === 404) return { missing: true };
     }
     return null;
   } catch {
@@ -34,9 +36,10 @@ async function fetchProductBySlug(slug: string) {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const product = await fetchProductBySlug(slug);
-  if (!product || product.redirectTo) {
+  if (!product || product.redirectTo || product.missing) {
     return {
       title: 'Producto no encontrado · Escapes y Más',
+      robots: { index: false, follow: true },
       description: 'Busca recambios y escapes para tu moto en Escapes y Más.',
     };
   }
@@ -73,5 +76,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const { slug } = await params;
   const product = await fetchProductBySlug(slug);
   if (product?.redirectTo) permanentRedirect(`/producto/${encodeURIComponent(product.redirectTo)}`);
+  // Producto inexistente: 404 de verdad (antes respondía 200 con "no encontrado").
+  if (product?.missing) notFound();
   return <ProductDetailClient slug={slug} initialProduct={product} />;
 }

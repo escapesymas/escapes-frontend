@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import type { Metadata } from 'next';
 import { redirect, notFound } from 'next/navigation';
 import CatalogClient from './CatalogClient';
 import { Category3, Product, FilterOptions } from '../../../types';
@@ -9,14 +10,44 @@ export const revalidate = 0;
 
 const API_BASE = process.env.API_URL || 'https://api.escapesymas.com';
 
-async function fetchJson(url: string) {
+/** Categorías vigentes (sin el árbol antiguo old-*, que no tiene productos). Caché 10 min. */
+async function fetchCategories(): Promise<Category3[]> {
   try {
-    const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) return null;
-    return res.json();
+    const res = await fetch(`${API_BASE}/api/catalog/categories`, { next: { revalidate: 600 } });
+    const all = res.ok ? ((await res.json()) as Category3[]) : [];
+    return all.filter((c) => !c.slug.startsWith('old-'));
   } catch {
-    return null;
+    return [];
   }
+}
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ segments?: string[] }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}): Promise<Metadata> {
+  const [{ segments = [] }, sp] = await Promise.all([params, searchParams]);
+  if (segments[0] === 'buscar') {
+    const q = decodeURIComponent(segments[1] || '');
+    return { title: `${q ? `“${q}” · ` : ''}Buscar — Escapes y Más`, robots: { index: false, follow: true } };
+  }
+  const cats = await fetchCategories();
+  const parent = segments[0] ? cats.find((c) => c.slug === segments[0]) : undefined;
+  const sub = parent && segments[1] ? cats.find((c) => c.slug === segments[1] && c.parentId === parent.id) : undefined;
+  const name = sub?.name || parent?.name;
+  const path = `/universales${segments.length ? `/${segments.join('/')}` : ''}`;
+  const filtered = Object.keys(sp).some((k) => k !== 'page');
+  return {
+    title: name ? `${name}${sub && parent ? ` · ${parent.name}` : ''} — Escapes y Más` : 'Catálogo de recambios y accesorios para moto — Escapes y Más',
+    description: name
+      ? `${name}${sub && parent ? ` (${parent.name})` : ''} para tu moto: precios con IVA, stock en tiempo real y envío rápido en Escapes y Más.`
+      : 'Recambios, accesorios, cascos, neumáticos y equipamiento para moto. Busca por modelo, talla o medida.',
+    alternates: { canonical: path },
+    // Las combinaciones de filtros no se indexan (contenido duplicado de la categoría).
+    ...(filtered ? { robots: { index: false, follow: true } } : {}),
+  };
 }
 
 function resolveIds(segments: string[], categories: Category3[]) {
@@ -58,8 +89,7 @@ export default async function CatalogPage({
     c.slug.includes('promocional') ||
     c.name.toLowerCase().includes('promocional');
 
-  const allCategories = await fetchJson(`${API_BASE}/api/catalog/categories`) as Category3[] || [];
-  const categories = allCategories.filter(c => !isPromoCategory(c));
+  const categories = (await fetchCategories()).filter(c => !isPromoCategory(c));
 
   // Pre-compute L1 (root) categories on the server so the client doesn't have to re-filter
   const initialMainCategories = categories
