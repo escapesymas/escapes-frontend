@@ -59,6 +59,8 @@ export interface Product {
   /** Características visibles para el cliente, ya con etiqueta en español */
   attributes: Record<string, string>;
   parentCategory?: string;
+  /** Ruta de categorías raíz → hoja (ficha de producto) */
+  categoryPath?: { name: string; slug: string }[];
   parentCategorySlug?: string;
   brand: string;
   barcode: string;
