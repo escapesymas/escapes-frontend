@@ -13,6 +13,7 @@ import { CATEGORY_HD_ICONS, IconHerramientas } from '../../../components/Categor
 import { useCart } from '../../../context/CartContext';
 import { Category3, Product, FilterOptions } from '../../../types';
 import CatalogFilters from '../../../components/catalog/CatalogFilters';
+import TyreFinder, { TYRE_KEYS, tyreSizeComplete } from '../../../components/catalog/TyreFinder';
 import {
   CatalogUrlState, SORT_OPTIONS, CatalogSort, parseCatalogUrl, toApiParams, attrsToParam, hasActiveFilters,
 } from '../../../lib/catalogParams';
@@ -33,6 +34,9 @@ interface Props {
 
 const isPromoCat = (c: { id: number; slug: string; name: string }) =>
   c.id === 1011 || c.id === 634 || c.slug.includes('promocional') || c.name.toLowerCase().includes('promocional');
+
+/** Subcategorías de Neumáticos que no son neumáticos: catálogo normal, sin buscador por medida. */
+const NOT_TYRES = /camara|mousse|accesorio|valvula|fondo/i;
 
 const chip = 'shrink-0 px-3 py-1.5 rounded-full text-xs border transition-colors whitespace-nowrap';
 const chipOn = 'bg-accent text-slate-950 border-accent font-semibold';
@@ -89,6 +93,11 @@ function CatalogContent({
     search: searchQuery || undefined,
   }), [subCategory, parentCategory, parentSlug, isSearch, searchQuery]);
 
+  // Neumáticos: buscador por medida; los productos aparecen al completarla.
+  const isTyreMode = parentCategory?.slug === 'neumaticos' && !(subCategory && NOT_TYRES.test(subCategory.slug));
+  const showProducts = !isTyreMode || tyreSizeComplete(urlState.attrs) || !!urlState.q;
+  const tyreExtras = isTyreMode ? subcategories.filter((c) => NOT_TYRES.test(c.slug)) : [];
+
   const activeFilterCount = urlState.brands.length + Object.values(urlState.attrs).reduce((n, v) => n + v.length, 0)
     + (urlState.inStock ? 1 : 0) + (urlState.minPrice != null || urlState.maxPrice != null ? 1 : 0);
 
@@ -113,6 +122,7 @@ function CatalogContent({
       isFirstLoad.current = false;
       if (initialProducts) return;
     }
+    if (!showProducts) return;
     const ctrl = new AbortController();
     (async () => {
       setIsLoading(true);
@@ -210,7 +220,7 @@ function CatalogContent({
 
   const removableChips: { key: string; label: string; remove: () => void }[] = [
     ...urlState.brands.map((b) => ({ key: `b:${b}`, label: b, remove: () => applyFilters({ brands: urlState.brands.filter((x) => x !== b) }) })),
-    ...Object.entries(urlState.attrs).flatMap(([k, vals]) => vals.map((v) => ({
+    ...Object.entries(urlState.attrs).filter(([k]) => !(isTyreMode && (TYRE_KEYS as readonly string[]).includes(k))).flatMap(([k, vals]) => vals.map((v) => ({
       key: `a:${k}:${v}`, label: `${k}: ${v}`, remove: () => applyFilters({ attrs: { ...urlState.attrs, [k]: vals.filter((x) => x !== v) } }),
     }))),
     ...(urlState.minPrice != null || urlState.maxPrice != null
@@ -253,10 +263,10 @@ function CatalogContent({
                 {isSearch ? <>Resultados para <span className="text-accent-text">{title}</span></> : title}
               </h1>
               {/* Cada tarjeta es un modelo; sus tallas y colores son referencias. */}
-              <span className="text-xs text-text-muted shrink-0 text-right leading-tight">
+              {showProducts && <span className="text-xs text-text-muted shrink-0 text-right leading-tight">
                 {total.toLocaleString('es-ES')} modelo{total !== 1 ? 's' : ''}
                 {refs > total && <><br />{refs.toLocaleString('es-ES')} referencias</>}
-              </span>
+              </span>}
             </div>
           </div>
 
@@ -281,7 +291,31 @@ function CatalogContent({
             </div>
           )}
 
-          {parentCategory && subcategories.length > 0 && (
+          {isTyreMode && (
+            <>
+              <TyreFinder
+                rootSlug={parentCategory!.slug}
+                typeSlug={subCategory?.slug || null}
+                categoryId={subCategory?.id || parentCategory!.id}
+                attrs={urlState.attrs}
+                queryString={searchParamsStr}
+                onChange={(attrs) => applyFilters({ attrs })}
+              />
+              {tyreExtras.length > 0 && (
+                <p className="text-xs text-text-muted -mt-1">
+                  ¿Buscas otra cosa?{' '}
+                  {tyreExtras.map((c, i) => (
+                    <React.Fragment key={c.id}>
+                      {i > 0 && ' · '}
+                      <Link href={`/universales/${parentCategory!.slug}/${c.slug}`} className="underline hover:text-foreground">{c.name}</Link>
+                    </React.Fragment>
+                  ))}
+                </p>
+              )}
+            </>
+          )}
+
+          {parentCategory && subcategories.length > 0 && !isTyreMode && (
             <div className="-mx-4 px-4 flex gap-2 overflow-x-auto no-scrollbar md:mx-0 md:px-0 md:flex-wrap">
               <Link href={`/universales/${parentCategory.slug}`} className={`${chip} ${!subCategory ? chipOn : chipOff}`}>Todo</Link>
               {subcategories.map((sub) => (
@@ -296,6 +330,7 @@ function CatalogContent({
             </div>
           )}
 
+          {showProducts && <>
           {/* Barra de herramientas: fija en móvil al hacer scroll */}
           <div className="sticky top-[57px] z-30 -mx-4 px-4 py-2 bg-background/95 backdrop-blur border-b border-card-border/60 flex items-center gap-2 md:static md:mx-0 md:px-0 md:border-0 md:bg-transparent">
             <button
@@ -422,6 +457,7 @@ function CatalogContent({
               )}
             </section>
           </div>
+          </>}
         </div>
       </main>
 
