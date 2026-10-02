@@ -173,8 +173,41 @@ export async function apiLogin(username: string, password: string): Promise<Sess
     body: JSON.stringify({ username, password }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Error al iniciar sesión');
+  if (!res.ok) throw new AuthError(data.error || 'Error al iniciar sesión', data.code, data.email);
   return normalizeSession(data);
+}
+
+/** Error de autenticación con código (p. ej. 'email_not_verified'). */
+export class AuthError extends Error {
+  constructor(message: string, public code?: string, public email?: string) {
+    super(message);
+  }
+}
+
+export type RegisterResult = { verificationRequired: true; email: string; emailSent: boolean };
+
+/** Confirma el email con el token del enlace e inicia sesión. */
+export async function apiVerifyEmail(token: string): Promise<SessionData> {
+  const res = await apiFetch(`/auth?action=verify-email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new AuthError(data.error || 'No se pudo confirmar el email', data.code);
+  return normalizeSession(data);
+}
+
+/** Pide otro enlace de confirmación (la respuesta no revela si el email existe). */
+export async function apiResendVerification(email: string): Promise<string> {
+  const res = await apiFetch(`/auth?action=resend-verification`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new AuthError(data.error || 'No se pudo reenviar el correo');
+  return data.message || 'Te hemos enviado un enlace nuevo.';
 }
 
 export async function apiRegister(
@@ -184,7 +217,7 @@ export async function apiRegister(
   firstName?: string,
   lastName?: string,
   phone?: string
-): Promise<SessionData> {
+): Promise<RegisterResult> {
   const res = await apiFetch(`/auth?action=register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -192,7 +225,7 @@ export async function apiRegister(
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Error al crear la cuenta');
-  return normalizeSession(data);
+  return { verificationRequired: true, email: data.email || email, emailSent: data.emailSent !== false };
 }
 
 export async function apiGetProfile(email?: string, userId?: number): Promise<UserProfile | null> {

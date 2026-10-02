@@ -4,7 +4,8 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { isValidRedirect } from '../../lib/constants';
-import { Bike, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AuthError, apiResendVerification } from '../../lib/api';
+import { Bike, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, MailCheck } from 'lucide-react';
 import Header from '../../components/Header';
 import BottomNav from '../../components/BottomNav';
 
@@ -36,6 +37,22 @@ function LoginPageContent() {
   // UI state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  // Email pendiente de confirmar (tras registrarse o al intentar entrar sin confirmar)
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const [resendMsg, setResendMsg] = useState('');
+
+  const handleResend = async () => {
+    if (!pendingEmail) return;
+    setResendState('sending');
+    try {
+      setResendMsg(await apiResendVerification(pendingEmail));
+      setResendState('sent');
+    } catch (err) {
+      setResendMsg(err instanceof Error ? err.message : 'No se pudo reenviar el correo.');
+      setResendState('idle');
+    }
+  };
   const [success, setSuccess] = useState('');
 
   // Si ya está autenticado, redirigir
@@ -59,6 +76,11 @@ function LoginPageContent() {
       setSuccess('¡Sesión iniciada!');
       setTimeout(() => router.replace(isValidRedirect(searchParams.get('from'))), 600);
     } catch (err) {
+      if (err instanceof AuthError && err.code === 'email_not_verified') {
+        setPendingEmail(err.email || loginUsername.trim());
+        setResendState('idle');
+        setResendMsg('');
+      }
       setError(err instanceof Error ? err.message : 'Error al iniciar sesión.');
     } finally {
       setIsSubmitting(false);
@@ -90,7 +112,7 @@ function LoginPageContent() {
     setIsSubmitting(true);
     setError('');
     try {
-      await register(
+      const r = await register(
         regUsername.trim(),
         regEmail.trim(),
         regPassword,
@@ -98,8 +120,14 @@ function LoginPageContent() {
         regLastName.trim(),
         regPhone.trim()
       );
-      setSuccess('¡Cuenta creada! Entrando...');
-      setTimeout(() => router.replace(isValidRedirect(searchParams.get('from'))), 600);
+      // La cuenta se activa al pulsar el enlace del correo (/verificar-email).
+      setTab('login');
+      setLoginUsername(r.email);
+      setLoginPassword('');
+      setPendingEmail(r.email);
+      setResendState('idle');
+      setResendMsg(r.emailSent ? '' : 'No hemos podido enviar el correo ahora mismo: pulsa «Reenviar correo» en unos minutos.');
+      setSuccess('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al crear la cuenta.');
     } finally {
@@ -111,6 +139,7 @@ function LoginPageContent() {
     setTab(t);
     setError('');
     setSuccess('');
+    setPendingEmail(null);
   };
 
   if (authLoading) {
@@ -172,6 +201,27 @@ function LoginPageContent() {
               <div className="mb-4 flex items-start gap-2 text-red-400 bg-red-950/30 border border-red-800/40 rounded px-3 py-2">
                 <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <p className="text-xs font-mono">{error}</p>
+              </div>
+            )}
+            {pendingEmail && (
+              <div className="mb-4 flex flex-col gap-2 text-foreground bg-accent/10 border border-accent/40 rounded px-3 py-3" role="status">
+                <div className="flex items-start gap-2">
+                  <MailCheck className="w-4 h-4 mt-0.5 flex-shrink-0 text-accent-text" />
+                  <p className="text-xs">
+                    Te hemos enviado un correo a <strong>{pendingEmail}</strong>. Pulsa el enlace para confirmar tu email y activar la cuenta (caduca en 24 h). Mira también en la carpeta de spam.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 pl-6">
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={resendState !== 'idle'}
+                    className="text-xs font-semibold underline disabled:no-underline disabled:opacity-60 cursor-pointer"
+                  >
+                    {resendState === 'sending' ? 'Enviando…' : resendState === 'sent' ? 'Correo reenviado' : 'Reenviar correo'}
+                  </button>
+                  {resendMsg && <span className="text-[11px] text-text-muted">{resendMsg}</span>}
+                </div>
               </div>
             )}
             {success && (
