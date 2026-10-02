@@ -1,6 +1,7 @@
 'use client';
+import Link from 'next/link';
 
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { Wrench, Loader2, ChevronLeft, ChevronRight, ChevronRight as ChevronIcon, SlidersHorizontal } from 'lucide-react';
 
 import Header from '../../../components/Header';
@@ -11,6 +12,10 @@ import NotifyMeModal from '../../../components/NotifyMeModal';
 import { CATEGORY_HD_ICONS, IconHerramientas } from '../../../components/CategoryCustomIcons';
 import { useCart } from '../../../context/CartContext';
 import { Category3, Product, FilterOptions } from '../../../types';
+import CatalogFilters from '../../../components/catalog/CatalogFilters';
+import {
+  CatalogUrlState, SORT_OPTIONS, CatalogSort, parseCatalogUrl, toApiParams, attrsToParam, hasActiveFilters,
+} from '../../../lib/catalogParams';
 
 const DEFAULT_ICON = IconHerramientas;
 const DEFAULT_COLOR = 'text-gray-500';
@@ -49,7 +54,8 @@ function CatalogContent({
   const [isProductsLoading, setIsProductsLoading] = useState(false);
 
   const categories = initialCategories;
-  const filterOptions = initialFilterOptions;
+  const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(initialFilterOptions);
+  const [isFuzzy, setIsFuzzy] = useState(false);
 
   const parentSlug = segments[0] || null;
   const subSlug = segments[1] || null;
@@ -74,26 +80,6 @@ function CatalogContent({
 
   const isCategoriesLoading = false;
 
-  const [sortBy, setSortBy] = useState<'default' | 'price_asc' | 'price_desc' | 'name_asc'>('default');
-
-  const sortedProducts = useMemo(() => {
-    const list = [...products];
-    if (sortBy === 'price_asc') {
-      return list.sort((a, b) => a.price - b.price);
-    }
-    if (sortBy === 'price_desc') {
-      return list.sort((a, b) => b.price - a.price);
-    }
-    if (sortBy === 'name_asc') {
-      return list.sort((a, b) => a.title.localeCompare(b.title));
-    }
-    return list;
-  }, [products, sortBy]);
-
-  const searchResults = sortedProducts;
-  const searchTotal = productsTotal;
-  const searchTotalPages = productsTotalPages;
-
   const [searchParamsStr, setSearchParamsStr] = useState<string>(initialSearchParamsStr);
 
   useEffect(() => {
@@ -105,32 +91,12 @@ function CatalogContent({
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const getSearchParam = (key: string): string => {
-    const p = new URLSearchParams(searchParamsStr);
-    return p.get(key) || '';
-  };
-
-  const maxPrice = (() => {
-    const fp = getSearchParam('maxPrice');
-    const parsed = fp ? Number(fp) : null;
-    return parsed !== null ? parsed : (filterOptions?.price_max ?? 1000);
-  })();
-
-  const [sliderPrice, setSliderPrice] = useState<number>(maxPrice);
-
-  useEffect(() => {
-    setSliderPrice(maxPrice);
-  }, [maxPrice]);
-
-  const searchPage = Number(getSearchParam('page')) || 1;
-  const selectedBrands: string[] = getSearchParam('brands') ? getSearchParam('brands').split(',').filter(Boolean) : [];
-  const inStockOnly = getSearchParam('inStock') === '1';
-  const selectedAttrs: Record<string, string> = (() => {
-    try {
-      const a = getSearchParam('attrs');
-      return a ? JSON.parse(decodeURIComponent(a)) : {};
-    } catch { return {}; }
-  })();
+  // Todo el estado de filtros/orden/página vive en la URL.
+  const urlState = useMemo(() => parseCatalogUrl(searchParamsStr), [searchParamsStr]);
+  const searchPage = urlState.page;
+  const searchResults = products;
+  const searchTotal = productsTotal;
+  const searchTotalPages = productsTotalPages;
 
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
 
@@ -139,35 +105,28 @@ function CatalogContent({
     if (active) setSelectedBike(active);
   }, []);
 
+  // Productos y facetas se piden con los mismos parámetros. La primera carga ya
+  // viene del servidor: no se repite en el cliente.
+  const isFirstLoad = useRef(true);
   useEffect(() => {
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false;
+      if (initialProducts) return;
+    }
     const ctrl = new AbortController();
-    const loadProducts = async () => {
+    const ctx = {
+      categoryId: selectedSubId || selectedParentId,
+      categorySlug: !selectedSubId && !selectedParentId && segments[0] && segments[0] !== 'buscar' ? segments[0] : null,
+      search: searchQuery || undefined,
+    };
+    const load = async () => {
       setIsProductsLoading(true);
       try {
-        const paramsObj: Record<string, string> = { universal: 'true', per_page: '12' };
-        const page = Number(getSearchParam('page')) || 1;
-        paramsObj.page = String(page);
-        const q = searchQuery || getSearchParam('q');
-        if (q) paramsObj.search = q;
-        const catId = selectedSubId || selectedParentId;
-        if (catId) {
-          paramsObj.category_id = String(catId);
-        } else {
-          const ps = segments[0];
-          if (ps && ps !== 'buscar') {
-            paramsObj.category_slug = ps;
-          }
-        }
-        const brands = getSearchParam('brands');
-        if (brands) paramsObj.brand = brands;
-        const maxPriceParam = getSearchParam('maxPrice');
-        if (maxPriceParam) paramsObj.max_price = maxPriceParam;
-        if (getSearchParam('inStock') === '1') paramsObj.in_stock = '1';
-        const attrs = getSearchParam('attrs');
-        if (attrs) paramsObj.attrs = attrs;
-
-        const qs = new URLSearchParams(paramsObj).toString();
-        const res = await fetch(`/api/catalog/products?${qs}`, { signal: ctrl.signal });
+        const [res, filtersRes] = await Promise.all([
+          fetch(`/api/catalog/products?${toApiParams(urlState, ctx)}`, { signal: ctrl.signal }),
+          fetch(`/api/catalog/filters?${toApiParams(urlState, ctx, true)}`, { signal: ctrl.signal }),
+        ]);
+        if (filtersRes.ok) setFilterOptions(await filtersRes.json());
         if (!res.ok) {
           setProducts([]);
           setProductsTotal(0);
@@ -176,19 +135,16 @@ function CatalogContent({
         }
         const data = await res.json();
         setProducts(Array.isArray(data) ? data : (data.products || []));
-        const total = Number(res.headers.get('X-WP-Total') || data.total || 0);
-        const totalPages = Number(res.headers.get('X-WP-TotalPages') || data.totalPages || 0);
-        setProductsTotal(total);
-        setProductsTotalPages(totalPages);
-      } catch (e: any) {
-        if (e?.name !== 'AbortError') {
-          console.warn('[CATALOG] Failed to load products:', e?.message || 'fetch error');
-        }
+        setProductsTotal(Number(res.headers.get('X-WP-Total') || 0));
+        setProductsTotalPages(Number(res.headers.get('X-WP-TotalPages') || 0));
+        setIsFuzzy(res.headers.get('X-Search-Fuzzy') === '1');
+      } catch (e) {
+        if ((e as Error)?.name !== 'AbortError') console.warn('[CATALOG] Error cargando productos:', (e as Error)?.message);
       } finally {
         setIsProductsLoading(false);
       }
     };
-    loadProducts();
+    load();
     return () => ctrl.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [segments.join('/'), selectedParentId, selectedSubId, searchQuery, searchParamsStr]);
@@ -198,33 +154,42 @@ function CatalogContent({
     return '/universales/' + segments.join('/');
   }, [segments]);
 
-  const updateFilters = (updates: Record<string, string | null | undefined | false>) => {
-    const params = new URLSearchParams(searchParamsStr);
-    Object.entries(updates).forEach(([key, value]) => {
-      if (value === null || value === undefined || value === '' || value === false) {
-        params.delete(key);
-      } else {
-        params.set(key, String(value));
-      }
-    });
+  const pushUrl = (params: URLSearchParams) => {
     const newQs = params.toString();
     setSearchParamsStr(newQs);
-    const newUrl = newQs ? `${basePath}?${newQs}` : basePath;
-    window.history.pushState({}, '', newUrl);
+    window.history.pushState({}, '', newQs ? `${basePath}?${newQs}` : basePath);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const filterHref = (updates: Record<string, string | null | undefined | false>): string => {
-    const params = new URLSearchParams(searchParamsStr);
-    Object.entries(updates).forEach(([key, value]) => {
-      if (value === null || value === undefined || value === '' || value === false) {
-        params.delete(key);
-      } else {
-        params.set(key, String(value));
-      }
-    });
-    const qs = params.toString();
-    return qs ? `${basePath}?${qs}` : basePath;
+  // Cambia filtros (siempre vuelve a la página 1).
+  const applyFilters = (updates: Partial<CatalogUrlState>) => {
+    const next = { ...urlState, ...updates };
+    const p = new URLSearchParams(searchParamsStr);
+    const setOrDelete = (k: string, v: string | null) => (v ? p.set(k, v) : p.delete(k));
+    setOrDelete('brands', next.brands.length ? next.brands.join(',') : null);
+    setOrDelete('minPrice', next.minPrice != null ? String(next.minPrice) : null);
+    setOrDelete('maxPrice', next.maxPrice != null ? String(next.maxPrice) : null);
+    setOrDelete('inStock', next.inStock ? '1' : null);
+    setOrDelete('attrs', attrsToParam(next.attrs));
+    setOrDelete('q', next.q || null);
+    p.delete('page');
+    pushUrl(p);
   };
+
+  const setSort = (sort: CatalogSort) => {
+    const p = new URLSearchParams(searchParamsStr);
+    if (sort === 'relevance') p.delete('sort'); else p.set('sort', sort);
+    p.delete('page');
+    pushUrl(p);
+  };
+
+  const setPage = (page: number) => {
+    const p = new URLSearchParams(searchParamsStr);
+    if (page <= 1) p.delete('page'); else p.set('page', String(page));
+    pushUrl(p);
+  };
+
+  const clearFilters = () => applyFilters({ brands: [], minPrice: null, maxPrice: null, inStock: false, attrs: {} });
 
   const isPromoCat = (id: number, slug: string, name: string) =>
     id === 1011 || id === 634 || slug.includes('promocional') || name.toLowerCase().includes('promocional');
@@ -266,7 +231,10 @@ function CatalogContent({
   };
 
   const handleSearch = (query: string) => {
-    if (!query) {
+    if (selectedParentId && !isSearch) {
+      // Dentro de una categoría se busca en ella, conservando los filtros.
+      applyFilters({ q: query.trim() });
+    } else if (!query) {
       navigate('/universales');
     } else {
       navigate(`/universales/buscar/${encodeURIComponent(query)}`);
@@ -303,14 +271,6 @@ function CatalogContent({
     setNotifyProduct(product);
   };
 
-  const attrsHref = (key: string, value: string): string => {
-    const next = { ...selectedAttrs };
-    if (next[key] === value) delete next[key];
-    else next[key] = value;
-    const attrsStr = Object.keys(next).length > 0 ? encodeURIComponent(JSON.stringify(next)) : null;
-    return filterHref({ attrs: attrsStr, page: '1' });
-  };
-
   return (
     <div className="bg-background text-foreground flex flex-col font-sans min-h-screen">
       <Header
@@ -343,9 +303,9 @@ function CatalogContent({
             </section>
 
             <div className="flex items-center flex-wrap gap-1 px-4 md:px-0 text-[10px] font-mono uppercase tracking-wider text-text-muted">
-              <a href="/universales" className="hover:text-foreground font-bold transition-colors cursor-pointer">
+              <Link href="/universales" className="hover:text-foreground font-bold transition-colors cursor-pointer">
                 Catálogo Universal
-              </a>
+              </Link>
               {(parentSlug || searchQuery) && <ChevronIcon className="w-3 h-3" />}
 
               {isSearch ? (
@@ -439,12 +399,12 @@ function CatalogContent({
                           </div>
                         </div>
 
-                        <a
+                        <Link
                           href="/universales"
                           className="px-3 py-1.5 border border-card-border rounded hover:bg-icon-box/40 text-[10px] font-mono font-bold uppercase text-text-muted hover:text-foreground cursor-pointer transition-all no-underline"
                         >
                           Ver todas las categorías
-                        </a>
+                        </Link>
                       </div>
 
                       {/* Subcategory Pills */}
@@ -490,12 +450,12 @@ function CatalogContent({
                           {searchTotal} producto{searchTotal !== 1 ? 's' : ''} encontrado{searchTotal !== 1 ? 's' : ''}
                         </p>
                       </div>
-                      <a
+                      <Link
                         href="/universales"
                         className="px-3 py-1.5 border border-card-border rounded hover:bg-icon-box/40 text-[10px] font-mono font-bold uppercase text-text-muted hover:text-foreground cursor-pointer transition-all no-underline"
                       >
                         Limpiar Búsqueda
-                      </a>
+                      </Link>
                     </div>
                   ) : null}
                 </div>
@@ -521,15 +481,14 @@ function CatalogContent({
                     </div>
                     <div className="flex items-center gap-3">
                       <select
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value as any)}
+                        value={urlState.sort}
+                        onChange={(e) => setSort(e.target.value as CatalogSort)}
                         className="px-2.5 py-1 text-[10px] font-mono bg-card border border-card-border rounded text-foreground cursor-pointer focus:outline-none focus:border-accent"
                         aria-label="Ordenar productos"
                       >
-                        <option value="default">Orden por defecto</option>
-                        <option value="price_asc">Precio: Menor a Mayor</option>
-                        <option value="price_desc">Precio: Mayor a Menor</option>
-                        <option value="name_asc">Nombre: A-Z</option>
+                        {SORT_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
                       </select>
 
                       <button
@@ -547,242 +506,50 @@ function CatalogContent({
                       <aside className={`w-full md:w-56 shrink-0 bg-card border border-card-border rounded-md p-4 flex-col gap-5 self-start shadow-sm md:flex ${
                         isSidebarOpenMobile ? 'flex' : 'hidden'
                       }`}>
-                        {/* Brands */}
-                        <div>
-                          <h4 className="text-[10px] font-mono font-bold uppercase tracking-wider text-text-muted mb-2 pb-1 border-b border-card-border/60">
-                            Marcas
-                          </h4>
-                          {!filterOptions || filterOptions.brands.length === 0 ? (
-                            <p className="text-[10px] font-mono text-text-muted">No hay marcas disponibles.</p>
-                          ) : (
-                            <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1 select-none no-scrollbar">
-                              {filterOptions.brands.map(brand => {
-                                const isChecked = selectedBrands.includes(brand);
-                                return (
-                                  <button
-                                    key={brand}
-                                    type="button"
-                                    onClick={() => {
-                                      const next = isChecked
-                                        ? selectedBrands.filter(b => b !== brand)
-                                        : [...selectedBrands, brand];
-                                      updateFilters({ brands: next.length > 0 ? next.join(',') : null, page: '1' });
-                                    }}
-                                    aria-label={`Filtrar por marca ${brand}${isChecked ? ' (activado)' : ''}`}
-                                    className="flex items-center gap-2 text-[10px] font-mono uppercase cursor-pointer hover:text-accent-text text-foreground no-underline min-h-[24px] text-left bg-transparent border-0 p-0 w-full"
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={isChecked}
-                                      readOnly
-                                      aria-label={`Filtrar por marca ${brand}`}
-                                      className="rounded border-card-border bg-select-bg text-accent focus:ring-0 focus:ring-offset-0 w-3 h-3 pointer-events-none"
-                                    />
-                                    <span className="truncate">{brand}</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Price */}
-                        <div>
-                          <h4 className="text-[10px] font-mono font-bold uppercase tracking-wider text-text-muted mb-2 pb-1 border-b border-card-border/60">
-                            Precio Máximo
-                          </h4>
-                          <div className="flex flex-col gap-2">
-                            <input
-                              type="range"
-                              min="0"
-                              max={filterOptions?.price_max ?? 1000}
-                              step={10}
-                              value={Math.min(sliderPrice, filterOptions?.price_max ?? 1000)}
-                              onChange={(e) => setSliderPrice(Number(e.target.value))}
-                              onMouseUp={() => updateFilters({ maxPrice: String(sliderPrice), page: '1' })}
-                              onTouchEnd={() => updateFilters({ maxPrice: String(sliderPrice), page: '1' })}
-                              className="w-full accent-accent bg-card-border h-1 rounded-lg cursor-pointer"
-                            />
-                            <div className="flex justify-between text-[9px] font-mono text-text-muted">
-                              <span>0 €</span>
-                              <span className="text-foreground font-bold">{sliderPrice} €</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* In Stock Toggle */}
-                        <div>
-                          <button
-                            type="button"
-                            onClick={() => updateFilters({ inStock: inStockOnly ? null : '1', page: '1' })}
-                            className="flex items-center gap-2 text-[10px] font-mono uppercase cursor-pointer hover:text-accent-text text-foreground no-underline bg-transparent border-0 p-0 text-left"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={inStockOnly}
-                              readOnly
-                              className="rounded border-card-border bg-select-bg text-accent focus:ring-0 focus:ring-offset-0 w-3 h-3 pointer-events-none"
-                            />
-                            Solo disponible
-                          </button>
-                        </div>
-
-                        {/* Dynamic Attribute Filters */}
-                        {filterOptions && Object.keys(filterOptions.attributes).length > 0 && (
-                          Object.entries(filterOptions.attributes).map(([key, values]) => (
-                            <div key={key}>
-                              <h4 className="text-[10px] font-mono font-bold uppercase tracking-wider text-text-muted mb-2 pb-1 border-b border-card-border/60">
-                                {key}
-                              </h4>
-                              {key === 'Talla' ? (
-                                <div className="flex flex-wrap gap-1.5">
-                                  {values.map(val => {
-                                    const isActive = selectedAttrs[key] === val;
-                                    return (
-                                      <button
-                                        key={val}
-                                        type="button"
-                                        onClick={() => {
-                                          const next = { ...selectedAttrs };
-                                          if (next[key] === val) delete next[key];
-                                          else next[key] = val;
-                                          const attrsStr = Object.keys(next).length > 0 ? encodeURIComponent(JSON.stringify(next)) : null;
-                                          updateFilters({ attrs: attrsStr, page: '1' });
-                                        }}
-                                        className={`px-2.5 py-1 text-[9px] font-mono font-bold uppercase rounded border transition-all cursor-pointer inline-block no-underline ${
-                                          isActive
-                                            ? 'bg-accent text-white border-accent'
-                                            : 'bg-card text-text-muted border-card-border hover:border-accent hover:text-foreground'
-                                        }`}
-                                      >
-                                        {val}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              ) : (
-                                <div className="flex flex-col gap-1.5 max-h-40 overflow-y-auto pr-1 no-scrollbar">
-                                  {values.map(val => {
-                                    const isActive = selectedAttrs[key] === val;
-                                    return (
-                                      <button
-                                        key={val}
-                                        type="button"
-                                        onClick={() => {
-                                          const next = { ...selectedAttrs };
-                                          if (next[key] === val) delete next[key];
-                                          else next[key] = val;
-                                          const attrsStr = Object.keys(next).length > 0 ? encodeURIComponent(JSON.stringify(next)) : null;
-                                          updateFilters({ attrs: attrsStr, page: '1' });
-                                        }}
-                                        className="flex items-center gap-2 text-[10px] font-mono uppercase cursor-pointer hover:text-accent-text text-foreground no-underline bg-transparent border-0 p-0 text-left w-full"
-                                      >
-                                        <input
-                                          type="checkbox"
-                                          checked={isActive}
-                                          readOnly
-                                          className="rounded border-card-border bg-select-bg text-accent focus:ring-0 focus:ring-offset-0 w-3 h-3 pointer-events-none"
-                                        />
-                                        <span className="truncate">{key === 'Color' ? (
-                                          <span className="flex items-center gap-1.5">
-                                            <span className="inline-block w-3 h-3 rounded-full border border-card-border" style={{
-                                              backgroundColor: val.toLowerCase() === 'negro' ? '#000' :
-                                                val.toLowerCase() === 'blanco' ? '#fff' :
-                                                val.toLowerCase() === 'rojo' ? '#ef4444' :
-                                                val.toLowerCase() === 'azul' ? '#3b82f6' :
-                                                val.toLowerCase() === 'verde' ? '#22c55e' :
-                                                val.toLowerCase() === 'gris' ? '#9ca3af' :
-                                                val.toLowerCase() === 'plateado' || val.toLowerCase() === 'plata' ? '#c0c0c0' :
-                                                val.toLowerCase() === 'amarillo' ? '#eab308' :
-                                                val.toLowerCase() === 'naranja' ? '#f97316' :
-                                                val.toLowerCase() === 'marron' || val.toLowerCase() === 'marrón' ? '#92400e' :
-                                                val.toLowerCase() === 'violeta' || val.toLowerCase() === 'morado' ? '#a855f7' :
-                                                val.toLowerCase() === 'rosa' ? '#ec4899' :
-                                                'transparent'
-                                            }} />
-                                            {val}
-                                          </span>
-                                        ) : val}</span>
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          ))
-                        )}
-
-                        {/* Clear Filters */}
-                        {(selectedBrands.length > 0 || inStockOnly || Object.keys(selectedAttrs).length > 0 || maxPrice < (filterOptions?.price_max ?? 1000)) && (
-                          <button
-                            type="button"
-                            onClick={() => updateFilters({ brands: null, maxPrice: null, inStock: null, attrs: null, page: '1' })}
-                            className="w-full py-1 text-[9px] font-mono font-bold uppercase tracking-wider text-center text-text-muted hover:text-foreground border border-dashed border-card-border rounded block bg-transparent cursor-pointer"
-                          >
-                            Limpiar Filtros
-                          </button>
-                        )}
+                        <CatalogFilters
+                          key={searchParamsStr}
+                          options={filterOptions}
+                          state={urlState}
+                          onChange={applyFilters}
+                          onClear={clearFilters}
+                        />
                       </aside>
 
                       <div className="flex-1 flex flex-col gap-5">
-                        {/* Active Filter Tags */}
-                        {(selectedBrands.length > 0 || inStockOnly || maxPrice < (filterOptions?.price_max ?? 1000) || Object.keys(selectedAttrs).length > 0) && (
+                        {/* Filtros activos */}
+                        {hasActiveFilters(urlState) && (
                           <div className="flex flex-wrap items-center gap-2 bg-card border border-card-border/80 rounded-md p-2.5 text-[10px] font-mono">
                             <span className="text-text-muted uppercase font-bold text-[9px] mr-1">Filtros:</span>
-                            {selectedBrands.map(b => (
-                              <button
-                                key={b}
-                                type="button"
-                                onClick={() => {
-                                  const next = selectedBrands.filter(x => x !== b);
-                                  updateFilters({ brands: next.length > 0 ? next.join(',') : null, page: '1' });
-                                }}
-                                className="px-2 py-0.5 rounded bg-accent/10 border border-accent/30 text-accent font-bold flex items-center gap-1 hover:bg-accent/20 transition-all cursor-pointer"
-                              >
-                                Marca: {b} <span className="text-[11px]">×</span>
+                            {urlState.brands.map((b) => (
+                              <button key={b} type="button" className="px-2 py-0.5 rounded bg-accent/10 border border-accent/30 text-accent-text font-bold flex items-center gap-1 hover:bg-accent/20 transition-all cursor-pointer" onClick={() => applyFilters({ brands: urlState.brands.filter((x) => x !== b) })}>
+                                {b} <span aria-hidden="true">×</span>
                               </button>
                             ))}
-                            {inStockOnly && (
-                              <button
-                                type="button"
-                                onClick={() => updateFilters({ inStock: null, page: '1' })}
-                                className="px-2 py-0.5 rounded bg-accent/10 border border-accent/30 text-accent font-bold flex items-center gap-1 hover:bg-accent/20 transition-all cursor-pointer"
-                              >
-                                En Stock <span className="text-[11px]">×</span>
+                            {Object.entries(urlState.attrs).flatMap(([k, vals]) => vals.map((v) => (
+                              <button key={`${k}:${v}`} type="button" className="px-2 py-0.5 rounded bg-accent/10 border border-accent/30 text-accent-text font-bold flex items-center gap-1 hover:bg-accent/20 transition-all cursor-pointer" onClick={() => applyFilters({ attrs: { ...urlState.attrs, [k]: vals.filter((x) => x !== v) } })}>
+                                {k}: {v} <span aria-hidden="true">×</span>
+                              </button>
+                            )))}
+                            {(urlState.minPrice != null || urlState.maxPrice != null) && (
+                              <button type="button" className="px-2 py-0.5 rounded bg-accent/10 border border-accent/30 text-accent-text font-bold flex items-center gap-1 hover:bg-accent/20 transition-all cursor-pointer" onClick={() => applyFilters({ minPrice: null, maxPrice: null })}>
+                                {urlState.minPrice ?? 0}–{urlState.maxPrice ?? '∞'} € <span aria-hidden="true">×</span>
                               </button>
                             )}
-                            {maxPrice < (filterOptions?.price_max ?? 1000) && (
-                              <button
-                                type="button"
-                                onClick={() => updateFilters({ maxPrice: null, page: '1' })}
-                                className="px-2 py-0.5 rounded bg-accent/10 border border-accent/30 text-accent font-bold flex items-center gap-1 hover:bg-accent/20 transition-all cursor-pointer"
-                              >
-                                ≤ {maxPrice}€ <span className="text-[11px]">×</span>
+                            {urlState.inStock && (
+                              <button type="button" className="px-2 py-0.5 rounded bg-accent/10 border border-accent/30 text-accent-text font-bold flex items-center gap-1 hover:bg-accent/20 transition-all cursor-pointer" onClick={() => applyFilters({ inStock: false })}>
+                                Con stock <span aria-hidden="true">×</span>
                               </button>
                             )}
-                            {Object.entries(selectedAttrs).map(([k, v]) => (
-                              <button
-                                key={k}
-                                type="button"
-                                onClick={() => {
-                                  const next = { ...selectedAttrs };
-                                  delete next[k];
-                                  const attrsStr = Object.keys(next).length > 0 ? encodeURIComponent(JSON.stringify(next)) : null;
-                                  updateFilters({ attrs: attrsStr, page: '1' });
-                                }}
-                                className="px-2 py-0.5 rounded bg-accent/10 border border-accent/30 text-accent font-bold flex items-center gap-1 hover:bg-accent/20 transition-all cursor-pointer"
-                              >
-                                {k}: {v} <span className="text-[11px]">×</span>
-                              </button>
-                            ))}
-                            <button
-                              type="button"
-                              onClick={() => updateFilters({ brands: null, maxPrice: null, inStock: null, attrs: null, page: '1' })}
-                              className="text-[9px] uppercase font-bold text-text-muted hover:text-foreground underline ml-auto cursor-pointer bg-transparent border-0 p-0"
-                            >
+                            <button type="button" onClick={clearFilters} className="text-[9px] uppercase font-bold text-text-muted hover:text-foreground underline ml-auto cursor-pointer bg-transparent border-0 p-0">
                               Limpiar todo
                             </button>
                           </div>
+                        )}
+
+                        {isFuzzy && !isProductsLoading && searchResults.length > 0 && (
+                          <p className="text-[10px] font-mono text-text-muted bg-card border border-card-border rounded-md px-3 py-2">
+                            No hay coincidencias exactas: mostrando resultados parecidos.
+                          </p>
                         )}
 
                         {isProductsLoading ? (
@@ -800,7 +567,9 @@ function CatalogContent({
                           <div className="flex flex-col items-center justify-center py-16 gap-3 border border-dashed border-card-border rounded-md">
                             <Wrench className="w-10 h-10 text-text-muted" />
                             <p className="text-xs text-text-muted font-mono text-center px-4">
-                              No se encontraron productos que coincidan con los filtros seleccionados.
+                              {hasActiveFilters(urlState)
+                                ? 'Ningún producto cumple todos los filtros. Prueba a quitar alguno.'
+                                : 'No hemos encontrado productos. Prueba con otras palabras o con la referencia del fabricante.'}
                             </p>
                           </div>
                         ) : (
@@ -822,7 +591,7 @@ function CatalogContent({
                                 {searchPage > 1 ? (
                                   <button
                                     type="button"
-                                    onClick={() => updateFilters({ page: String(Math.max(1, searchPage - 1)) })}
+                                    onClick={() => setPage(searchPage - 1)}
                                     className="p-2 border border-card-border rounded bg-card hover:bg-icon-box/40 transition-all cursor-pointer inline-block"
                                   >
                                     <ChevronLeft className="w-4 h-4" />
@@ -838,7 +607,7 @@ function CatalogContent({
                                 {searchPage < searchTotalPages ? (
                                   <button
                                     type="button"
-                                    onClick={() => updateFilters({ page: String(searchPage + 1) })}
+                                    onClick={() => setPage(searchPage + 1)}
                                     className="p-2 border border-card-border rounded bg-card hover:bg-icon-box/40 transition-all cursor-pointer inline-block"
                                   >
                                     <ChevronRight className="w-4 h-4" />

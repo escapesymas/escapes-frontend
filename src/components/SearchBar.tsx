@@ -6,6 +6,8 @@ interface SearchSuggestion {
   name: string;
   slug: string;
   category?: string;
+  /** Sugerencia de marca (lanza una búsqueda) en vez de producto (abre la ficha) */
+  isBrand?: boolean;
 }
 
 interface SearchBarProps {
@@ -56,8 +58,11 @@ export default function SearchBar({
       try {
         const response = await fetch(`/api/search/suggestions?q=${encodeURIComponent(query)}&limit=5`);
         if (response.ok) {
-          const data = await response.json();
-          setSuggestions(data.results || []);
+          // El backend devuelve { products, suggestions (marcas) }.
+          const data: { products?: { name: string; slug: string; brand?: string; price?: number }[]; suggestions?: string[] } = await response.json();
+          const brandItems: SearchSuggestion[] = (data.suggestions || []).map((b) => ({ name: b, slug: `marca:${b}`, category: 'Marca', isBrand: true }));
+          const productItems: SearchSuggestion[] = (data.products || []).map((p) => ({ name: p.name, slug: p.slug, category: p.brand }));
+          setSuggestions([...brandItems, ...productItems]);
         }
       } catch {
         setSuggestions([]);
@@ -91,6 +96,9 @@ export default function SearchBar({
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setSelectedIndex(prev => Math.max(prev - 1, -1));
+    } else if (e.key === 'Enter' && selectedIndex >= 0 && suggestions[selectedIndex] && !suggestions[selectedIndex].isBrand) {
+      e.preventDefault();
+      window.location.href = `/producto/${suggestions[selectedIndex].slug}`;
     } else if (e.key === 'Enter' && selectedIndex >= 0 && suggestions[selectedIndex]) {
       e.preventDefault();
       setQuery(suggestions[selectedIndex].name);
@@ -163,8 +171,13 @@ export default function SearchBar({
                 key={suggestion.slug}
                 type="button"
                 onClick={() => {
-                  setQuery(suggestion.name);
                   setShowSuggestions(false);
+                  if (!suggestion.isBrand) {
+                    trackUmami('search_suggestion_click', { query, product: suggestion.slug });
+                    window.location.href = `/producto/${suggestion.slug}`;
+                    return;
+                  }
+                  setQuery(suggestion.name);
                   trackUmami('search', { query: suggestion.name });
                   onSearch(suggestion.name);
                 }}

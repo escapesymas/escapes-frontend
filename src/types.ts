@@ -75,6 +75,37 @@ export interface Product {
   ratingCount: number;
   source: string;
   isCompatible?: boolean;
+  /** Ejes de esta variante, p. ej. { Talla: 'XL', Color: 'Negro' } */
+  variantOptions?: Record<string, string> | null;
+  /** Modelo al que pertenece (listados: resumen; ficha: variantes completas) */
+  family?: ProductFamily | null;
+}
+
+export interface ProductVariant {
+  id: number;
+  sku: string;
+  slug: string;
+  name: string;
+  price: number;
+  salePrice: number | null;
+  stock: number;
+  inStock: boolean;
+  image: string;
+  options: Record<string, string>;
+}
+
+export interface ProductFamily {
+  code: string;
+  // Listados
+  variantCount?: number;
+  priceMin?: number;
+  priceMax?: number;
+  inStock?: boolean;
+  options?: Record<string, string[]>;
+  // Ficha de producto
+  title?: string;
+  axes?: Record<string, string[]>;
+  variants?: ProductVariant[];
 }
 
 export interface Category3 {
@@ -97,6 +128,9 @@ export interface FilterOptions {
   price_min: number;
   price_max: number;
   attributes: Record<string, string[]>;
+  brand_counts?: { value: string; count: number }[];
+  attribute_counts?: Record<string, { value: string; count: number }[]>;
+  fuzzy?: boolean;
 }
 
 export interface SelectedBike {
