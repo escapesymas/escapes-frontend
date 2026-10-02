@@ -29,6 +29,8 @@ export default function ProductCard({ product, onAddToCart, onNotifyMe, priority
   const isOutOfStock = hasVariants ? family!.inStock === false : (product.inStock === false || product.stock === 0);
   const price = effectivePrice(product);
   const onSale = price < product.price;
+  // product.price es el PVP; el ahorro se muestra frente a él.
+  const savingPct = onSale ? Math.round((1 - price / product.price) * 100) : 0;
   const fromPrice = hasVariants && family!.priceMin != null && family!.priceMax != null && family!.priceMin < family!.priceMax;
   const summary = hasVariants ? optionsSummary(family!.options) : '';
   const productSlug = product.slug || product.sku || String(product.id);
@@ -177,7 +179,10 @@ export default function ProductCard({ product, onAddToCart, onNotifyMe, priority
               {formatEuro(fromPrice ? family!.priceMin! : price)}
             </span>
             {onSale && !fromPrice && (
-              <span className="ml-1.5 text-[10px] font-mono text-text-muted line-through">{formatEuro(product.price)}</span>
+              <span className="ml-1.5 text-[10px] font-mono text-text-muted whitespace-nowrap">
+                PVP <span className="line-through">{formatEuro(product.price)}</span>
+                {savingPct >= 1 && <span className="ml-1 px-1 rounded bg-accent/20 text-accent-text font-bold">−{savingPct} %</span>}
+              </span>
             )}
           </div>
 

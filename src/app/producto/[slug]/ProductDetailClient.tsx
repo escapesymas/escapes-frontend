@@ -129,6 +129,8 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
   const inStock = product.inStock && product.stock > 0;
   const price = effectivePrice(product);
   const onSale = price < product.price;
+  // product.price es el PVP de Bihr; price, lo que paga el cliente (DTO1 o promoción).
+  const savingPct = onSale ? Math.round((1 - price / product.price) * 100) : 0;
   const images: ProductImageType[] = product.images?.length ? product.images : [{ src: product.image, alt: product.name } as ProductImageType];
   const description = product.description?.trim() || '';
   const specs: [string, string][] = [
@@ -220,7 +222,7 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
             alt={product.name}
             badge={!inStock ? (
               <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-red-600 text-white">Agotado</span>
-            ) : onSale ? (
+            ) : onSale && product.onPromotion ? (
               <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-accent text-slate-950">Oferta</span>
             ) : undefined}
           />
@@ -241,7 +243,14 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
 
             <div className="flex items-baseline gap-2">
               <span className="text-2xl md:text-3xl font-bold font-mono text-foreground">{formatEuro(price)}</span>
-              {onSale && <span className="text-sm text-text-muted line-through font-mono">{formatEuro(product.price)}</span>}
+              {onSale && (
+                <span className="text-sm text-text-muted font-mono whitespace-nowrap">
+                  PVP <span className="line-through">{formatEuro(product.price)}</span>
+                  {savingPct >= 1 && (
+                    <span className="ml-1.5 px-1.5 py-0.5 rounded bg-accent text-slate-950 text-xs font-bold">−{savingPct} %</span>
+                  )}
+                </span>
+              )}
               <span className="text-[11px] text-text-muted">IVA incl.</span>
             </div>
 
