@@ -47,15 +47,9 @@ export const metadata: Metadata = {
     'apple-mobile-web-app-status-bar-style': 'black-translucent',
   },
   icons: {
-    icon: [
-      { url: '/favicon.ico', sizes: 'any' },
-      { url: '/icon-192.svg', type: 'image/svg+xml' },
-      { url: '/icon-512.svg', type: 'image/svg+xml' },
-    ],
+    icon: '/favicon.ico',
     shortcut: '/favicon.ico',
-    apple: [
-      { url: '/icon-192.svg', sizes: '192x192' },
-    ],
+    apple: '/favicon.ico',
   },
 };
 

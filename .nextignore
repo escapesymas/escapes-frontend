@@ -1,0 +1,8 @@
+node_modules
+.next/cache/webpack
+.git
+.eslintcache
+tsconfig.tsbuildinfo
+local_db
+*.log
+public/uploads
