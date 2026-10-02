@@ -486,7 +486,7 @@ export default function Home() {
                       />
                     </section>
                     <section className="mt-8">
-                      <BrandCarousel brand="AKRAPOVIC" title="Akrapovič — Escapes" onAddToCart={handleAddToCart} onNotifyMe={handleNotifyMe} />
+                      <BrandCarousel brand="IXIL" title="IXIL — Escapes" onAddToCart={handleAddToCart} onNotifyMe={handleNotifyMe} />
                     </section>
                   </>
                 ) : (

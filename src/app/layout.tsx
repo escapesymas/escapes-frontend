@@ -41,7 +41,8 @@ export const metadata: Metadata = {
     description: "Encuentra escapes homologados y recambios oficiales para tu moto.",
     images: ['https://escapesymas.com/icon-512.svg'],
   },
-  alternates: { canonical: 'https://escapesymas.com' },
+  // Sin canonical global: lo heredaban todas las páginas sin el suyo (catálogo,
+  // legales…) y le decía a Google que todas eran copias de la home.
   other: {
     'mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-status-bar-style': 'black-translucent',

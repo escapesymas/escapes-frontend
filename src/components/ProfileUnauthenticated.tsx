@@ -14,7 +14,7 @@ export default function ProfileUnauthenticated() {
         <div>
           <h2 className="text-lg font-mono font-bold text-foreground uppercase italic">Tu Perfil</h2>
           <p className="text-[10px] text-text-muted font-mono mt-2 leading-relaxed max-w-xs">
-            Inicia sesión para ver tu garaje, historial de pedidos y participar en el Paddock.
+            Inicia sesión para ver tu garaje y tu historial de pedidos.
           </p>
         </div>
         <div className="flex gap-3">

@@ -91,7 +91,7 @@ export function getWebSiteSchema(): WebSiteSchema {
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: `${BASE_URL}/buscar?q={search_term_string}`,
+        urlTemplate: `${BASE_URL}/universales/buscar/{search_term_string}`,
       },
       'query-input': 'required name=search_term_string',
     },
@@ -108,13 +108,13 @@ export function getProductSchema(product: {
   url?: string;
   inStock?: boolean;
 }): ProductSchema {
-  const imageUrls = product.image ? [`${BASE_URL}${product.image}`] : [];
-  
+  const imageUrls = product.image ? [/^https?:\/\//.test(product.image) ? product.image : `${BASE_URL}${product.image}`] : [];
+
   return {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.name,
-    description: product.description || `${product.name} - Escape homologado para moto`,
+    description: plainText(product.description || '').slice(0, 5000) || `${product.name} en Escapes y Más`,
     image: imageUrls,
     sku: product.sku || '',
     brand: {
@@ -131,6 +131,21 @@ export function getProductSchema(product: {
       url: product.url || BASE_URL,
     },
   };
+}
+
+/** Texto plano para JSON-LD: sin etiquetas ni entidades HTML (&aacute; → á). */
+function plainText(html: string): string {
+  const named: Record<string, string> = {
+    nbsp: ' ', amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", ordm: 'º', ordf: 'ª', deg: '°', euro: '€',
+    aacute: 'á', eacute: 'é', iacute: 'í', oacute: 'ó', uacute: 'ú', ntilde: 'ñ', uuml: 'ü', iexcl: '¡', iquest: '¿',
+    Aacute: 'Á', Eacute: 'É', Iacute: 'Í', Oacute: 'Ó', Uacute: 'Ú', Ntilde: 'Ñ', Uuml: 'Ü',
+  };
+  return html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
+    .replace(/&([a-zA-Z]+);/g, (m, n) => named[n] ?? m)
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 export function getBreadcrumbSchema(items: { name: string; url: string }[]): BreadcrumbSchema {

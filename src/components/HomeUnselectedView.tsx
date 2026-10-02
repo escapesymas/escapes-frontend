@@ -205,10 +205,10 @@ export default function HomeUnselectedView({
         ScrollReveal={ScrollReveal}
       />
 
-      {/* ── 4. CARRUSEL SECUNDARIO AKRAPOVIC ── */}
+      {/* ── 4. CARRUSEL SECUNDARIO DE ESCAPES ── */}
       <section className="pt-4">
         <ScrollReveal animation="fade-up" delay={150}>
-          <BrandCarousel brand="AKRAPOVIC" title="Akrapovič — Escapes Destacados" onAddToCart={onAddToCart} onNotifyMe={onNotifyMe} />
+          <BrandCarousel brand="IXIL" title="IXIL — Escapes destacados" onAddToCart={onAddToCart} onNotifyMe={onNotifyMe} />
         </ScrollReveal>
       </section>
     </div>

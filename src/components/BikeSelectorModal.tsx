@@ -12,6 +12,11 @@ interface BikeSelectorModalProps {
 
 const API_BASE = '/api';
 
+const POPULAR_BRANDS = ['HONDA', 'YAMAHA', 'KAWASAKI', 'SUZUKI', 'BMW', 'KTM', 'DUCATI', 'TRIUMPH', 'HARLEY DAVIDSON', 'APRILIA', 'PIAGGIO', 'KYMCO'];
+
+const normalizeForSearch = (s: string) =>
+  s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+
 export default function BikeSelectorModal({
   isOpen,
   onClose,
@@ -35,12 +40,14 @@ export default function BikeSelectorModal({
   const safeModels = Array.isArray(models) ? models : [];
   const safeYears = Array.isArray(years) ? years : [];
 
-  const filteredBrands = safeBrands.filter((b) =>
-    typeof b === 'string' && b.toLowerCase().includes(searchFilter.toLowerCase())
-  );
-  const filteredModels = safeModels.filter((m) =>
-    typeof m === 'string' && m.toLowerCase().includes(searchFilter.toLowerCase())
-  );
+  // "mt07", "mt 07" y "MT-07" deben encontrar lo mismo.
+  const wanted = normalizeForSearch(searchFilter);
+  const matchesFilter = (v: unknown) => typeof v === 'string' && normalizeForSearch(v).includes(wanted);
+  const filteredBrands = safeBrands.filter(matchesFilter);
+  // Sin filtro, las marcas más habituales primero.
+  const popularBrands = wanted ? [] : POPULAR_BRANDS.filter((b) => filteredBrands.includes(b));
+  const otherBrands = filteredBrands.filter((b) => !popularBrands.includes(b));
+  const filteredModels = safeModels.filter(matchesFilter);
 
   // Cargar marcas iniciales al abrir
   useEffect(() => {
@@ -219,18 +226,27 @@ export default function BikeSelectorModal({
                       className="w-full pl-9 pr-3 py-2 bg-select-bg border border-card-border rounded text-xs font-mono text-foreground placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {filteredBrands.map((brand) => (
-                      <button
-                        key={brand}
-                        onClick={() => handleBrandSelect(brand)}
-                        className="p-4 text-left border border-card-border hover:border-accent hover:bg-select-bg rounded font-mono text-xs font-bold text-foreground transition-all flex items-center justify-between"
-                      >
-                        <span>{brand}</span>
-                        <ChevronRight className="w-4 h-4 text-text-muted" />
-                      </button>
-                    ))}
-                  </div>
+                  {[popularBrands, otherBrands].map((group, gi) => group.length > 0 && (
+                    <React.Fragment key={gi}>
+                      {popularBrands.length > 0 && (
+                        <h5 className="text-[9px] font-mono font-bold text-text-muted uppercase tracking-wider mt-1">
+                          {gi === 0 ? 'Más buscadas' : 'Todas las marcas'}
+                        </h5>
+                      )}
+                      <div className="grid grid-cols-2 gap-2">
+                        {group.map((brand) => (
+                          <button
+                            key={brand}
+                            onClick={() => handleBrandSelect(brand)}
+                            className="p-4 text-left border border-card-border hover:border-accent hover:bg-select-bg rounded font-mono text-xs font-bold text-foreground transition-all flex items-center justify-between"
+                          >
+                            <span>{brand}</span>
+                            <ChevronRight className="w-4 h-4 text-text-muted" />
+                          </button>
+                        ))}
+                      </div>
+                    </React.Fragment>
+                  ))}
                 </div>
               )}
 
@@ -257,7 +273,7 @@ export default function BikeSelectorModal({
                       className="w-full pl-9 pr-3 py-2 bg-select-bg border border-card-border rounded text-xs font-mono text-foreground placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
                     />
                   </div>
-                  <div className="flex flex-col gap-1 max-h-[350px] overflow-y-auto pr-1">
+                  <div className="flex flex-col gap-1">
                     {filteredModels.map((model) => (
                       <button
                         key={model}
@@ -313,7 +329,7 @@ export default function BikeSelectorModal({
         {/* Footer info */}
         <div className="p-4 border-t border-card-border bg-select-bg text-center rounded-b-xl md:rounded-b-none">
           <p className="text-[9px] font-mono text-text-muted uppercase">
-            Compatible con escapes Akrapovič, Mivv, Yoshimura y LeoVince
+            Recambios y accesorios compatibles con tu modelo y año
           </p>
         </div>
       </div>
