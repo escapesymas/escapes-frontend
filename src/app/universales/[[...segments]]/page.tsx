@@ -108,6 +108,7 @@ export default async function CatalogPage({
   const initialSearchMeta = {
     fuzzy: prodRes?.headers.get('X-Search-Fuzzy') === '1',
     corrected: corrHeader ? decodeURIComponent(corrHeader) : null,
+    refs: Number(prodRes?.headers.get('X-Total-Refs') || 0) || undefined,
   };
 
   if (prodRes?.ok) {

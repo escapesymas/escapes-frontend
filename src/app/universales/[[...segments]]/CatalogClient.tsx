@@ -28,7 +28,7 @@ interface Props {
   initialSearchTotal: number;
   initialSearchTotalPages: number;
   initialSearchParamsStr: string;
-  initialSearchMeta?: { fuzzy: boolean; corrected: string | null };
+  initialSearchMeta?: { fuzzy: boolean; corrected: string | null; refs?: number };
 }
 
 const isPromoCat = (c: { id: number; slug: string; name: string }) =>
@@ -53,6 +53,7 @@ function CatalogContent({
   const [selectedBike, setSelectedBike] = useState('');
   const [products, setProducts] = useState<Product[]>(initialProducts?.products || []);
   const [total, setTotal] = useState(initialSearchTotal);
+  const [refs, setRefs] = useState(initialSearchMeta?.refs ?? initialSearchTotal);
   const [totalPages, setTotalPages] = useState(initialSearchTotalPages);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -128,6 +129,7 @@ function CatalogContent({
         const data = await res.json();
         setProducts(Array.isArray(data) ? data : []);
         setTotal(Number(res.headers.get('X-WP-Total') || 0));
+        setRefs(Number(res.headers.get('X-Total-Refs') || res.headers.get('X-WP-Total') || 0));
         setTotalPages(Number(res.headers.get('X-WP-TotalPages') || 0));
         setLoadedPage(urlState.page);
         setIsFuzzy(res.headers.get('X-Search-Fuzzy') === '1');
@@ -250,7 +252,11 @@ function CatalogContent({
               <h1 className="text-xl md:text-2xl font-semibold leading-tight">
                 {isSearch ? <>Resultados para <span className="text-accent-text">{title}</span></> : title}
               </h1>
-              <span className="text-xs text-text-muted shrink-0">{total.toLocaleString('es-ES')} producto{total !== 1 ? 's' : ''}</span>
+              {/* Cada tarjeta es un modelo; sus tallas y colores son referencias. */}
+              <span className="text-xs text-text-muted shrink-0 text-right leading-tight">
+                {total.toLocaleString('es-ES')} modelo{total !== 1 ? 's' : ''}
+                {refs > total && <><br />{refs.toLocaleString('es-ES')} referencias</>}
+              </span>
             </div>
           </div>
 
@@ -436,7 +442,7 @@ function CatalogContent({
               className="w-full py-3 rounded-md bg-accent text-slate-950 font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer"
             >
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              Ver {total.toLocaleString('es-ES')} producto{total !== 1 ? 's' : ''}
+              Ver {total.toLocaleString('es-ES')} modelo{total !== 1 ? 's' : ''}
             </button>
           </div>
         </div>
