@@ -1,8 +1,11 @@
+/** Tramos por importe: deben coincidir con ORDER_TIERS del backend
+ *  (lib/order-pricing.ts). Los importes que se muestran en el carrito vienen de
+ *  /api/cart/quote; esto solo sirve para la barra de progreso y el primer pintado. */
 export const MARKETING_TIERS = {
-  BRONCE: { min: 0, discount: 0, label: 'BRONCE', shipping: 6.99 },
-  PLATA: { min: 200, discount: 10, label: 'PLATA', shipping: 4.99 },
-  ORO: { min: 500, discount: 15, label: 'ORO', shipping: 2.99 },
-  PLATINO: { min: 1000, discount: 20, label: 'PLATINO', shipping: 0 },
+  BRONCE: { min: 0, discount: 0, label: 'BRONCE', shipping: 14.99 },
+  PLATA: { min: 150, discount: 5, label: 'PLATA', shipping: 0 },
+  ORO: { min: 300, discount: 10, label: 'ORO', shipping: 0 },
+  PLATINO: { min: 500, discount: 15, label: 'PLATINO', shipping: 0 },
 } as const;
 
 const DANGEROUS_TAGS = /<\/?(script|iframe|object|embed|form|input|button|select|textarea|style|link|meta|base|svg|math|●)/gi;
