@@ -388,15 +388,49 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
 
   const isFreeShippingPromo = appliedPromo && promoType === 'free_shipping';
   const qualifiesFor150FreeShipping = afterTierSubtotal >= 150 || subtotal >= 150;
-  const isFreeShipping = isFreeShippingPromo || qualifiesFor150FreeShipping || currentTier.shipping === 0 || dynamicShippingCost === 0;
+  const localFreeShipping = isFreeShippingPromo || qualifiesFor150FreeShipping || currentTier.shipping === 0 || dynamicShippingCost === 0;
 
   // Use dynamic shipping cost if available, otherwise fallback to tier logic for initial render
-  const baseShippingCost = isFreeShipping ? 0 : (dynamicShippingCost !== null ? dynamicShippingCost : currentTier.shipping);
-  const shippingCost = baseShippingCost;
+  const baseShippingCost = localFreeShipping ? 0 : (dynamicShippingCost !== null ? dynamicShippingCost : currentTier.shipping);
 
-  const discountAmount = tierDiscount + promoDiscount;
+  // Importes del servidor (/api/cart/quote): el mismo cálculo que cobra el pedido,
+  // con el impuesto del código postal (Canarias, Ceuta y Melilla sin IVA). El
+  // cálculo local de arriba solo se usa hasta que llega la respuesta.
+  const quoteKey = JSON.stringify([cart.map((i) => [i.id, i.quantity]), shippingData.postcode, appliedPromo]);
+  const [serverQuote, setServerQuote] = useState<{ key: string; subtotal: number; discount: number; shipping: number; total: number; taxRate: number; taxLabel: string } | null>(null);
+  useEffect(() => {
+    if (cart.length === 0) return;
+    const ctrl = new AbortController();
+    const t = setTimeout(async () => {
+      try {
+        const res = await apiRequest('/cart/quote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cart: cart.map((i) => ({ id: i.id, quantity: i.quantity })),
+            country: 'ES',
+            postcode: /^\d{5}$/.test(shippingData.postcode || '') ? shippingData.postcode : '',
+            promoCode: appliedPromo,
+          }),
+          signal: ctrl.signal,
+        });
+        if (res.ok) setServerQuote({ key: quoteKey, ...(await res.json()) });
+      } catch { /* se queda el cálculo local */ }
+    }, 300);
+    return () => { clearTimeout(t); ctrl.abort(); };
+  }, [quoteKey]);
+  const quote = serverQuote && serverQuote.key === quoteKey ? serverQuote : null;
+
+  const isFreeShipping = quote ? quote.shipping === 0 : localFreeShipping;
+  const shippingCost = quote ? quote.shipping : baseShippingCost;
+  const discountAmount = quote ? quote.discount : tierDiscount + promoDiscount;
   const effectiveShippingCostInCart = (!isCheckingOut && !isFreeShipping) ? 0 : shippingCost;
-  const total = Math.max(0, subtotal + effectiveShippingCostInCart - discountAmount);
+  const total = quote
+    ? Math.max(0, quote.total - (effectiveShippingCostInCart === 0 ? quote.shipping : 0))
+    : Math.max(0, subtotal + effectiveShippingCostInCart - discountAmount);
+  // Sin IVA (Canarias, Ceuta, Melilla): el subtotal se muestra ya sin IVA.
+  const taxExempt = !!quote && quote.taxRate === 0;
+  const shownSubtotal = quote ? quote.subtotal : subtotal;
   const itemsCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   const formatPrice = (amount: number) => {
@@ -769,8 +803,8 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
               <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-foreground mb-4">Resumen de Pago</h3>
               <div className="bg-background border border-card-border rounded p-4 text-xs font-mono text-text-muted space-y-2">
                 <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span className="text-foreground">{formatPrice(subtotal)}</span>
+                  <span>Subtotal{taxExempt ? ' (sin IVA)' : ''}:</span>
+                  <span className="text-foreground">{formatPrice(shownSubtotal)}</span>
                 </div>
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-accent-text">
@@ -784,10 +818,21 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
                     {isEstimatingShipping ? 'Calculando...' : (shippingCost === 0 ? 'GRATIS' : formatPrice(shippingCost))}
                   </span>
                 </div>
+                {taxExempt && (
+                  <div className="flex justify-between text-accent-text">
+                    <span>{quote?.taxLabel}</span>
+                    <span>0,00 €</span>
+                  </div>
+                )}
                 <div className="flex justify-between border-t border-card-border pt-2 text-sm font-bold text-foreground">
-                  <span>Total a Pagar (IVA inc.):</span>
+                  <span>Total a Pagar{taxExempt ? '' : ' (IVA inc.)'}:</span>
                   <span className="text-accent-text">{formatPrice(total)}</span>
                 </div>
+                {taxExempt && (
+                  <p className="text-[10px] leading-snug">
+                    Envío fuera del territorio del IVA: el IGIC / IPSI y los gastos de despacho de aduana corren a cargo del destinatario.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -1015,7 +1060,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
                 <div className="space-y-4 mb-6">
                   <div className="flex justify-between text-text-muted text-xs font-bold uppercase tracking-wider">
                     <span>Subtotal</span>
-                    <span className="text-foreground font-mono">{formatPrice(subtotal)}</span>
+                    <span className="text-foreground font-mono">{formatPrice(shownSubtotal)}</span>
                   </div>
 
                   {tierDiscount > 0 && (
