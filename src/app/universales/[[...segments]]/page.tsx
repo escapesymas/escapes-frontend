@@ -104,6 +104,12 @@ export default async function CatalogPage({
     fetch(`${API_BASE}/api/catalog/filters?${toApiParams(urlState, ctx, true)}`, { cache: 'no-store' }).catch(() => null),
   ]);
 
+  const corrHeader = prodRes?.headers.get('X-Search-Corrected');
+  const initialSearchMeta = {
+    fuzzy: prodRes?.headers.get('X-Search-Fuzzy') === '1',
+    corrected: corrHeader ? decodeURIComponent(corrHeader) : null,
+  };
+
   if (prodRes?.ok) {
     const total = Number(prodRes.headers.get('X-WP-Total') || 0);
     const totalPages = Number(prodRes.headers.get('X-WP-TotalPages') || 0);
@@ -137,6 +143,7 @@ export default async function CatalogPage({
         initialSearchTotal={products?.total || 0}
         initialSearchTotalPages={products?.totalPages || 0}
         initialSearchParamsStr={initialSearchParamsStr}
+        initialSearchMeta={initialSearchMeta}
       />
     </Suspense>
   );

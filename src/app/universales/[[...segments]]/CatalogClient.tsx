@@ -36,6 +36,7 @@ function CatalogContent({
   initialSearchTotal,
   initialSearchTotalPages,
   initialSearchParamsStr,
+  initialSearchMeta,
 }: {
   segments: string[];
   initialCategories: Category3[];
@@ -45,6 +46,7 @@ function CatalogContent({
   initialSearchTotal: number;
   initialSearchTotalPages: number;
   initialSearchParamsStr: string;
+  initialSearchMeta?: { fuzzy: boolean; corrected: string | null };
 }) {
   const { addToCart } = useCart();
   const [selectedBike, setSelectedBike] = useState<string>('');
@@ -55,7 +57,8 @@ function CatalogContent({
 
   const categories = initialCategories;
   const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(initialFilterOptions);
-  const [isFuzzy, setIsFuzzy] = useState(false);
+  const [isFuzzy, setIsFuzzy] = useState(initialSearchMeta?.fuzzy || false);
+  const [correctedQuery, setCorrectedQuery] = useState<string | null>(initialSearchMeta?.corrected || null);
 
   const parentSlug = segments[0] || null;
   const subSlug = segments[1] || null;
@@ -138,6 +141,8 @@ function CatalogContent({
         setProductsTotal(Number(res.headers.get('X-WP-Total') || 0));
         setProductsTotalPages(Number(res.headers.get('X-WP-TotalPages') || 0));
         setIsFuzzy(res.headers.get('X-Search-Fuzzy') === '1');
+        const corr = res.headers.get('X-Search-Corrected');
+        setCorrectedQuery(corr ? decodeURIComponent(corr) : null);
       } catch (e) {
         if ((e as Error)?.name !== 'AbortError') console.warn('[CATALOG] Error cargando productos:', (e as Error)?.message);
       } finally {
@@ -546,7 +551,12 @@ function CatalogContent({
                           </div>
                         )}
 
-                        {isFuzzy && !isProductsLoading && searchResults.length > 0 && (
+                        {correctedQuery && !isProductsLoading && searchResults.length > 0 && (
+                          <p className="text-[10px] font-mono text-text-muted bg-card border border-card-border rounded-md px-3 py-2">
+                            Mostrando resultados para <strong className="text-foreground">&ldquo;{correctedQuery}&rdquo;</strong>
+                          </p>
+                        )}
+                        {isFuzzy && !correctedQuery && !isProductsLoading && searchResults.length > 0 && (
                           <p className="text-[10px] font-mono text-text-muted bg-card border border-card-border rounded-md px-3 py-2">
                             No hay coincidencias exactas: mostrando resultados parecidos.
                           </p>
@@ -655,6 +665,7 @@ export default function CatalogClient({
   initialSearchTotal,
   initialSearchTotalPages,
   initialSearchParamsStr,
+  initialSearchMeta,
 }: {
   segments: string[];
   initialCategories: Category3[];
@@ -664,6 +675,7 @@ export default function CatalogClient({
   initialSearchTotal: number;
   initialSearchTotalPages: number;
   initialSearchParamsStr: string;
+  initialSearchMeta?: { fuzzy: boolean; corrected: string | null };
 }) {
   return (
     <Suspense fallback={
@@ -683,6 +695,7 @@ export default function CatalogClient({
         initialSearchTotal={initialSearchTotal}
         initialSearchTotalPages={initialSearchTotalPages}
         initialSearchParamsStr={initialSearchParamsStr}
+        initialSearchMeta={initialSearchMeta}
       />
     </Suspense>
   );

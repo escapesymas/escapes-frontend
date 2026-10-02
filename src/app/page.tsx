@@ -1,6 +1,6 @@
-import Link from 'next/link';
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps, @next/next/no-img-element, @typescript-eslint/no-unused-vars */
 'use client';
+import Link from 'next/link';
 
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
