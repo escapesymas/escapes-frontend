@@ -46,7 +46,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   const price = (product.salePrice ?? product.price).toFixed(2);
   const description = `${product.brand} ${product.name} a ${price}€. ${product.inStock ? 'En stock, envío 24-72h.' : 'Sin stock, vuelve pronto.'} Compatible con tu moto. Garantía oficial.`;
-  const imageUrl = product.image || `${SITE_URL}/icon-512.svg`;
+  const imageUrl = product.image || `${SITE_URL}/og-image.png`;
   const pageUrl = `${SITE_URL}/producto/${slug}`;
 
   return {
