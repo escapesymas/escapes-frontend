@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import ProductDetailClient from './ProductDetailClient';
 
 const API_BASE = process.env.API_URL || 'https://api.escapesymas.com';
@@ -12,6 +12,8 @@ async function fetchProductBySlug(slug: string) {
     });
     if (res.ok) {
       const data = await res.json();
+      // Ficha duplicada archivada: el backend indica la canónica.
+      if (data && data.redirectTo) return { redirectTo: String(data.redirectTo) };
       if (data && data.id) return data;
     }
 
@@ -32,7 +34,7 @@ async function fetchProductBySlug(slug: string) {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const product = await fetchProductBySlug(slug);
-  if (!product) {
+  if (!product || product.redirectTo) {
     return {
       title: 'Producto no encontrado · Escapes y Más',
       description: 'Busca recambios y escapes para tu moto en Escapes y Más.',
@@ -70,5 +72,6 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const product = await fetchProductBySlug(slug);
+  if (product?.redirectTo) permanentRedirect(`/producto/${encodeURIComponent(product.redirectTo)}`);
   return <ProductDetailClient slug={slug} initialProduct={product} />;
 }

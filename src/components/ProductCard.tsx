@@ -7,6 +7,7 @@ import ProductImage from './ProductImage';
 import RatingStars from './RatingStars';
 import { useHoverPrefetch } from '../lib/useHoverPrefetch';
 import { trackEvent as trackUmami } from '../lib/umami';
+import { effectivePrice, formatEuro, optionsSummary } from '../lib/pricing';
 
 interface ProductCardProps {
   product: Product;
@@ -22,7 +23,14 @@ function pickImage(img: ProductImageType) {
 }
 
 export default function ProductCard({ product, onAddToCart, onNotifyMe, priority = false }: ProductCardProps) {
-  const isOutOfStock = product.inStock === false || product.stock === 0;
+  const family = product.family;
+  const hasVariants = !!family && (family.variantCount || 0) > 1;
+  // Un modelo con variantes está agotado solo si lo están todas.
+  const isOutOfStock = hasVariants ? family!.inStock === false : (product.inStock === false || product.stock === 0);
+  const price = effectivePrice(product);
+  const onSale = price < product.price;
+  const fromPrice = hasVariants && family!.priceMin != null && family!.priceMax != null && family!.priceMin < family!.priceMax;
+  const summary = hasVariants ? optionsSummary(family!.options) : '';
   const productSlug = product.slug || product.sku || String(product.id);
   // Hover-triggered prefetch so clicking a card feels instant without
   // burning prefetches on every card the user scrolls past.
@@ -146,9 +154,13 @@ export default function ProductCard({ product, onAddToCart, onNotifyMe, priority
           <h4 className="font-mono text-xs font-bold uppercase text-foreground line-clamp-1 mb-1">
             {product.name}
           </h4>
-          <p className="text-[10px] text-text-muted line-clamp-2 leading-relaxed">
-            {product.shortDescription}
-          </p>
+          {summary ? (
+            <p className="text-[10px] font-mono text-text-muted line-clamp-1">{summary}</p>
+          ) : (
+            <p className="text-[10px] text-text-muted line-clamp-2 leading-relaxed">
+              {product.shortDescription}
+            </p>
+          )}
           {product.supplier_code && (
             <p className="text-[9px] font-mono text-text-muted mt-2">
               Ref: <span className="text-foreground/80">{product.supplier_code}</span>
@@ -158,13 +170,23 @@ export default function ProductCard({ product, onAddToCart, onNotifyMe, priority
 
         <div className="pt-3 border-t border-card-border/60 flex items-center justify-between">
           <div>
-            <span className="text-[8px] font-mono text-text-muted uppercase font-bold block">Precio</span>
-            <span className="text-sm font-mono font-bold text-foreground">
-              {product.price.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €
+            <span className="text-[8px] font-mono text-text-muted uppercase font-bold block">
+              {fromPrice ? 'Desde' : 'Precio'}
             </span>
+            <span className="text-sm font-mono font-bold text-foreground">
+              {formatEuro(fromPrice ? family!.priceMin! : price)}
+            </span>
+            {onSale && !fromPrice && (
+              <span className="ml-1.5 text-[10px] font-mono text-text-muted line-through">{formatEuro(product.price)}</span>
+            )}
           </div>
 
-          {isOutOfStock ? (
+          {hasVariants && !isOutOfStock ? (
+            // Con tallas/colores no se puede añadir sin elegir: la tarjeta lleva a la ficha.
+            <span className="px-2.5 py-1.5 rounded bg-accent text-slate-950 text-[10px] font-mono font-bold uppercase shadow-sm">
+              Elegir
+            </span>
+          ) : isOutOfStock ? (
             <button
               onClick={(e) => {
                 e.preventDefault();

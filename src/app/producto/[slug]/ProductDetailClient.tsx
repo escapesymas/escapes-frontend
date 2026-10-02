@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -16,6 +17,9 @@ import Header from '../../../components/Header';
 import ProductImage from '../../../components/ProductImage';
 import ProductDetailSkeleton from '../../../components/ProductDetailSkeleton';
 import NotifyMeModal from '../../../components/NotifyMeModal';
+import VariantSelector from '../../../components/VariantSelector';
+import { effectivePrice, formatEuro } from '../../../lib/pricing';
+import { ProductVariant } from '../../../types';
 
 const FrequentlyBoughtTogether = dynamic(
   () => import('../../../components/FrequentlyBoughtTogether'),
@@ -137,6 +141,20 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
     };
   }, [product?.id]);
 
+  // Cambiar de variante (talla/color) sin recargar: misma ficha, otro SKU.
+  const selectVariant = async (variant: ProductVariant) => {
+    try {
+      const next = await fetchProductBySlug(variant.slug);
+      if (next && next.id) {
+        setProduct(next);
+        setImgIdx(0);
+        window.history.replaceState(null, '', `/producto/${variant.slug}`);
+      }
+    } catch {
+      router.push(`/producto/${variant.slug}`);
+    }
+  };
+
   if (isLoading) {
     return <ProductDetailSkeleton />;
   }
@@ -146,9 +164,9 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
       <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center gap-4">
         <AlertCircle className="w-10 h-10 text-text-muted" />
         <p className="text-sm font-mono text-text-muted">{error || 'Producto no encontrado'}</p>
-        <a href="/" className="text-xs font-mono font-bold text-accent-text hover:underline">
+        <Link href="/" className="text-xs font-mono font-bold text-accent-text hover:underline">
           Volver a la tienda
-        </a>
+        </Link>
       </div>
     );
   }
@@ -205,7 +223,7 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
 
       <div className="bg-card border-b border-card-border/60 py-2.5 shadow-sm mb-6 md:mb-8">
         <div className="max-w-7xl mx-auto px-4 flex items-center gap-1.5 font-mono text-[9px] text-text-muted uppercase tracking-wider">
-          <a href="/" className="hover:text-foreground transition-colors font-bold">Inicio</a>
+          <Link href="/" className="hover:text-foreground transition-colors font-bold">Inicio</Link>
           <span>/</span>
           <span className="text-text-muted">{product.category || 'General'}</span>
           <span>/</span>
@@ -274,11 +292,11 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
 
             <div className="flex items-baseline gap-3">
               <span className="font-mono text-2xl font-bold text-foreground">
-                {product.price.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €
+                {formatEuro(effectivePrice(product))}
               </span>
-              {product.salePrice && (
+              {effectivePrice(product) < product.price && (
                 <span className="font-mono text-sm text-text-muted line-through">
-                  {product.regularPrice.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €
+                  {formatEuro(product.price)}
                 </span>
               )}
             </div>
@@ -304,6 +322,10 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
                 </span>
               )}
             </div>
+
+            {product.family && (
+              <VariantSelector family={product.family} current={product.variantOptions || {}} onSelect={selectVariant} />
+            )}
 
             {hasDescription && (
               <div className="border border-card-border rounded-md p-4 bg-card">
@@ -441,11 +463,11 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
 
             <div className="flex items-baseline gap-3">
               <span className="font-mono text-3xl font-bold text-foreground">
-                {product.price.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €
+                {formatEuro(effectivePrice(product))}
               </span>
-              {product.salePrice && (
+              {effectivePrice(product) < product.price && (
                 <span className="font-mono text-sm text-text-muted line-through">
-                  {product.regularPrice.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €
+                  {formatEuro(product.price)}
                 </span>
               )}
             </div>
@@ -471,6 +493,10 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
                 </span>
               )}
             </div>
+
+            {product.family && (
+              <VariantSelector family={product.family} current={product.variantOptions || {}} onSelect={selectVariant} />
+            )}
 
             {hasDescription && (
               <div className="border border-card-border rounded-md p-4 bg-card">

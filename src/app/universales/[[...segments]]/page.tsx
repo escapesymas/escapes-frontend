@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { redirect, notFound } from 'next/navigation';
 import CatalogClient from './CatalogClient';
 import { Category3, Product, FilterOptions } from '../../../types';
+import { parseCatalogUrl, toApiParams } from '../../../lib/catalogParams';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -88,56 +89,33 @@ export default async function CatalogPage({
 
   const { parentId, subId, searchTerm, isSearch } = resolveIds(segs, categories);
 
-  const page = Number(sp.page) || 1;
-  const brands = typeof sp.brands === 'string' ? sp.brands : '';
-  const maxPrice = typeof sp.maxPrice === 'string' ? sp.maxPrice : '';
-  const inStock = sp.inStock === '1';
-  const attrsRaw = typeof sp.attrs === 'string' ? sp.attrs : '';
+  // Mismo estado y mismos parámetros que usa el cliente (lib/catalogParams).
+  const spParams = new URLSearchParams();
+  for (const [k, v] of Object.entries(sp)) if (typeof v === 'string') spParams.set(k, v);
+  const urlState = parseCatalogUrl(spParams);
+  const catId = subId || parentId || null;
+  const ctx = { categoryId: catId, search: searchTerm || undefined };
 
   let products: { products: Product[]; total: number; totalPages: number } | null = null;
   let filterOptions: FilterOptions | null = null;
 
-  const catId = subId || parentId || undefined;
-  const q = searchTerm || (typeof sp.q === 'string' ? sp.q : '');
-
-  const paramsObj: Record<string, string> = { universal: 'true', per_page: '12', page: String(page) };
-  if (q) paramsObj.search = q;
-  if (catId) paramsObj.category_id = String(catId);
-  if (brands) paramsObj.brand = brands;
-  if (maxPrice) paramsObj.max_price = maxPrice;
-  if (inStock) paramsObj.in_stock = '1';
-  if (attrsRaw) paramsObj.attrs = attrsRaw;
-
-  const qs = new URLSearchParams(paramsObj).toString();
-  const filterQs = new URLSearchParams({
-    universal: 'true',
-    ...(catId ? { category_id: String(catId) } : {}),
-    ...(q ? { search: q } : {})
-  }).toString();
-
   const [prodRes, filterRes] = await Promise.all([
-    fetch(`${API_BASE}/api/catalog/products?${qs}`, { cache: 'no-store' }),
-    fetch(`${API_BASE}/api/catalog/filters?${filterQs}`, { cache: 'no-store' })
+    fetch(`${API_BASE}/api/catalog/products?${toApiParams(urlState, ctx)}`, { cache: 'no-store' }).catch(() => null),
+    fetch(`${API_BASE}/api/catalog/filters?${toApiParams(urlState, ctx, true)}`, { cache: 'no-store' }).catch(() => null),
   ]);
 
-  if (prodRes.ok) {
+  if (prodRes?.ok) {
     const total = Number(prodRes.headers.get('X-WP-Total') || 0);
     const totalPages = Number(prodRes.headers.get('X-WP-TotalPages') || 0);
     const prodData = await prodRes.json();
     products = { products: prodData || [], total, totalPages };
   }
-  if (filterRes.ok) {
+  if (filterRes?.ok) {
     filterOptions = await filterRes.json() as FilterOptions;
   }
 
-
-  const initialSearchParams = new URLSearchParams();
-  if (brands) initialSearchParams.set('brands', brands);
-  if (maxPrice) initialSearchParams.set('maxPrice', maxPrice);
-  if (inStock) initialSearchParams.set('inStock', '1');
-  if (attrsRaw) initialSearchParams.set('attrs', attrsRaw);
-  if (sp.page) initialSearchParams.set('page', String(sp.page));
-  const initialSearchParamsStr = initialSearchParams.toString();
+  // El cliente recibe la query tal cual (filtros, orden, página, q).
+  const initialSearchParamsStr = spParams.toString();
 
   return (
     <Suspense
