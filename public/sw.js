@@ -1,6 +1,6 @@
-/* Escapes y Más — Service Worker v7 */
+/* Escapes y Más — Service Worker v8 */
 
-const SW_VERSION = 'v7';
+const SW_VERSION = 'v8';
 const STATIC_CACHE = `static-${SW_VERSION}`;
 const RUNTIME_CACHE = `runtime-${SW_VERSION}`;
 const HTML_FALLBACK = '/offline';
@@ -9,8 +9,8 @@ const STATIC_ASSETS = [
   '/',
   '/offline',
   '/manifest.json',
-  '/icon-192.svg',
-  '/icon-512.svg',
+  '/icon-192.png',
+  '/icon-512.png',
   '/logo-cabecera.svg',
   '/logo-cabecera-negro.svg',
   '/favicon.ico',

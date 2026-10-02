@@ -32,14 +32,14 @@ export const metadata: Metadata = {
     siteName: 'Escapes y Más',
     locale: 'es_ES',
     images: [
-      { url: 'https://escapesymas.com/icon-512.svg', width: 512, height: 512, alt: 'Escapes y Más' },
+      { url: 'https://escapesymas.com/og-image.png', width: 1200, height: 630, alt: 'Escapes y Más' },
     ],
   },
   twitter: {
     card: 'summary_large_image',
     title: "Escapes y Más — Escapes de Moto de Alto Rendimiento",
     description: "Encuentra escapes homologados y recambios oficiales para tu moto.",
-    images: ['https://escapesymas.com/icon-512.svg'],
+    images: ['https://escapesymas.com/og-image.png'],
   },
   // Sin canonical global: lo heredaban todas las páginas sin el suyo (catálogo,
   // legales…) y le decía a Google que todas eran copias de la home.
@@ -47,11 +47,7 @@ export const metadata: Metadata = {
     'mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-status-bar-style': 'black-translucent',
   },
-  icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon.ico',
-    apple: '/favicon.ico',
-  },
+  // Iconos: los genera Next a partir de src/app/favicon.ico, icon.png y apple-icon.png.
 };
 
 export const viewport: Viewport = {
