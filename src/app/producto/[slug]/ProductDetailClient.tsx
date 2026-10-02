@@ -1,25 +1,25 @@
 'use client';
-import Link from 'next/link';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ShoppingCart, Bell, Bike, ChevronLeft, AlertCircle, Ruler, Weight, Package, Check } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { ShoppingCart, Bell, AlertCircle, Check, AlertTriangle, ChevronDown, Truck, RotateCcw, ShieldCheck } from 'lucide-react';
 import { trackEvent } from '../../../lib/analytics';
 import { trackEvent as trackUmami } from '../../../lib/umami';
-import dynamic from 'next/dynamic';
-import { Product, ProductCompatibility, ProductImage as ProductImageType } from '../../../types';
+import { Product, ProductImage as ProductImageType, ProductVariant } from '../../../types';
 import { fetchProductBySlug, refreshProductStock } from '../../../lib/api';
 import { useCart } from '../../../context/CartContext';
-import { useToast } from '../../../context/ToastContext';
-import { sanitizeHTML, getImageUrl } from '../../../lib/constants';
+import { sanitizeHTML } from '../../../lib/constants';
 import { getProductSchema, getBreadcrumbSchema } from '../../../components/SchemaMarkup';
 import Header from '../../../components/Header';
-import ProductImage from '../../../components/ProductImage';
 import ProductDetailSkeleton from '../../../components/ProductDetailSkeleton';
 import NotifyMeModal from '../../../components/NotifyMeModal';
 import VariantSelector from '../../../components/VariantSelector';
+import ProductGallery from '../../../components/product/ProductGallery';
+import CompatibilityList from '../../../components/product/CompatibilityList';
+import { normalizeCompat, fitsBike, bikeLabel } from '../../../components/product/compat';
 import { effectivePrice, formatEuro } from '../../../lib/pricing';
-import { ProductVariant } from '../../../types';
 
 const FrequentlyBoughtTogether = dynamic(
   () => import('../../../components/FrequentlyBoughtTogether'),
@@ -31,115 +31,73 @@ const ProductReviews = dynamic(
   { ssr: false, loading: () => <div className="h-32 my-6 bg-card/20 animate-pulse rounded border border-card-border" /> }
 );
 
+/** Sección plegable (abierta por defecto en escritorio y en la primera). */
+function Section({ title, children, defaultOpen = false, id }: { title: React.ReactNode; children: React.ReactNode; defaultOpen?: boolean; id?: string }) {
+  return (
+    <details id={id} open={defaultOpen} className="group border-b border-card-border">
+      <summary className="flex items-center justify-between py-4 cursor-pointer list-none select-none">
+        <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-foreground">{title}</h2>
+        <ChevronDown className="w-4 h-4 text-text-muted transition-transform group-open:rotate-180" aria-hidden="true" />
+      </summary>
+      <div className="pb-5">{children}</div>
+    </details>
+  );
+}
+
 export default function ProductDetailClient({ slug, initialProduct }: { slug: string; initialProduct?: Product | null }) {
   const router = useRouter();
-
   const { addToCart } = useCart();
-  const { showToast } = useToast();
   const [product, setProduct] = useState<Product | null>(initialProduct ?? null);
   const [isLoading, setIsLoading] = useState(!initialProduct);
   const [error, setError] = useState('');
-  const [compatSearch, setCompatSearch] = useState('');
-  const [compatPage, setCompatPage] = useState(1);
   const [selectedBike, setSelectedBike] = useState<string>('');
   const [showNotifyModal, setShowNotifyModal] = useState(false);
-  const [imgIdx, setImgIdx] = useState(0);
-
-  const images: ProductImageType[] = product?.images?.length
-    ? product.images
-    : product
-      ? [{ src: product.image, alt: product.name } as ProductImageType]
-      : [];
-
-  const pickImage = (img: ProductImageType) => {
-    const src = getImageUrl(img.srcCardDesktop || img.srcMobile || img.src || '');
-    const mobileSrc = getImageUrl(img.srcCardMobile || img.srcMobile || '');
-    return { src, mobileSrc };
-  };
-
-  const handleNotifyMe = () => {
-    setShowNotifyModal(true);
-  };
+  const [descExpanded, setDescExpanded] = useState(false);
 
   useEffect(() => {
     const active = localStorage.getItem('tg_selected_bike');
-    if (active) {
-      setSelectedBike(active);
-    }
+    if (active) setSelectedBike(active);
   }, []);
 
   useEffect(() => {
-    setCompatPage(1);
-  }, [compatSearch]);
-
-  useEffect(() => {
-    if (product) {
-      trackEvent.viewItem(product);
-      // Umami — distinct event from the card impression so we can see
-      // click-through vs scroll-past separately in the dashboard.
-      trackUmami('view_product_detail', {
-        product_id: product.id,
-        product_brand: product.brand,
-        product_price: product.price,
-      });
-    }
+    if (!product) return;
+    trackEvent.viewItem(product);
+    trackUmami('view_product_detail', { product_id: product.id, product_brand: product.brand, product_price: product.price });
   }, [product]);
 
   useEffect(() => {
     if (!slug || initialProduct) return;
     let cancelled = false;
-    const load = async () => {
-      try {
-        const data = await fetchProductBySlug(slug);
-        if (!cancelled) {
-          if (!data) {
-            setError('Producto no encontrado');
-          } else {
-            setProduct(data);
-            setImgIdx(0);
-          }
-        }
-      } catch {
-        if (!cancelled) setError('Error al cargar el producto');
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    };
-    load();
+    fetchProductBySlug(slug)
+      .then((data) => {
+        if (cancelled) return;
+        if (!data || !data.id) setError('Producto no encontrado');
+        else setProduct(data);
+      })
+      .catch(() => { if (!cancelled) setError('Error al cargar el producto'); })
+      .finally(() => { if (!cancelled) setIsLoading(false); });
     return () => { cancelled = true; };
-  }, [slug]);
+  }, [slug, initialProduct]);
 
-  // Sincronizar stock en tiempo real en segundo plano al cargar el producto
+  // Stock en tiempo real del proveedor para productos de dropshipping/bajo pedido.
   useEffect(() => {
     if (!product || (!product.dropshipping && !product.ondemand)) return;
-
     let active = true;
-    const refresh = async () => {
+    const timer = setTimeout(async () => {
       try {
         const data = await refreshProductStock(product.id);
         if (active && data && typeof data.stock === 'number') {
-          setProduct((prev) => {
-            if (!prev) return null;
-            if (prev.stock === data.stock && prev.inStock === data.inStock) return prev;
-            return {
-              ...prev,
-              stock: data.stock,
-              inStock: data.inStock,
-            };
-          });
+          setProduct((prev) => (prev && (prev.stock !== data.stock || prev.inStock !== data.inStock)
+            ? { ...prev, stock: data.stock, inStock: data.inStock } : prev));
         }
-      } catch (err) {
-        console.error('[STOCK REFRESH ERROR]:', err);
-      }
-    };
-
-    // Pequeño retardo de 1 segundo para no interferir con la pintura inicial
-    const timer = setTimeout(refresh, 1000);
-    return () => {
-      active = false;
-      clearTimeout(timer);
-    };
+      } catch { /* el stock mostrado sigue siendo el de la BD */ }
+    }, 1000);
+    return () => { active = false; clearTimeout(timer); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product?.id]);
+
+  const compatRows = useMemo(() => (product?.compatibility || []).map(normalizeCompat), [product?.compatibility]);
+  const fits = useMemo(() => (selectedBike ? fitsBike(compatRows, selectedBike) : null), [compatRows, selectedBike]);
 
   // Cambiar de variante (talla/color) sin recargar: misma ficha, otro SKU.
   const selectVariant = async (variant: ProductVariant) => {
@@ -147,7 +105,6 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
       const next = await fetchProductBySlug(variant.slug);
       if (next && next.id) {
         setProduct(next);
-        setImgIdx(0);
         window.history.replaceState(null, '', `/producto/${variant.slug}`);
       }
     } catch {
@@ -155,61 +112,82 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
     }
   };
 
-  if (isLoading) {
-    return <ProductDetailSkeleton />;
-  }
+  if (isLoading) return <ProductDetailSkeleton />;
 
   if (error || !product) {
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center gap-4">
         <AlertCircle className="w-10 h-10 text-text-muted" />
         <p className="text-sm font-mono text-text-muted">{error || 'Producto no encontrado'}</p>
-        <Link href="/" className="text-xs font-mono font-bold text-accent-text hover:underline">
-          Volver a la tienda
+        <Link href="/universales" className="text-xs font-mono font-bold text-accent-text hover:underline">
+          Ver el catálogo
         </Link>
       </div>
     );
   }
 
-  const displayDescription = (product?.description && product.description.trim().length > 0)
-    ? product.description
-    : `${product.name} de la marca ${product.brand || 'Escapes y Más'}. Recambio y accesorio diseñado para ofrecer un ajuste preciso, máxima resistencia y excelente rendimiento en tu motocicleta.`;
-  const hasDescription = true;
-  const hasSpecs = Boolean(
-    (product?.attributes && Object.keys(product.attributes).length > 0) ||
-    product?.weight_g ||
-    product?.length_mm ||
-    product?.width_mm ||
-    product?.height_mm ||
-    product?.volume_cm3 ||
-    product?.barcode
-  );
+  const inStock = product.inStock && product.stock > 0;
+  const price = effectivePrice(product);
+  const onSale = price < product.price;
+  const images: ProductImageType[] = product.images?.length ? product.images : [{ src: product.image, alt: product.name } as ProductImageType];
+  const description = product.description?.trim() || '';
+  const specs: [string, string][] = [
+    ['Marca', product.brand],
+    ...Object.entries(product.attributes || {}),
+    ...(product.weight_g ? [['Peso', product.weight_g >= 1000 ? `${(product.weight_g / 1000).toFixed(2)} kg` : `${product.weight_g} g`] as [string, string]] : []),
+    ['Referencia', product.sku],
+    ...(product.barcode ? [['EAN', product.barcode] as [string, string]] : []),
+  ].filter(([, v]) => v) as [string, string][];
+
+  const availability = inStock
+    ? { dot: 'bg-emerald-500', text: product.dropshipping ? 'Disponible · envío en 3-5 días' : 'En stock · envío en 24 h' }
+    : { dot: 'bg-red-500', text: 'Agotado' };
+
+  const crumbs = [
+    { name: 'Catálogo', href: '/universales' },
+    ...(product.parentCategory && product.parentCategorySlug
+      ? [{ name: product.parentCategory, href: `/universales/${product.parentCategorySlug}` }] : []),
+    ...(product.category && product.categorySlug
+      ? [{ name: product.category, href: product.parentCategorySlug ? `/universales/${product.parentCategorySlug}/${product.categorySlug}` : `/universales/${product.categorySlug}` }]
+      : []),
+  ];
+
+  const handleBuy = () => {
+    if (inStock) {
+      addToCart(product);
+      trackEvent.addToCart(product, 1);
+    } else {
+      setShowNotifyModal(true);
+    }
+  };
+
+  const buyLabel = inStock
+    ? <><ShoppingCart className="w-4 h-4" /> Añadir al carrito</>
+    : <><Bell className="w-4 h-4" /> Avísame cuando vuelva</>;
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      {product && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(getProductSchema({
-              name: product.name,
-              description: product.description || product.name,
-              image: product.image,
-              sku: product.sku,
-              brand: product.brand,
-              price: product.price,
-              url: `https://escapesymas.com/producto/${slug}`,
-              inStock: product.inStock,
-            }))
-          }}
-        />
-      )}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(getProductSchema({
+            name: product.name,
+            description: description.replace(/<[^>]+>/g, ' ').slice(0, 500) || product.name,
+            image: product.image,
+            sku: product.sku,
+            brand: product.brand,
+            price,
+            url: `https://escapesymas.com/producto/${slug}`,
+            inStock,
+          })),
+        }}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(getBreadcrumbSchema([
             { name: 'Inicio', url: '/' },
-            { name: product.category || 'General', url: `/${(product.category || '').toLowerCase()}` },
+            ...crumbs.map((c) => ({ name: c.name, url: c.href })),
             { name: product.name, url: `/producto/${slug}` },
           ])),
         }}
@@ -221,602 +199,177 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
         onTabChange={(tab) => router.push(`/?tab=${tab}`)}
       />
 
-      <div className="bg-card border-b border-card-border/60 py-2.5 shadow-sm mb-6 md:mb-8">
-        <div className="max-w-7xl mx-auto px-4 flex items-center gap-1.5 font-mono text-[9px] text-text-muted uppercase tracking-wider">
-          <Link href="/" className="hover:text-foreground transition-colors font-bold">Inicio</Link>
-          <span>/</span>
-          <span className="text-text-muted">{product.category || 'General'}</span>
-          <span>/</span>
-          <span className="text-foreground font-bold truncate max-w-[200px] sm:max-w-none">{product.name}</span>
+      <nav aria-label="Ruta" className="border-b border-card-border/60 bg-card">
+        <ol className="max-w-6xl mx-auto px-4 py-2 flex items-center gap-1.5 text-[11px] text-text-muted overflow-x-auto no-scrollbar whitespace-nowrap">
+          {crumbs.map((c, i) => (
+            <li key={c.href} className="flex items-center gap-1.5">
+              {i > 0 && <span aria-hidden="true">›</span>}
+              <Link href={c.href} className="hover:text-foreground">{c.name}</Link>
+            </li>
+          ))}
+        </ol>
+      </nav>
+
+      <main className="flex-grow w-full max-w-6xl mx-auto pb-28 md:pb-12 md:px-4 md:pt-6">
+        <div className="md:grid md:grid-cols-2 md:gap-10">
+          <ProductGallery
+            images={images}
+            alt={product.name}
+            badge={!inStock ? (
+              <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-red-600 text-white">Agotado</span>
+            ) : onSale ? (
+              <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-accent text-slate-950">Oferta</span>
+            ) : undefined}
+          />
+
+          <div className="px-4 md:px-0 pt-4 md:pt-0 flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              {product.brand && (
+                <Link
+                  href={`/universales/buscar/${encodeURIComponent(product.brand)}`}
+                  className="text-[11px] font-mono font-bold uppercase tracking-wider text-accent-text self-start"
+                >
+                  {product.brand}
+                </Link>
+              )}
+              <h1 className="text-xl md:text-2xl font-semibold leading-snug text-foreground">{product.name}</h1>
+              <p className="text-[11px] text-text-muted">Ref. {product.sku}</p>
+            </div>
+
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl md:text-3xl font-bold font-mono text-foreground">{formatEuro(price)}</span>
+              {onSale && <span className="text-sm text-text-muted line-through font-mono">{formatEuro(product.price)}</span>}
+              <span className="text-[11px] text-text-muted">IVA incl.</span>
+            </div>
+
+            <p className="flex items-center gap-2 text-sm text-foreground">
+              <span className={`w-2 h-2 rounded-full ${availability.dot}`} aria-hidden="true" />
+              {availability.text}
+              {inStock && product.stock <= 3 && <span className="text-xs font-semibold text-red-600">· últimas {product.stock} uds.</span>}
+            </p>
+
+            {compatRows.length > 0 && (
+              fits === true ? (
+                <p className="flex items-center gap-2 text-sm rounded-md px-3 py-2 bg-emerald-50 text-emerald-900 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-800">
+                  <Check className="w-4 h-4 shrink-0" /> Compatible con tu {bikeLabel(selectedBike)}
+                </p>
+              ) : fits === false ? (
+                <p className="flex items-center gap-2 text-sm rounded-md px-3 py-2 bg-amber-50 text-amber-900 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-800">
+                  <AlertTriangle className="w-4 h-4 shrink-0" /> No figura como compatible con tu {bikeLabel(selectedBike)}
+                </p>
+              ) : (
+                <a href="#compatibilidad" className="text-sm text-accent-text underline underline-offset-2 self-start">
+                  Compatible con {compatRows.length} versiones de moto · comprueba la tuya
+                </a>
+              )
+            )}
+
+            {product.family && (
+              <VariantSelector family={product.family} current={product.variantOptions || {}} onSelect={selectVariant} />
+            )}
+
+            <button
+              type="button"
+              onClick={handleBuy}
+              className="hidden md:flex w-full py-3 bg-accent text-slate-950 rounded font-mono text-xs font-bold uppercase tracking-wider hover:bg-accent-hover transition-all items-center justify-center gap-2 cursor-pointer"
+            >
+              {buyLabel}
+            </button>
+
+            <ul className="grid grid-cols-3 gap-2 text-[10px] text-text-muted text-center">
+              <li className="flex flex-col items-center gap-1"><Truck className="w-4 h-4" aria-hidden="true" />Envío rápido</li>
+              <li className="flex flex-col items-center gap-1"><RotateCcw className="w-4 h-4" aria-hidden="true" />Devolución 14 días</li>
+              <li className="flex flex-col items-center gap-1"><ShieldCheck className="w-4 h-4" aria-hidden="true" />Pago seguro</li>
+            </ul>
+
+            <div className="border-t border-card-border mt-2">
+              {description && (
+                <Section title="Descripción" defaultOpen>
+                  <div className={`relative ${descExpanded ? '' : 'max-h-56 overflow-hidden'}`}>
+                    <div
+                      className="text-sm leading-relaxed text-foreground prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_p]:mb-2"
+                      dangerouslySetInnerHTML={{ __html: sanitizeHTML(description) }}
+                    />
+                    {!descExpanded && description.length > 600 && (
+                      <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background to-transparent" />
+                    )}
+                  </div>
+                  {description.length > 600 && (
+                    <button
+                      type="button"
+                      onClick={() => setDescExpanded((v) => !v)}
+                      className="mt-2 text-xs font-mono font-bold uppercase text-accent-text cursor-pointer"
+                    >
+                      {descExpanded ? 'Leer menos' : 'Leer más'}
+                    </button>
+                  )}
+                </Section>
+              )}
+
+              <Section title="Características" defaultOpen={!description}>
+                <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+                  {specs.map(([k, v]) => (
+                    <React.Fragment key={k}>
+                      <dt className="text-text-muted">{k}</dt>
+                      <dd className="text-foreground break-words">{v}</dd>
+                    </React.Fragment>
+                  ))}
+                </dl>
+              </Section>
+
+              {compatRows.length > 0 && (
+                <Section id="compatibilidad" title={`Compatibilidad (${compatRows.length})`}>
+                  <CompatibilityList rows={compatRows} />
+                </Section>
+              )}
+
+              <Section title="Envío y devoluciones">
+                <ul className="text-sm text-foreground space-y-1.5 list-disc pl-5">
+                  <li>{product.dropshipping ? 'Envío directo desde el almacén del fabricante en 3-5 días laborables.' : 'Envío en 24-72 h desde nuestro almacén.'}</li>
+                  <li>14 días naturales para devolverlo, sin usar ni montar. Los gastos de la devolución corren por tu cuenta salvo producto defectuoso o error nuestro.</li>
+                  <li>Pago seguro con tarjeta, Bizum o Klarna.</li>
+                </ul>
+                <Link href="/devoluciones" className="inline-block mt-2 text-xs text-accent-text underline">Política de devoluciones</Link>
+              </Section>
+            </div>
+          </div>
         </div>
+
+        <div className="px-4 md:px-0">
+          {product.id && <FrequentlyBoughtTogether productId={product.id} />}
+          <section className="mt-8">
+            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-foreground mb-4">Opiniones de clientes</h2>
+            <ProductReviews productId={product.id} />
+          </section>
+        </div>
+      </main>
+
+      {/* Barra de compra fija en móvil: precio siempre visible + botón */}
+      <div
+        className="fixed bottom-0 inset-x-0 md:hidden bg-card border-t border-card-border px-4 pt-3 z-40 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] flex items-center gap-3"
+        style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
+      >
+        <div className="flex flex-col leading-tight">
+          <span className="text-base font-bold font-mono text-foreground">{formatEuro(price)}</span>
+          {product.variantOptions && Object.keys(product.variantOptions).length > 0 && (
+            <span className="text-[10px] text-text-muted truncate max-w-[9rem]">{Object.values(product.variantOptions).join(' · ')}</span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={handleBuy}
+          className="flex-1 py-3 bg-accent text-slate-950 rounded font-mono text-xs font-bold uppercase tracking-wider active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+        >
+          {buyLabel}
+        </button>
       </div>
 
-      <main role="main" className="flex-grow max-w-7xl mx-auto px-0 w-full pb-24 md:pb-12">
-        <div className="md:hidden flex flex-col">
-          <div className="relative bg-image-wrapper border-b border-card-border">
-            <div className="max-h-[50vh] aspect-square flex items-center justify-center p-6">
-              <ProductImage
-                src={pickImage(images[imgIdx]).src}
-                srcDesktop={images[imgIdx]?.srcCardDesktop}
-                srcMobile={images[imgIdx]?.srcCardMobile || images[imgIdx]?.srcMobile}
-                alt={product.name}
-                priority
-                className="w-full h-full object-contain"
-                wrapperClassName="w-full h-full"
-              />
-            </div>
-            {(!product.inStock || product.stock === 0) && (
-              <div className="absolute top-3 left-3 z-10">
-                <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-red-600/90 text-white border border-red-400/50 shadow-sm">
-                  Agotado
-                </span>
-              </div>
-            )}
-            {images.length > 1 && (
-              <div className="absolute bottom-0 left-0 right-0 flex gap-1.5 px-3 py-2 overflow-x-auto bg-gradient-to-t from-black/50 to-transparent">
-                {images.map((img, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setImgIdx(i)}
-                    className={`shrink-0 w-10 h-10 rounded border-2 overflow-hidden transition-all cursor-pointer ${
-                      i === imgIdx ? 'border-accent' : 'border-white/50 hover:border-white'
-                    }`}
-                  >
-                    <img
-                      src={pickImage(img).src}
-                      alt=""
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="px-4 py-4 space-y-4">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-tag text-tag-text border border-tag-border">
-                {product.brand}
-              </span>
-              <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-tag text-tag-text border border-tag-border">
-                {product.category}
-              </span>
-            </div>
-
-            <h1 className="font-mono text-lg font-bold uppercase text-foreground leading-tight">
-              {product.name}
-            </h1>
-
-            <p className="text-[9px] font-mono text-text-muted">SKU: {product.sku}</p>
-
-            <div className="flex items-baseline gap-3">
-              <span className="font-mono text-2xl font-bold text-foreground">
-                {formatEuro(effectivePrice(product))}
-              </span>
-              {effectivePrice(product) < product.price && (
-                <span className="font-mono text-sm text-text-muted line-through">
-                  {formatEuro(product.price)}
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className={`w-2 h-2 rounded-full ${product.inStock ? 'bg-emerald-500' : 'bg-red-500'}`} />
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-foreground">
-                {product.inStock ? 'En Stock' : 'Sin Stock'}
-              </span>
-              {product.inStock && product.stock > 0 && product.stock <= 5 && (
-                <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-red-500 text-white border border-red-300 animate-pulse">
-                  {product.stock <= 2 ? '¡Última unidad!' : `¡Quedan ${product.stock}!`}
-                </span>
-              )}
-              {product.inStock && product.stock > 5 && product.stock <= 20 && (
-                <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-amber-500 text-white border border-amber-300">
-                  Pocas unidades
-                </span>
-              )}
-              {product.dropshipping && (
-                <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-accent/10 text-accent border border-accent/20">
-                  Envío directo
-                </span>
-              )}
-            </div>
-
-            {product.family && (
-              <VariantSelector family={product.family} current={product.variantOptions || {}} onSelect={selectVariant} />
-            )}
-
-            {hasDescription && (
-              <div className="border border-card-border rounded-md p-4 bg-card">
-                <h2 className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2">
-                  Descripción
-                </h2>
-                <div
-                  className="text-xs text-foreground leading-relaxed font-sans prose prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(displayDescription) }}
-                />
-              </div>
-            )}
-
-            {hasSpecs && (
-              <div className="border border-card-border rounded-md p-4">
-                <h2 className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-3">
-                  Especificaciones Técnicas
-                </h2>
-                <div className="grid grid-cols-2 gap-3">
-                  {product.attributes && Object.entries(product.attributes).map(([attrKey, attrVal]) => (
-                    <div key={attrKey} className="flex items-center gap-2 col-span-2 sm:col-span-1">
-                      <span className="text-[10px] font-mono text-text-muted">{attrKey}:</span>
-                      <span className="text-[10px] font-mono font-bold text-foreground">{String(attrVal)}</span>
-                    </div>
-                  ))}
-                  {product.weight_g && (
-                    <div className="flex items-center gap-2">
-                      <Weight className="w-3.5 h-3.5 text-text-muted shrink-0" />
-                      <span className="text-[10px] font-mono text-foreground">
-                        {(product.weight_g / 1000).toFixed(2)} kg
-                      </span>
-                    </div>
-                  )}
-                  {product.length_mm && (
-                    <div className="flex items-center gap-2">
-                      <Ruler className="w-3.5 h-3.5 text-text-muted shrink-0" />
-                      <span className="text-[10px] font-mono text-foreground">
-                        {product.length_mm} mm
-                      </span>
-                    </div>
-                  )}
-                  {product.width_mm && (
-                    <div className="flex items-center gap-2">
-                      <Ruler className="w-3.5 h-3.5 text-text-muted shrink-0" />
-                      <span className="text-[10px] font-mono text-foreground">
-                        {product.width_mm} mm
-                      </span>
-                    </div>
-                  )}
-                  {product.height_mm && (
-                    <div className="flex items-center gap-2">
-                      <Ruler className="w-3.5 h-3.5 text-text-muted shrink-0" />
-                      <span className="text-[10px] font-mono text-foreground">
-                        {product.height_mm} mm
-                      </span>
-                    </div>
-                  )}
-                  {product.volume_cm3 && (
-                    <div className="flex items-center gap-2">
-                      <Package className="w-3.5 h-3.5 text-text-muted shrink-0" />
-                      <span className="text-[10px] font-mono text-foreground">
-                        {product.volume_cm3} cm³
-                      </span>
-                    </div>
-                  )}
-                  {product.barcode && (
-                    <div className="flex items-center gap-2 col-span-2">
-                      <span className="text-[10px] font-mono text-text-muted">EAN:</span>
-                      <span className="text-[10px] font-mono text-foreground">{product.barcode}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="hidden md:grid md:grid-cols-2 gap-8 px-4">
-          <div className="flex gap-3 w-full">
-            {images.length > 1 && (
-              <div className="flex flex-col gap-2 shrink-0">
-                {images.map((img, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setImgIdx(i)}
-                    className={`w-16 h-16 rounded border-2 overflow-hidden transition-all cursor-pointer ${
-                      i === imgIdx ? 'border-accent' : 'border-card-border hover:border-foreground/30'
-                    }`}
-                  >
-                    <img
-                      src={pickImage(img).src}
-                      alt=""
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="bg-image-wrapper border border-card-border rounded-md p-8 flex items-center justify-center min-h-[500px] overflow-hidden relative flex-1">
-              <ProductImage
-                src={pickImage(images[imgIdx]).src}
-                srcDesktop={images[imgIdx]?.srcCardDesktop}
-                srcMobile={images[imgIdx]?.srcCardMobile || images[imgIdx]?.srcMobile}
-                alt={product.name}
-                priority
-                className="w-full h-full object-contain p-4"
-                wrapperClassName="w-full h-full"
-              />
-              {(!product.inStock || product.stock === 0) && (
-                <div className="absolute top-3 left-3 z-10">
-                  <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-red-600/90 text-white border border-red-400/50 shadow-sm">
-                    Agotado
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-6">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-tag text-tag-text border border-tag-border">
-                  {product.brand}
-                </span>
-                <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-tag text-tag-text border border-tag-border">
-                  {product.category}
-                </span>
-              </div>
-              <h1 className="font-mono text-xl font-bold uppercase text-foreground mb-2">
-                {product.name}
-              </h1>
-              <p className="text-[10px] font-mono text-text-muted">SKU: {product.sku}</p>
-            </div>
-
-            <div className="flex items-baseline gap-3">
-              <span className="font-mono text-3xl font-bold text-foreground">
-                {formatEuro(effectivePrice(product))}
-              </span>
-              {effectivePrice(product) < product.price && (
-                <span className="font-mono text-sm text-text-muted line-through">
-                  {formatEuro(product.price)}
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className={`w-2 h-2 rounded-full ${product.inStock ? 'bg-emerald-500' : 'bg-red-500'}`} />
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-foreground">
-                {product.inStock ? 'En Stock' : 'Sin Stock'}
-              </span>
-              {product.inStock && product.stock > 0 && product.stock <= 5 && (
-                <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-red-500 text-white border border-red-300 animate-pulse">
-                  {product.stock <= 2 ? '¡Última unidad!' : `¡Quedan ${product.stock}!`}
-                </span>
-              )}
-              {product.inStock && product.stock > 5 && product.stock <= 20 && (
-                <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-amber-500 text-white border border-amber-300">
-                  Pocas unidades
-                </span>
-              )}
-              {product.dropshipping && (
-                <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-accent/10 text-accent border border-accent/20">
-                  Envío directo
-                </span>
-              )}
-            </div>
-
-            {product.family && (
-              <VariantSelector family={product.family} current={product.variantOptions || {}} onSelect={selectVariant} />
-            )}
-
-            {hasDescription && (
-              <div className="border border-card-border rounded-md p-4 bg-card">
-                <h2 className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-3">
-                  Descripción
-                </h2>
-                <div
-                  className="text-xs text-foreground leading-relaxed font-sans prose prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(displayDescription) }}
-                />
-              </div>
-            )}
-
-            {hasSpecs && (
-              <div className="border border-card-border rounded-md p-4">
-                <h2 className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-3">
-                  Especificaciones Técnicas
-                </h2>
-                <div className="grid grid-cols-2 gap-3">
-                  {product.attributes && Object.entries(product.attributes).map(([attrKey, attrVal]) => (
-                    <div key={attrKey} className="flex items-center gap-2 col-span-2 sm:col-span-1">
-                      <span className="text-[10px] font-mono text-text-muted">{attrKey}:</span>
-                      <span className="text-[10px] font-mono font-bold text-foreground">{String(attrVal)}</span>
-                    </div>
-                  ))}
-                  {product.weight_g && (
-                    <div className="flex items-center gap-2">
-                      <Weight className="w-3.5 h-3.5 text-text-muted shrink-0" />
-                      <span className="text-[10px] font-mono text-foreground">
-                        {(product.weight_g / 1000).toFixed(2)} kg
-                      </span>
-                    </div>
-                  )}
-                  {product.length_mm && (
-                    <div className="flex items-center gap-2">
-                      <Ruler className="w-3.5 h-3.5 text-text-muted shrink-0" />
-                      <span className="text-[10px] font-mono text-foreground">
-                        {product.length_mm} mm
-                      </span>
-                    </div>
-                  )}
-                  {product.width_mm && (
-                    <div className="flex items-center gap-2">
-                      <Ruler className="w-3.5 h-3.5 text-text-muted shrink-0" />
-                      <span className="text-[10px] font-mono text-foreground">
-                        {product.width_mm} mm
-                      </span>
-                    </div>
-                  )}
-                  {product.height_mm && (
-                    <div className="flex items-center gap-2">
-                      <Ruler className="w-3.5 h-3.5 text-text-muted shrink-0" />
-                      <span className="text-[10px] font-mono text-foreground">
-                        {product.height_mm} mm
-                      </span>
-                    </div>
-                  )}
-                  {product.volume_cm3 && (
-                    <div className="flex items-center gap-2">
-                      <Package className="w-3.5 h-3.5 text-text-muted shrink-0" />
-                      <span className="text-[10px] font-mono text-foreground">
-                        {product.volume_cm3} cm³
-                      </span>
-                    </div>
-                  )}
-                  {product.barcode && (
-                    <div className="flex items-center gap-2 col-span-2">
-                      <span className="text-[10px] font-mono text-text-muted">EAN:</span>
-                      <span className="text-[10px] font-mono text-foreground">{product.barcode}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {product && (
-              <div className="mt-6">
-                <button
-                  onClick={() => {
-                    if (product.inStock && product.stock > 0) {
-                      addToCart(product);
-                      trackEvent.addToCart(product, 1);
-                    } else {
-                      handleNotifyMe();
-                    }
-                  }}
-                  className="w-full py-3 bg-accent text-slate-950 rounded font-mono text-xs font-bold uppercase tracking-wider hover:bg-accent-hover transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  {product.inStock && product.stock > 0 ? (
-                    <><ShoppingCart className="w-4 h-4" /> Añadir al carrito</>
-                  ) : (
-                    <><Bell className="w-4 h-4" /> Avísame cuando vuelva</>
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {product && (
-          <div
-            className="fixed bottom-0 left-0 right-0 md:hidden bg-card border-t border-card-border p-3 z-40 shadow-lg"
-            style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
-          >
-            <button
-              onClick={() => {
-                if (product.inStock && product.stock > 0) {
-                  addToCart(product);
-                  trackEvent.addToCart(product, 1);
-                } else {
-                  handleNotifyMe();
-                }
-              }}
-              className="w-full py-3 bg-accent text-slate-950 rounded font-mono text-xs font-bold uppercase tracking-wider hover:bg-accent-hover transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              {product.inStock && product.stock > 0 ? (
-                <><ShoppingCart className="w-4 h-4" /> Añadir al carrito</>
-              ) : (
-                <><Bell className="w-4 h-4" /> Avísame cuando vuelva</>
-              )}
-            </button>
-          </div>
-        )}
-
-        {product.compatibility && product.compatibility.length > 0 && (() => {
-          const normalize = (comp: ProductCompatibility) => {
-            if (typeof comp === 'object' && comp !== null) {
-              return {
-                brand: comp.brand || '',
-                model: comp.model || '',
-                year: comp.year ? String(comp.year) : '',
-                cc: comp.cc ? String(comp.cc) : '',
-                code: comp.code || ''
-              };
-            }
-            const str = String(comp).trim();
-            const yearMatch = str.match(/\((\d{4})\)$/);
-            const year = yearMatch ? yearMatch[1] : '';
-            const nameWithoutYear = yearMatch ? str.replace(/\((\d{4})\)$/, '').trim() : str;
-            const ccMatch = nameWithoutYear.match(/\[(\d+)\]$/);
-            const cc = ccMatch ? ccMatch[1] : '';
-            const fullName = ccMatch ? nameWithoutYear.replace(/\[(\d+)\]$/, '').trim() : nameWithoutYear;
-            const parts = fullName.split(' ');
-            const brand = parts[0] || '';
-            const model = parts.slice(1).join(' ') || '';
-            return { brand, model, year, cc, code: '' };
-          };
-
-          const normalized = product.compatibility.map(normalize);
-          const query = compatSearch.toLowerCase().trim();
-          const filtered = normalized.filter(item => {
-            if (!query) return true;
-            return (
-              (item.brand || '').toLowerCase().includes(query) ||
-              (item.model || '').toLowerCase().includes(query) ||
-              (item.year || '').toLowerCase().includes(query) ||
-              (item.cc || '').toLowerCase().includes(query)
-            );
-          });
-
-          const sorted = [...filtered].sort((a, b) => {
-            const brandCompare = a.brand.localeCompare(b.brand);
-            if (brandCompare !== 0) return brandCompare;
-            const modelCompare = a.model.localeCompare(b.model);
-            if (modelCompare !== 0) return modelCompare;
-            const ccA = parseInt(a.cc) || 0;
-            const ccB = parseInt(b.cc) || 0;
-            if (ccB !== ccA) return ccB - ccA;
-            const yearA = parseInt(a.year) || 0;
-            const yearB = parseInt(b.year) || 0;
-            return yearB - yearA;
-          });
-
-          const pageSize = 15;
-          const totalPages = Math.ceil(sorted.length / pageSize);
-          const currentPage = Math.min(Math.max(1, compatPage), totalPages || 1);
-          const offset = (currentPage - 1) * pageSize;
-          const displayed = sorted.slice(offset, offset + pageSize);
-
-          let lastGroupKey = '';
-
-          return (
-            <div className="mt-6 border border-card-border rounded-md p-6 bg-card/30">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-                <div className="flex items-center gap-2">
-                  <Bike className="w-4 h-4 text-accent" />
-                  <h2 className="text-xs font-mono font-bold text-foreground uppercase tracking-wider">
-                    Compatibilidad ({filtered.length})
-                  </h2>
-                </div>
-                <div className="relative w-full sm:w-64">
-                  <input
-                    type="text"
-                    placeholder="Indica el nombre de tu vehículo"
-                    value={compatSearch}
-                    onChange={(e) => setCompatSearch(e.target.value)}
-                    className="w-full pl-3 pr-8 py-1.5 bg-select-bg border border-card-border rounded text-xs font-mono placeholder:text-text-muted text-foreground focus:outline-none focus:border-accent/50"
-                  />
-                  <svg className="w-3.5 h-3.5 text-text-muted absolute right-2.5 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-              </div>
-
-              {displayed.length > 0 ? (
-                <div className="overflow-x-auto border border-card-border rounded">
-                  <table className="w-full text-left border-collapse font-mono text-[10px]">
-                    <thead>
-                      <tr className="bg-select-bg border-b border-card-border text-text-muted font-bold">
-                        <th className="p-2.5">Marca</th>
-                        <th className="p-2.5">Modelo</th>
-                        <th className="p-2.5">Cilindrada</th>
-                        <th className="p-2.5">Año</th>
-                        <th className="p-2.5">Características</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {displayed.map((item, idx) => {
-                        const groupKey = `${item.brand} - ${item.model} [${item.cc}]`;
-                        const showGroupHeader = groupKey !== lastGroupKey;
-                        if (showGroupHeader) {
-                          lastGroupKey = groupKey;
-                        }
-
-                        const groupLabel = `${item.brand} ${item.model} [${item.cc || '-'}]`;
-
-                        return (
-                          <React.Fragment key={idx}>
-                            {showGroupHeader && (
-                              <tr className="bg-tag border-t border-b border-tag-border font-bold text-tag-text">
-                                <td colSpan={5} className="p-2 text-left tracking-wide">
-                                  {groupLabel.toUpperCase()}
-                                </td>
-                              </tr>
-                            )}
-                            <tr className="hover:bg-tag/50 border-b border-tag-border/50 text-foreground transition-colors">
-                              <td className="p-2">{item.brand}</td>
-                              <td className="p-2 text-accent-text font-bold">{item.model}</td>
-                              <td className="p-2">{item.cc || '-'}</td>
-                              <td className="p-2">{item.year}</td>
-                              <td className="p-2 text-text-muted">-</td>
-                            </tr>
-                          </React.Fragment>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="text-xs font-mono text-text-muted py-4 text-center">Ningún vehículo coincide con la búsqueda.</p>
-              )}
-
-              {totalPages > 1 && (
-                <div className="mt-5 flex items-center justify-center gap-1.5 flex-wrap">
-                  <button
-                    onClick={() => setCompatPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="px-2 py-1 border border-card-border hover:border-accent/40 rounded text-[9px] font-mono font-bold uppercase tracking-wider text-text-muted hover:text-foreground disabled:opacity-50 disabled:pointer-events-none transition-all cursor-pointer"
-                  >
-                    Anterior
-                  </button>
-                  
-                  {Array.from({ length: totalPages }).map((_, i) => {
-                    const pageNum = i + 1;
-                    const isVisible = pageNum === 1 || pageNum === totalPages || Math.abs(pageNum - currentPage) <= 2;
-                    const showEllipsis = (pageNum === 2 && currentPage > 4) || (pageNum === totalPages - 1 && currentPage < totalPages - 3);
-
-                    if (!isVisible) {
-                      if (showEllipsis) {
-                        return <span key={i} className="text-text-muted px-1.5 text-xs font-bold">...</span>;
-                      }
-                      return null;
-                    }
-
-                    return (
-                      <button
-                        key={i}
-                        onClick={() => setCompatPage(pageNum)}
-                        className={`px-2.5 py-1 font-mono text-[9px] font-bold rounded border transition-all cursor-pointer ${
-                          currentPage === pageNum
-                            ? 'bg-accent border-accent text-slate-950'
-                            : 'border-card-border hover:border-accent/40 text-text-muted hover:text-foreground'
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  })}
-
-                  <button
-                    onClick={() => setCompatPage(p => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                    className="px-2 py-1 border border-card-border hover:border-accent/40 rounded text-[9px] font-mono font-bold uppercase tracking-wider text-text-muted hover:text-foreground disabled:opacity-50 disabled:pointer-events-none transition-all cursor-pointer"
-                  >
-                    Siguiente
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        })()}
-
-        {product && product.id && (
-          <FrequentlyBoughtTogether productId={product.id} />
-        )}
-
-        <div className="mt-8">
-          <h2 className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-4">
-            Opiniones de Clientes
-          </h2>
-          <ProductReviews productId={product.id} />
-        </div>
-
-        <NotifyMeModal
-          isOpen={showNotifyModal}
-          onClose={() => setShowNotifyModal(false)}
-          productName={product?.name || ''}
-          productId={product?.id || 0}
-        />
-      </main>
+      <NotifyMeModal
+        isOpen={showNotifyModal}
+        onClose={() => setShowNotifyModal(false)}
+        productName={product.name}
+        productId={product.id}
+      />
     </div>
   );
 }
