@@ -64,9 +64,9 @@ export default function ProductCard({ product, onAddToCart, onNotifyMe, priority
       style={{ borderColor: product.isCompatible ? 'var(--badge-border)' : 'var(--card-border)' }}
       {...hoverPrefetchProps}
     >
-      <div className="p-4 bg-image-wrapper flex items-center justify-center relative min-h-[160px] overflow-hidden">
+      <div className="aspect-square p-2 sm:p-4 bg-image-wrapper flex items-center justify-center relative overflow-hidden">
         <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
-          <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-card border border-card-border text-foreground shadow-sm">
+          <span className="max-w-[6.5rem] truncate text-[9px] font-mono font-bold uppercase px-1.5 sm:px-2 py-0.5 rounded bg-card border border-card-border text-foreground shadow-sm">
             {product.brand}
           </span>
           {product.isCompatible && (
@@ -99,7 +99,7 @@ export default function ProductCard({ product, onAddToCart, onNotifyMe, priority
         )}
 
         {!isOutOfStock && product.stock > 5 && product.stock <= 20 && (
-          <div className="absolute top-2 right-2 z-10">
+          <div className="hidden sm:block absolute top-2 right-2 z-10">
             <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-amber-500 text-white border border-amber-300 shadow-sm">
               Pocas unidades
             </span>
@@ -107,14 +107,14 @@ export default function ProductCard({ product, onAddToCart, onNotifyMe, priority
         )}
 
         {product.dropshipping && !isOutOfStock && (
-          <div className="absolute bottom-2 right-2 z-10">
+          <div className="hidden sm:block absolute bottom-2 right-2 z-10">
             <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-amber-100/90 text-amber-900 border border-amber-300/50 shadow-sm">
               Envío 3-5 días
             </span>
           </div>
         )}
         {!product.dropshipping && !isOutOfStock && product.stock > 0 && (
-          <div className="absolute bottom-2 right-2 z-10">
+          <div className="hidden sm:block absolute bottom-2 right-2 z-10">
             <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-emerald-100/90 text-emerald-900 border border-emerald-300/50 shadow-sm">
               Envío 24h
             </span>
@@ -149,26 +149,26 @@ export default function ProductCard({ product, onAddToCart, onNotifyMe, priority
         )}
       </div>
 
-      <div className="p-4 flex flex-col justify-between flex-grow">
-        <div className="mb-4">
-          <h4 className="font-mono text-xs font-bold uppercase text-foreground line-clamp-1 mb-1">
+      <div className="p-2.5 sm:p-4 flex flex-col justify-between flex-grow">
+        <div className="mb-2 sm:mb-4">
+          <h4 className="text-[13px] sm:text-sm font-medium leading-snug text-foreground line-clamp-2 mb-1 min-h-[2.5em]">
             {product.name}
           </h4>
           {summary ? (
             <p className="text-[10px] font-mono text-text-muted line-clamp-1">{summary}</p>
           ) : (
-            <p className="text-[10px] text-text-muted line-clamp-2 leading-relaxed">
+            <p className="hidden sm:block text-[10px] text-text-muted line-clamp-2 leading-relaxed">
               {product.shortDescription}
             </p>
           )}
           {product.supplier_code && (
-            <p className="text-[9px] font-mono text-text-muted mt-2">
+            <p className="hidden sm:block text-[9px] font-mono text-text-muted mt-2">
               Ref: <span className="text-foreground/80">{product.supplier_code}</span>
             </p>
           )}
         </div>
 
-        <div className="pt-3 border-t border-card-border/60 flex items-center justify-between">
+        <div className="pt-2 sm:pt-3 border-t border-card-border/60 flex items-center justify-between gap-1">
           <div>
             <span className="text-[8px] font-mono text-text-muted uppercase font-bold block">
               {fromPrice ? 'Desde' : 'Precio'}

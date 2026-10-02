@@ -56,7 +56,10 @@ export interface Product {
   shortDescription: string;
   status: string;
   compatibility: ProductCompatibility[];
-  attributes: ProductAttribute[];
+  /** Características visibles para el cliente, ya con etiqueta en español */
+  attributes: Record<string, string>;
+  parentCategory?: string;
+  parentCategorySlug?: string;
   brand: string;
   barcode: string;
   supplierCode: string;

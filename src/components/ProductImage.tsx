@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { Package } from 'lucide-react';
 
@@ -31,6 +31,13 @@ export default function ProductImage({
   srcDesktop, srcMobile, srcCardDesktop, srcCardMobile,
 }: ProductImageProps) {
   const [failed, setFailed] = useState(false);
+  // Si la imagen ya falló antes de hidratar (SSR + carga prioritaria), React no
+  // recibe el onError: se comprueba tras montar.
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  useEffect(() => {
+    const el = imgRef.current;
+    if (el && el.complete && el.naturalWidth === 0) setFailed(true);
+  }, [src]);
 
   const mainSrc = normalizeImgSrc(src);
   const cardMobile = normalizeImgSrc(srcCardMobile);
@@ -67,6 +74,7 @@ export default function ProductImage({
             height={600}
             className={className}
             onError={() => setFailed(true)}
+            ref={imgRef}
           />
         </picture>
       </div>
@@ -99,6 +107,7 @@ export default function ProductImage({
           width={600}
           height={600}
           onError={() => setFailed(true)}
+          ref={imgRef}
         />
       )}
     </div>
