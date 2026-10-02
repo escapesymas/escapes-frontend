@@ -99,7 +99,11 @@ export default async function CatalogPage({
   let products: { products: Product[]; total: number; totalPages: number } | null = null;
   let filterOptions: FilterOptions | null = null;
 
-  const [prodRes, filterRes] = await Promise.all([
+  // Neumáticos: hasta elegir la medida solo se muestra el buscador (ver TyreFinder).
+  const tyresWithoutSize = segs[0] === 'neumaticos' && !/camara|mousse|accesorio|valvula|fondo/i.test(segs[1] || '')
+    && !(urlState.attrs.Ancho?.length && urlState.attrs.Llanta?.length) && !urlState.q;
+
+  const [prodRes, filterRes] = tyresWithoutSize ? [null, null] : await Promise.all([
     fetch(`${API_BASE}/api/catalog/products?${toApiParams(urlState, ctx)}`, { cache: 'no-store' }).catch(() => null),
     fetch(`${API_BASE}/api/catalog/filters?${toApiParams(urlState, ctx, true)}`, { cache: 'no-store' }).catch(() => null),
   ]);
