@@ -17,12 +17,30 @@ const heading = 'text-[10px] font-mono font-bold uppercase tracking-wider text-t
 const checkRow = 'flex items-center gap-2 text-[10px] font-mono uppercase cursor-pointer hover:text-accent-text text-foreground bg-transparent border-0 p-0 text-left w-full min-h-[24px]';
 const checkbox = 'rounded border-card-border bg-select-bg text-accent w-3 h-3 pointer-events-none';
 
+/** Valores visibles por sección antes de "Ver todos" (en la raíz del catálogo hay
+ *  cientos de marcas y colores: pintarlos todos eran ~1.300 botones en el HTML). */
+const VISIBLE = 12;
+
+function MoreButton({ total, open, onClick }: { total: number; open: boolean; onClick: () => void }) {
+  if (total <= VISIBLE) return null;
+  return (
+    <button type="button" onClick={onClick} className="mt-1.5 text-[10px] font-mono text-accent-text hover:underline bg-transparent border-0 p-0 cursor-pointer text-left">
+      {open ? 'Ver menos' : `Ver todos (${total})`}
+    </button>
+  );
+}
+
 function Count({ n }: { n?: number }) {
   return n != null ? <span className="ml-auto text-text-muted tabular-nums">{n}</span> : null;
 }
 
 export default function CatalogFilters({ options, state, onChange, onClear }: Props) {
   const [brandQuery, setBrandQuery] = useState('');
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const toggle = (key: string) => setExpanded((e) => ({ ...e, [key]: !e[key] }));
+  // Los valores marcados siempre visibles, aunque queden fuera de los primeros.
+  const visible = <T,>(key: string, list: T[], isActive: (x: T) => boolean): T[] =>
+    expanded[key] || list.length <= VISIBLE ? list : [...list.slice(0, VISIBLE), ...list.slice(VISIBLE).filter(isActive)];
   const [minInput, setMinInput] = useState(state.minPrice != null ? String(state.minPrice) : '');
   const [maxInput, setMaxInput] = useState(state.maxPrice != null ? String(state.maxPrice) : '');
 
@@ -56,7 +74,9 @@ export default function CatalogFilters({ options, state, onChange, onClear }: Pr
   return (
     <div className="flex flex-col gap-5">
       {/* Tallas y colores primero: es lo que más filtra en equipación */}
-      {attrEntries.map(([key, values]) => (
+      {attrEntries.map(([key, allValues]) => {
+        const values = visible(`a:${key}`, [...allValues], (v) => (state.attrs[key] || []).includes(v.value));
+        return (
         <div key={key}>
           <h4 className={heading}>{key}</h4>
           {key === 'Talla' || key === 'Tamaño' ? (
@@ -96,8 +116,10 @@ export default function CatalogFilters({ options, state, onChange, onClear }: Pr
               })}
             </div>
           )}
+          <MoreButton total={allValues.length} open={!!expanded[`a:${key}`]} onClick={() => toggle(`a:${key}`)} />
         </div>
-      ))}
+        );
+      })}
 
       <div>
         <h4 className={heading}>Marcas</h4>
@@ -115,7 +137,7 @@ export default function CatalogFilters({ options, state, onChange, onClear }: Pr
           <p className="text-[10px] font-mono text-text-muted">No hay marcas para estos filtros.</p>
         ) : (
           <div className="flex flex-col gap-1.5 max-h-52 overflow-y-auto pr-1 no-scrollbar">
-            {brands.map((brand) => {
+            {visible('brands', brands, (b) => state.brands.includes(b)).map((brand) => {
               const active = state.brands.includes(brand);
               return (
                 <button key={brand} type="button" onClick={() => toggleBrand(brand)} aria-pressed={active} className={checkRow}>
@@ -127,6 +149,7 @@ export default function CatalogFilters({ options, state, onChange, onClear }: Pr
             })}
           </div>
         )}
+        <MoreButton total={brands.length} open={!!expanded.brands} onClick={() => toggle('brands')} />
       </div>
 
       <div>
