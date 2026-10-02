@@ -15,7 +15,7 @@ import { Category3, Product, FilterOptions } from '../../../types';
 import CatalogFilters from '../../../components/catalog/CatalogFilters';
 import TyreFinder, { TYRE_KEYS, tyreSizeComplete } from '../../../components/catalog/TyreFinder';
 import {
-  CatalogUrlState, SORT_OPTIONS, CatalogSort, parseCatalogUrl, toApiParams, attrsToParam, hasActiveFilters,
+  CatalogUrlState, SORT_OPTIONS, CatalogSort, parseCatalogUrl, toApiParams, attrsToParam, hasActiveFilters, sizedKindFor,
 } from '../../../lib/catalogParams';
 
 type InitialProducts = { products: Product[]; total: number; totalPages: number } | null;
@@ -34,9 +34,6 @@ interface Props {
 
 const isPromoCat = (c: { id: number; slug: string; name: string }) =>
   c.id === 1011 || c.id === 634 || c.slug.includes('promocional') || c.name.toLowerCase().includes('promocional');
-
-/** Subcategorías de Neumáticos que no son neumáticos: catálogo normal, sin buscador por medida. */
-const NOT_TYRES = /camara|mousse|accesorio|valvula|fondo/i;
 
 const chip = 'shrink-0 px-3 py-1.5 rounded-full text-xs border transition-colors whitespace-nowrap';
 const chipOn = 'bg-accent text-slate-950 border-accent font-semibold';
@@ -87,16 +84,22 @@ function CatalogContent({
   const mainCategories = initialMainCategories.filter((c) => !isPromoCat(c));
 
   const urlState = useMemo(() => parseCatalogUrl(searchParamsStr), [searchParamsStr]);
+  // Neumáticos, cámaras y mousses se buscan por medida (TyreFinder).
+  const sizedKind = parentCategory && !isSearch ? sizedKindFor(parentCategory.slug, subCategory?.slug || null) : null;
   const ctx = useMemo(() => ({
     categoryId: subCategory?.id || parentCategory?.id || null,
     categorySlug: !subCategory && !parentCategory && parentSlug && !isSearch ? parentSlug : null,
     search: searchQuery || undefined,
-  }), [subCategory, parentCategory, parentSlug, isSearch, searchQuery]);
+    sizedKind,
+  }), [subCategory, parentCategory, parentSlug, isSearch, searchQuery, sizedKind]);
 
-  // Neumáticos: buscador por medida; los productos aparecen al completarla.
-  const isTyreMode = parentCategory?.slug === 'neumaticos' && !(subCategory && NOT_TYRES.test(subCategory.slug));
+  // Buscador por medida: los productos aparecen al completarla (o al buscar texto).
+  const isTyreMode = !!sizedKind;
   const showProducts = !isTyreMode || tyreSizeComplete(urlState.attrs) || !!urlState.q;
-  const tyreExtras = isTyreMode ? subcategories.filter((c) => NOT_TYRES.test(c.slug)) : [];
+  // Enlaces a las otras secciones de Neumáticos que no son del tipo actual.
+  const tyreExtras = isTyreMode
+    ? subcategories.filter((c) => sizedKindFor('neumaticos', c.slug) !== 'tyre' && c.id !== subCategory?.id)
+    : [];
 
   const activeFilterCount = urlState.brands.length
     + Object.entries(urlState.attrs).reduce((n, [k, v]) => n + (isTyreMode && (TYRE_KEYS as readonly string[]).includes(k) ? 0 : v.length), 0)
@@ -295,6 +298,7 @@ function CatalogContent({
           {isTyreMode && (
             <>
               <TyreFinder
+                kind={sizedKind!}
                 rootSlug={parentCategory!.slug}
                 typeSlug={subCategory?.slug || null}
                 categoryId={subCategory?.id || parentCategory!.id}
@@ -302,17 +306,21 @@ function CatalogContent({
                 queryString={searchParamsStr}
                 onChange={(attrs) => applyFilters({ attrs })}
               />
-              {tyreExtras.length > 0 && (
-                <p className="text-xs text-text-muted -mt-1">
-                  ¿Buscas otra cosa?{' '}
-                  {tyreExtras.map((c, i) => (
-                    <React.Fragment key={c.id}>
-                      {i > 0 && ' · '}
-                      <Link href={`/universales/${parentCategory!.slug}/${c.slug}`} className="underline hover:text-foreground">{c.name}</Link>
-                    </React.Fragment>
-                  ))}
-                </p>
-              )}
+              <p className="text-xs text-text-muted -mt-1">
+                ¿Buscas otra cosa?{' '}
+                {sizedKind !== 'tyre' && (
+                  <><Link href={`/universales/${parentCategory!.slug}`} className="underline hover:text-foreground">Neumáticos</Link>{' · '}</>
+                )}
+                {tyreExtras.map((c, i) => (
+                  <React.Fragment key={c.id}>
+                    {i > 0 && ' · '}
+                    <Link href={`/universales/${parentCategory!.slug}/${c.slug}`} className="underline hover:text-foreground">{c.name}</Link>
+                  </React.Fragment>
+                ))}
+                {sizedKind === 'tube' && (
+                  <>{' · '}<Link href="/universales/buscar/fondo%20llanta" className="underline hover:text-foreground">Fondos de llanta</Link></>
+                )}
+              </p>
             </>
           )}
 

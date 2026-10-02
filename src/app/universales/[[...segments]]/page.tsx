@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import { redirect, notFound } from 'next/navigation';
 import CatalogClient from './CatalogClient';
 import { Category3, Product, FilterOptions } from '../../../types';
-import { parseCatalogUrl, toApiParams } from '../../../lib/catalogParams';
+import { parseCatalogUrl, toApiParams, sizedKindFor } from '../../../lib/catalogParams';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -94,14 +94,14 @@ export default async function CatalogPage({
   for (const [k, v] of Object.entries(sp)) if (typeof v === 'string') spParams.set(k, v);
   const urlState = parseCatalogUrl(spParams);
   const catId = subId || parentId || null;
-  const ctx = { categoryId: catId, search: searchTerm || undefined };
+  const sizedKind = isSearch ? null : sizedKindFor(segs[0] || null, segs[1] || null);
+  const ctx = { categoryId: catId, search: searchTerm || undefined, sizedKind };
 
   let products: { products: Product[]; total: number; totalPages: number } | null = null;
   let filterOptions: FilterOptions | null = null;
 
-  // Neumáticos: hasta elegir la medida solo se muestra el buscador (ver TyreFinder).
-  const tyresWithoutSize = segs[0] === 'neumaticos' && !/camara|mousse|accesorio|valvula|fondo/i.test(segs[1] || '')
-    && !(urlState.attrs.Ancho?.length && urlState.attrs.Llanta?.length) && !urlState.q;
+  // Neumáticos, cámaras y mousses: hasta elegir la medida solo se muestra el buscador (ver TyreFinder).
+  const tyresWithoutSize = !!sizedKind && !(urlState.attrs.Ancho?.length && urlState.attrs.Llanta?.length) && !urlState.q;
 
   const [prodRes, filterRes] = tyresWithoutSize ? [null, null] : await Promise.all([
     fetch(`${API_BASE}/api/catalog/products?${toApiParams(urlState, ctx)}`, { cache: 'no-store' }).catch(() => null),

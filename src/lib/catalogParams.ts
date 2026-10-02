@@ -70,10 +70,33 @@ export function parseCatalogUrl(input: string | URLSearchParams): CatalogUrlStat
   };
 }
 
+/** Productos que se buscan por medida de neumático (ver TyreFinder). */
+export type SizedKind = 'tyre' | 'tube' | 'mousse';
+const KIND_LABEL: Record<SizedKind, string> = { tyre: 'Neumático', tube: 'Cámara', mousse: 'Mousse' };
+
+/** Neumáticos (raíz y tipos), Cámaras y Mousses llevan buscador por medida; Accesorios no. */
+export function sizedKindFor(parentSlug: string | null, subSlug: string | null): SizedKind | null {
+  if (parentSlug !== 'neumaticos') return null;
+  if (!subSlug) return 'tyre';
+  if (/camara/i.test(subSlug)) return 'tube';
+  if (/mousse/i.test(subSlug)) return 'mousse';
+  if (/accesorio|valvula|fondo/i.test(subSlug)) return null;
+  return 'tyre';
+}
+
+/** Ancho/Perfil/Llanta de la URL → la medida completa que guarda cada producto. */
+function sizedAttrs(attrs: Record<string, string[]>, kind: SizedKind): Record<string, string[]> {
+  const { Ancho, Perfil, Llanta, ...rest } = attrs;
+  if (!Ancho?.[0] || !Llanta?.[0]) return attrs;
+  const medida = `${Ancho[0]}${Perfil?.[0] ? `/${Perfil[0]}` : ''}-${Llanta[0]}`;
+  if (kind !== 'tyre') delete rest['Posición'];
+  return { ...rest, Medida: [medida], TipoMedida: [KIND_LABEL[kind]] };
+}
+
 /** Parámetros para /api/catalog/products (y /filters sin page/sort/per_page). */
 export function toApiParams(
   state: CatalogUrlState,
-  ctx: { categoryId?: number | null; categorySlug?: string | null; search?: string },
+  ctx: { categoryId?: number | null; categorySlug?: string | null; search?: string; sizedKind?: SizedKind | null },
   forFilters = false,
 ): URLSearchParams {
   const p = new URLSearchParams();
@@ -90,7 +113,7 @@ export function toApiParams(
   if (state.minPrice != null) p.set('min_price', String(state.minPrice));
   if (state.maxPrice != null) p.set('max_price', String(state.maxPrice));
   if (state.inStock) p.set('in_stock', '1');
-  const attrs = attrsToParam(state.attrs);
+  const attrs = attrsToParam(ctx.sizedKind ? sizedAttrs(state.attrs, ctx.sizedKind) : state.attrs);
   if (attrs) p.set('attrs', attrs);
   return p;
 }
