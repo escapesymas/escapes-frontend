@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { apiLogin, apiRegister, apiGetProfile, apiUpdateProfile, apiDeleteAccount, SessionData, UserProfile, UserBilling } from '../lib/api';
+import { apiLogin, apiRegister, apiVerifyEmail, apiGetProfile, apiUpdateProfile, apiDeleteAccount, SessionData, UserProfile, UserBilling, RegisterResult } from '../lib/api';
 import { apiRequest } from '../lib/constants';
 
 const SESSION_KEY = 'tg_session';
@@ -22,7 +22,9 @@ interface AuthContextValue extends AuthState {
     firstName?: string,
     lastName?: string,
     phone?: string
-  ) => Promise<void>;
+  ) => Promise<RegisterResult>;
+  /** Confirma el email con el token del enlace e inicia sesión. */
+  verifyEmail: (token: string) => Promise<void>;
   logout: () => void;
   syncGarage: (newGarage: string[]) => Promise<void>;
   updateProfile: (params: {
@@ -132,7 +134,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     lastName?: string,
     phone?: string
   ) => {
-    const s = await apiRegister(username, email, password, firstName, lastName, phone);
+    // La cuenta queda pendiente de confirmar el email: sin sesión todavía.
+    return apiRegister(username, email, password, firstName, lastName, phone);
+  };
+
+  const verifyEmail = async (token: string) => {
+    const s = await apiVerifyEmail(token);
     persistSession(s);
     await loadProfile(s);
   };
@@ -222,6 +229,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthenticated: !!session,
         login,
         register,
+        verifyEmail,
         logout,
         syncGarage,
         updateProfile,
