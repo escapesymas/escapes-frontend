@@ -9,7 +9,7 @@ export async function getAllProductsSitemap(limit = 50000): Promise<string[]> {
     });
     if (!res.ok) return [];
     const rows = await res.json();
-    return Array.isArray(rows) ? rows.map((r: any) => r.slug).filter(Boolean) : [];
+    return Array.isArray(rows) ? rows.map((r: { slug?: string }) => r.slug).filter((s): s is string => Boolean(s)) : [];
   } catch (err) {
     console.error('sitemap-data: error fetching sitemap slugs', err);
     return [];

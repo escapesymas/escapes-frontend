@@ -16,7 +16,7 @@ export default function CartProgressBar({ subtotal }: CartProgressBarProps) {
   ];
 
   // Logic to determine current status
-  let nextTier = tiers.find(t => subtotal < t.threshold);
+  const nextTier = tiers.find(t => subtotal < t.threshold);
   if (!nextTier) {
     return (
       <div className="bg-accent/10 border border-accent/30 p-4 rounded mb-6 flex items-center justify-between">

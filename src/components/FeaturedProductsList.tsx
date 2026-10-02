@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 
 import React, { useState, useEffect } from 'react';
 import { Loader2, Sparkles, ArrowRight, PlusCircle } from 'lucide-react';
@@ -155,13 +156,13 @@ export default function FeaturedProductsList({
         )}
 
         <ScrollReveal animation="fade-up">
-          <a
+          <Link
             href="/universales/cascos"
             className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-accent text-slate-950 hover:bg-accent-hover rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition-all duration-300 shadow-md hover:shadow-xl no-underline cursor-pointer mx-auto"
           >
             <span>Ver todo el catálogo de Equipamiento</span>
             <ArrowRight className="w-4 h-4" />
-          </a>
+          </Link>
         </ScrollReveal>
       </div>
     </section>

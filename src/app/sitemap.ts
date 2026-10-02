@@ -47,8 +47,8 @@ export default async function sitemap(props?: { id?: number }): Promise<Metadata
       const rows = await res.json();
       if (Array.isArray(rows)) {
         productPages = rows
-          .filter((r: any) => r.slug)
-          .map((r: any) => ({
+          .filter((r: { slug?: string }) => r.slug)
+          .map((r: { slug?: string; updated_at?: string }) => ({
             url: `${SITE_URL}/producto/${r.slug}`,
             lastModified: r.updated_at ? new Date(r.updated_at) : now,
             changeFrequency: 'weekly' as const,

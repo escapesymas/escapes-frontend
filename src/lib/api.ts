@@ -149,6 +149,8 @@ export interface UserProfile {
   cart: Record<string, unknown>[];
 }
 
+// La respuesta de login tiene varias formas heredadas (WordPress/Clerk/JWT).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeSession(data: any): SessionData {
   if (!data) return { token: '', user_id: 0, user_email: '', user_nicename: '', user_display_name: '', avatarUrl: '', role: '' };
   const user = data.user || {};

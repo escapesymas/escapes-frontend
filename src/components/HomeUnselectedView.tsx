@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 
 import React, { useRef, useEffect, useState } from 'react';
 import { Bike, Sparkles, ArrowUpRight, ChevronDown } from 'lucide-react';
@@ -175,7 +176,7 @@ export default function HomeUnselectedView({
 
         {/* Card 4: Cascos & Ropa (Equipamiento Piloto) */}
         <ScrollReveal animation="fade-up" delay={250}>
-          <a
+          <Link
             href="/universales/cascos"
             className="group relative bg-card/40 hover:bg-card border border-card-border/60 hover:border-accent/60 rounded-2xl p-7 sm:p-8 transition-all duration-500 hover:-translate-y-2 shadow-sm hover:shadow-2xl text-left flex flex-col sm:flex-row sm:items-center justify-between gap-6 w-full no-underline cursor-pointer overflow-hidden"
           >
@@ -193,7 +194,7 @@ export default function HomeUnselectedView({
               </div>
             </div>
             <ArrowUpRight className="w-5 h-5 text-accent opacity-50 group-hover:opacity-100 group-hover:translate-x-1 group-hover:-translate-y-1 transition-all shrink-0 hidden sm:block" />
-          </a>
+          </Link>
         </ScrollReveal>
       </div>
 

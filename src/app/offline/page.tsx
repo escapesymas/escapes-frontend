@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -51,18 +52,18 @@ export default function OfflinePage() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 mt-2">
-          <a
+          <Link
             href="/"
             className="px-5 py-2.5 text-xs font-mono font-bold rounded-sm bg-accent text-slate-950 hover:bg-accent-hover transition-all"
           >
             Volver al inicio
-          </a>
-          <a
+          </Link>
+          <Link
             href="/universales"
             className="px-5 py-2.5 text-xs font-mono font-bold rounded-sm border border-card-border text-foreground hover:border-accent/50 hover:bg-select-bg transition-all"
           >
             Explorar catálogo
-          </a>
+          </Link>
         </div>
 
         <p className="text-[10px] font-mono text-text-muted uppercase tracking-wider pt-4">

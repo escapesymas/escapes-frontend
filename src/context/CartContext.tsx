@@ -4,6 +4,10 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
 import { apiRequest } from '../lib/constants';
+import type { Product } from '../types';
+
+/** Lo mínimo para añadir al carrito: un producto completo o una variante. */
+export type CartProductInput = Partial<Product> & { id: number; price: number };
 
 export interface CartItem {
   id: number;
@@ -26,7 +30,7 @@ export interface CartItem {
 interface CartContextValue {
   cart: CartItem[];
   cartCount: number;
-  addToCart: (product: any, quantity?: number) => void;
+  addToCart: (product: CartProductInput, quantity?: number) => void;
   updateQuantity: (id: number, delta: number) => void;
   removeItem: (id: number) => void;
   clearCart: () => void;
@@ -186,7 +190,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     };
   }, [cart, user, sessionToken, isInitialized]);
 
-  const addToCart = (product: any, quantity: number = 1) => {
+  const addToCart = (product: CartProductInput, quantity: number = 1) => {
     const itemTitle = product.name || product.title || 'Producto';
     const itemImage = product.image || (product.images && product.images[0]?.src) || '';
     const itemCategory = product.category || '';

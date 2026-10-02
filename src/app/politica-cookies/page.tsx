@@ -76,7 +76,7 @@ export default function PoliticaCookiesPage() {
           <section>
             <h2 className="font-mono text-sm font-bold uppercase text-foreground mb-2">Gestión de cookies</h2>
             <p>
-              Puedes configurar o rechazar las cookies opcionales a través del banner de cookies que aparece en tu primera visita, o actualizar tus preferencias en cualquier momento haciendo clic en el botón "Gestionar cookies" en el pie de página.
+              Puedes configurar o rechazar las cookies opcionales a través del banner de cookies que aparece en tu primera visita, o actualizar tus preferencias en cualquier momento haciendo clic en el botón &ldquo;Gestionar cookies&rdquo; en el pie de página.
             </p>
             <p>
               También puedes configurar tu navegador para que rechace todas las cookies o avise antes de instalarlas. La mayoría de los navegadores aceptan las cookies por defecto, pero puedes cambiar la configuración en cualquier momento. Ten en cuenta que bloquear las cookies estrictamente necesarias puede impedir el correcto funcionamiento del sitio.
