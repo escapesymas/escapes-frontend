@@ -31,6 +31,8 @@ export interface ProductAttribute {
 export interface Product {
   /** En una promoción activa (precio DTO2 o descuento temporal). */
   onPromotion?: boolean;
+  /** Precio habitual (DTO1) mientras dura una promoción. */
+  usualPrice?: number | null;
   id: number;
   title: string;
   name: string;
