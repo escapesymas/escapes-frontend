@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Loader2, RotateCcw } from 'lucide-react';
+import type { SizedKind } from '../../lib/catalogParams';
 
 export const TYRE_KEYS = ['Ancho', 'Perfil', 'Llanta', 'Posición'] as const;
 
@@ -18,6 +19,8 @@ interface TyreOptions {
 }
 
 interface Props {
+  /** Neumático, cámara o mousse: cambia textos y oculta posición/tipo fuera de neumáticos */
+  kind: SizedKind;
   rootSlug: string;
   /** Tipo elegido (subcategoría) o null = todos */
   typeSlug: string | null;
@@ -49,7 +52,14 @@ export function tyreSizeComplete(attrs: Record<string, string[]>): boolean {
   return !!attrs.Ancho?.[0] && !!attrs.Llanta?.[0];
 }
 
-export default function TyreFinder({ rootSlug, typeSlug, categoryId, attrs, queryString, onChange }: Props) {
+const COPY: Record<SizedKind, { title: string; found: string; list: string; done: string }> = {
+  tyre: { title: 'Busca tu neumático por medida', found: 'neumáticos', list: 'los neumáticos', done: 'Neumáticos' },
+  tube: { title: 'Busca tu cámara por la medida del neumático', found: 'cámaras', list: 'las cámaras', done: 'Cámaras para' },
+  mousse: { title: 'Busca tu mousse por la medida del neumático', found: 'mousses', list: 'los mousses', done: 'Mousses para' },
+};
+
+export default function TyreFinder({ kind, rootSlug, typeSlug, categoryId, attrs, queryString, onChange }: Props) {
+  const copy = COPY[kind];
   const ancho = attrs.Ancho?.[0] || '';
   const perfil = attrs.Perfil?.[0] || '';
   const llanta = attrs.Llanta?.[0] || '';
@@ -107,11 +117,12 @@ export default function TyreFinder({ rootSlug, typeSlug, categoryId, attrs, quer
       <div className="flex items-start justify-between gap-2">
         <div>
           <h2 className="text-base font-semibold leading-tight">
-            {complete ? <>Neumáticos <span className="text-accent-text">{tyreLabel(ancho, perfil, llanta)}</span></> : 'Busca tu neumático por medida'}
+            {complete ? <>{copy.done} <span className="text-accent-text">{tyreLabel(ancho, perfil, llanta)}</span></> : copy.title}
           </h2>
           {!complete && (
             <p className="text-xs text-text-muted mt-0.5">
-              La medida está en el flanco: en <strong className="text-foreground">120/70 ZR17</strong> el ancho es 120, el perfil 70 y la llanta 17.
+              La medida está en el flanco del neumático: en <strong className="text-foreground">120/70 ZR17</strong> el ancho es 120, el perfil 70 y la llanta 17.
+              {kind !== 'tyre' && ' Cada una sirve para varias medidas: elige la de tu neumático.'}
             </p>
           )}
         </div>
@@ -191,7 +202,7 @@ export default function TyreFinder({ rootSlug, typeSlug, categoryId, attrs, quer
         </div>
       )}
 
-      <div>
+      {kind === 'tyre' && <div>
         <span className={label}>Posición</span>
         <div className="flex gap-2">
           {[['', 'Indiferente'], ['Delantero', 'Delantero'], ['Trasero', 'Trasero']].map(([v, text]) => (
@@ -206,9 +217,9 @@ export default function TyreFinder({ rootSlug, typeSlug, categoryId, attrs, quer
             </button>
           ))}
         </div>
-      </div>
+      </div>}
 
-      <div>
+      {kind === 'tyre' && <div>
         <span className={label}>Tipo de neumático</span>
         <div className="-mx-3 px-3 flex gap-2 overflow-x-auto no-scrollbar md:mx-0 md:px-0 md:flex-wrap">
           <Link href={typeHref(null)} className={`${chip} ${!typeSlug ? chipOn : chipOff}`}>Todos</Link>
@@ -221,14 +232,14 @@ export default function TyreFinder({ rootSlug, typeSlug, categoryId, attrs, quer
               </Link>
             ))}
         </div>
-      </div>
+      </div>}
 
       {!complete && (
         <p className="text-xs text-text-muted flex items-center gap-1.5" aria-live="polite">
           {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
           {ancho
-            ? `${(opts?.total ?? 0).toLocaleString('es-ES')} neumáticos con ancho ${ancho}. Completa la medida para verlos.`
-            : 'Elige la medida para ver los neumáticos disponibles.'}
+            ? `${(opts?.total ?? 0).toLocaleString('es-ES')} ${copy.found} con ancho ${ancho}. Completa la medida para verlos.`
+            : `Elige la medida para ver ${copy.list} disponibles.`}
         </p>
       )}
     </section>
