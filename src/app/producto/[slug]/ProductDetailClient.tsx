@@ -143,13 +143,16 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
     ? { dot: 'bg-emerald-500', text: product.dropshipping ? 'Disponible · envío en 3-5 días' : 'En stock · envío en 24 h' }
     : { dot: 'bg-red-500', text: 'Agotado' };
 
+  // Catálogo › Raíz › Subcategoría › (tercer nivel, sin página propia: se
+  // enlaza a su subcategoría).
+  // Sin niveles consecutivos con el mismo nombre ("Guantes › Guantes").
+  const path = (product.categoryPath || []).filter((c, i, arr) => i === 0 || c.name.toLowerCase() !== arr[i - 1].name.toLowerCase());
   const crumbs = [
     { name: 'Catálogo', href: '/universales' },
-    ...(product.parentCategory && product.parentCategorySlug
-      ? [{ name: product.parentCategory, href: `/universales/${product.parentCategorySlug}` }] : []),
-    ...(product.category && product.categorySlug
-      ? [{ name: product.category, href: product.parentCategorySlug ? `/universales/${product.parentCategorySlug}/${product.categorySlug}` : `/universales/${product.categorySlug}` }]
-      : []),
+    ...path.map((c, i) => ({
+      name: c.name,
+      href: i === 0 ? `/universales/${c.slug}` : `/universales/${path[0].slug}/${path[Math.min(i, 1)].slug}`,
+    })),
   ];
 
   const handleBuy = () => {
@@ -202,7 +205,7 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
       <nav aria-label="Ruta" className="border-b border-card-border/60 bg-card">
         <ol className="max-w-6xl mx-auto px-4 py-2 flex items-center gap-1.5 text-[11px] text-text-muted overflow-x-auto no-scrollbar whitespace-nowrap">
           {crumbs.map((c, i) => (
-            <li key={c.href} className="flex items-center gap-1.5">
+            <li key={`${c.href}-${i}`} className="flex items-center gap-1.5">
               {i > 0 && <span aria-hidden="true">›</span>}
               <Link href={c.href} className="hover:text-foreground">{c.name}</Link>
             </li>
