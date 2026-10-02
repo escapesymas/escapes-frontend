@@ -98,7 +98,8 @@ function CatalogContent({
   const showProducts = !isTyreMode || tyreSizeComplete(urlState.attrs) || !!urlState.q;
   const tyreExtras = isTyreMode ? subcategories.filter((c) => NOT_TYRES.test(c.slug)) : [];
 
-  const activeFilterCount = urlState.brands.length + Object.values(urlState.attrs).reduce((n, v) => n + v.length, 0)
+  const activeFilterCount = urlState.brands.length
+    + Object.entries(urlState.attrs).reduce((n, [k, v]) => n + (isTyreMode && (TYRE_KEYS as readonly string[]).includes(k) ? 0 : v.length), 0)
     + (urlState.inStock ? 1 : 0) + (urlState.minPrice != null || urlState.maxPrice != null ? 1 : 0);
 
   useEffect(() => {
