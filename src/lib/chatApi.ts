@@ -33,6 +33,15 @@ function getToken(): string | null {
   }
 }
 
+function getSelectedBike(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return localStorage.getItem('tg_selected_bike') || null;
+  } catch {
+    return null;
+  }
+}
+
 export interface ChatStreamHandlers {
   onDelta: (delta: string) => void;
   onProducts: (products: ChatProduct[]) => void;
@@ -56,7 +65,8 @@ export async function sendChatMessage(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ messages }),
+    // La moto elegida en la web («Mi garaje» de la cabecera) tiene prioridad.
+    body: JSON.stringify({ messages, selectedBike: getSelectedBike() }),
   });
 
   if (res.status === 401) {
