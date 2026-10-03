@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
+import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
@@ -9,11 +10,50 @@ import { trackEvent } from '../lib/analytics';
 import ProductCardMessage from './chat/ProductCardMessage';
 
 const SUGGESTIONS = [
-  '¿Tenéis escapes Akrapovic?',
-  'Busco recambios para mi moto',
+  'Pastillas de freno para mi moto',
+  '¿Cuánto cuesta el envío?',
   '¿Cómo va mi pedido?',
-  '¿Cuál es la garantía?',
+  '¿Cómo hago una devolución?',
 ];
+
+// La conversación se guarda en la pestaña para no perderla al recargar.
+const STORAGE_KEY = 'tg_chat_v1';
+
+/** **negrita** dentro de una línea. */
+function inline(text: string): ReactNode[] {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+    part.startsWith('**') && part.endsWith('**') && part.length > 4
+      ? <strong key={i}>{part.slice(2, -2)}</strong>
+      : <Fragment key={i}>{part}</Fragment>
+  );
+}
+
+/** Formato mínimo de las respuestas: párrafos, listas con guiones y negritas. */
+function ChatText({ text }: { text: string }) {
+  const blocks: ReactNode[] = [];
+  let list: string[] = [];
+  const flush = () => {
+    if (list.length) {
+      blocks.push(
+        <ul key={`l${blocks.length}`} className="list-disc pl-4 space-y-0.5">
+          {list.map((li, i) => <li key={i}>{inline(li)}</li>)}
+        </ul>
+      );
+      list = [];
+    }
+  };
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    const item = line.match(/^(?:[-*•]|\d+[.)])\s+(.*)$/);
+    if (item) { list.push(item[1]); continue; }
+    flush();
+    if (!line) continue;
+    const heading = line.match(/^#{1,6}\s+(.*)$/);
+    blocks.push(<p key={`p${blocks.length}`}>{heading ? <strong>{heading[1]}</strong> : inline(line)}</p>);
+  }
+  flush();
+  return <div className="space-y-1.5">{blocks}</div>;
+}
 
 export default function ChatWidget() {
   const { isAuthenticated, user, isLoading } = useAuth();
@@ -56,8 +96,28 @@ export default function ChatWidget() {
     return () => window.removeEventListener('session-expired', handleExpired);
   }, []);
 
+  // Recuperar la conversación de esta pestaña (y olvidarla al cerrar sesión).
+  useEffect(() => {
+    if (isLoading) return;
+    try {
+      if (!isAuthenticated) { sessionStorage.removeItem(STORAGE_KEY); return; }
+      const saved = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || 'null');
+      if (saved && Array.isArray(saved.messages)) {
+        setMessages(saved.messages);
+        setProductsByMessage(saved.products || {});
+      }
+    } catch {}
+  }, [isAuthenticated, isLoading]);
+
+  useEffect(() => {
+    if (streaming || !isAuthenticated) return;
+    try {
+      if (messages.length === 0) sessionStorage.removeItem(STORAGE_KEY);
+      else sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ messages: messages.slice(-30), products: productsByMessage }));
+    } catch {}
+  }, [messages, productsByMessage, streaming, isAuthenticated]);
+
   if (isLoading) return null;
-  if (!isAuthenticated) return null;
 
   const send = async (text: string) => {
     const clean = text.trim();
@@ -198,7 +258,7 @@ export default function ChatWidget() {
                 Asistente IA
               </p>
               <p className="text-[10px] text-muted-foreground mt-0.5">
-                Hola{user?.firstName ? `, ${user.firstName}` : ''} · Pregunta sobre catálogo
+                {isAuthenticated ? `Hola${user?.firstName ? `, ${user.firstName}` : ''} · Recambios, pedidos y envíos` : 'Recambios, pedidos y envíos'}
               </p>
             </div>
             <div className="flex gap-2">
@@ -222,7 +282,31 @@ export default function ChatWidget() {
           </div>
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-background">
-            {messages.length === 0 && (
+            {!isAuthenticated && (
+              <div className="space-y-3 text-sm">
+                <p className="text-foreground">
+                  Te ayudo a encontrar recambios compatibles con tu moto, a seguir tus pedidos y con envíos o devoluciones.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Inicia sesión para usar el asistente: así puedo consultar tus pedidos y las motos de tu garaje.
+                </p>
+                <Link
+                  href="/login?tab=login"
+                  onClick={() => setOpen(false)}
+                  className="block text-center px-3 py-2 bg-accent text-accent-foreground rounded-lg text-xs font-mono uppercase font-bold"
+                >
+                  Iniciar sesión
+                </Link>
+                <Link
+                  href="/login?tab=register"
+                  onClick={() => setOpen(false)}
+                  className="block text-center text-xs text-muted-foreground hover:text-foreground underline"
+                >
+                  Crear una cuenta
+                </Link>
+              </div>
+            )}
+            {isAuthenticated && messages.length === 0 && (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground mb-3">
                   Estoy aquí para ayudarte con catálogo, pedidos y soporte de la web.
@@ -258,8 +342,8 @@ export default function ChatWidget() {
                         </div>
                       )}
                       {m.content && (
-                        <div className="px-3 py-2 bg-card border border-card-border text-foreground whitespace-pre-wrap break-words rounded-2xl">
-                          {m.content}
+                        <div className="px-3 py-2 bg-card border border-card-border text-foreground break-words rounded-2xl">
+                          <ChatText text={m.content} />
                         </div>
                       )}
                       {productsByMessage[i] && productsByMessage[i].length > 0 && (
@@ -288,7 +372,7 @@ export default function ChatWidget() {
             )}
           </div>
 
-          <form onSubmit={handleSubmit} className="p-3 border-t border-card-border bg-card">
+          {isAuthenticated && <form onSubmit={handleSubmit} className="p-3 border-t border-card-border bg-card">
             <div className="flex gap-2">
               <input
                 type="text"
@@ -312,7 +396,7 @@ export default function ChatWidget() {
             <p className="text-[9px] text-muted-foreground mt-1.5 text-center">
               Solo responde sobre catálogo, pedidos y soporte web.
             </p>
-          </form>
+          </form>}
         </div>
       )}
     </>
