@@ -9,7 +9,7 @@ import { trackEvent as trackUmami } from '../lib/umami';
 import { useCart, CartItem } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import Link from 'next/link';
-import { MARKETING_TIERS, PHONE_REGEX, POSTCODE_REGEX, getImageUrl, formatOrderNumber, apiRequest } from '../lib/constants';
+import { MARKETING_TIERS, FREE_SHIPPING_MIN, PHONE_REGEX, POSTCODE_REGEX, getImageUrl, formatOrderNumber, apiRequest } from '../lib/constants';
 import { Product } from '../types';
 import CartProgressBar from './CartProgressBar';
 import { Elements } from '@stripe/react-stripe-js';
@@ -390,8 +390,8 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
   }
 
   const isFreeShippingPromo = appliedPromo && promoType === 'free_shipping';
-  const qualifiesFor150FreeShipping = afterTierSubtotal >= 150 || subtotal >= 150;
-  const localFreeShipping = isFreeShippingPromo || qualifiesFor150FreeShipping || currentTier.shipping === 0 || dynamicShippingCost === 0;
+  const qualifiesForFreeShipping = subtotal >= FREE_SHIPPING_MIN;
+  const localFreeShipping = isFreeShippingPromo || qualifiesForFreeShipping || currentTier.shipping === 0 || dynamicShippingCost === 0;
 
   // Use dynamic shipping cost if available, otherwise fallback to tier logic for initial render
   const baseShippingCost = localFreeShipping ? 0 : (dynamicShippingCost !== null ? dynamicShippingCost : currentTier.shipping);

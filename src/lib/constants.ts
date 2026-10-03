@@ -1,9 +1,13 @@
 /** Tramos por importe: deben coincidir con ORDER_TIERS del backend
  *  (lib/order-pricing.ts). Los importes que se muestran en el carrito vienen de
  *  /api/cart/quote; esto solo sirve para la barra de progreso y el primer pintado. */
+/** Envío estándar y umbral de envío gratis (los reales vienen de shipping_methods). */
+export const SHIPPING_COST = 19.99;
+export const FREE_SHIPPING_MIN = 200;
+
 export const MARKETING_TIERS = {
-  BRONCE: { min: 0, discount: 0, label: 'BRONCE', shipping: 14.99 },
-  PLATA: { min: 150, discount: 5, label: 'PLATA', shipping: 0 },
+  BRONCE: { min: 0, discount: 0, label: 'BRONCE', shipping: SHIPPING_COST },
+  PLATA: { min: 150, discount: 5, label: 'PLATA', shipping: SHIPPING_COST },
   ORO: { min: 300, discount: 10, label: 'ORO', shipping: 0 },
   PLATINO: { min: 500, discount: 15, label: 'PLATINO', shipping: 0 },
 } as const;

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Truck, Percent, Trophy, ChevronRight } from 'lucide-react';
-import { MARKETING_TIERS } from '../lib/constants';
+import { MARKETING_TIERS, FREE_SHIPPING_MIN } from '../lib/constants';
 
 interface CartProgressBarProps {
   subtotal: number;
@@ -10,7 +10,8 @@ interface CartProgressBarProps {
 
 export default function CartProgressBar({ subtotal }: CartProgressBarProps) {
   const tiers = [
-    { threshold: MARKETING_TIERS.PLATA.min, label: 'Envío Gratis + 5%', icon: Truck, color: 'bg-zinc-500' },
+    { threshold: MARKETING_TIERS.PLATA.min, label: 'Descuento 5%', icon: Percent, color: 'bg-zinc-500' },
+    { threshold: FREE_SHIPPING_MIN, label: 'Envío Gratis', icon: Truck, color: 'bg-zinc-500' },
     { threshold: MARKETING_TIERS.ORO.min, label: 'Descuento 10%', icon: Percent, color: 'bg-zinc-500' },
     { threshold: MARKETING_TIERS.PLATINO.min, label: 'Nivel Platino 15%', icon: Trophy, color: 'bg-accent' }
   ];
@@ -80,11 +81,18 @@ export default function CartProgressBar({ subtotal }: CartProgressBarProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-4 text-text-muted text-[10px] font-bold uppercase tracking-tight">
-          <div className="flex items-center gap-1.5 grayscale opacity-75 hover:opacity-100 transition-all cursor-default">
+          <div className="flex items-center gap-1.5">
             <div className={`p-1 rounded-full ${subtotal >= MARKETING_TIERS.PLATA.min ? 'bg-accent text-slate-950' : 'bg-slate-950 text-text-muted'}`}>
+              <Percent className="w-3 h-3" />
+            </div>
+            <span className={subtotal >= MARKETING_TIERS.PLATA.min ? 'text-foreground' : ''}>5% DTO</span>
+          </div>
+          <div className="w-2 h-px bg-card-border"></div>
+          <div className="flex items-center gap-1.5">
+            <div className={`p-1 rounded-full ${subtotal >= FREE_SHIPPING_MIN ? 'bg-accent text-slate-950' : 'bg-slate-950 text-text-muted'}`}>
               <Truck className="w-3 h-3" />
             </div>
-            <span className={subtotal >= MARKETING_TIERS.PLATA.min ? 'text-foreground' : ''}>Envío Gratis</span>
+            <span className={subtotal >= FREE_SHIPPING_MIN ? 'text-foreground' : ''}>Envío Gratis</span>
           </div>
           <div className="w-2 h-px bg-card-border"></div>
           <div className="flex items-center gap-1.5">
