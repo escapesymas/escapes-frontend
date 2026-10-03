@@ -97,6 +97,9 @@ export default function ChatWidget() {
   }, []);
 
   // Recuperar la conversación de esta pestaña (y olvidarla al cerrar sesión).
+  // No se guarda nada hasta haberla recuperado: al cargar, la sesión aparece
+  // antes que el perfil y el guardado borraba la conversación vacía.
+  const restoredRef = useRef(false);
   useEffect(() => {
     if (isLoading) return;
     try {
@@ -106,16 +109,18 @@ export default function ChatWidget() {
         setMessages(saved.messages);
         setProductsByMessage(saved.products || {});
       }
-    } catch {}
+    } catch {} finally {
+      restoredRef.current = isAuthenticated;
+    }
   }, [isAuthenticated, isLoading]);
 
   useEffect(() => {
-    if (streaming || !isAuthenticated) return;
+    if (streaming || !isAuthenticated || isLoading || !restoredRef.current) return;
     try {
       if (messages.length === 0) sessionStorage.removeItem(STORAGE_KEY);
       else sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ messages: messages.slice(-30), products: productsByMessage }));
     } catch {}
-  }, [messages, productsByMessage, streaming, isAuthenticated]);
+  }, [messages, productsByMessage, streaming, isAuthenticated, isLoading]);
 
   if (isLoading) return null;
 
