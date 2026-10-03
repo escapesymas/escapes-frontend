@@ -309,6 +309,23 @@ export interface OrderItemDetail {
   price: number;
 }
 
+export interface RefundRequestView {
+  id: number;
+  scope: 'full' | 'partial';
+  items: Array<{ itemId: number; name: string; quantity: number; priceCents: number }>;
+  /** Importe estimado en euros. */
+  amount: number;
+  reasonCode: string;
+  reasonLabel: string;
+  reason: string;
+  status: 'pending' | 'refunded' | 'rejected';
+  adminNote: string | null;
+  /** Importe devuelto en euros. */
+  refunded: number;
+  createdAt: string;
+  resolvedAt: string | null;
+}
+
 export interface OrderDetail {
   id: number;
   total: number;
@@ -317,6 +334,29 @@ export interface OrderDetail {
   shippingData: Record<string, unknown>;
   createdAt: string;
   items: OrderItemDetail[];
+  /** Importe ya reembolsado en euros. */
+  refunded?: number;
+  refundRequests?: RefundRequestView[];
+  canRequestRefund?: boolean;
+}
+
+export interface RefundRequestPayload {
+  scope: 'full' | 'partial';
+  items?: Array<{ itemId: number; quantity: number }>;
+  reasonCode: string;
+  reason: string;
+}
+
+/** Envía una solicitud de reembolso; devuelve la solicitud creada o el error. */
+export async function apiRequestRefund(orderId: number, payload: RefundRequestPayload): Promise<{ request?: RefundRequestView; error?: string }> {
+  try {
+    const res = await apiFetch(`/orders/${orderId}/refund-request`, { method: 'POST', body: JSON.stringify(payload) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: data.error || 'No hemos podido enviar la solicitud.' };
+    return { request: data.request };
+  } catch {
+    return { error: 'Error de conexión. Inténtalo de nuevo.' };
+  }
 }
 
 export async function apiGetOrders(userId: number): Promise<OrderSummary[]> {
