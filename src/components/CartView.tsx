@@ -303,7 +303,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
       const res = await apiRequest('/coupons/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: upperCode }),
+        body: JSON.stringify({ code: upperCode, subtotal }),
       });
       const data = await res.json();
       if (data.valid) {
@@ -400,7 +400,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
   // con el impuesto del código postal (Canarias, Ceuta y Melilla sin IVA). El
   // cálculo local de arriba solo se usa hasta que llega la respuesta.
   const quoteKey = JSON.stringify([cart.map((i) => [i.id, i.quantity]), shippingData.postcode, appliedPromo]);
-  const [serverQuote, setServerQuote] = useState<{ key: string; subtotal: number; discount: number; shipping: number; total: number; taxRate: number; taxLabel: string; belowMinimum?: boolean; minimumMessage?: string | null } | null>(null);
+  const [serverQuote, setServerQuote] = useState<{ key: string; subtotal: number; discount: number; shipping: number; total: number; taxRate: number; taxLabel: string; belowMinimum?: boolean; minimumMessage?: string | null; promo?: { code: string; valid: boolean; error?: string } | null } | null>(null);
   useEffect(() => {
     if (cart.length === 0) return;
     const ctrl = new AbortController();
@@ -1112,6 +1112,11 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
                           <span className="text-text-muted text-[10px]">
                             {promoType === 'percent' ? `${promoValue}% de descuento adicional` : promoType === 'free_shipping' ? 'Envío Gratuito' : `${formatPrice(promoValue / 100)} de descuento`}
                           </span>
+                          {quote?.promo && quote.promo.code === appliedPromo && !quote.promo.valid && (
+                            <span className="text-amber-600 text-[10px] font-mono font-semibold block mt-1">
+                              {quote.promo.error || 'El cupón no se aplica a este pedido.'}
+                            </span>
+                          )}
                         </div>
                         <button
                           type="button"
