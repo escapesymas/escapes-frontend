@@ -400,7 +400,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
   // con el impuesto del código postal (Canarias, Ceuta y Melilla sin IVA). El
   // cálculo local de arriba solo se usa hasta que llega la respuesta.
   const quoteKey = JSON.stringify([cart.map((i) => [i.id, i.quantity]), shippingData.postcode, appliedPromo]);
-  const [serverQuote, setServerQuote] = useState<{ key: string; subtotal: number; discount: number; shipping: number; total: number; taxRate: number; taxLabel: string } | null>(null);
+  const [serverQuote, setServerQuote] = useState<{ key: string; subtotal: number; discount: number; shipping: number; total: number; taxRate: number; taxLabel: string; belowMinimum?: boolean; minimumMessage?: string | null } | null>(null);
   useEffect(() => {
     if (cart.length === 0) return;
     const ctrl = new AbortController();
@@ -844,10 +844,15 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
                 <AlertCircle className="w-3.5 h-3.5" /> {orderError}
               </p>
             )}
+            {!orderError && quote?.belowMinimum && (
+              <p className="text-amber-600 text-xs font-mono font-bold mt-2 flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5" /> {quote.minimumMessage || 'El importe mínimo para pagar es de 0,50 €.'}
+              </p>
+            )}
 
             <button
               type="submit"
-              disabled={isSubmittingOrder}
+              disabled={isSubmittingOrder || !!quote?.belowMinimum}
               className="w-full bg-accent text-slate-950 font-mono font-bold uppercase tracking-wider py-4 rounded hover:bg-accent-hover transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {isSubmittingOrder ? (
