@@ -198,9 +198,12 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
         setRecoveryMessage(data.already_recovered
           ? `Carrito reabierto · ${data.cart.length} producto${data.cart.length === 1 ? '' : 's'} añadidos. Esta vez te avisaremos si no completas el pago.`
           : `Carrito recuperado · ${data.cart.length} producto${data.cart.length === 1 ? '' : 's'} añadidos.`);
-        if (data.discount_cents && data.discount_cents > 0) {
-          const discountPct = Math.round((data.discount_cents / data.total_cents) * 100);
-          setRecoveryMessage(prev => `${prev} Tienes un cupón del ${discountPct}% reservado si completas la compra.`);
+        // Recordatorios con descuento: el correo trae un cupón de un solo uso
+        // que se aplica aquí sin que el cliente tenga que escribirlo.
+        if (typeof data.coupon_code === 'string' && data.coupon_code) {
+          setPromoCodeInput(data.coupon_code);
+          applyPromoCode(data.coupon_code);
+          setRecoveryMessage(prev => `${prev} Hemos aplicado tu cupón ${data.coupon_code}.`);
         }
         url.searchParams.delete('recover');
         window.history.replaceState({}, '', url.toString());
