@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { apiChangePassword, apiGetMyOrders, OrderSummary, OrderDetail } from '../lib/api';
 import { formatOrderNumber, apiRequest } from '../lib/constants';
 import ProfileSkeleton from './ProfileSkeleton';
+import RefundRequestPanel from './RefundRequestPanel';
 import ProfileUnauthenticated from './ProfileUnauthenticated';
 
 // Lista de emojis predeterminados para avatares rápidos
@@ -21,6 +22,25 @@ interface Address {
   phone: string;
   nif?: string; // Solo para fiscal
 }
+
+/** Estado del pedido en español y su color. */
+const ORDER_STATUS: Record<string, { label: string; tone: 'ok' | 'warn' | 'bad' | 'info' }> = {
+  pending: { label: 'Pendiente de pago', tone: 'warn' },
+  pending_payment: { label: 'Pendiente de pago', tone: 'warn' },
+  payment_failed: { label: 'Pago fallido', tone: 'bad' },
+  payment_amount_mismatch: { label: 'En revisión', tone: 'warn' },
+  paid: { label: 'Pagado', tone: 'ok' },
+  processing: { label: 'En preparación', tone: 'ok' },
+  shipped: { label: 'Enviado', tone: 'ok' },
+  delivered: { label: 'Entregado', tone: 'ok' },
+  completed: { label: 'Completado', tone: 'ok' },
+  cancelled: { label: 'Cancelado', tone: 'bad' },
+  refunded: { label: 'Reembolsado', tone: 'info' },
+  partially_refunded: { label: 'Reembolso parcial', tone: 'info' },
+};
+const TONE_CLASS = { ok: 'bg-emerald-500/10 text-emerald-500', warn: 'bg-amber-500/10 text-amber-500', bad: 'bg-red-500/10 text-red-500', info: 'bg-sky-500/10 text-sky-600' };
+const statusLabel = (st: string) => ORDER_STATUS[st]?.label || st;
+const statusClass = (st: string) => TONE_CLASS[ORDER_STATUS[st]?.tone || 'warn'];
 
 export default function ProfileView() {
   const { user, isAuthenticated, isLoading, logout, updateProfile, deleteAccount } = useAuth();
@@ -690,14 +710,8 @@ export default function ProfileView() {
                       <Package className="w-3.5 h-3.5 text-accent shrink-0" />
                       <div>
                         <span className="text-foreground font-bold">#{formatOrderNumber(order.id, order.createdAt)}</span>
-                        <span className={`ml-2 text-[8px] px-1.5 py-0.5 rounded font-bold uppercase ${
-                          order.status === 'completed' || order.status === 'processing'
-                            ? 'bg-emerald-500/10 text-emerald-500'
-                            : order.status === 'cancelled'
-                            ? 'bg-red-500/10 text-red-500'
-                            : 'bg-amber-500/10 text-amber-500'
-                        }`}>
-                          {order.status}
+                        <span className={`ml-2 text-[8px] px-1.5 py-0.5 rounded font-bold uppercase ${statusClass(order.status)}`}>
+                          {statusLabel(order.status)}
                         </span>
                       </div>
                     </div>
@@ -999,7 +1013,7 @@ export default function ProfileView() {
             <div className="flex items-center justify-between mb-4 border-b border-card-border/60 pb-3">
               <h3 className="font-mono font-bold text-foreground uppercase text-sm flex items-center gap-2">
                 <Package className="w-4 h-4 text-accent" />
-                Detalle del Pedido #{selectedOrder.id}
+                Detalle del Pedido #{formatOrderNumber(selectedOrder.id, selectedOrder.createdAt)}
               </h3>
               <button onClick={() => setSelectedOrder(null)} className="text-text-muted hover:text-foreground cursor-pointer text-lg p-1">&times;</button>
             </div>
@@ -1007,13 +1021,7 @@ export default function ProfileView() {
             <div className="space-y-3 mb-5">
               <div className="flex justify-between text-xs font-mono p-2.5 bg-background/50 rounded-xl">
                 <span className="text-text-muted">Estado del Pedido</span>
-                <span className={`font-bold px-2 py-0.5 rounded text-[10px] uppercase ${
-                  selectedOrder.status === 'completed' || selectedOrder.status === 'processing'
-                    ? 'bg-emerald-500/10 text-emerald-500'
-                    : selectedOrder.status === 'cancelled'
-                    ? 'bg-red-500/10 text-red-500'
-                    : 'bg-amber-500/10 text-amber-500'
-                }`}>{selectedOrder.status}</span>
+                <span className={`font-bold px-2 py-0.5 rounded text-[10px] uppercase ${statusClass(selectedOrder.status)}`}>{statusLabel(selectedOrder.status)}</span>
               </div>
               <div className="flex justify-between text-xs font-mono p-2.5 bg-background/50 rounded-xl">
                 <span className="text-text-muted">Fecha de Realización</span>
@@ -1023,6 +1031,12 @@ export default function ProfileView() {
                 <span className="text-text-muted">Importe Total</span>
                 <span className="text-accent-text font-bold text-sm">{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(selectedOrder.total)}</span>
               </div>
+              {(selectedOrder.refunded || 0) > 0 && (
+                <div className="flex justify-between text-xs font-mono p-2.5 bg-background/50 rounded-xl">
+                  <span className="text-text-muted">Reembolsado</span>
+                  <span className="text-sky-600 font-bold">{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(selectedOrder.refunded || 0)}</span>
+                </div>
+              )}
             </div>
 
             {selectedOrder.items.length > 0 && (
@@ -1046,6 +1060,15 @@ export default function ProfileView() {
                 </div>
               </>
             )}
+
+            <RefundRequestPanel
+              key={selectedOrder.id}
+              order={selectedOrder}
+              onUpdated={(o) => {
+                setSelectedOrder(o);
+                setOrders((list) => list.map((x) => (x.id === o.id ? o : x)));
+              }}
+            />
 
             <button
               onClick={() => setSelectedOrder(null)}
