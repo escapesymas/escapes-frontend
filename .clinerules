@@ -38,7 +38,7 @@ El logo principal (`/logo-cabecera.svg`) es blanco por defecto.
 - **Base de datos local (PostgreSQL):** Activa en `localhost:5432`.
   - *Base de datos:* `escapes_db`
   - *Usuario:* `postgres`
-  - *Contraseña:* `***ELIMINADO***`
+  - *Contraseña:* (en tu gestor de contraseñas; nunca en el repositorio)
   - *Backup/Dump:* Ubicado en `local_db/escapes_db_dump.sql` (restaurable con `./setup-local-db.sh`).
 - **Frontend de Producción (Next.js):** Ejecutándose en la carpeta `FRONTEND/` (puerto `3000`).
   - *Inicio local:* `pnpm run dev` (desde `FRONTEND/`).
