@@ -140,6 +140,14 @@ export default function ChatWidget() {
   const [liveMessages, setLiveMessages] = useState<LiveMessage[]>([]);
   const [liveUnread, setLiveUnread] = useState(0);
   const [handoffBusy, setHandoffBusy] = useState(false);
+  // Imagen del asesor ampliada en un visor (antes se abría en otra pestaña).
+  const [imageView, setImageView] = useState<string | null>(null);
+  useEffect(() => {
+    if (!imageView) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setImageView(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [imageView]);
   const [pushState, setPushState] = useState<ChatPushState>('unsupported');
   const lastLiveIdRef = useRef(0);
   const openRef = useRef(open);
@@ -512,10 +520,10 @@ export default function ChatWidget() {
                     ) : m.kind === 'image' && m.payload?.url ? (
                       <div key={m.id} className="flex justify-start">
                         <div className="max-w-[80%] space-y-1">
-                          <a href={m.payload.url} target="_blank" rel="noopener noreferrer">
+                          <button type="button" onClick={() => setImageView(m.payload.url)} className="block cursor-zoom-in" aria-label="Ampliar imagen">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={m.payload.url} alt={m.content || 'Imagen del asesor'} className="rounded-xl border border-card-border max-h-64 object-contain bg-background" loading="lazy" />
-                          </a>
+                          </button>
                           {m.content && <p className="text-xs px-1">{m.content}</p>}
                         </div>
                       </div>
@@ -660,6 +668,25 @@ export default function ChatWidget() {
               {liveActive ? 'Hablas con una persona del equipo de Escapes y Más.' : 'Solo responde sobre catálogo, pedidos y soporte web.'}
             </p>
           </form>}
+        </div>
+      )}
+      {imageView && (
+        <div
+          className="fixed inset-0 z-[70] bg-black/85 flex items-center justify-center p-4"
+          role="dialog"
+          aria-label="Imagen ampliada"
+          onClick={() => setImageView(null)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={imageView} alt="Imagen ampliada" className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" onClick={(e) => e.stopPropagation()} />
+          <button
+            type="button"
+            onClick={() => setImageView(null)}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/60 text-white text-xl flex items-center justify-center"
+            aria-label="Cerrar"
+          >
+            ✕
+          </button>
         </div>
       )}
     </>
