@@ -7,6 +7,7 @@ import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import {
   sendChatMessage, requestHandoff, fetchLive, sendLiveMessage, closeLive, enableChatPush, chatPushState,
+  sendLiveTyping, sendLiveImage, rateLive,
   type ChatPushState, type LiveOrderPayload,
   type ChatMessage, type ChatProduct, type LiveConversation, type LiveMessage,
 } from '../lib/chatApi';
@@ -135,7 +136,14 @@ export default function ChatWidget() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Chat con un asesor humano.
-  const [offer, setOffer] = useState<{ index: number; agentName: string } | null>(null);
+  // «Hablar con un asesor» (hay alguien conectado) o «Dejar un mensaje» (fuera de horario).
+  const [offer, setOffer] = useState<{ index: number; agentName: string; kind: 'human' | 'message' } | null>(null);
+  const [rating, setRating] = useState(0);
+  const [ratingComment, setRatingComment] = useState('');
+  const [ratingSent, setRatingSent] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const photoRef = useRef<HTMLInputElement>(null);
+  const lastTypingRef = useRef(0);
   const [live, setLive] = useState<LiveConversation | null>(null);
   const [liveMessages, setLiveMessages] = useState<LiveMessage[]>([]);
   const [liveUnread, setLiveUnread] = useState(0);
@@ -293,7 +301,8 @@ export default function ChatWidget() {
           [assistantIndex]: products,
         }));
       },
-      onOfferHuman: (agentName) => setOffer({ index: assistantIndex, agentName }),
+      onOfferHuman: (agentName) => setOffer({ index: assistantIndex, agentName, kind: 'human' }),
+      onOfferMessage: () => setOffer({ index: assistantIndex, agentName: '', kind: 'message' }),
       onDone: () => setStreaming(false),
       onError: (msg) => {
         setError(msg);
@@ -320,13 +329,14 @@ export default function ChatWidget() {
     setOffer(null);
   };
 
-  const startHandoff = async () => {
+  const startHandoff = async (offline = false) => {
     setHandoffBusy(true);
     setError(null);
     // Mismo clic: se piden los avisos para enterarse de la respuesta aunque cierre la web.
     enableChatPush().then(setPushState).catch(() => {});
     try {
-      await requestHandoff(messages);
+      await requestHandoff(messages, offline);
+      setRating(0); setRatingComment(''); setRatingSent(false);
       trackEvent.chatInteraction('message');
       setOffer(null);
       lastLiveIdRef.current = 0;
@@ -336,6 +346,33 @@ export default function ChatWidget() {
       setError(e instanceof Error ? e.message : 'No se pudo avisar al asesor');
     } finally {
       setHandoffBusy(false);
+    }
+  };
+
+  const sendPhoto = async (file: File) => {
+    if (!file.type.startsWith('image/')) { setError('Solo se pueden enviar imágenes.'); return; }
+    if (file.size > 12 * 1024 * 1024) { setError('La foto supera los 12 MB.'); return; }
+    setPhotoBusy(true);
+    setError(null);
+    try {
+      const { message } = await sendLiveImage(file, input.trim());
+      setInput('');
+      lastLiveIdRef.current = Math.max(lastLiveIdRef.current, message.id);
+      setLiveMessages((prev) => [...prev, message]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo enviar la foto');
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
+  const submitRating = async () => {
+    if (!rating) return;
+    try {
+      await rateLive(rating, ratingComment.trim());
+      setRatingSent(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo enviar la valoración');
     }
   };
 
@@ -445,7 +482,7 @@ export default function ChatWidget() {
                 {live ? (
                   <>
                     <span className={`w-1.5 h-1.5 rounded-full ${live.status === 'open' ? 'bg-emerald-500' : live.status === 'waiting' ? 'bg-amber-500 animate-pulse' : 'bg-muted-foreground'}`} />
-                    {live.status === 'waiting' ? 'Avisando a un asesor…' : live.status === 'open' ? live.agentName : 'Conversación cerrada'}
+                    {live.status === 'waiting' ? (live.offline ? 'Mensaje enviado al equipo' : 'Avisando a un asesor…') : live.status === 'open' ? live.agentName : 'Conversación cerrada'}
                   </>
                 ) : isAuthenticated ? `Hola${user?.firstName ? `, ${user.firstName}` : ''} · Recambios, pedidos y envíos` : 'Recambios, pedidos y envíos'}
               </p>
@@ -518,11 +555,11 @@ export default function ChatWidget() {
                     ) : m.kind === 'order' && m.payload ? (
                       <div key={m.id}><OrderCard order={m.payload} /></div>
                     ) : m.kind === 'image' && m.payload?.url ? (
-                      <div key={m.id} className="flex justify-start">
+                      <div key={m.id} className={`flex ${m.sender === 'customer' ? 'justify-end' : 'justify-start'}`}>
                         <div className="max-w-[80%] space-y-1">
                           <button type="button" onClick={() => setImageView(m.payload.url)} className="block cursor-zoom-in" aria-label="Ampliar imagen">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={m.payload.url} alt={m.content || 'Imagen del asesor'} className="rounded-xl border border-card-border max-h-64 object-contain bg-background" loading="lazy" />
+                            <img src={m.payload.url} alt={m.content || (m.sender === 'customer' ? 'Tu foto' : 'Imagen del asesor')} className="rounded-xl border border-card-border max-h-64 object-contain bg-background" loading="lazy" />
                           </button>
                           {m.content && <p className="text-xs px-1">{m.content}</p>}
                         </div>
@@ -547,6 +584,49 @@ export default function ChatWidget() {
                     )
                   )
                 ))}
+                {(() => {
+                  // «Visto» bajo tu último mensaje cuando el asesor lo ha leído.
+                  const lastMine = [...liveMessages].reverse().find((m) => m.sender === 'customer');
+                  return lastMine && (live.agentReadId || 0) >= lastMine.id && live.status !== 'waiting'
+                    ? <p className="text-[10px] text-right text-muted-foreground -mt-1.5">Visto</p> : null;
+                })()}
+                {live.agentTyping && liveActive && (
+                  <p className="text-[11px] text-muted-foreground italic">{live.agentName} está escribiendo…</p>
+                )}
+                {live.status === 'waiting' && (
+                  <div className="text-xs bg-accent/10 border border-accent/30 rounded-xl p-3 text-foreground">
+                    {live.offline
+                      ? 'Mensaje recibido. Te responderemos en cuanto un asesor se conecte y te avisaremos con una notificación y por email.'
+                      : !live.queuePosition || live.queuePosition <= 1
+                        ? 'Eres el siguiente: un asesor te atenderá enseguida.'
+                        : `Hay ${live.queuePosition - 1} persona${live.queuePosition - 1 === 1 ? '' : 's'} delante de ti. Te atenderemos en cuanto un asesor quede libre.`}
+                  </div>
+                )}
+                {live.status === 'closed' && !live.rated && live.closedBy !== 'auto' && (
+                  ratingSent ? (
+                    <p className="text-xs text-center text-muted-foreground">¡Gracias por tu valoración!</p>
+                  ) : (
+                    <div className="text-xs bg-card border border-card-border rounded-xl p-3 space-y-2 text-center">
+                      <p className="text-foreground font-bold">¿Qué tal te hemos atendido?</p>
+                      <div className="flex justify-center gap-1" role="radiogroup" aria-label="Valoración">
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <button key={n} type="button" onClick={() => setRating(n)} aria-label={`${n} estrella${n === 1 ? '' : 's'}`}
+                            className={`text-2xl leading-none ${n <= rating ? 'text-accent' : 'text-muted-foreground/40'}`}>★</button>
+                        ))}
+                      </div>
+                      {rating > 0 && (
+                        <>
+                          <textarea value={ratingComment} onChange={(e) => setRatingComment(e.target.value)} rows={2} maxLength={500}
+                            placeholder="Cuéntanos algo más (opcional)"
+                            className="w-full px-2 py-1.5 text-xs bg-background border border-card-border rounded-lg resize-none" />
+                          <button type="button" onClick={submitRating} className="px-3 py-1.5 rounded-lg bg-accent text-accent-foreground font-mono uppercase font-bold text-[10px]">
+                            Enviar valoración
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )
+                )}
                 {liveActive && pushState === 'default' && (
                   <div className="text-xs bg-card border border-card-border rounded-xl p-3 flex items-center gap-2">
                     <span className="flex-1 text-muted-foreground">¿Te avisamos cuando te respondamos, aunque cierres la web?</span>
@@ -619,14 +699,14 @@ export default function ChatWidget() {
                       )}
                       {offer?.index === i && !streaming && (
                         <button
-                          onClick={startHandoff}
+                          onClick={() => startHandoff(offer.kind === 'message')}
                           disabled={handoffBusy}
                           className="w-full mt-1 px-3 py-2.5 rounded-xl bg-accent text-accent-foreground text-xs font-mono uppercase font-bold disabled:opacity-60 flex items-center justify-center gap-2"
                         >
                           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
                           </svg>
-                          {handoffBusy ? 'Avisando…' : 'Hablar con un asesor'}
+                          {handoffBusy ? 'Un momento…' : offer.kind === 'message' ? 'Dejar un mensaje al equipo' : 'Hablar con un asesor'}
                         </button>
                       )}
                     </>
@@ -645,11 +725,31 @@ export default function ChatWidget() {
 
           {isAuthenticated && !(live && !liveActive) && <form onSubmit={handleSubmit} className="p-3 border-t border-card-border bg-card">
             <div className="flex gap-2">
+              {liveActive && (
+                <>
+                  <button type="button" onClick={() => photoRef.current?.click()} disabled={photoBusy}
+                    className="px-2.5 py-2 border border-card-border rounded-lg text-muted-foreground hover:text-foreground disabled:opacity-50"
+                    aria-label="Enviar una foto" title="Enviar una foto (de tu moto, la pieza…)">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" />
+                    </svg>
+                  </button>
+                  <input ref={photoRef} type="file" accept="image/*" className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) sendPhoto(f); e.target.value = ''; }} />
+                </>
+              )}
               <input
                 type="text"
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={liveActive ? 'Escribe al asesor…' : 'Escribe tu pregunta…'}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  // «Escribiendo…» para el asesor, como mucho cada 3 s.
+                  if (liveActive && Date.now() - lastTypingRef.current > 3000) {
+                    lastTypingRef.current = Date.now();
+                    sendLiveTyping();
+                  }
+                }}
+                placeholder={photoBusy ? 'Enviando foto…' : liveActive ? 'Escribe al asesor…' : 'Escribe tu pregunta…'}
                 disabled={streaming}
                 className="flex-1 px-3 py-2 text-sm bg-background border border-card-border rounded-lg focus:outline-none focus:border-accent disabled:opacity-50"
                 maxLength={500}

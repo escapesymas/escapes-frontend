@@ -49,6 +49,8 @@ export interface ChatStreamHandlers {
   onError: (msg: string) => void;
   /** El asistente no ha podido resolverlo y hay un asesor disponible. */
   onOfferHuman?: (agentName: string) => void;
+  /** No hay asesores conectados: puede dejar un mensaje. */
+  onOfferMessage?: (hoursText: string) => void;
 }
 
 export async function sendChatMessage(
@@ -139,6 +141,9 @@ export async function sendChatMessage(
         if (parsed.offerHuman) {
           handlers.onOfferHuman?.(parsed.agentName || 'un asesor');
         }
+        if (parsed.offerMessage) {
+          handlers.onOfferMessage?.(parsed.hoursText || '');
+        }
       } catch {
       }
     }
@@ -188,6 +193,15 @@ export interface LiveConversation {
   status: 'waiting' | 'open' | 'closed';
   closedBy?: string | null;
   agentName: string;
+  /** Mensaje dejado fuera de horario. */
+  offline?: boolean;
+  /** Ya ha valorado la atención. */
+  rated?: boolean;
+  /** Posición en la cola mientras nadie la atiende. */
+  queuePosition?: number | null;
+  agentTyping?: boolean;
+  /** Último mensaje que ha visto el asesor («visto»). */
+  agentReadId?: number;
 }
 
 async function liveFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -202,11 +216,35 @@ async function liveFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 /** Pasa la conversación a un asesor (con lo hablado con la IA como contexto). */
-export function requestHandoff(messages: ChatMessage[]) {
+export function requestHandoff(messages: ChatMessage[], offline = false) {
   return liveFetch<{ conversation: LiveConversation }>('/chat/handoff', {
     method: 'POST',
-    body: JSON.stringify({ messages }),
+    body: JSON.stringify({ messages, offline }),
   });
+}
+
+/** El cliente está escribiendo (se llama como mucho cada pocos segundos). */
+export function sendLiveTyping() {
+  return liveFetch<{ ok: boolean }>('/chat/live/typing', { method: 'POST' }).catch(() => null);
+}
+
+/** Foto del cliente para el asesor (su moto, la pieza…). */
+export async function sendLiveImage(file: File, caption = '') {
+  const token = getToken();
+  const form = new FormData();
+  form.append('image', file, file.name || 'foto.jpg');
+  if (caption) form.append('caption', caption);
+  const res = await fetch(`${API_BASE}/chat/live/image`, {
+    method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : {}, body: form,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'No se pudo enviar la foto');
+  return data as { message: LiveMessage };
+}
+
+/** Valoración de la atención al cerrar (1-5). */
+export function rateLive(rating: number, comment: string) {
+  return liveFetch<{ ok: boolean }>('/chat/live/rate', { method: 'POST', body: JSON.stringify({ rating, comment }) });
 }
 
 /** Conversación con el asesor y mensajes posteriores a `after`. */
