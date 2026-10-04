@@ -332,8 +332,8 @@ export default function ChatWidget() {
   const startHandoff = async (offline = false) => {
     setHandoffBusy(true);
     setError(null);
-    // Mismo clic: se piden los avisos para enterarse de la respuesta aunque cierre la web.
-    enableChatPush().then(setPushState).catch(() => {});
+    // Los avisos no se piden aquí: primero se explica para qué se usan (tarjeta
+    // en la conversación) y el permiso del navegador solo sale al aceptarlo.
     try {
       await requestHandoff(messages, offline);
       setRating(0); setRatingComment(''); setRatingSent(false);
@@ -628,11 +628,18 @@ export default function ChatWidget() {
                   )
                 )}
                 {liveActive && pushState === 'default' && (
-                  <div className="text-xs bg-card border border-card-border rounded-xl p-3 flex items-center gap-2">
-                    <span className="flex-1 text-muted-foreground">¿Te avisamos cuando te respondamos, aunque cierres la web?</span>
-                    <button onClick={activatePush} className="px-2.5 py-1.5 rounded-lg bg-accent text-accent-foreground font-mono uppercase font-bold text-[10px]">
-                      Activar avisos
-                    </button>
+                  <div className="text-xs bg-card border border-card-border rounded-xl p-3 space-y-2">
+                    <p className="text-foreground font-bold">¿Te avisamos cuando te respondamos, aunque cierres la web?</p>
+                    <p className="text-muted-foreground">
+                      Solo usaremos las notificaciones para la atención de tu asesor: sus respuestas y el pedido que te prepare.
+                      Nunca te enviaremos publicidad por este medio.
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <button onClick={activatePush} className="px-2.5 py-1.5 rounded-lg bg-accent text-accent-foreground font-mono uppercase font-bold text-[10px]">
+                        Activar avisos
+                      </button>
+                      <a href="/politica-privacidad#chat" target="_blank" rel="noopener noreferrer" className="text-[10px] text-muted-foreground underline">Más información</a>
+                    </div>
                   </div>
                 )}
                 {live.status === 'closed' && (

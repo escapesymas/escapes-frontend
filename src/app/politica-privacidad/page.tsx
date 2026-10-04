@@ -34,6 +34,7 @@ export default function PoliticaPrivacidadPage() {
               <li>Gestión de pedidos y facturación.</li>
               <li>Atención al cliente y resolución de incidencias.</li>
               <li>Envío de notificaciones de disponibilidad de productos (cuando el usuario lo solicite).</li>
+              <li>Chat de atención con un asesor y avisos de sus respuestas (cuando el usuario lo active).</li>
               <li>Cumplimiento de obligaciones legales y fiscales.</li>
             </ul>
           </section>
@@ -41,7 +42,7 @@ export default function PoliticaPrivacidadPage() {
           <section>
             <h2 className="font-mono text-sm font-bold uppercase text-foreground mb-2">3. Legitimación</h2>
             <p>
-              La base legal para el tratamiento de sus datos es la ejecución de un contrato (compra de productos), su consentimiento explícito (notificaciones de stock) y el cumplimiento de obligaciones legales.
+              La base legal para el tratamiento de sus datos es la ejecución de un contrato (compra de productos), su consentimiento explícito (notificaciones de stock y avisos del chat de atención) y el cumplimiento de obligaciones legales.
             </p>
           </section>
 
@@ -67,8 +68,22 @@ export default function PoliticaPrivacidadPage() {
             </p>
           </section>
 
+          <section id="chat">
+            <h2 className="font-mono text-sm font-bold uppercase text-foreground mb-2">6. Chat de atención y notificaciones</h2>
+            <p>
+              Cuando hablas con nuestro asistente o con un asesor, guardamos los mensajes y las fotos que envías para poder
+              atenderte y para el seguimiento de tu consulta y de los pedidos que te preparemos.
+            </p>
+            <p className="mt-2">
+              Si activas los avisos del chat, usaremos las notificaciones de tu navegador o móvil <strong>solo para la atención</strong>:
+              avisarte de las respuestas de tu asesor, de si sigues conectado y del pedido que te haya preparado. <strong>Nunca te
+              enviaremos publicidad por este medio.</strong> Puedes desactivarlas cuando quieras desde los ajustes de notificaciones
+              de tu navegador o de tu móvil.
+            </p>
+          </section>
+
           <section>
-            <h2 className="font-mono text-sm font-bold uppercase text-foreground mb-2">6. Seguridad</h2>
+            <h2 className="font-mono text-sm font-bold uppercase text-foreground mb-2">7. Seguridad</h2>
             <p>
               Implementamos las medidas técnicas y organizativas necesarias para garantizar la seguridad e integridad de sus datos personales y evitar su alteración, pérdida o acceso no autorizado.
             </p>
