@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useCart } from '../../../context/CartContext';
 import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { formatOrderNumber, apiRequest } from '../../../lib/constants';
+import { trackPurchase } from '../../../lib/analytics';
 
 type Status = 'loading' | 'ok' | 'error' | 'pending';
 
@@ -79,6 +80,7 @@ function SuccessContent() {
         if (res.ok) {
           setOrderId(data.orderId || data.id);
           sessionStorage.setItem(`finalize_done_${paymentIntentId}`, String(data.orderId || data.id));
+          trackPurchase(paymentIntentId, data.orderId || data.id, Number(data.totalCents) || 0);
           setStatus('ok');
           clearCart();
         } else if (res.status === 409 || (data.error && /already|processed/i.test(data.error))) {

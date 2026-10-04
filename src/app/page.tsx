@@ -1,5 +1,6 @@
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps, @next/next/no-img-element, @typescript-eslint/no-unused-vars */
 'use client';
+import { trackEvent } from '../lib/analytics';
 import Link from 'next/link';
 
 import React, { useState, useEffect } from 'react';
@@ -174,6 +175,8 @@ export default function Home() {
   const handleSelectBike = async (bike: string) => {
     setSelectedBike(bike);
     if (bike) {
+      // Qué motos tienen los clientes: para decidir qué recambios destacar.
+      trackEvent.bikeSelected(bike);
       localStorage.setItem('tg_selected_bike', bike);
     } else {
       localStorage.removeItem('tg_selected_bike');

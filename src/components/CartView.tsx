@@ -248,6 +248,8 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
 
   const startProposal = (token: string, agentName: string, items: CartItem[], mode: 'solo' | 'merge') => {
     try {
+      // Pedido del asesor abierto por el cliente (una vez por propuesta, no al recargar).
+      if (sessionStorage.getItem('chat_proposal') !== token) trackUmami('chat_proposal_open', { mode, items: items.length });
       sessionStorage.setItem('chat_proposal', token);
       sessionStorage.setItem('chat_proposal_mode', mode);
     } catch {}
@@ -1333,8 +1335,8 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
                 <button
                   onClick={() => {
                     trackUmami('checkout_start', {
-                      cart_total: subtotal,
-                      items_count: itemsCount,
+                      value: subtotal,
+                      items: itemsCount,
                     });
                     setIsCheckingOut(true);
                   }}

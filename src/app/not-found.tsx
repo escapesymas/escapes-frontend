@@ -2,9 +2,15 @@
 
 import Header from '../components/Header';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { trackEvent as trackUmami } from '../lib/umami';
 
 export default function NotFound() {
   const router = useRouter();
+  // Enlaces rotos (de Google, redes o campañas antiguas): para redirigirlos.
+  useEffect(() => {
+    trackUmami('not_found', { path: window.location.pathname.slice(0, 200), referrer: document.referrer.slice(0, 200) });
+  }, []);
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Header

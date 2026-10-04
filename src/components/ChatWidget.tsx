@@ -337,7 +337,7 @@ export default function ChatWidget() {
     try {
       await requestHandoff(messages, offline);
       setRating(0); setRatingComment(''); setRatingSent(false);
-      trackEvent.chatInteraction('message');
+      trackEvent.chatInteraction(offline ? 'leave_message' : 'advisor');
       setOffer(null);
       lastLiveIdRef.current = 0;
       setLiveMessages([]);
@@ -453,7 +453,7 @@ export default function ChatWidget() {
           )}
           <button
             type="button"
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => setOpen((v) => { if (!v) trackEvent.chatInteraction('open'); return !v; })}
             className="bg-accent hover:bg-accent/90 text-accent-foreground rounded-full p-3.5 shadow-lg transition-all duration-300 group-hover:scale-110 cursor-pointer"
             aria-label="Abrir asistente IA"
             aria-expanded={open}

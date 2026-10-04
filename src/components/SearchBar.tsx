@@ -63,6 +63,10 @@ export default function SearchBar({
           const brandItems: SearchSuggestion[] = (data.suggestions || []).map((b) => ({ name: b, slug: `marca:${b}`, category: 'Marca', isBrand: true }));
           const productItems: SearchSuggestion[] = (data.products || []).map((p) => ({ name: p.name, slug: p.slug, category: p.brand }));
           setSuggestions([...brandItems, ...productItems]);
+          // Lo que buscan y no encuentran: lo más útil para ampliar el catálogo o los sinónimos.
+          if (!brandItems.length && !productItems.length && query.trim().length >= 3) {
+            trackUmami('search_no_results', { query: query.trim().toLowerCase().slice(0, 80) });
+          }
         }
       } catch {
         setSuggestions([]);

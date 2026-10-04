@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { apiLogin, apiRegister, apiVerifyEmail, apiGetProfile, apiUpdateProfile, apiDeleteAccount, SessionData, UserProfile, UserBilling, RegisterResult } from '../lib/api';
 import { apiRequest } from '../lib/constants';
+import { trackEvent as trackUmami } from '../lib/umami';
 
 const SESSION_KEY = 'tg_session';
 
@@ -120,9 +121,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession(s);
   };
 
+  // Las visitas del equipo (administradores y asesores) no cuentan en Umami:
+  // el script no envía nada si existe «umami.disabled». Se queda en el
+  // dispositivo aunque se cierre la sesión.
+  useEffect(() => {
+    if (session?.role === 'admin' || session?.role === 'asesor') {
+      try { localStorage.setItem('umami.disabled', '1'); } catch { /* sin storage */ }
+    }
+  }, [session?.role]);
+
   const login = async (username: string, password: string) => {
     const s = await apiLogin(username, password);
     persistSession(s);
+    trackUmami('login');
     await loadProfile(s);
   };
 
@@ -135,12 +146,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     phone?: string
   ) => {
     // La cuenta queda pendiente de confirmar el email: sin sesión todavía.
-    return apiRegister(username, email, password, firstName, lastName, phone);
+    const result = await apiRegister(username, email, password, firstName, lastName, phone);
+    trackUmami('sign_up');
+    return result;
   };
 
   const verifyEmail = async (token: string) => {
     const s = await apiVerifyEmail(token);
     persistSession(s);
+    trackUmami('email_verified');
     await loadProfile(s);
   };
 

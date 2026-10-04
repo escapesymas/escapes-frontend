@@ -1,6 +1,7 @@
 'use client';
 
 import { Product } from '../types';
+import { trackEvent as umami, short } from './umami';
 
 const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID || '';
 
@@ -40,7 +41,11 @@ export const trackEvent = {
     });
   },
 
-  addToCart: (product: Product, quantity: number) => {
+  addToCart: (product: Product, quantity: number, source = 'ficha') => {
+    umami('add_to_cart', {
+      product_id: product.id, product: short(product.name), brand: short(product.brand),
+      value: (product.salePrice || product.price) * quantity, quantity, source,
+    });
     pushEvent('add_to_cart', {
       currency: 'EUR',
       value: (product.salePrice || product.price) * quantity,
@@ -55,6 +60,7 @@ export const trackEvent = {
   },
 
   removeFromCart: (product: Product, quantity: number) => {
+    umami('remove_from_cart', { product_id: product.id, product: short(product.name), quantity });
     pushEvent('remove_from_cart', {
       currency: 'EUR',
       items: [{
@@ -67,6 +73,8 @@ export const trackEvent = {
   },
 
   beginCheckout: (items: { product: Product; quantity: number }[], value: number) => {
+    // Pedido creado: el cliente pasa al pago.
+    umami('checkout_payment', { value, items: items.reduce((n, it) => n + it.quantity, 0) });
     const eventId = (typeof crypto !== 'undefined' && 'randomUUID' in crypto) ? crypto.randomUUID() : `${Date.now()}_${Math.random()}`;
     if (typeof window !== 'undefined') {
       try {
@@ -118,11 +126,13 @@ export const trackEvent = {
     });
   },
 
-  chatInteraction: (intent: 'open' | 'message' | 'product_click' | 'add_to_cart_from_chat') => {
+  chatInteraction: (intent: 'open' | 'message' | 'product_click' | 'add_to_cart_from_chat' | 'advisor' | 'leave_message') => {
+    umami(`chat_${intent}`);
     pushEvent('chat_interaction', { intent });
   },
 
   bikeSelected: (bike: string) => {
+    umami('bike_selected', { bike: short(bike) });
     pushEvent('bike_selected', { bike });
   },
 };
@@ -158,4 +168,15 @@ export function GtmNoScript() {
       />
     </noscript>
   );
+}
+
+/**
+ * Compra completada, con su importe: Umami la muestra en el informe de
+ * ingresos (revenue + currency). Una sola vez por pago.
+ */
+export function trackPurchase(paymentId: string, orderId: number | string, totalCents: number) {
+  if (typeof window === 'undefined' || !totalCents) return;
+  const key = `umami_purchase_${paymentId}`;
+  try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, '1'); } catch { /* sin storage: se envía igual */ }
+  umami('purchase', { revenue: Math.round(totalCents) / 100, currency: 'EUR', order_id: String(orderId) });
 }
