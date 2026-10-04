@@ -5,7 +5,10 @@ import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
-import { sendChatMessage, type ChatMessage, type ChatProduct } from '../lib/chatApi';
+import {
+  sendChatMessage, requestHandoff, fetchLive, sendLiveMessage, closeLive,
+  type ChatMessage, type ChatProduct, type LiveConversation, type LiveMessage,
+} from '../lib/chatApi';
 import { trackEvent } from '../lib/analytics';
 import ProductCardMessage from './chat/ProductCardMessage';
 
@@ -18,6 +21,8 @@ const SUGGESTIONS = [
 
 // La conversación se guarda en la pestaña para no perderla al recargar.
 const STORAGE_KEY = 'tg_chat_v1';
+// Conversación con asesor ya cerrada que el cliente ha dejado atrás.
+const DISMISSED_LIVE_KEY = 'tg_chat_live_dismissed';
 
 /** **negrita** dentro de una línea. */
 function inline(text: string): ReactNode[] {
@@ -84,11 +89,63 @@ export default function ChatWidget() {
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Chat con un asesor humano.
+  const [offer, setOffer] = useState<{ index: number; agentName: string } | null>(null);
+  const [live, setLive] = useState<LiveConversation | null>(null);
+  const [liveMessages, setLiveMessages] = useState<LiveMessage[]>([]);
+  const [liveUnread, setLiveUnread] = useState(0);
+  const [handoffBusy, setHandoffBusy] = useState(false);
+  const lastLiveIdRef = useRef(0);
+  const openRef = useRef(open);
+  openRef.current = open;
+  const liveActive = !!live && live.status !== 'closed';
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, streaming, productsByMessage]);
+  }, [messages, streaming, productsByMessage, liveMessages]);
+
+  // Mensajes nuevos de la conversación con el asesor (cada 3 s con el chat
+  // abierto, cada 15 s cerrado para avisar con el contador del botón).
+  const pollLive = async () => {
+    try {
+      const data = await fetchLive(lastLiveIdRef.current);
+      if (!data.conversation) { setLive(null); return; }
+      let dismissed = 0;
+      try { dismissed = Number(sessionStorage.getItem(DISMISSED_LIVE_KEY)) || 0; } catch {}
+      if (data.conversation.status === 'closed' && data.conversation.id === dismissed) { setLive(null); return; }
+      setLive(data.conversation);
+      if (data.messages.length) {
+        lastLiveIdRef.current = data.messages[data.messages.length - 1].id;
+        setLiveMessages((prev) => [...prev, ...data.messages.filter((m) => !prev.some((p) => p.id === m.id))]);
+        const fromAgent = data.messages.filter((m) => m.sender === 'agent').length;
+        if (fromAgent && !openRef.current) setLiveUnread((n) => n + fromAgent);
+      }
+    } catch { /* sin conexión: se reintenta en la siguiente vuelta */ }
+  };
+
+  useEffect(() => {
+    if (isLoading || !isAuthenticated) return;
+    lastLiveIdRef.current = 0;
+    setLiveMessages([]);
+    pollLive();
+    // Enlace del email «te hemos respondido» (/?chat=1): abre el chat.
+    try {
+      if (new URLSearchParams(window.location.search).get('chat') === '1') setOpen(true);
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, isLoading]);
+
+  useEffect(() => {
+    if (!liveActive) return;
+    const id = setInterval(pollLive, open ? 3000 : 15000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveActive, open]);
+
+  useEffect(() => { if (open) setLiveUnread(0); }, [open]);
+
 
   useEffect(() => {
     const handleExpired = () => setOpen(false);
@@ -128,6 +185,20 @@ export default function ChatWidget() {
     const clean = text.trim();
     if (!clean || streaming) return;
 
+    if (liveActive) {
+      setInput('');
+      setError(null);
+      try {
+        const { message } = await sendLiveMessage(clean);
+        lastLiveIdRef.current = Math.max(lastLiveIdRef.current, message.id);
+        setLiveMessages((prev) => [...prev, message]);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'No se pudo enviar el mensaje');
+        setInput(clean);
+      }
+      return;
+    }
+
     setError(null);
     trackEvent.chatInteraction('message');
     const newMessages: ChatMessage[] = [...messages, { role: 'user', content: clean }];
@@ -155,6 +226,7 @@ export default function ChatWidget() {
           [assistantIndex]: products,
         }));
       },
+      onOfferHuman: (agentName) => setOffer({ index: assistantIndex, agentName }),
       onDone: () => setStreaming(false),
       onError: (msg) => {
         setError(msg);
@@ -178,6 +250,38 @@ export default function ChatWidget() {
     setMessages([]);
     setProductsByMessage({});
     setError(null);
+    setOffer(null);
+  };
+
+  const startHandoff = async () => {
+    setHandoffBusy(true);
+    setError(null);
+    try {
+      await requestHandoff(messages);
+      trackEvent.chatInteraction('message');
+      setOffer(null);
+      lastLiveIdRef.current = 0;
+      setLiveMessages([]);
+      await pollLive();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo avisar al asesor');
+    } finally {
+      setHandoffBusy(false);
+    }
+  };
+
+  const endLive = async () => {
+    if (!window.confirm('¿Terminar la conversación con el asesor?')) return;
+    try { await closeLive(); } catch {}
+    await pollLive();
+  };
+
+  const backToAssistant = () => {
+    try { if (live) sessionStorage.setItem(DISMISSED_LIVE_KEY, String(live.id)); } catch {}
+    setLive(null);
+    setLiveMessages([]);
+    lastLiveIdRef.current = 0;
+    reset();
   };
 
   const handleAddToCart = (product: ChatProduct) => {
@@ -234,7 +338,13 @@ export default function ChatWidget() {
               </button>
             </div>
           )}
-          <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full animate-pulse pointer-events-none" />
+          {liveUnread > 0 ? (
+            <div className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center pointer-events-none z-10">
+              {liveUnread}
+            </div>
+          ) : (
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full animate-pulse pointer-events-none" />
+          )}
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
@@ -260,14 +370,28 @@ export default function ChatWidget() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-card-border bg-card">
             <div>
               <p className="font-mono font-bold text-xs uppercase tracking-wider text-foreground">
-                Asistente IA
+                {live ? 'Chat con un asesor' : 'Asistente IA'}
               </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
-                {isAuthenticated ? `Hola${user?.firstName ? `, ${user.firstName}` : ''} · Recambios, pedidos y envíos` : 'Recambios, pedidos y envíos'}
+              <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                {live ? (
+                  <>
+                    <span className={`w-1.5 h-1.5 rounded-full ${live.status === 'open' ? 'bg-emerald-500' : live.status === 'waiting' ? 'bg-amber-500 animate-pulse' : 'bg-muted-foreground'}`} />
+                    {live.status === 'waiting' ? 'Avisando a un asesor…' : live.status === 'open' ? live.agentName : 'Conversación cerrada'}
+                  </>
+                ) : isAuthenticated ? `Hola${user?.firstName ? `, ${user.firstName}` : ''} · Recambios, pedidos y envíos` : 'Recambios, pedidos y envíos'}
               </p>
             </div>
             <div className="flex gap-2">
-              {messages.length > 0 && (
+              {liveActive && (
+                <button
+                  onClick={endLive}
+                  className="text-[10px] font-mono uppercase text-muted-foreground hover:text-foreground px-2"
+                  aria-label="Terminar la conversación con el asesor"
+                >
+                  Finalizar
+                </button>
+              )}
+              {!live && messages.length > 0 && (
                 <button
                   onClick={reset}
                   className="text-[10px] font-mono uppercase text-muted-foreground hover:text-foreground px-2"
@@ -311,7 +435,41 @@ export default function ChatWidget() {
                 </Link>
               </div>
             )}
-            {isAuthenticated && messages.length === 0 && (
+            {live && (
+              <div className="space-y-2.5">
+                {liveMessages.map((m) => (
+                  m.sender === 'system' ? (
+                    <p key={m.id} className="text-[11px] text-center text-muted-foreground px-4">{m.content}</p>
+                  ) : (
+                    <div key={m.id} className={`flex ${m.sender === 'customer' ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[90%] px-3 py-2 rounded-2xl text-sm break-words ${
+                        m.sender === 'customer'
+                          ? 'bg-accent text-accent-foreground rounded-br-sm whitespace-pre-wrap'
+                          : m.sender === 'agent'
+                            ? 'bg-card border-2 border-accent/60 text-foreground rounded-bl-sm whitespace-pre-wrap'
+                            : 'bg-card border border-card-border text-muted-foreground rounded-bl-sm'
+                      }`}>
+                        {m.sender !== 'customer' && (
+                          <p className="text-[9px] font-mono uppercase tracking-wider mb-0.5 text-accent">
+                            {m.sender === 'agent' ? live.agentName : 'Asistente IA'}
+                          </p>
+                        )}
+                        {m.sender === 'ai' ? <ChatText text={m.content} /> : m.content}
+                      </div>
+                    </div>
+                  )
+                ))}
+                {live.status === 'closed' && (
+                  <button
+                    onClick={backToAssistant}
+                    className="block mx-auto text-xs px-3 py-2 rounded-lg bg-card border border-card-border hover:border-accent hover:text-accent transition-colors"
+                  >
+                    Volver al asistente IA
+                  </button>
+                )}
+              </div>
+            )}
+            {!live && isAuthenticated && messages.length === 0 && (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground mb-3">
                   Estoy aquí para ayudarte con catálogo, pedidos y soporte de la web.
@@ -328,7 +486,7 @@ export default function ChatWidget() {
                 ))}
               </div>
             )}
-            {messages.map((m, i) => (
+            {!live && messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
                   className={`max-w-[90%] ${
@@ -363,6 +521,18 @@ export default function ChatWidget() {
                           ))}
                         </div>
                       )}
+                      {offer?.index === i && !streaming && (
+                        <button
+                          onClick={startHandoff}
+                          disabled={handoffBusy}
+                          className="w-full mt-1 px-3 py-2.5 rounded-xl bg-accent text-accent-foreground text-xs font-mono uppercase font-bold disabled:opacity-60 flex items-center justify-center gap-2"
+                        >
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+                          </svg>
+                          {handoffBusy ? 'Avisando…' : 'Hablar con un asesor'}
+                        </button>
+                      )}
                     </>
                   ) : (
                     m.content
@@ -377,13 +547,13 @@ export default function ChatWidget() {
             )}
           </div>
 
-          {isAuthenticated && <form onSubmit={handleSubmit} className="p-3 border-t border-card-border bg-card">
+          {isAuthenticated && !(live && !liveActive) && <form onSubmit={handleSubmit} className="p-3 border-t border-card-border bg-card">
             <div className="flex gap-2">
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Escribe tu pregunta…"
+                placeholder={liveActive ? 'Escribe al asesor…' : 'Escribe tu pregunta…'}
                 disabled={streaming}
                 className="flex-1 px-3 py-2 text-sm bg-background border border-card-border rounded-lg focus:outline-none focus:border-accent disabled:opacity-50"
                 maxLength={500}
@@ -399,7 +569,7 @@ export default function ChatWidget() {
               </button>
             </div>
             <p className="text-[9px] text-muted-foreground mt-1.5 text-center">
-              Solo responde sobre catálogo, pedidos y soporte web.
+              {liveActive ? 'Hablas con una persona del equipo de Escapes y Más.' : 'Solo responde sobre catálogo, pedidos y soporte web.'}
             </p>
           </form>}
         </div>

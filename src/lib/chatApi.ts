@@ -47,6 +47,8 @@ export interface ChatStreamHandlers {
   onProducts: (products: ChatProduct[]) => void;
   onDone: () => void;
   onError: (msg: string) => void;
+  /** El asistente no ha podido resolverlo y hay un asesor disponible. */
+  onOfferHuman?: (agentName: string) => void;
 }
 
 export async function sendChatMessage(
@@ -134,6 +136,9 @@ export async function sendChatMessage(
         if (parsed.delta) {
           handlers.onDelta(parsed.delta);
         }
+        if (parsed.offerHuman) {
+          handlers.onOfferHuman?.(parsed.agentName || 'un asesor');
+        }
       } catch {
       }
     }
@@ -150,4 +155,53 @@ export async function checkChatHealth(): Promise<{ ok: boolean; configured: bool
   } catch {
     return { ok: false, configured: false };
   }
+}
+
+
+// ── Chat con un asesor humano ────────────────────────────────────────────
+
+export interface LiveMessage {
+  id: number;
+  sender: 'customer' | 'ai' | 'agent' | 'system';
+  content: string;
+  created_at: string;
+}
+
+export interface LiveConversation {
+  id: number;
+  status: 'waiting' | 'open' | 'closed';
+  closedBy?: string | null;
+  agentName: string;
+}
+
+async function liveFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...init,
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(init.headers || {}) },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+  return data as T;
+}
+
+/** Pasa la conversación a un asesor (con lo hablado con la IA como contexto). */
+export function requestHandoff(messages: ChatMessage[]) {
+  return liveFetch<{ conversation: LiveConversation }>('/chat/handoff', {
+    method: 'POST',
+    body: JSON.stringify({ messages }),
+  });
+}
+
+/** Conversación con el asesor y mensajes posteriores a `after`. */
+export function fetchLive(after = 0) {
+  return liveFetch<{ conversation: LiveConversation | null; messages: LiveMessage[] }>(`/chat/live?after=${after}`);
+}
+
+export function sendLiveMessage(content: string) {
+  return liveFetch<{ message: LiveMessage }>('/chat/live/message', { method: 'POST', body: JSON.stringify({ content }) });
+}
+
+export function closeLive() {
+  return liveFetch<{ ok: boolean }>('/chat/live/close', { method: 'POST' });
 }
