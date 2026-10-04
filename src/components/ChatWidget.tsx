@@ -6,7 +6,8 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import {
-  sendChatMessage, requestHandoff, fetchLive, sendLiveMessage, closeLive,
+  sendChatMessage, requestHandoff, fetchLive, sendLiveMessage, closeLive, enableChatPush, chatPushState,
+  type ChatPushState,
   type ChatMessage, type ChatProduct, type LiveConversation, type LiveMessage,
 } from '../lib/chatApi';
 import { trackEvent } from '../lib/analytics';
@@ -95,6 +96,7 @@ export default function ChatWidget() {
   const [liveMessages, setLiveMessages] = useState<LiveMessage[]>([]);
   const [liveUnread, setLiveUnread] = useState(0);
   const [handoffBusy, setHandoffBusy] = useState(false);
+  const [pushState, setPushState] = useState<ChatPushState>('unsupported');
   const lastLiveIdRef = useRef(0);
   const openRef = useRef(open);
   openRef.current = open;
@@ -110,7 +112,7 @@ export default function ChatWidget() {
   // abierto, cada 15 s cerrado para avisar con el contador del botón).
   const pollLive = async () => {
     try {
-      const data = await fetchLive(lastLiveIdRef.current);
+      const data = await fetchLive(lastLiveIdRef.current, openRef.current);
       if (!data.conversation) { setLive(null); return; }
       let dismissed = 0;
       try { dismissed = Number(sessionStorage.getItem(DISMISSED_LIVE_KEY)) || 0; } catch {}
@@ -145,6 +147,19 @@ export default function ChatWidget() {
   }, [liveActive, open]);
 
   useEffect(() => { if (open) setLiveUnread(0); }, [open]);
+
+  // Al pulsar la notificación con la web abierta, el service worker pide abrir el chat.
+  useEffect(() => {
+    setPushState(chatPushState());
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type === 'open-chat') { setOpen(true); pollLive(); }
+    };
+    navigator.serviceWorker?.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker?.removeEventListener('message', onMessage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const activatePush = async () => setPushState(await enableChatPush());
 
 
   useEffect(() => {
@@ -256,6 +271,8 @@ export default function ChatWidget() {
   const startHandoff = async () => {
     setHandoffBusy(true);
     setError(null);
+    // Mismo clic: se piden los avisos para enterarse de la respuesta aunque cierre la web.
+    enableChatPush().then(setPushState).catch(() => {});
     try {
       await requestHandoff(messages);
       trackEvent.chatInteraction('message');
@@ -459,6 +476,14 @@ export default function ChatWidget() {
                     </div>
                   )
                 ))}
+                {liveActive && pushState === 'default' && (
+                  <div className="text-xs bg-card border border-card-border rounded-xl p-3 flex items-center gap-2">
+                    <span className="flex-1 text-muted-foreground">¿Te avisamos cuando te respondamos, aunque cierres la web?</span>
+                    <button onClick={activatePush} className="px-2.5 py-1.5 rounded-lg bg-accent text-accent-foreground font-mono uppercase font-bold text-[10px]">
+                      Activar avisos
+                    </button>
+                  </div>
+                )}
                 {live.status === 'closed' && (
                   <button
                     onClick={backToAssistant}

@@ -194,8 +194,10 @@ export function requestHandoff(messages: ChatMessage[]) {
 }
 
 /** Conversación con el asesor y mensajes posteriores a `after`. */
-export function fetchLive(after = 0) {
-  return liveFetch<{ conversation: LiveConversation | null; messages: LiveMessage[] }>(`/chat/live?after=${after}`);
+export function fetchLive(after = 0, active = false) {
+  return liveFetch<{ conversation: LiveConversation | null; messages: LiveMessage[] }>(
+    `/chat/live?after=${after}${active ? '&active=1' : ''}`
+  );
 }
 
 export function sendLiveMessage(content: string) {
@@ -204,4 +206,48 @@ export function sendLiveMessage(content: string) {
 
 export function closeLive() {
   return liveFetch<{ ok: boolean }>('/chat/live/close', { method: 'POST' });
+}
+
+// ── Avisos push de las respuestas del asesor ─────────────────────────────
+
+export type ChatPushState = 'unsupported' | 'denied' | 'default' | 'granted';
+
+/** ¿Puede este navegador recibir avisos? (en iPhone, solo con la web añadida a la pantalla de inicio). */
+export function chatPushState(): ChatPushState {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+    return 'unsupported';
+  }
+  return Notification.permission as ChatPushState;
+}
+
+function base64ToUint8(base64: string): Uint8Array {
+  const padded = (base64 + '='.repeat((4 - (base64.length % 4)) % 4)).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(padded);
+  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+}
+
+/**
+ * Pide permiso (debe llamarse desde un clic) y registra el dispositivo para que
+ * le lleguen las respuestas del asesor aunque cierre la web.
+ */
+export async function enableChatPush(): Promise<ChatPushState> {
+  const state = chatPushState();
+  if (state === 'unsupported' || state === 'denied') return state;
+  const permission = state === 'granted' ? 'granted' : await Notification.requestPermission();
+  if (permission !== 'granted') return permission as ChatPushState;
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    let sub = await registration.pushManager.getSubscription();
+    if (!sub) {
+      const { publicKey } = await fetch(`${API_BASE}/push/vapid-public-key`).then((r) => r.json());
+      sub = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: base64ToUint8(publicKey) as BufferSource,
+      });
+    }
+    await liveFetch('/chat/push/subscribe', { method: 'POST', body: JSON.stringify({ subscription: sub.toJSON() }) });
+  } catch (err) {
+    console.warn('[chat] no se pudieron activar los avisos:', err);
+  }
+  return 'granted';
 }

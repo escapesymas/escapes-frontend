@@ -1,6 +1,6 @@
-/* Escapes y Más — Service Worker v8 */
+/* Escapes y Más — Service Worker v9 (v9: notificaciones push del chat con el asesor) */
 
-const SW_VERSION = 'v8';
+const SW_VERSION = 'v9';
 const STATIC_CACHE = `static-${SW_VERSION}`;
 const RUNTIME_CACHE = `runtime-${SW_VERSION}`;
 const HTML_FALLBACK = '/offline';
@@ -48,6 +48,41 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
+});
+
+// Respuestas del asesor en el chat («Equipo de Escapes y Más te ha respondido»).
+self.addEventListener('push', (event) => {
+  let data = { title: 'Escapes y Más', body: 'Tienes una respuesta en el chat.', url: '/?chat=1', tag: 'chat' };
+  if (event.data) {
+    try { data = { ...data, ...event.data.json() }; } catch (e) { data.body = event.data.text(); }
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: data.icon || '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: data.tag,
+      renotify: true,
+      data: { url: data.url || '/?chat=1' },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = new URL(event.notification.data?.url || '/?chat=1', self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if (new URL(client.url).origin === self.location.origin && 'focus' in client) {
+          // Con la web abierta, se abre el chat sin recargar.
+          client.postMessage({ type: 'open-chat' });
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow ? self.clients.openWindow(url) : undefined;
+    })
+  );
 });
 
 function isStaticAsset(url) {
