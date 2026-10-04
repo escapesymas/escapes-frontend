@@ -12,7 +12,7 @@ type Status = 'loading' | 'ok' | 'error' | 'pending';
 function SuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { clearCart } = useCart();
+  const { clearPaidCart: clearCart } = useCart();
 
   const paymentIntentId = searchParams.get('payment_intent');
   const redirectStatus = searchParams.get('redirect_status');

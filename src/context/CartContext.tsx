@@ -34,6 +34,11 @@ interface CartContextValue {
   updateQuantity: (id: number, delta: number) => void;
   removeItem: (id: number) => void;
   clearCart: () => void;
+  /**
+   * Tras un pago: vacía el carrito, salvo que se haya pagado solo un pedido
+   * preparado en el chat (entonces el carrito del cliente no se toca).
+   */
+  clearPaidCart: () => void;
   restoreCart: (items: CartItem[]) => void;
   restoreLastRemoved: () => void;
   isInitialized: boolean;
@@ -262,8 +267,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clearCart = () => {
     setCart([]);
-    // Pedido preparado en el chat: se olvida al vaciar el carrito (p. ej. tras pagar).
-    try { sessionStorage.removeItem('chat_proposal'); } catch {}
+  };
+
+  const clearPaidCart = () => {
+    let onlyProposal = false;
+    try {
+      onlyProposal = sessionStorage.getItem('chat_proposal_mode') === 'solo';
+      sessionStorage.removeItem('chat_proposal');
+      sessionStorage.removeItem('chat_proposal_mode');
+    } catch {}
+    if (!onlyProposal) setCart([]);
   };
 
   const restoreCart = (items: CartItem[]) => {
@@ -288,6 +301,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         updateQuantity,
         removeItem,
         clearCart,
+        clearPaidCart,
         restoreCart,
         restoreLastRemoved,
         isInitialized,

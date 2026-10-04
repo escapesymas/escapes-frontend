@@ -57,11 +57,31 @@ interface SavedAddress {
 }
 
 export default function CartView({ onContinueShopping, initialStep = 'cart' }: CartViewProps) {
-  const { cart, updateQuantity, removeItem, clearCart, addToCart, isInitialized, isSynced } = useCart();
+  const cartCtx = useCart();
+  const { addToCart, isInitialized, isSynced } = cartCtx;
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+
+  // Pedido preparado por un asesor en el chat. «Solo este pedido»: se paga
+  // aparte con sus productos y el carrito del cliente no se toca. «Añadirlo a mi
+  // carrito»: se suman al carrito y se paga todo junto.
+  const [proposalCart, setProposalCart] = useState<CartItem[] | null>(null);
+  const [proposalAgent, setProposalAgent] = useState<string | null>(null);
+  const [proposalChoice, setProposalChoice] = useState<{ token: string; agentName: string; items: CartItem[] } | null>(null);
+  const cart = proposalCart ?? cartCtx.cart;
+  const clearCart = () => (proposalCart ? setProposalCart([]) : cartCtx.clearCart());
+  const updateQuantity = (id: number, delta: number) => (proposalCart
+    ? setProposalCart((prev) => (prev || []).map((i) => (i.id === id ? { ...i, quantity: Math.max(1, Math.min(i.stock ?? 99, i.quantity + delta)) } : i)))
+    : cartCtx.updateQuantity(id, delta));
+  const removeItem = (id: number) => (proposalCart
+    ? setProposalCart((prev) => (prev || []).filter((i) => i.id !== id))
+    : cartCtx.removeItem(id));
+
   // Enlaces que traen productos (pedido del chat o carrito recuperado): mientras
   // se cargan, el checkout no debe mandar a la portada por tener el carrito vacío.
-  const linkPendingRef = useRef(typeof window !== 'undefined' && /[?&](propuesta|recover)=/.test(window.location.search));
+  const linkPendingRef = useRef(typeof window !== 'undefined' && (
+    /[?&](propuesta|recover)=/.test(window.location.search)
+    || (initialStep === 'checkout' && (() => { try { return sessionStorage.getItem('chat_proposal_mode') === 'solo'; } catch { return false; } })())
+  ));
   const proposalLoadedRef = useRef(false);
 
   const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
@@ -219,36 +239,70 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Pedido preparado por un asesor en el chat (/checkout?propuesta=token): se
-  // cargan sus productos y el pedido queda a nombre del asesor al crearlo.
+  // Pedido preparado por un asesor en el chat (/checkout?propuesta=token).
+  const proposalToCart = (items: any[]): CartItem[] => items.map((it) => ({
+    id: it.id, title: it.name, name: it.name, slug: it.slug || it.sku || '', sku: it.sku || '',
+    price: (it.sale_price ?? it.price) / 100, regularPrice: it.price / 100, image: it.image || '',
+    inStock: !!it.in_stock, stock: it.stock, category: it.brand || '', categorySlug: '', quantity: it.quantity,
+  }));
+
+  const startProposal = (token: string, agentName: string, items: CartItem[], mode: 'solo' | 'merge') => {
+    try {
+      sessionStorage.setItem('chat_proposal', token);
+      sessionStorage.setItem('chat_proposal_mode', mode);
+    } catch {}
+    setProposalAgent(agentName);
+    if (mode === 'solo') {
+      setProposalCart(items);
+    } else {
+      for (const it of items) addToCart(it as any, it.quantity);
+    }
+    setProposalChoice(null);
+    linkPendingRef.current = false;
+  };
+
+  /** Deja de pagar el pedido del chat aparte y vuelve a su carrito. */
+  const exitProposal = () => {
+    try { sessionStorage.removeItem('chat_proposal'); sessionStorage.removeItem('chat_proposal_mode'); } catch {}
+    setProposalCart(null);
+    setProposalAgent(null);
+  };
+
   useEffect(() => {
     if (typeof window === 'undefined' || proposalLoadedRef.current) return;
     const url = new URL(window.location.href);
-    const token = url.searchParams.get('propuesta');
+    let token = url.searchParams.get('propuesta');
+    let restoring = false;
+    if (!token) {
+      // Recarga del checkout pagando «solo este pedido»: se recupera; en la
+      // página del carrito se sale de ese modo y se ve el carrito propio.
+      let mode: string | null = null;
+      try { mode = sessionStorage.getItem('chat_proposal_mode'); token = sessionStorage.getItem('chat_proposal'); } catch {}
+      if (mode !== 'solo' || !token) return;
+      if (initialStep !== 'checkout') { exitProposal(); return; }
+      restoring = true;
+    }
     if (!token || !/^[0-9a-f-]{36}$/i.test(token)) return;
     // Se espera a la sesión y al carrito del servidor: si llegaran después,
-    // sustituirían los productos del pedido.
+    // sustituirían los productos.
     if (authLoading || !isInitialized || !isSynced) return;
     proposalLoadedRef.current = true;
     (async () => {
       try {
         const res = await fetch(`/api/chat/proposal/${token}`);
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) { setRecoveryError(data.error || 'No se pudo cargar el pedido preparado'); return; }
-        clearCart();
-        for (const it of data.items) {
-          addToCart({
-            id: it.id, sku: it.sku || '', slug: it.slug || it.sku || '', name: it.name, title: it.name,
-            price: (it.sale_price ?? it.price) / 100, regularPrice: it.price / 100, salePrice: null,
-            stock: it.stock, inStock: it.in_stock, brand: it.brand || '', category: '', categorySlug: '',
-            image: it.image || '',
-          } as any, it.quantity);
+        if (!res.ok) {
+          if (restoring) { exitProposal(); linkPendingRef.current = false; return; }
+          setRecoveryError(data.error || 'No se pudo cargar el pedido preparado');
+          return;
         }
-        sessionStorage.setItem('chat_proposal', token);
-        setRecoveryMessage(`Pedido preparado por ${data.agentName || 'tu asesor'} · ${data.items.length} producto${data.items.length === 1 ? '' : 's'}. Completa tus datos de envío y paga.`);
+        const items = proposalToCart(data.items || []);
+        const agentName = data.agentName || 'tu asesor';
         url.searchParams.delete('propuesta');
         window.history.replaceState({}, '', url.toString());
-        linkPendingRef.current = false;
+        // Sin nada en su carrito (o recargando) no hay nada que preguntar.
+        if (restoring || cartCtx.cart.length === 0) startProposal(token!, agentName, items, 'solo');
+        else setProposalChoice({ token: token!, agentName, items });
       } catch {
         setRecoveryError('Error de conexión al cargar el pedido preparado');
       }
@@ -293,7 +347,8 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
       });
       if (finalizeRes.ok) {
         setCompletedOrder({ orderId, total: 0 });
-        clearCart();
+        if (proposalCart) { setProposalCart(null); setProposalAgent(null); }
+        cartCtx.clearPaidCart();
         trackEvent.clearBeginCheckoutEventId();
         setShowPaymentModal(false);
       } else {
@@ -578,7 +633,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
     );
   }
 
-  if (cart.length === 0 && linkPendingRef.current) {
+  if (cart.length === 0 && linkPendingRef.current && !proposalChoice) {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center text-center px-4 gap-3">
         {recoveryError ? (
@@ -607,6 +662,51 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
 
   return (
     <div className="animate-fade-in font-sans">
+      {proposalAgent && (
+        <div className="max-w-2xl mx-auto mb-4 bg-accent/10 border border-accent/40 rounded p-3 flex items-start gap-3 text-sm">
+          <ShoppingBag className="w-5 h-5 text-accent shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-bold text-foreground">Pedido preparado por {proposalAgent}</p>
+            <p className="text-xs text-text-muted mt-0.5">
+              {proposalCart
+                ? 'Lo pagas aparte: los productos de tu carrito siguen guardados para otra compra.'
+                : 'Lo hemos añadido a tu carrito: pagarás todo junto.'}
+            </p>
+          </div>
+          {proposalCart && (
+            <button type="button" onClick={exitProposal} className="text-[10px] font-mono uppercase text-text-muted hover:text-foreground whitespace-nowrap">
+              Ver mi carrito
+            </button>
+          )}
+        </div>
+      )}
+      {proposalChoice && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-card border border-card-border rounded-lg max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div>
+              <p className="font-mono font-bold uppercase text-foreground">Pedido preparado por {proposalChoice.agentName}</p>
+              <p className="text-sm text-text-muted mt-1">
+                Ya tienes {cartCtx.cart.reduce((n, i) => n + i.quantity, 0)} producto{cartCtx.cart.reduce((n, i) => n + i.quantity, 0) === 1 ? '' : 's'} en tu carrito. ¿Cómo quieres hacer este pedido?
+              </p>
+            </div>
+            <ul className="text-xs text-foreground space-y-1 bg-background border border-card-border rounded p-3">
+              {proposalChoice.items.map((it) => <li key={it.id}>{it.quantity} × {it.title}</li>)}
+            </ul>
+            <button type="button"
+              onClick={() => startProposal(proposalChoice.token, proposalChoice.agentName, proposalChoice.items, 'solo')}
+              className="w-full py-3 rounded bg-accent text-accent-foreground font-mono font-bold uppercase text-xs">
+              Pagar solo este pedido
+              <span className="block normal-case font-sans font-normal text-[11px] opacity-80">Tu carrito se queda como está</span>
+            </button>
+            <button type="button"
+              onClick={() => startProposal(proposalChoice.token, proposalChoice.agentName, proposalChoice.items, 'merge')}
+              className="w-full py-3 rounded border border-card-border text-foreground font-mono font-bold uppercase text-xs hover:border-accent">
+              Añadirlo a mi carrito
+              <span className="block normal-case font-sans font-normal text-[11px] text-text-muted">Pagas todo junto en un solo pedido</span>
+            </button>
+          </div>
+        </div>
+      )}
       {isCheckingOut ? (
         // Checkout simulator drawer
         <div data-testid="checkout-form" className="max-w-2xl mx-auto bg-card border border-card-border p-6 md:p-8 rounded shadow-xl">
