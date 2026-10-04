@@ -259,6 +259,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clearCart = () => {
     setCart([]);
+    // Pedido preparado en el chat: se olvida al vaciar el carrito (p. ej. tras pagar).
+    try { sessionStorage.removeItem('chat_proposal'); } catch {}
   };
 
   const restoreCart = (items: CartItem[]) => {

@@ -160,10 +160,25 @@ export async function checkChatHealth(): Promise<{ ok: boolean; configured: bool
 
 // ── Chat con un asesor humano ────────────────────────────────────────────
 
+export interface LiveOrderPayload {
+  chatOrderId: number;
+  url: string;
+  lines: { id: number; quantity: number; name: string; image: string | null; unit: number }[];
+  subtotal: number;
+  discount: number;
+  shipping: number;
+  tax: number;
+  total: number;
+  note: string | null;
+}
+
 export interface LiveMessage {
   id: number;
   sender: 'customer' | 'ai' | 'agent' | 'system';
+  /** text · product (tarjeta) · image · order (pedido con botón de pago) */
+  kind?: 'text' | 'product' | 'image' | 'order';
   content: string;
+  payload?: any;
   created_at: string;
 }
 

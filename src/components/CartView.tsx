@@ -214,6 +214,38 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Pedido preparado por un asesor en el chat (/checkout?propuesta=token): se
+  // cargan sus productos y el pedido queda a nombre del asesor al crearlo.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    const token = url.searchParams.get('propuesta');
+    if (!token || !/^[0-9a-f-]{36}$/i.test(token)) return;
+    (async () => {
+      try {
+        const res = await fetch(`/api/chat/proposal/${token}`);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { setRecoveryError(data.error || 'No se pudo cargar el pedido preparado'); return; }
+        clearCart();
+        for (const it of data.items) {
+          addToCart({
+            id: it.id, sku: it.sku || '', slug: it.slug || it.sku || '', name: it.name, title: it.name,
+            price: (it.sale_price ?? it.price) / 100, regularPrice: it.price / 100, salePrice: null,
+            stock: it.stock, inStock: it.in_stock, brand: it.brand || '', category: '', categorySlug: '',
+            image: it.image || '',
+          } as any, it.quantity);
+        }
+        sessionStorage.setItem('chat_proposal', token);
+        setRecoveryMessage(`Pedido preparado por ${data.agentName || 'tu asesor'} · ${data.items.length} producto${data.items.length === 1 ? '' : 's'}. Completa tus datos de envío y paga.`);
+        url.searchParams.delete('propuesta');
+        window.history.replaceState({}, '', url.toString());
+      } catch {
+        setRecoveryError('Error de conexión al cargar el pedido preparado');
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Procesar resultado de pago al montar el carrito (redirect de Klarna/Bizum)
   useEffect(() => {
   if (typeof window === 'undefined') return;
@@ -474,6 +506,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
           billingData: billingDifferent ? billingData : null,
           paymentMethod: 'stripe',
           promoCode: appliedPromo,
+          chatProposal: (() => { try { return sessionStorage.getItem('chat_proposal') || undefined; } catch { return undefined; } })(),
         }),
       });
 

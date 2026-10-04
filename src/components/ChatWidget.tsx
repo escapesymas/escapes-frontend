@@ -7,7 +7,7 @@ import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import {
   sendChatMessage, requestHandoff, fetchLive, sendLiveMessage, closeLive, enableChatPush, chatPushState,
-  type ChatPushState,
+  type ChatPushState, type LiveOrderPayload,
   type ChatMessage, type ChatProduct, type LiveConversation, type LiveMessage,
 } from '../lib/chatApi';
 import { trackEvent } from '../lib/analytics';
@@ -19,6 +19,44 @@ const SUGGESTIONS = [
   '¿Cómo va mi pedido?',
   '¿Cómo hago una devolución?',
 ];
+
+const eur = (cents: number) => `${(cents / 100).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+
+/** Pedido preparado por el asesor: productos, importe orientativo y botón al checkout. */
+function OrderCard({ order }: { order: LiveOrderPayload }) {
+  return (
+    <div className="bg-card border-2 border-accent rounded-xl overflow-hidden text-foreground">
+      <div className="px-3 py-2 bg-accent/10 border-b border-card-border">
+        <p className="text-[10px] font-mono uppercase tracking-wider text-accent font-bold">Tu pedido preparado</p>
+        {order.note && <p className="text-xs mt-0.5 whitespace-pre-wrap">{order.note}</p>}
+      </div>
+      <ul className="divide-y divide-card-border">
+        {order.lines.map((l) => (
+          <li key={l.id} className="flex items-center gap-2 px-3 py-2">
+            {l.image
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={l.image} alt="" className="w-10 h-10 object-contain bg-background rounded" loading="lazy" />
+              : <span className="w-10 h-10 bg-background rounded" />}
+            <span className="flex-1 text-xs leading-tight line-clamp-2">{l.name}</span>
+            <span className="text-xs whitespace-nowrap">{l.quantity} × {eur(l.unit)}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="px-3 py-2 text-xs space-y-0.5 border-t border-card-border">
+        {order.discount > 0 && <p className="flex justify-between text-emerald-600"><span>Descuento</span><span>−{eur(order.discount)}</span></p>}
+        <p className="flex justify-between"><span>Envío (Península)</span><span>{order.shipping > 0 ? eur(order.shipping) : 'Gratis'}</span></p>
+        <p className="flex justify-between font-bold text-sm"><span>Total aprox.</span><span>{eur(order.total)}</span></p>
+        <p className="text-[10px] text-muted-foreground">El importe final se calcula con tu dirección de envío.</p>
+      </div>
+      <a
+        href={order.url}
+        className="block text-center px-3 py-2.5 bg-accent text-accent-foreground font-mono uppercase font-bold text-xs hover:bg-accent/90"
+      >
+        Ir al envío y pago
+      </a>
+    </div>
+  );
+}
 
 // La conversación se guarda en la pestaña para no perderla al recargar.
 const STORAGE_KEY = 'tg_chat_v1';
@@ -458,6 +496,24 @@ export default function ChatWidget() {
                   m.sender === 'system' ? (
                     <p key={m.id} className="text-[11px] text-center text-muted-foreground px-4">{m.content}</p>
                   ) : (
+                    m.kind === 'product' && m.payload ? (
+                      <div key={m.id} className="space-y-1">
+                        <p className="text-[9px] font-mono uppercase tracking-wider text-accent">{live.agentName} te recomienda</p>
+                        <ProductCardMessage product={m.payload} onAddToCart={handleAddToCart} onView={handleViewProduct} />
+                      </div>
+                    ) : m.kind === 'order' && m.payload ? (
+                      <div key={m.id}><OrderCard order={m.payload} /></div>
+                    ) : m.kind === 'image' && m.payload?.url ? (
+                      <div key={m.id} className="flex justify-start">
+                        <div className="max-w-[80%] space-y-1">
+                          <a href={m.payload.url} target="_blank" rel="noopener noreferrer">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={m.payload.url} alt={m.content || 'Imagen del asesor'} className="rounded-xl border border-card-border max-h-64 object-contain bg-background" loading="lazy" />
+                          </a>
+                          {m.content && <p className="text-xs px-1">{m.content}</p>}
+                        </div>
+                      </div>
+                    ) : (
                     <div key={m.id} className={`flex ${m.sender === 'customer' ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[90%] px-3 py-2 rounded-2xl text-sm break-words ${
                         m.sender === 'customer'
@@ -474,6 +530,7 @@ export default function ChatWidget() {
                         {m.sender === 'ai' ? <ChatText text={m.content} /> : m.content}
                       </div>
                     </div>
+                    )
                   )
                 ))}
                 {liveActive && pushState === 'default' && (
