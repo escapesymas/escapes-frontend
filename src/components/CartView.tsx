@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps, @next/next/no-img-element, @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 import { Trash2, Plus, Minus, ShoppingBag, Truck, ArrowLeft, ArrowRight, AlertCircle, RotateCcw, Loader2, Package, ShieldCheck, Lock, Repeat } from 'lucide-react';
@@ -57,8 +57,12 @@ interface SavedAddress {
 }
 
 export default function CartView({ onContinueShopping, initialStep = 'cart' }: CartViewProps) {
-  const { cart, updateQuantity, removeItem, clearCart, addToCart, isInitialized } = useCart();
-  const { user, isAuthenticated } = useAuth();
+  const { cart, updateQuantity, removeItem, clearCart, addToCart, isInitialized, isSynced } = useCart();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  // Enlaces que traen productos (pedido del chat o carrito recuperado): mientras
+  // se cargan, el checkout no debe mandar a la portada por tener el carrito vacío.
+  const linkPendingRef = useRef(typeof window !== 'undefined' && /[?&](propuesta|recover)=/.test(window.location.search));
+  const proposalLoadedRef = useRef(false);
 
   const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
   const [promoType, setPromoType] = useState<string | null>(null);
@@ -150,7 +154,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
   // Guard: si llegamos a /checkout con carrito vacío, redirigir a /
   useEffect(() => {
     if (initialStep !== 'checkout') return;
-    if (!isInitialized) return;
+    if (!isInitialized || linkPendingRef.current) return;
     if (!cart || cart.length === 0) {
       window.location.href = '/?emptyCart=1';
     }
@@ -207,6 +211,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
         }
         url.searchParams.delete('recover');
         window.history.replaceState({}, '', url.toString());
+        linkPendingRef.current = false;
       } catch (err: any) {
         setRecoveryError('Error de conexión al recuperar carrito');
       }
@@ -217,10 +222,14 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
   // Pedido preparado por un asesor en el chat (/checkout?propuesta=token): se
   // cargan sus productos y el pedido queda a nombre del asesor al crearlo.
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || proposalLoadedRef.current) return;
     const url = new URL(window.location.href);
     const token = url.searchParams.get('propuesta');
     if (!token || !/^[0-9a-f-]{36}$/i.test(token)) return;
+    // Se espera a la sesión y al carrito del servidor: si llegaran después,
+    // sustituirían los productos del pedido.
+    if (authLoading || !isInitialized || !isSynced) return;
+    proposalLoadedRef.current = true;
     (async () => {
       try {
         const res = await fetch(`/api/chat/proposal/${token}`);
@@ -239,12 +248,13 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
         setRecoveryMessage(`Pedido preparado por ${data.agentName || 'tu asesor'} · ${data.items.length} producto${data.items.length === 1 ? '' : 's'}. Completa tus datos de envío y paga.`);
         url.searchParams.delete('propuesta');
         window.history.replaceState({}, '', url.toString());
+        linkPendingRef.current = false;
       } catch {
         setRecoveryError('Error de conexión al cargar el pedido preparado');
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authLoading, isInitialized, isSynced]);
 
   // Procesar resultado de pago al montar el carrito (redirect de Klarna/Bizum)
   useEffect(() => {
@@ -565,6 +575,21 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
         onContinueShopping={onContinueShopping}
         onReset={() => setCompletedOrder(null)}
       />
+    );
+  }
+
+  if (cart.length === 0 && linkPendingRef.current) {
+    return (
+      <div className="min-h-[50vh] flex flex-col items-center justify-center text-center px-4 gap-3">
+        {recoveryError ? (
+          <>
+            <p className="text-foreground font-bold">{recoveryError}</p>
+            <p className="text-sm text-muted-foreground">Escríbenos por el chat o a info@escapesymas.com y te lo preparamos de nuevo.</p>
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground animate-pulse">Cargando tu pedido…</p>
+        )}
+      </div>
     );
   }
 

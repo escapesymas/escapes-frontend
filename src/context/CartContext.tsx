@@ -37,6 +37,8 @@ interface CartContextValue {
   restoreCart: (items: CartItem[]) => void;
   restoreLastRemoved: () => void;
   isInitialized: boolean;
+  /** El carrito del servidor ya se ha cargado para la sesión actual (no lo va a sustituir). */
+  isSynced: boolean;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -103,6 +105,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!sessionToken || !isInitialized) return;
     let cancelled = false;
+    setHasFetchedDB(false);
 
     const fetchDBCart = async () => {
       try {
@@ -288,6 +291,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         restoreCart,
         restoreLastRemoved,
         isInitialized,
+        isSynced: hasFetchedDB,
       }}
     >
       {children}
