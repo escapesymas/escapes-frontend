@@ -496,7 +496,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
   // Importes del servidor (/api/cart/quote): el mismo cálculo que cobra el pedido,
   // con el impuesto del código postal (Canarias, Ceuta y Melilla sin IVA). El
   // cálculo local de arriba solo se usa hasta que llega la respuesta.
-  const quoteKey = JSON.stringify([cart.map((i) => [i.id, i.quantity]), shippingData.postcode, appliedPromo]);
+  const quoteKey = JSON.stringify([cart.map((i) => [i.id, i.quantity]), shippingData.postcode, appliedPromo, proposalAgent]);
   const [serverQuote, setServerQuote] = useState<{ key: string; subtotal: number; discount: number; shipping: number; total: number; taxRate: number; taxLabel: string; belowMinimum?: boolean; minimumMessage?: string | null; promo?: { code: string; valid: boolean; error?: string } | null } | null>(null);
   useEffect(() => {
     if (cart.length === 0) return;
@@ -507,6 +507,8 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            // Precios pactados con el asesor del chat (los aplica el servidor).
+            chatProposal: (() => { try { return sessionStorage.getItem('chat_proposal') || undefined; } catch { return undefined; } })(),
             cart: cart.map((i) => ({ id: i.id, quantity: i.quantity })),
             country: 'ES',
             postcode: /^\d{5}$/.test(shippingData.postcode || '') ? shippingData.postcode : '',

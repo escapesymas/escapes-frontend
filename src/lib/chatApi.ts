@@ -163,7 +163,8 @@ export async function checkChatHealth(): Promise<{ ok: boolean; configured: bool
 export interface LiveOrderPayload {
   chatOrderId: number;
   url: string;
-  lines: { id: number; quantity: number; name: string; image: string | null; unit: number }[];
+  /** unit: precio pactado; list: precio sin el descuento del asesor (si lo hay). */
+  lines: { id: number; quantity: number; name: string; image: string | null; unit: number; list?: number | null; discount?: number }[];
   subtotal: number;
   discount: number;
   shipping: number;

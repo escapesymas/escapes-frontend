@@ -37,8 +37,14 @@ function OrderCard({ order }: { order: LiveOrderPayload }) {
               // eslint-disable-next-line @next/next/no-img-element
               ? <img src={l.image} alt="" className="w-10 h-10 object-contain bg-background rounded" loading="lazy" />
               : <span className="w-10 h-10 bg-background rounded" />}
-            <span className="flex-1 text-xs leading-tight line-clamp-2">{l.name}</span>
-            <span className="text-xs whitespace-nowrap">{l.quantity} × {eur(l.unit)}</span>
+            <span className="flex-1 text-xs leading-tight line-clamp-2">
+              {l.name}
+              {!!l.discount && <span className="ml-1 text-[10px] font-bold text-emerald-600">−{String(l.discount).replace('.', ',')} %</span>}
+            </span>
+            <span className="text-xs whitespace-nowrap text-right">
+              {l.list ? <span className="block text-[10px] text-muted-foreground line-through">{eur(l.list)}</span> : null}
+              {l.quantity} × {eur(l.unit)}
+            </span>
           </li>
         ))}
       </ul>
