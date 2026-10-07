@@ -2,7 +2,8 @@ name: CI — Escapes Frontend
 
 on:
   push:
-    branches: [ main, master ]
+    # mejoras/**: comprobar antes de pasar a main (main despliega en Coolify).
+    branches: [ main, master, 'mejoras/**' ]
   pull_request:
     branches: [ main, master ]
 
@@ -15,7 +16,7 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-      - run: npm ci
+      - run: npm ci --legacy-peer-deps
       # El push a main despliega en Coolify: tipos y lint tienen que pasar antes.
       - name: TypeScript
         run: npx tsc --noEmit

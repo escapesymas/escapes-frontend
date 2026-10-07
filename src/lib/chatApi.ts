@@ -184,6 +184,8 @@ export interface LiveMessage {
   /** text · product (tarjeta) · image · order (pedido con botón de pago) */
   kind?: 'text' | 'product' | 'image' | 'order';
   content: string;
+  // Depende de kind (producto, pedido…): cada tarjeta lee sus propios campos.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload?: any;
   created_at: string;
 }

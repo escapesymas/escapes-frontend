@@ -78,10 +78,13 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
 
   // Enlaces que traen productos (pedido del chat o carrito recuperado): mientras
   // se cargan, el checkout no debe mandar a la portada por tener el carrito vacío.
-  const linkPendingRef = useRef(typeof window !== 'undefined' && (
+  // El estado sirve para pintar; la ref, para los efectos (sin depender del render).
+  const [linkPending, setLinkPending] = useState(() => typeof window !== 'undefined' && (
     /[?&](propuesta|recover)=/.test(window.location.search)
     || (initialStep === 'checkout' && (() => { try { return sessionStorage.getItem('chat_proposal_mode') === 'solo'; } catch { return false; } })())
   ));
+  const linkPendingRef = useRef(linkPending);
+  const clearLinkPending = () => { clearLinkPending(); setLinkPending(false); };
   const proposalLoadedRef = useRef(false);
 
   const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
@@ -231,7 +234,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
         }
         url.searchParams.delete('recover');
         window.history.replaceState({}, '', url.toString());
-        linkPendingRef.current = false;
+        clearLinkPending();
       } catch (err: any) {
         setRecoveryError('Error de conexión al recuperar carrito');
       }
@@ -260,7 +263,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
       for (const it of items) addToCart(it as any, it.quantity);
     }
     setProposalChoice(null);
-    linkPendingRef.current = false;
+    clearLinkPending();
   };
 
   /** Deja de pagar el pedido del chat aparte y vuelve a su carrito. */
@@ -294,7 +297,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
         const res = await fetch(`/api/chat/proposal/${token}`);
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          if (restoring) { exitProposal(); linkPendingRef.current = false; return; }
+          if (restoring) { exitProposal(); clearLinkPending(); return; }
           setRecoveryError(data.error || 'No se pudo cargar el pedido preparado');
           return;
         }
@@ -637,7 +640,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
     );
   }
 
-  if (cart.length === 0 && linkPendingRef.current && !proposalChoice) {
+  if (cart.length === 0 && linkPending && !proposalChoice) {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center text-center px-4 gap-3">
         {recoveryError ? (

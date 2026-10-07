@@ -159,7 +159,7 @@ export default function ChatWidget() {
   const [pushState, setPushState] = useState<ChatPushState>('unsupported');
   const lastLiveIdRef = useRef(0);
   const openRef = useRef(open);
-  openRef.current = open;
+  useEffect(() => { openRef.current = open; }, [open]);
   const liveActive = !!live && live.status !== 'closed';
 
   useEffect(() => {
