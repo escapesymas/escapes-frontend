@@ -32,6 +32,8 @@ const csp = [
 ].join('; ');
 
 const nextConfig: NextConfig = {
+  // Sin la cabecera X-Powered-By: no anunciar la tecnología del servidor.
+  poweredByHeader: false,
   ...(isProduction ? {} : { allowedDevOrigins: ['192.168.1.131'] }),
   async headers() {
     return [

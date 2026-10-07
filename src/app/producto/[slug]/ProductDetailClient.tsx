@@ -11,7 +11,7 @@ import { Product, ProductImage as ProductImageType, ProductVariant } from '../..
 import { fetchProductBySlug, refreshProductStock } from '../../../lib/api';
 import { useCart } from '../../../context/CartContext';
 import { sanitizeHTML } from '../../../lib/constants';
-import { getProductSchema, getBreadcrumbSchema } from '../../../components/SchemaMarkup';
+import { getProductSchema, getBreadcrumbSchema, jsonLd } from '../../../components/SchemaMarkup';
 import Header from '../../../components/Header';
 import ProductDetailSkeleton from '../../../components/ProductDetailSkeleton';
 import NotifyMeModal from '../../../components/NotifyMeModal';
@@ -175,7 +175,7 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(getProductSchema({
+          __html: jsonLd(getProductSchema({
             name: product.name,
             description: description.replace(/<[^>]+>/g, ' ').slice(0, 500) || product.name,
             image: product.image,
@@ -190,7 +190,7 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(getBreadcrumbSchema([
+          __html: jsonLd(getBreadcrumbSchema([
             { name: 'Inicio', url: '/' },
             ...crumbs.map((c) => ({ name: c.name, url: c.href })),
             { name: product.name, url: `/producto/${slug}` },

@@ -170,15 +170,24 @@ export default function SchemaMarkup() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(organizationSchema),
+          __html: jsonLd(organizationSchema),
         }}
       />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(websiteSchema),
+          __html: jsonLd(websiteSchema),
         }}
       />
     </>
   );
+}
+
+/**
+ * JSON para <script type="application/ld+json">: se escapan «<», «>» y «&» para
+ * que ningún texto (nombre o descripción de un producto) pueda cerrar la
+ * etiqueta <script> e inyectar código.
+ */
+export function jsonLd(data: unknown): string {
+  return JSON.stringify(data).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
 }
