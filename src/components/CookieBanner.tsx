@@ -35,12 +35,24 @@ export default function CookieBanner() {
       if (!stored) {
         setVisible(true);
       } else {
-        const parsed: ConsentState = JSON.parse(stored);
+        const parsed = JSON.parse(stored);
         if (parsed?.preferences) setPrefs(parsed.preferences);
+        else if (parsed && typeof parsed === 'object') {
+          // Formato antiguo: { necessary: true, analytics: false, marketing: false }
+          setPrefs({
+            necessary: 'accepted',
+            analytics: parsed.analytics === true ? 'accepted' : 'rejected',
+            marketing: parsed.marketing === true ? 'accepted' : 'rejected',
+          });
+        }
       }
     } catch {
       setVisible(true);
     }
+    // Botón «Gestionar cookies» del pie de página.
+    const open = () => { setVisible(true); setExpanded(true); };
+    window.addEventListener('open_cookie_settings', open);
+    return () => window.removeEventListener('open_cookie_settings', open);
   }, []);
 
   const save = (action: ConsentAction, preferences = prefs) => {
@@ -116,7 +128,11 @@ export default function CookieBanner() {
         <div className="flex flex-col sm:flex-row gap-2">
           <button
             type="button"
-            onClick={() => save('reject_all')}
+            onClick={() => {
+              const onlyNecessary = { necessary: 'accepted', analytics: 'rejected', marketing: 'rejected' };
+              setPrefs(onlyNecessary);
+              save('reject_all', onlyNecessary);
+            }}
             className="flex-1 px-3 py-2 text-xs font-mono uppercase font-bold rounded border border-card-border text-foreground hover:bg-icon-box transition-colors min-h-[40px]"
           >
             Solo necesarias

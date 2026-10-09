@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import CookieSettingsButton from './CookieSettingsButton';
 
 function InstagramIcon() {
   return (
@@ -51,6 +52,9 @@ export default function Footer() {
                 >
                   Política de Cookies
                 </Link>
+              </li>
+              <li>
+                <CookieSettingsButton className="text-[10px] font-mono text-text-muted hover:text-foreground transition-colors cursor-pointer" />
               </li>
               <li>
                 <Link

@@ -36,7 +36,9 @@ export function hasMarketingConsent(): boolean {
   try {
     const raw = localStorage.getItem(CONSENT_KEY);
     if (!raw) return false;
-    return JSON.parse(raw)?.preferences?.marketing === 'accepted';
+    const parsed = JSON.parse(raw);
+    // Formato actual ({ preferences: { marketing: 'accepted' } }) o antiguo ({ marketing: true }).
+    return parsed?.preferences ? parsed.preferences.marketing === 'accepted' : parsed?.marketing === true;
   } catch {
     return false;
   }
