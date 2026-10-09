@@ -86,7 +86,7 @@ export const trackEvent = {
       value,
       contents: items.map((it) => ({
         content_id: String(it.product.id),
-        content_name: it.product.name,
+        content_name: it.product.name || (it.product as { title?: string }).title,
         quantity: it.quantity,
         price: it.product.salePrice ?? it.product.price,
       })),

@@ -41,6 +41,7 @@ interface CartContextValue {
   clearPaidCart: () => void;
   restoreCart: (items: CartItem[]) => void;
   restoreLastRemoved: () => void;
+  syncPrices: (unitPrices: Record<string, number>) => void;
   isInitialized: boolean;
   /** El carrito del servidor ya se ha cargado para la sesión actual (no lo va a sustituir). */
   isSynced: boolean;
@@ -222,7 +223,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           id: product.id,
           title: itemTitle,
           slug: product.slug || '',
-          price: product.price,
+          // Precio que paga el cliente (con su descuento), no el PVP: el mismo que la ficha.
+          price: product.salePrice != null && product.salePrice > 0 && product.salePrice < product.price
+            ? product.salePrice
+            : product.price,
           regularPrice: product.regularPrice || product.price,
           sku: product.sku || '',
           image: itemImage,
@@ -290,6 +294,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     showToast({ message: `Restaurado: ${lastRemovedItem.title}`, type: 'success' });
   };
 
+  /** Corrige los precios con los que cobra el servidor (/api/cart/quote). */
+  const syncPrices = (unitPrices: Record<string, number>) => {
+    setCart((prev) => {
+      const changed = prev.some((it) => unitPrices[it.id] != null && Math.abs(unitPrices[it.id] - it.price) >= 0.005);
+      if (!changed) return prev;
+      return prev.map((it) => (unitPrices[it.id] != null ? { ...it, price: unitPrices[it.id] } : it));
+    });
+  };
+
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   return (
@@ -304,6 +317,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         clearPaidCart,
         restoreCart,
         restoreLastRemoved,
+        syncPrices,
         isInitialized,
         isSynced: hasFetchedDB,
       }}

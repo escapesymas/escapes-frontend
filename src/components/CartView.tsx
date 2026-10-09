@@ -523,7 +523,12 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
           }),
           signal: ctrl.signal,
         });
-        if (res.ok) setServerQuote({ key: quoteKey, ...(await res.json()) });
+        if (res.ok) {
+          const data = await res.json();
+          setServerQuote({ key: quoteKey, ...data });
+          // Cada línea con el precio que se cobra (carritos guardados con el PVP antiguo).
+          if (!proposalCart && data.unitPrices) cartCtx.syncPrices(data.unitPrices);
+        }
       } catch { /* se queda el cálculo local */ }
     }, 300);
     return () => { clearTimeout(t); ctrl.abort(); };
