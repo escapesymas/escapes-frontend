@@ -9,12 +9,12 @@ const isProduction = process.env.NODE_ENV === 'production';
 // in the action plan). For development we keep 'unsafe-eval' because esbuild
 // and SWC rely on it for hot reload.
 const scriptSrc = isProduction
-  ? "'self' 'unsafe-inline' https://js.stripe.com https://m.stripe.com https://*.stripe.com https://umami.escapesymas.com"
-  : "'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://*.stripe.com https://umami.escapesymas.com";
+  ? "'self' 'unsafe-inline' https://js.stripe.com https://m.stripe.com https://*.stripe.com https://umami.escapesymas.com https://analytics.tiktok.com"
+  : "'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://*.stripe.com https://umami.escapesymas.com https://analytics.tiktok.com";
 
 const connectSrc = isProduction
-  ? "'self' https://api.stripe.com https://api.escapesymas.com https://umami.escapesymas.com"
-  : "'self' http://127.0.0.1:3001 http://localhost:3001 https://api.stripe.com https://api.escapesymas.com https://umami.escapesymas.com";
+  ? "'self' https://api.stripe.com https://api.escapesymas.com https://umami.escapesymas.com https://analytics.tiktok.com https://analytics-ipv6.tiktokw.us"
+  : "'self' http://127.0.0.1:3001 http://localhost:3001 https://api.stripe.com https://api.escapesymas.com https://umami.escapesymas.com https://analytics.tiktok.com https://analytics-ipv6.tiktokw.us";
 
 const csp = [
   "default-src 'self'",

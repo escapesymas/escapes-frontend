@@ -5,6 +5,7 @@ import Image from 'next/image';
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps, @next/next/no-img-element, @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 import { Trash2, Plus, Minus, ShoppingBag, Truck, ArrowLeft, ArrowRight, AlertCircle, RotateCcw, Loader2, Package, ShieldCheck, Lock, Repeat } from 'lucide-react';
 import { trackEvent } from '../lib/analytics';
+import { tiktokServerContext } from '../lib/tiktok';
 import { trackEvent as trackUmami } from '../lib/umami';
 import { useCart, CartItem } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -347,7 +348,8 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
         body: JSON.stringify({
           orderId,
           paymentId: paymentIntentId,
-          status: 'processing'
+          status: 'processing',
+          tiktok: tiktokServerContext(),
         })
       });
       if (finalizeRes.ok) {

@@ -36,13 +36,14 @@ export default function PoliticaPrivacidadPage() {
               <li>Envío de notificaciones de disponibilidad de productos (cuando el usuario lo solicite).</li>
               <li>Chat de atención con un asesor y avisos de sus respuestas (cuando el usuario lo active).</li>
               <li>Cumplimiento de obligaciones legales y fiscales.</li>
+              <li>Medición de las compras y visitas que llegan desde TikTok (solo si acepta las cookies de marketing): se comunica a TikTok Technology Limited el importe y los productos comprados, junto con su email y teléfono cifrados (SHA-256) y datos técnicos de la visita.</li>
             </ul>
           </section>
 
           <section>
             <h2 className="font-mono text-sm font-bold uppercase text-foreground mb-2">3. Legitimación</h2>
             <p>
-              La base legal para el tratamiento de sus datos es la ejecución de un contrato (compra de productos), su consentimiento explícito (notificaciones de stock y avisos del chat de atención) y el cumplimiento de obligaciones legales.
+              La base legal para el tratamiento de sus datos es la ejecución de un contrato (compra de productos), su consentimiento explícito (notificaciones de stock, avisos del chat de atención y medición en TikTok mediante las cookies de marketing) y el cumplimiento de obligaciones legales.
             </p>
           </section>
 

@@ -7,6 +7,7 @@ import ProductImage from './ProductImage';
 import RatingStars from './RatingStars';
 import { useHoverPrefetch } from '../lib/useHoverPrefetch';
 import { trackEvent as trackUmami, short } from '../lib/umami';
+import { tiktokAddToCart } from '../lib/analytics';
 import { effectivePrice, formatEuro, optionsSummary } from '../lib/pricing';
 
 interface ProductCardProps {
@@ -204,6 +205,7 @@ export default function ProductCard({ product, onAddToCart, onNotifyMe, priority
                   quantity: 1,
                   source: 'listado',
                 });
+                tiktokAddToCart(product, 1);
                 onAddToCart(product);
               }}
               className="p-2 rounded bg-accent text-slate-950 hover:bg-accent-hover active:scale-95 transition-all shadow-sm cursor-pointer"

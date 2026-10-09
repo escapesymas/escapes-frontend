@@ -2,6 +2,7 @@
 
 import { Product } from '../types';
 import { trackEvent as umami, short } from './umami';
+import { tiktokTrack, type TikTokContent } from './tiktok';
 
 const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID || '';
 
@@ -27,6 +28,11 @@ export const trackEvent = {
   },
 
   viewItem: (product: Product) => {
+    const price = product.salePrice || product.price;
+    tiktokTrack('ViewContent', {
+      value: price,
+      contents: [{ content_id: String(product.id), content_name: product.name, quantity: 1, price }],
+    });
     pushEvent('view_item', {
       currency: 'EUR',
       value: (product.salePrice || product.price),
@@ -46,6 +52,7 @@ export const trackEvent = {
       product_id: product.id, product: short(product.name), brand: short(product.brand),
       value: (product.salePrice || product.price) * quantity, quantity, source,
     });
+    tiktokAddToCart(product, quantity);
     pushEvent('add_to_cart', {
       currency: 'EUR',
       value: (product.salePrice || product.price) * quantity,
@@ -75,6 +82,15 @@ export const trackEvent = {
   beginCheckout: (items: { product: Product; quantity: number }[], value: number) => {
     // Pedido creado: el cliente pasa al pago.
     umami('checkout_payment', { value, items: items.reduce((n, it) => n + it.quantity, 0) });
+    tiktokTrack('InitiateCheckout', {
+      value,
+      contents: items.map((it) => ({
+        content_id: String(it.product.id),
+        content_name: it.product.name,
+        quantity: it.quantity,
+        price: it.product.salePrice ?? it.product.price,
+      })),
+    });
     const eventId = (typeof crypto !== 'undefined' && 'randomUUID' in crypto) ? crypto.randomUUID() : `${Date.now()}_${Math.random()}`;
     if (typeof window !== 'undefined') {
       try {
@@ -174,9 +190,25 @@ export function GtmNoScript() {
  * Compra completada, con su importe: Umami la muestra en el informe de
  * ingresos (revenue + currency). Una sola vez por pago.
  */
-export function trackPurchase(paymentId: string, orderId: number | string, totalCents: number) {
+export function trackPurchase(
+  paymentId: string,
+  orderId: number | string,
+  totalCents: number,
+  extra: { items?: TikTokContent[] } = {},
+) {
   if (typeof window === 'undefined' || !totalCents) return;
   const key = `umami_purchase_${paymentId}`;
   try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, '1'); } catch { /* sin storage: se envía igual */ }
   umami('purchase', { revenue: Math.round(totalCents) / 100, currency: 'EUR', order_id: String(orderId) });
+  // TikTok: mismo event_id que el que envía el servidor, para no contarla dos veces.
+  tiktokTrack('CompletePayment', { value: Math.round(totalCents) / 100, contents: extra.items }, `order_${orderId}`);
+}
+
+/** Añadir al carrito en TikTok (desde la ficha, el listado o el chat). */
+export function tiktokAddToCart(product: Pick<Product, 'id' | 'name' | 'price' | 'salePrice'>, quantity = 1) {
+  const price = product.salePrice || product.price;
+  tiktokTrack('AddToCart', {
+    value: price * quantity,
+    contents: [{ content_id: String(product.id), content_name: product.name, quantity, price }],
+  });
 }

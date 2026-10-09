@@ -11,7 +11,7 @@ import {
   type ChatPushState, type LiveOrderPayload,
   type ChatMessage, type ChatProduct, type LiveConversation, type LiveMessage,
 } from '../lib/chatApi';
-import { trackEvent } from '../lib/analytics';
+import { tiktokAddToCart, trackEvent } from '../lib/analytics';
 import ProductCardMessage from './chat/ProductCardMessage';
 
 const SUGGESTIONS = [
@@ -407,6 +407,7 @@ export default function ChatWidget() {
       },
       1
     );
+    tiktokAddToCart({ id: product.id, name: product.name, price: product.sale_price ?? product.price, salePrice: null }, 1);
     showToast({ message: 'Producto añadido al carrito', type: 'success' });
   };
 

@@ -28,6 +28,7 @@ export default function PoliticaCookiesPage() {
             <ul className="list-disc pl-5 mt-2 space-y-2">
               <li><strong>Cookies estrictamente necesarias:</strong> imprescindibles para el funcionamiento del sitio web, como la gestión del carrito de la compra, la autenticación de usuarios y la seguridad. Estas cookies no requieren consentimiento.</li>
               <li><strong>Cookies de análisis (opcionales):</strong> nos permiten medir y analizar la navegación de los usuarios en el sitio para mejorar nuestros servicios. Solo se activan con tu consentimiento.</li>
+              <li><strong>Cookies de marketing (opcionales):</strong> las usa el píxel de TikTok para medir las compras y visitas que llegan desde nuestras publicaciones y anuncios en TikTok. Solo se activan si aceptas la categoría «Marketing» en el aviso de cookies.</li>
               <li><strong>Cookies de funcionalidad (opcionales):</strong> permiten recordar tus preferencias (idioma, configuración del selector de moto, productos favoritos) para ofrecerte una experiencia personalizada.</li>
             </ul>
           </section>
@@ -63,6 +64,12 @@ export default function PoliticaCookiesPage() {
                   <td className="py-2">365 días</td>
                 </tr>
                 <tr className="border-b border-card-border/50">
+                  <td className="py-2">_ttp, _tt_enable_cookie, ttcsid</td>
+                  <td className="py-2">Marketing (TikTok, solo con tu consentimiento)</td>
+                  <td className="py-2">Medir visitas y compras procedentes de TikTok. Proveedor: TikTok Technology Limited</td>
+                  <td className="py-2">Hasta 13 meses</td>
+                </tr>
+                <tr className="border-b border-card-border/50">
                   <td className="py-2">cookie_consent</td>
                   <td className="py-2">Estrictamente necesaria</td>
                   <td className="py-2">Almacenar tu elección de consentimiento de cookies</td>
@@ -70,7 +77,7 @@ export default function PoliticaCookiesPage() {
                 </tr>
               </tbody>
             </table>
-            <p className="mt-3">Este sitio web no utiliza cookies publicitarias ni de seguimiento entre sitios de terceros.</p>
+            <p className="mt-3">Las únicas cookies publicitarias son las del píxel de TikTok, y solo se instalan si aceptas la categoría «Marketing». Cuando la aceptas y compras, también enviamos a TikTok desde nuestro servidor el importe, los productos y tu email y teléfono cifrados (SHA-256), para medir la compra.</p>
           </section>
 
           <section>
@@ -90,7 +97,7 @@ export default function PoliticaCookiesPage() {
             </p>
           </section>
 
-          <p className="text-foreground/60 italic mt-8">Última actualización: junio de 2026.</p>
+          <p className="text-foreground/60 italic mt-8">Última actualización: octubre de 2026.</p>
         </div>
       </main>
     </div>
