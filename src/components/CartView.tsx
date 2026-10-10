@@ -85,7 +85,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
     || (initialStep === 'checkout' && (() => { try { return sessionStorage.getItem('chat_proposal_mode') === 'solo'; } catch { return false; } })())
   ));
   const linkPendingRef = useRef(linkPending);
-  const clearLinkPending = () => { clearLinkPending(); setLinkPending(false); };
+  const clearLinkPending = () => { linkPendingRef.current = false; setLinkPending(false); };
   const proposalLoadedRef = useRef(false);
 
   const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
@@ -1062,7 +1062,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
             </button>
           </div>
 
-          <CartProgressBar subtotal={subtotal} />
+          <CartProgressBar subtotal={subtotal} discountCapped={!!quote?.discountCapped} />
 
           {recoveryMessage && (
             <div data-testid="recovery-banner" className="bg-green-500/10 border border-green-500/30 p-4 rounded-sm mb-6 flex items-start gap-3 font-sans">
@@ -1248,14 +1248,28 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
                     <span className="text-foreground font-mono">{formatPrice(shownSubtotal)}</span>
                   </div>
 
-                  {tierDiscount > 0 && (
+                  {/* Con la respuesta del servidor, el descuento real (tramo + cupón, con su tope). */}
+                  {quote ? (
+                    discountAmount > 0 && (
+                      <div className="flex justify-between text-accent-text text-xs font-bold uppercase">
+                        <span>Descuento {currentTier.discount > 0 ? currentTier.label : ''}{appliedPromo ? `${currentTier.discount > 0 ? ' + ' : ''}cupón` : ''}</span>
+                        <span className="font-mono">-{formatPrice(discountAmount)}</span>
+                      </div>
+                    )
+                  ) : tierDiscount > 0 && (
                     <div className="flex justify-between text-accent-text text-xs font-bold uppercase">
                       <span>Descuento {currentTier.label}</span>
                       <span className="font-mono">-{formatPrice(tierDiscount)}</span>
                     </div>
                   )}
 
-                  {promoDiscount > 0 && (
+                  {quote?.discountCapped && (
+                    <p className="text-[10px] leading-snug text-text-muted normal-case">
+                      Descuento limitado: algunos productos ya tienen el precio al mínimo y no admiten más rebaja.
+                    </p>
+                  )}
+
+                  {!quote && promoDiscount > 0 && (
                     <div className="flex justify-between text-emerald-500 text-xs font-bold uppercase">
                       <span>Cupón {appliedPromo}</span>
                       <span className="font-mono">-{formatPrice(promoDiscount)}</span>

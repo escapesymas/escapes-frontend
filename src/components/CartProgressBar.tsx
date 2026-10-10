@@ -6,9 +6,11 @@ import { MARKETING_TIERS, FREE_SHIPPING_MIN } from '../lib/constants';
 
 interface CartProgressBarProps {
   subtotal: number;
+  /** El servidor ha recortado el descuento (productos con el precio al mínimo). */
+  discountCapped?: boolean;
 }
 
-export default function CartProgressBar({ subtotal }: CartProgressBarProps) {
+export default function CartProgressBar({ subtotal, discountCapped }: CartProgressBarProps) {
   const tiers = [
     { threshold: MARKETING_TIERS.PLATA.min, label: 'Descuento 5%', icon: Percent, color: 'bg-zinc-500' },
     { threshold: FREE_SHIPPING_MIN, label: 'Envío Gratis', icon: Truck, color: 'bg-zinc-500' },
@@ -27,7 +29,7 @@ export default function CartProgressBar({ subtotal }: CartProgressBarProps) {
           </div>
           <div>
             <p className="text-sm font-bold text-foreground uppercase italic">Nivel Máximo Alcanzado: PLATINO</p>
-            <p className="text-xs text-accent-text font-bold uppercase tracking-widest">15% DTO + ENVÍO GRATIS APLICADO</p>
+            <p className="text-xs text-accent-text font-bold uppercase tracking-widest">{discountCapped ? 'HASTA 15% DTO + ENVÍO GRATIS APLICADO' : '15% DTO + ENVÍO GRATIS APLICADO'}</p>
           </div>
         </div>
       </div>
