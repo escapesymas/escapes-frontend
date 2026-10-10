@@ -213,6 +213,8 @@ async function liveFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
     headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(init.headers || {}) },
   });
   const data = await res.json().catch(() => ({}));
+  // Token caducado: se cierra la sesión (y el chat deja de consultar cada pocos segundos).
+  if (res.status === 401 && token) window.dispatchEvent(new CustomEvent('session-expired'));
   if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
   return data as T;
 }

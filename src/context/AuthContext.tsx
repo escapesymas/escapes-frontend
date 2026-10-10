@@ -41,6 +41,17 @@ interface AuthContextValue extends AuthState {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/** El token (JWT) ya ha caducado: la sesión guardada no sirve aunque tenga los datos del usuario. */
+function tokenExpired(token?: string | null): boolean {
+  if (!token) return false;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof payload.exp === 'number' && payload.exp * 1000 <= Date.now();
+  } catch {
+    return false;
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<SessionData | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -86,6 +97,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (raw) {
       try {
         const saved: SessionData = JSON.parse(raw);
+        // Sesión caducada: se cierra en vez de mostrar al usuario como conectado
+        // (el servidor rechazaría el chat, el perfil y los pedidos a su nombre).
+        if (tokenExpired(saved.token)) {
+          localStorage.removeItem(SESSION_KEY);
+          setIsLoading(false);
+          return () => { cancelled = true; };
+        }
         setSession(saved);
         if (saved.user) {
           setUser(saved.user);
