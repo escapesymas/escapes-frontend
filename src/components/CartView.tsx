@@ -504,7 +504,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
   // con el impuesto del código postal (Canarias, Ceuta y Melilla sin IVA). El
   // cálculo local de arriba solo se usa hasta que llega la respuesta.
   const quoteKey = JSON.stringify([cart.map((i) => [i.id, i.quantity]), shippingData.postcode, appliedPromo, proposalAgent]);
-  const [serverQuote, setServerQuote] = useState<{ key: string; subtotal: number; discount: number; shipping: number; total: number; taxRate: number; taxLabel: string; belowMinimum?: boolean; minimumMessage?: string | null; promo?: { code: string; valid: boolean; error?: string } | null } | null>(null);
+  const [serverQuote, setServerQuote] = useState<{ key: string; subtotal: number; discount: number; discountCapped?: boolean; shipping: number; total: number; taxRate: number; taxLabel: string; belowMinimum?: boolean; minimumMessage?: string | null; promo?: { code: string; valid: boolean; error?: string } | null } | null>(null);
   useEffect(() => {
     if (cart.length === 0) return;
     const ctrl = new AbortController();
@@ -986,6 +986,11 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
                     <span>Descuentos acumulados:</span>
                     <span>-{formatPrice(discountAmount)}</span>
                   </div>
+                )}
+                {quote?.discountCapped && (
+                  <p className="text-[10px] leading-snug text-text-muted">
+                    Descuento limitado: algunos productos ya tienen el precio al mínimo y no admiten más rebaja.
+                  </p>
                 )}
                 <div className="flex justify-between">
                   <span>Gastos de Envío:</span>
