@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import Image from 'next/image';
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps, @next/next/no-img-element, @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 import { Trash2, Plus, Minus, ShoppingBag, Truck, ArrowLeft, ArrowRight, AlertCircle, RotateCcw, Loader2, Package, ShieldCheck, Lock, Repeat } from 'lucide-react';
@@ -80,11 +80,19 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
   // Enlaces que traen productos (pedido del chat o carrito recuperado): mientras
   // se cargan, el checkout no debe mandar a la portada por tener el carrito vacío.
   // El estado sirve para pintar; la ref, para los efectos (sin depender del render).
-  const [linkPending, setLinkPending] = useState(() => typeof window !== 'undefined' && (
-    /[?&](propuesta|recover)=/.test(window.location.search)
-    || (initialStep === 'checkout' && (() => { try { return sessionStorage.getItem('chat_proposal_mode') === 'solo'; } catch { return false; } })())
-  ));
-  const linkPendingRef = useRef(linkPending);
+  // La ref se calcula ya; el estado empieza en false como en el servidor y se
+  // activa antes del primer pintado: si no, el HTML del servidor («carrito
+  // vacío») no coincidía con el del navegador («Cargando tu pedido…») y React
+  // daba el error #418 y volvía a pintar la página entera.
+  const [linkPending, setLinkPending] = useState(false);
+  const linkPendingRef = useRef<boolean | null>(null);
+  if (linkPendingRef.current === null) {
+    linkPendingRef.current = typeof window !== 'undefined' && (
+      /[?&](propuesta|recover)=/.test(window.location.search)
+      || (initialStep === 'checkout' && (() => { try { return sessionStorage.getItem('chat_proposal_mode') === 'solo'; } catch { return false; } })())
+    );
+  }
+  useLayoutEffect(() => { if (linkPendingRef.current) setLinkPending(true); }, []);
   const clearLinkPending = () => { linkPendingRef.current = false; setLinkPending(false); };
   const proposalLoadedRef = useRef(false);
 
