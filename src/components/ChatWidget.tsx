@@ -69,6 +69,13 @@ function OrderCard({ order }: { order: LiveOrderPayload }) {
 const STORAGE_KEY = 'tg_chat_v1';
 // Conversación con asesor ya cerrada que el cliente ha dejado atrás.
 const DISMISSED_LIVE_KEY = 'tg_chat_live_dismissed';
+// Petición de asesor hecha sin sesión: se cumple al volver tras iniciar sesión.
+const PENDING_ADVISOR_KEY = 'tg_chat_pending_advisor';
+
+/** Identificador de una conversación con la IA (el servidor guarda cada turno en ella). */
+const newSessionId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto
+  ? crypto.randomUUID()
+  : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`);
 
 /** **negrita** dentro de una línea. */
 function inline(text: string): ReactNode[] {
@@ -232,6 +239,8 @@ export default function ChatWidget() {
   // No se guarda nada hasta haberla recuperado: al cargar, la sesión aparece
   // antes que el perfil y el guardado borraba la conversación vacía.
   const restoredRef = useRef(false);
+  // Conversación actual con la IA (se crea con el primer mensaje).
+  const sessionIdRef = useRef('');
   useEffect(() => {
     if (isLoading) return;
     try {
@@ -240,17 +249,53 @@ export default function ChatWidget() {
       if (saved && Array.isArray(saved.messages)) {
         setMessages(saved.messages);
         setProductsByMessage(saved.products || {});
+        if (typeof saved.sessionId === 'string') sessionIdRef.current = saved.sessionId;
       }
     } catch {} finally {
       restoredRef.current = isAuthenticated;
     }
   }, [isAuthenticated, isLoading]);
 
+  // «Hablar con un asesor» desde otras partes de la web (openAdvisorChat):
+  // la petición se guarda y la cumple el efecto de abajo.
+  const [pendingAdvisor, setPendingAdvisor] = useState(false);
+  const [advisorRequest, setAdvisorRequest] = useState<string | null>(null);
+  useEffect(() => {
+    const onAdvisor = (e: Event) => {
+      setOpen(true);
+      setAdvisorRequest((e as CustomEvent<{ context?: string }>).detail?.context || '');
+    };
+    window.addEventListener('open-chat-advisor', onAdvisor);
+    return () => window.removeEventListener('open-chat-advisor', onAdvisor);
+  }, []);
+  // Al volver de iniciar sesión, la petición que quedó pendiente.
+  useEffect(() => {
+    if (isLoading || !isAuthenticated) return;
+    let pending: string | null = null;
+    try { pending = sessionStorage.getItem(PENDING_ADVISOR_KEY); sessionStorage.removeItem(PENDING_ADVISOR_KEY); } catch {}
+    if (pending === null) return;
+    setPendingAdvisor(false);
+    setOpen(true);
+    setAdvisorRequest(pending.trim());
+  }, [isAuthenticated, isLoading]);
+  useEffect(() => {
+    if (advisorRequest === null || isLoading) return;
+    if (!isAuthenticated) {
+      // Sin sesión: se pide al volver de iniciar sesión.
+      try { sessionStorage.setItem(PENDING_ADVISOR_KEY, advisorRequest || ' '); } catch {}
+      setPendingAdvisor(true);
+    } else {
+      talkToAdvisor(advisorRequest);
+    }
+    setAdvisorRequest(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [advisorRequest, isAuthenticated, isLoading]);
+
   useEffect(() => {
     if (streaming || !isAuthenticated || isLoading || !restoredRef.current) return;
     try {
       if (messages.length === 0) sessionStorage.removeItem(STORAGE_KEY);
-      else sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ messages: messages.slice(-30), products: productsByMessage }));
+      else sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ messages: messages.slice(-30), products: productsByMessage, sessionId: sessionIdRef.current }));
     } catch {}
   }, [messages, productsByMessage, streaming, isAuthenticated, isLoading]);
 
@@ -283,6 +328,7 @@ export default function ChatWidget() {
     setMessages((m) => [...m, { role: 'assistant', content: '' }]);
 
     const assistantIndex = newMessages.length;
+    if (!sessionIdRef.current) sessionIdRef.current = newSessionId();
 
     await sendChatMessage(newMessages, {
       onDelta: (delta) => {
@@ -314,7 +360,7 @@ export default function ChatWidget() {
         });
         setStreaming(false);
       },
-    });
+    }, sessionIdRef.current);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -323,19 +369,27 @@ export default function ChatWidget() {
   };
 
   const reset = () => {
+    sessionIdRef.current = '';
     setMessages([]);
     setProductsByMessage({});
     setError(null);
     setOffer(null);
   };
 
-  const startHandoff = async (offline = false) => {
+  const startHandoff = async (offline = false, transcript: ChatMessage[] = messages) => {
     setHandoffBusy(true);
     setError(null);
     // Los avisos no se piden aquí: primero se explica para qué se usan (tarjeta
     // en la conversación) y el permiso del navegador solo sale al aceptarlo.
     try {
-      await requestHandoff(messages, offline);
+      try {
+        await requestHandoff(transcript, offline, sessionIdRef.current || undefined);
+      } catch (e) {
+        // Sin asesores conectados: se deja el mensaje y se responde en cuanto haya alguien.
+        if ((e as { code?: string }).code !== 'unavailable' || offline) throw e;
+        offline = true;
+        await requestHandoff(transcript, true, sessionIdRef.current || undefined);
+      }
       setRating(0); setRatingComment(''); setRatingSent(false);
       trackEvent.chatInteraction(offline ? 'leave_message' : 'advisor');
       setOffer(null);
@@ -347,6 +401,12 @@ export default function ChatWidget() {
     } finally {
       setHandoffBusy(false);
     }
+  };
+
+  /** Pasa directamente a un asesor; `context` llega como primer mensaje (p. ej. la moto). */
+  const talkToAdvisor = (context = '') => {
+    if (handoffBusy) return;
+    startHandoff(false, context ? [...messages, { role: 'user', content: context }] : messages);
   };
 
   const sendPhoto = async (file: File) => {
@@ -524,7 +584,9 @@ export default function ChatWidget() {
                   Te ayudo a encontrar recambios compatibles con tu moto, a seguir tus pedidos y con envíos o devoluciones.
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Inicia sesión para usar el asistente: así puedo consultar tus pedidos y las motos de tu garaje.
+                  {pendingAdvisor
+                    ? 'Inicia sesión y te pasamos con un asesor: así podrá prepararte el pedido y avisarte cuando te responda.'
+                    : 'Inicia sesión para usar el asistente: así puedo consultar tus pedidos y las motos de tu garaje.'}
                 </p>
                 <Link
                   href="/login?tab=login"
@@ -668,6 +730,16 @@ export default function ChatWidget() {
                     {s}
                   </button>
                 ))}
+                <button
+                  onClick={() => talkToAdvisor()}
+                  disabled={streaming || handoffBusy}
+                  className="w-full mt-2 px-3 py-2.5 rounded-lg bg-accent text-accent-foreground text-xs font-mono uppercase font-bold disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+                  </svg>
+                  {handoffBusy ? 'Un momento…' : 'Hablar con un asesor'}
+                </button>
               </div>
             )}
             {!live && messages.map((m, i) => (

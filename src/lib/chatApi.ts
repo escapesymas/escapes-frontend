@@ -55,7 +55,9 @@ export interface ChatStreamHandlers {
 
 export async function sendChatMessage(
   messages: ChatMessage[],
-  handlers: ChatStreamHandlers
+  handlers: ChatStreamHandlers,
+  /** Identificador de la conversación: el servidor guarda cada turno en ella. */
+  sessionId?: string
 ): Promise<void> {
   const token = getToken();
   if (!token) {
@@ -70,7 +72,7 @@ export async function sendChatMessage(
       Authorization: `Bearer ${token}`,
     },
     // La moto elegida en la web («Mi garaje» de la cabecera) tiene prioridad.
-    body: JSON.stringify({ messages, selectedBike: getSelectedBike() }),
+    body: JSON.stringify({ messages, selectedBike: getSelectedBike(), sessionId }),
   });
 
   if (res.status === 401) {
@@ -215,16 +217,24 @@ async function liveFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const data = await res.json().catch(() => ({}));
   // Token caducado: se cierra la sesión (y el chat deja de consultar cada pocos segundos).
   if (res.status === 401 && token) window.dispatchEvent(new CustomEvent('session-expired'));
-  if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+  if (!res.ok) throw Object.assign(new Error(data.error || `Error ${res.status}`), { code: data.code as string | undefined });
   return data as T;
 }
 
 /** Pasa la conversación a un asesor (con lo hablado con la IA como contexto). */
-export function requestHandoff(messages: ChatMessage[], offline = false) {
+export function requestHandoff(messages: ChatMessage[], offline = false, aiSessionId?: string) {
   return liveFetch<{ conversation: LiveConversation }>('/chat/handoff', {
     method: 'POST',
-    body: JSON.stringify({ messages, offline }),
+    body: JSON.stringify({ messages, offline, aiSessionId }),
   });
+}
+
+/**
+ * Abre el chat y pide un asesor desde cualquier parte de la web (p. ej. una moto
+ * sin recambios compatibles). `context` llega al asesor como primer mensaje.
+ */
+export function openAdvisorChat(context = '') {
+  window.dispatchEvent(new CustomEvent('open-chat-advisor', { detail: { context } }));
 }
 
 /** El cliente está escribiendo (se llama como mucho cada pocos segundos). */

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Product } from '../types';
 import { fetchCategories, fetchProducts, fetchProductsBySkus } from '../lib/api';
 import { parseBike } from '../lib/constants';
+import { openAdvisorChat } from '../lib/chatApi';
 import ProductCard from './ProductCard';
 
 interface CompatibleProductsProps {
@@ -308,13 +309,20 @@ export default function CompatibleProducts({ selectedBike, onAddToCart, onNotify
                 Aún no tenemos recambios compatibles
               </p>
               <p className="text-[10px] text-text-muted font-mono mt-2 max-w-[320px] mx-auto">
-                Estamos ampliando el catálogo. Mientras tanto, explora todo nuestro catálogo o usa el buscador por referencia.
+                Estamos ampliando el catálogo. Pide ayuda a un asesor: buscamos los recambios de tu moto y te preparamos el pedido.
               </p>
             </div>
-            <div className="flex gap-2 mt-2">
+            <button
+              type="button"
+              onClick={() => openAdvisorChat(`Busco recambios para mi ${selectedBike} y en la web no aparece ninguno compatible. ¿Me ayudáis?`)}
+              className="mt-2 px-4 py-2.5 text-xs font-mono uppercase font-bold rounded bg-accent text-accent-foreground hover:opacity-90 transition-opacity"
+            >
+              Pedir ayuda a un asesor
+            </button>
+            <div className="flex gap-2">
               <Link
                 href="/universales"
-                className="px-4 py-2 text-xs font-mono uppercase font-bold rounded bg-accent text-accent-foreground hover:opacity-90 transition-opacity"
+                className="px-4 py-2 text-xs font-mono uppercase font-bold rounded border border-card-border text-foreground hover:bg-icon-box transition-colors"
               >
                 Ver catálogo
               </Link>
