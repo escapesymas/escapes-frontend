@@ -51,7 +51,7 @@ export default function MotoAlertButton({ bike, variant = 'primary' }: MotoAlert
 
   if (done) {
     return (
-      <div className={`flex items-start gap-2 text-left ${variant === 'card' ? 'p-4 bg-card border border-card-border rounded-md' : 'max-w-[320px]'}`}>
+      <div className={`flex items-start gap-2 text-left ${variant === 'card' ? 'p-4 bg-card border border-card-border rounded-md' : 'max-w-[320px] mx-auto'}`}>
         <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
         <p className="text-[10px] font-mono text-text-muted">
           Listo: te escribiremos a <strong className="text-foreground">{done}</strong> cuando lleguen piezas nuevas para tu {bike}.
