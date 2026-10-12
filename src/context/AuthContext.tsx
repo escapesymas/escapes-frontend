@@ -28,16 +28,25 @@ interface AuthContextValue extends AuthState {
   verifyEmail: (token: string) => Promise<void>;
   logout: () => void;
   syncGarage: (newGarage: string[]) => Promise<void>;
-  updateProfile: (params: {
-    username?: string;
-    firstName?: string;
-    lastName?: string;
-    email?: string;
-    billing?: UserBilling;
-    avatarUrl?: string;
-  }) => Promise<void>;
+  /**
+   * Guarda el perfil en el servidor (lanza el error si lo rechaza) y lo
+   * actualiza en pantalla. Un email nuevo queda en `pendingEmail` hasta que
+   * se confirma. `skipRemote`: el servidor ya lo tiene (p. ej. el avatar subido).
+   */
+  updateProfile: (params: ProfileUpdate, skipRemote?: boolean) => Promise<{ pendingEmail?: string }>;
+  /** Vuelve a leer el perfil del servidor (p. ej. tras confirmar el email nuevo). */
+  refreshProfile: () => Promise<void>;
   deleteAccount: () => Promise<void>;
 }
+
+type ProfileUpdate = {
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  billing?: UserBilling;
+  avatarUrl?: string;
+};
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -197,51 +206,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateProfile = async (
-    params: {
-      username?: string;
-      firstName?: string;
-      lastName?: string;
-      email?: string;
-      billing?: UserBilling;
-      avatarUrl?: string;
-    },
-    skipRemote: boolean = false
-  ) => {
-    if (user) {
-      if (!skipRemote) {
-        try {
-          await apiUpdateProfile(user.id, params);
-        } catch (err) {
-          console.warn('[AuthContext] Remote API update-profile warning (backend will update fully after git push):', err);
-        }
-      }
-      setUser(prev => {
-        if (!prev) return null;
-        const updated = {
-          ...prev,
-          username: params.username !== undefined ? params.username : prev.username,
-          firstName: params.firstName !== undefined ? params.firstName : prev.firstName,
-          lastName: params.lastName !== undefined ? params.lastName : prev.lastName,
-          email: params.email !== undefined ? params.email : prev.email,
-          billing: params.billing !== undefined ? params.billing : prev.billing,
-          avatarUrl: params.avatarUrl !== undefined ? params.avatarUrl : prev.avatarUrl,
-        };
-        try {
-          const s = localStorage.getItem('escapes_session');
-          if (s) {
-            const parsed = JSON.parse(s);
-            if (parsed.user) {
-              parsed.user = { ...parsed.user, ...updated };
-            }
-            parsed.user_nicename = updated.username;
-            parsed.user_display_name = `${updated.firstName} ${updated.lastName}`.trim();
-            parsed.user_email = updated.email;
-            localStorage.setItem('escapes_session', JSON.stringify(parsed));
-          }
-        } catch {}
-        return updated;
-      });
+  // Copia del perfil en la sesión guardada: al recargar se pinta ya al día.
+  const persistUser = (updated: UserProfile) => {
+    if (!session) return;
+    persistSession({
+      ...session,
+      user: updated,
+      user_email: updated.email,
+      user_nicename: updated.username,
+      user_display_name: updated.firstName || updated.username,
+      avatarUrl: updated.avatarUrl,
+    });
+  };
+
+  const updateProfile = async (params: ProfileUpdate, skipRemote: boolean = false) => {
+    if (!user) return {};
+    // Si el servidor lo rechaza (usuario o email ya usados…) el error llega a la
+    // pantalla: antes se ignoraba y el perfil parecía guardado sin estarlo.
+    const result: { pendingEmail?: string } = skipRemote ? {} : await apiUpdateProfile(user.id, params);
+    const updated: UserProfile = {
+      ...user,
+      username: params.username ?? user.username,
+      firstName: params.firstName ?? user.firstName,
+      lastName: params.lastName ?? user.lastName,
+      // El email nuevo no cuenta hasta que se confirma desde el enlace.
+      email: params.email !== undefined && !result.pendingEmail ? params.email : user.email,
+      pendingEmail: result.pendingEmail ?? user.pendingEmail,
+      billing: params.billing ?? user.billing,
+      avatarUrl: params.avatarUrl ?? user.avatarUrl,
+    };
+    setUser(updated);
+    persistUser(updated);
+    return { pendingEmail: result.pendingEmail };
+  };
+
+  const refreshProfile = async () => {
+    if (!session) return;
+    const profile = await apiGetProfile(session.user_email, session.user_id);
+    if (profile) {
+      setUser(profile);
+      persistUser(profile);
     }
   };
 
@@ -265,6 +269,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         syncGarage,
         updateProfile,
+        refreshProfile,
         deleteAccount,
       }}
     >

@@ -138,6 +138,8 @@ export interface UserProfile {
   id: number;
   username: string;
   email: string;
+  /** Email nuevo pendiente de confirmar desde el enlace que se le envía. */
+  pendingEmail?: string;
   firstName: string;
   lastName: string;
   avatarUrl: string;
@@ -254,7 +256,7 @@ export async function apiUpdateProfile(
     garage?: string[];
     avatarUrl?: string;
   }
-): Promise<{ success: boolean }> {
+): Promise<{ success: boolean; pendingEmail?: string }> {
   const res = await apiFetch(`/auth?action=update-profile`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -262,6 +264,35 @@ export async function apiUpdateProfile(
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Error al actualizar el perfil');
+  return data;
+}
+
+/** Anula el cambio de email pendiente: el enlace enviado deja de valer. */
+export async function apiCancelEmailChange(): Promise<void> {
+  const res = await apiFetch(`/auth?action=cancel-email-change`, { method: 'POST' });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'No se pudo cancelar el cambio de email');
+  }
+}
+
+/** Aplica el email nuevo con el token del enlace del correo. */
+export async function apiConfirmEmailChange(token: string): Promise<{ email: string }> {
+  const res = await apiFetch(`/auth?action=confirm-email-change`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new AuthError(data.error || 'No se pudo confirmar el email', data.code);
+  return data;
+}
+
+/** Copia de todos los datos personales del cliente (RGPD). */
+export async function apiExportMyData(): Promise<Record<string, unknown>> {
+  const res = await apiFetch(`/auth?action=export-data`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'No se pudieron descargar tus datos');
   return data;
 }
 
@@ -367,6 +398,6 @@ export async function apiGetOrders(userId: number): Promise<OrderSummary[]> {
 
 export async function apiGetMyOrders(): Promise<OrderDetail[]> {
   const res = await apiFetch('/orders/my-orders');
-  if (!res.ok) return [];
+  if (!res.ok) throw new Error('No hemos podido cargar tus pedidos.');
   return res.json();
 }

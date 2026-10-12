@@ -5,12 +5,7 @@ import Header from '../../components/Header';
 export default function PoliticaPrivacidadPage() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <Header
-        selectedBike=""
-        onOpenBikeSelector={() => {}}
-        onCartClick={() => {}}
-        onTabChange={() => {}}
-      />
+      <Header />
       <main id="main-content" className="flex-grow max-w-3xl mx-auto px-4 py-10 w-full">
         <title>Política de Privacidad — Escapes y Más</title>
         <h1 className="font-mono text-2xl font-bold uppercase text-foreground mb-6">Política de Privacidad</h1>

@@ -101,8 +101,8 @@ function LoginPageContent() {
       setError('Por favor, completa todos los campos.');
       return;
     }
-    if (regPassword.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres.');
+    if (regPassword.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres.');
       return;
     }
     if (regPassword !== regConfirmPassword) {
@@ -380,7 +380,7 @@ function LoginPageContent() {
                       required
                       value={regPassword}
                       onChange={e => setRegPassword(e.target.value)}
-                      placeholder="Mínimo 6 caracteres"
+                      placeholder="Mínimo 8 caracteres"
                       className="w-full bg-background border border-card-border rounded px-3 py-2.5 text-sm font-mono text-foreground placeholder:text-text-muted/50 focus:outline-none focus:border-accent transition-colors pr-10"
                     />
                     <button

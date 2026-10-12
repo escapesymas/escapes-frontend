@@ -18,7 +18,7 @@ export default function PerfilPage() {
         onCartClick={() => router.push('/?tab=cart')}
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-8 pb-28 md:pb-8">
+      <main id="main-content" className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 md:py-8">
         <Suspense fallback={
           <div className="min-h-[50vh] flex items-center justify-center">
             <Loader2 className="w-8 h-8 text-accent animate-spin" />

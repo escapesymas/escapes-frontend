@@ -290,6 +290,7 @@ export default function Home() {
         onOpenBikeSelector={handleOpenSelectorForSearch}
         onCartClick={() => setActiveTab('cart')}
         onTabChange={(tab) => setActiveTab(tab)}
+        activeTab={activeTab}
       />
 
 

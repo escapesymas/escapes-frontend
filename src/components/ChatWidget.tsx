@@ -485,7 +485,7 @@ export default function ChatWidget() {
         <div className="relative">
           {proactiveBike && !open && (
             <div
-              className="absolute -top-12 -right-16 md:-top-10 md:-right-12 z-10"
+              className="absolute -top-12 right-0 md:-top-10 z-10 w-max max-w-[calc(100vw-2rem)] flex items-center gap-1.5"
             >
               <button
                 type="button"
@@ -498,7 +498,7 @@ export default function ChatWidget() {
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); setDismissedProactive(true); }}
-                className="ml-2 text-muted-foreground hover:text-foreground cursor-pointer"
+                className="w-6 h-6 flex items-center justify-center rounded-full bg-card border border-card-border text-text-muted hover:text-foreground cursor-pointer shadow-sm text-[10px]"
                 aria-label="Cerrar sugerencia"
               >
                 ✕
