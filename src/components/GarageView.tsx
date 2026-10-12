@@ -1,7 +1,9 @@
 'use client';
 
-import React from 'react';
-import { Bike, Star, Trash2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Bike, Star, Trash2, Bell } from 'lucide-react';
+import { apiRequest } from '../lib/constants';
+import { useAuth } from '../context/AuthContext';
 
 interface GarageViewProps {
   selectedBike: string;
@@ -23,6 +25,31 @@ export default function GarageView({
   
   // Filtrar el resto de motos guardadas que no son la activa
   const otherBikes = garageList.filter(bike => bike !== selectedBike);
+
+  // Avisos por correo de piezas nuevas para las motos del garaje (solo con cuenta).
+  const { isAuthenticated } = useAuth();
+  const [alerts, setAlerts] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    apiRequest('/moto-alerts/prefs')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setAlerts(!!d.garageAlerts))
+      .catch(() => {});
+  }, [isAuthenticated]);
+  const toggleAlerts = async () => {
+    const next = !alerts;
+    setAlerts(next);
+    try {
+      const r = await apiRequest('/moto-alerts/prefs', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ garageAlerts: next }),
+      });
+      if (!r.ok) setAlerts(!next);
+    } catch {
+      setAlerts(!next);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in">
@@ -126,6 +153,35 @@ export default function GarageView({
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* AVISOS DE PIEZAS NUEVAS */}
+        {garageList.length > 0 && (
+          <div className="mt-6 pt-5 border-t border-card-border flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <Bell className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-mono text-[10px] font-bold uppercase text-foreground tracking-wider">Avisos de piezas nuevas</h3>
+                <p className="text-[10px] text-text-muted mt-0.5">
+                  {isAuthenticated
+                    ? 'Te escribimos cuando lleguen recambios nuevos para las motos de tu garaje. Como mucho un correo cada pocos días.'
+                    : 'Inicia sesión y te escribiremos cuando lleguen recambios nuevos para las motos de tu garaje.'}
+                </p>
+              </div>
+            </div>
+            {isAuthenticated && alerts !== null && (
+              <button
+                type="button"
+                role="switch"
+                aria-checked={alerts}
+                aria-label="Avisos de piezas nuevas"
+                onClick={toggleAlerts}
+                className={`relative w-10 h-5 shrink-0 rounded-full transition-colors cursor-pointer ${alerts ? 'bg-accent' : 'bg-card-border'}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${alerts ? 'translate-x-5' : ''}`} />
+              </button>
+            )}
           </div>
         )}
 

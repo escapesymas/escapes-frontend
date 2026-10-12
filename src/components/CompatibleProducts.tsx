@@ -8,6 +8,7 @@ import { fetchCategories, fetchProducts, fetchProductsBySkus } from '../lib/api'
 import { parseBike } from '../lib/constants';
 import { openAdvisorChat } from '../lib/chatApi';
 import ProductCard from './ProductCard';
+import MotoAlertButton from './MotoAlertButton';
 
 interface CompatibleProductsProps {
   selectedBike?: string;
@@ -309,13 +310,16 @@ export default function CompatibleProducts({ selectedBike, onAddToCart, onNotify
                 Aún no tenemos recambios compatibles
               </p>
               <p className="text-[10px] text-text-muted font-mono mt-2 max-w-[320px] mx-auto">
-                Estamos ampliando el catálogo. Pide ayuda a un asesor: buscamos los recambios de tu moto y te preparamos el pedido.
+                Estamos ampliando el catálogo. Te avisamos en cuanto lleguen piezas para tu moto, o pide ayuda a un asesor: las buscamos y te preparamos el pedido.
               </p>
+            </div>
+            <div className="mt-2 w-full">
+              <MotoAlertButton bike={selectedBike} />
             </div>
             <button
               type="button"
               onClick={() => openAdvisorChat(`Busco recambios para mi ${selectedBike} y en la web no aparece ninguno compatible. ¿Me ayudáis?`)}
-              className="mt-2 px-4 py-2.5 text-xs font-mono uppercase font-bold rounded bg-accent text-accent-foreground hover:opacity-90 transition-opacity"
+              className="px-4 py-2 text-xs font-mono uppercase font-bold rounded border border-accent text-accent hover:bg-accent/10 transition-colors"
             >
               Pedir ayuda a un asesor
             </button>
@@ -336,7 +340,8 @@ export default function CompatibleProducts({ selectedBike, onAddToCart, onNotify
             </div>
           </div>
         ) : (
-          sortedCategories.map(([categoryName, subgroups]) => {
+          <>
+          {sortedCategories.map(([categoryName, subgroups]) => {
             const isCollapsed = !!collapsedCategories[categoryName];
             const totalCount = Object.values(subgroups).reduce((sum, list) => sum + list.length, 0);
             return (
@@ -397,7 +402,9 @@ export default function CompatibleProducts({ selectedBike, onAddToCart, onNotify
                 )}
               </div>
             );
-          })
+          })}
+          <MotoAlertButton bike={selectedBike} variant="card" />
+          </>
         )
       ) : (
         <div>

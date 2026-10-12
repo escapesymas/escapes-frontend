@@ -94,9 +94,16 @@ export default function Home() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      const hasParams = params.has('tab') || params.has('payment_intent') || params.has('emptyCart') || params.has('openSelector');
+      const hasParams = params.has('tab') || params.has('payment_intent') || params.has('emptyCart') || params.has('openSelector') || params.has('moto');
 
       if (hasParams) {
+        // Enlace de los correos de piezas nuevas: abre la web con esa moto elegida.
+        const moto = params.get('moto')?.trim();
+        if (moto) {
+          setSelectedBike(moto);
+          localStorage.setItem('tg_selected_bike', moto);
+        }
+
         const tab = params.get('tab');
         if (tab) {
           setActiveTab(tab);
