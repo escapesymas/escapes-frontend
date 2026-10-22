@@ -9,8 +9,10 @@ export const MARKETING_TIERS = {
   BRONCE: { min: 0, discount: 0, label: 'BRONCE', shipping: SHIPPING_COST },
   PLATA: { min: 150, discount: 5, label: 'PLATA', shipping: SHIPPING_COST },
   ORO: { min: 300, discount: 10, label: 'ORO', shipping: 0 },
-  PLATINO: { min: 500, discount: 15, label: 'PLATINO', shipping: 0 },
 } as const;
+
+/** Máximo del descuento del carrito sumando cupones (MAX_EXTRA_DISCOUNT_PERCENT del backend). */
+export const MAX_CART_DISCOUNT = 10;
 
 const DANGEROUS_TAGS = /<\/?(script|iframe|object|embed|form|input|button|select|textarea|style|link|meta|base|svg|math|●)/gi;
 const DANGEROUS_ATTRS = /\s(on\w+|href|src|action|formaction|data|cite|background|xlink:href|innerHTML|outerHTML|dangerouslySetInnerHTML)\s*=/gi;

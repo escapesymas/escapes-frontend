@@ -10,7 +10,7 @@ import { trackEvent as trackUmami } from '../lib/umami';
 import { useCart, CartItem } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import Link from 'next/link';
-import { MARKETING_TIERS, FREE_SHIPPING_MIN, PHONE_REGEX, POSTCODE_REGEX, getImageUrl, formatOrderNumber, apiRequest } from '../lib/constants';
+import { MARKETING_TIERS, MAX_CART_DISCOUNT, FREE_SHIPPING_MIN, PHONE_REGEX, POSTCODE_REGEX, getImageUrl, formatOrderNumber, apiRequest } from '../lib/constants';
 import { Product } from '../types';
 import CartProgressBar from './CartProgressBar';
 import { Elements } from '@stripe/react-stripe-js';
@@ -483,7 +483,6 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
 
   // Marketing Tier Logic
   const getTier = (amount: number) => {
-    if (amount >= MARKETING_TIERS.PLATINO.min) return MARKETING_TIERS.PLATINO;
     if (amount >= MARKETING_TIERS.ORO.min) return MARKETING_TIERS.ORO;
     if (amount >= MARKETING_TIERS.PLATA.min) return MARKETING_TIERS.PLATA;
     return MARKETING_TIERS.BRONCE;
@@ -491,12 +490,12 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
 
   const currentTier = getTier(subtotal);
   const tierDiscount = (subtotal * currentTier.discount) / 100;
-  const afterTierSubtotal = subtotal - tierDiscount;
 
-  // Calculate promo discount on tier-discounted amount (proper stacking)
+  // Primer pintado (lo bueno viene de /api/cart/quote): tramo + cupón como mucho MAX_CART_DISCOUNT %.
   let promoDiscount = 0;
   if (appliedPromo && promoType === 'percent') {
-    promoDiscount = afterTierSubtotal * (promoValue / 100);
+    const promoPct = Math.max(0, Math.min(promoValue, MAX_CART_DISCOUNT - currentTier.discount));
+    promoDiscount = (subtotal * promoPct) / 100;
   } else if (appliedPromo && promoType === 'fixed') {
     promoDiscount = promoValue / 100; // cents to euros
   }
@@ -512,7 +511,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
   // con el impuesto del código postal (Canarias, Ceuta y Melilla sin IVA). El
   // cálculo local de arriba solo se usa hasta que llega la respuesta.
   const quoteKey = JSON.stringify([cart.map((i) => [i.id, i.quantity]), shippingData.postcode, appliedPromo, proposalAgent]);
-  const [serverQuote, setServerQuote] = useState<{ key: string; subtotal: number; discount: number; discountCapped?: boolean; shipping: number; total: number; taxRate: number; taxLabel: string; belowMinimum?: boolean; minimumMessage?: string | null; promo?: { code: string; valid: boolean; error?: string } | null } | null>(null);
+  const [serverQuote, setServerQuote] = useState<{ key: string; subtotal: number; discount: number; discountCapped?: boolean; shipping: number; total: number; taxRate: number; taxLabel: string; belowMinimum?: boolean; minimumMessage?: string | null; promo?: { code: string; valid: boolean; error?: string; note?: string } | null } | null>(null);
   useEffect(() => {
     if (cart.length === 0) return;
     const ctrl = new AbortController();
@@ -1314,6 +1313,11 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
                           {quote?.promo && quote.promo.code === appliedPromo && !quote.promo.valid && (
                             <span className="text-amber-600 text-[10px] font-mono font-semibold block mt-1">
                               {quote.promo.error || 'El cupón no se aplica a este pedido.'}
+                            </span>
+                          )}
+                          {quote?.promo && quote.promo.code === appliedPromo && quote.promo.valid && quote.promo.note && (
+                            <span className="text-amber-600 text-[10px] font-mono font-semibold block mt-1">
+                              {quote.promo.note}
                             </span>
                           )}
                         </div>

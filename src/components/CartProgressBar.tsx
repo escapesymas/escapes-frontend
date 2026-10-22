@@ -14,8 +14,7 @@ export default function CartProgressBar({ subtotal, discountCapped }: CartProgre
   const tiers = [
     { threshold: MARKETING_TIERS.PLATA.min, label: 'Descuento 5%', icon: Percent, color: 'bg-zinc-500' },
     { threshold: FREE_SHIPPING_MIN, label: 'Envío Gratis', icon: Truck, color: 'bg-zinc-500' },
-    { threshold: MARKETING_TIERS.ORO.min, label: 'Descuento 10%', icon: Percent, color: 'bg-zinc-500' },
-    { threshold: MARKETING_TIERS.PLATINO.min, label: 'Nivel Platino 15%', icon: Trophy, color: 'bg-accent' }
+    { threshold: MARKETING_TIERS.ORO.min, label: 'Descuento 10%', icon: Trophy, color: 'bg-accent' },
   ];
 
   // Logic to determine current status
@@ -28,8 +27,8 @@ export default function CartProgressBar({ subtotal, discountCapped }: CartProgre
             <Trophy className="w-5 h-5 text-slate-950" />
           </div>
           <div>
-            <p className="text-sm font-bold text-foreground uppercase italic">Nivel Máximo Alcanzado: PLATINO</p>
-            <p className="text-xs text-accent-text font-bold uppercase tracking-widest">{discountCapped ? 'HASTA 15% DTO + ENVÍO GRATIS APLICADO' : '15% DTO + ENVÍO GRATIS APLICADO'}</p>
+            <p className="text-sm font-bold text-foreground uppercase italic">Nivel Máximo Alcanzado: ORO</p>
+            <p className="text-xs text-accent-text font-bold uppercase tracking-widest">{discountCapped ? 'HASTA 10% DTO + ENVÍO GRATIS APLICADO' : '10% DTO + ENVÍO GRATIS APLICADO'}</p>
           </div>
         </div>
       </div>
@@ -99,16 +98,9 @@ export default function CartProgressBar({ subtotal, discountCapped }: CartProgre
           <div className="w-2 h-px bg-card-border"></div>
           <div className="flex items-center gap-1.5">
             <div className={`p-1 rounded-full ${subtotal >= MARKETING_TIERS.ORO.min ? 'bg-accent text-slate-950' : 'bg-slate-950 text-text-muted'}`}>
-              <Percent className="w-3 h-3" />
-            </div>
-            <span className={subtotal >= MARKETING_TIERS.ORO.min ? 'text-foreground' : ''}>10% DTO</span>
-          </div>
-          <div className="w-2 h-px bg-card-border"></div>
-          <div className="flex items-center gap-1.5">
-            <div className={`p-1 rounded-full ${subtotal >= MARKETING_TIERS.PLATINO.min ? 'bg-accent text-slate-950' : 'bg-slate-950 text-text-muted'}`}>
               <Trophy className="w-3 h-3" />
             </div>
-            <span className={subtotal >= MARKETING_TIERS.PLATINO.min ? 'text-foreground' : ''}>15% DTO</span>
+            <span className={subtotal >= MARKETING_TIERS.ORO.min ? 'text-foreground' : ''}>10% DTO</span>
           </div>
         </div>
       </div>
