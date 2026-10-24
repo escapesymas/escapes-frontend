@@ -10,7 +10,7 @@ import { trackEvent as trackUmami } from '../../../lib/umami';
 import { Product, ProductImage as ProductImageType, ProductVariant } from '../../../types';
 import { fetchProductBySlug, refreshProductStock } from '../../../lib/api';
 import { useCart } from '../../../context/CartContext';
-import { sanitizeHTML } from '../../../lib/constants';
+import { sanitizeHTML, DELIVERY_ES, DELIVERY_EU, SHIPPING_COST, FREE_SHIPPING_MIN } from '../../../lib/constants';
 import { getProductSchema, getBreadcrumbSchema, jsonLd } from '../../../components/SchemaMarkup';
 import Header from '../../../components/Header';
 import ProductDetailSkeleton from '../../../components/ProductDetailSkeleton';
@@ -142,7 +142,7 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
   ].filter(([, v]) => v) as [string, string][];
 
   const availability = inStock
-    ? { dot: 'bg-emerald-500', text: product.dropshipping ? 'Disponible · envío en 3-5 días' : 'En stock · envío en 24 h' }
+    ? { dot: 'bg-emerald-500', text: `${product.dropshipping ? 'Disponible' : 'En stock'} · entrega en ${DELIVERY_ES}` }
     : { dot: 'bg-red-500', text: 'Agotado' };
 
   // Catálogo › Raíz › Subcategoría › (tercer nivel, sin página propia: se
@@ -294,7 +294,7 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
             </button>
 
             <ul className="grid grid-cols-3 gap-2 text-[10px] text-text-muted text-center">
-              <li className="flex flex-col items-center gap-1"><Truck className="w-4 h-4" aria-hidden="true" />Envío rápido</li>
+              <li className="flex flex-col items-center gap-1"><Truck className="w-4 h-4" aria-hidden="true" />Envío gratis desde {FREE_SHIPPING_MIN} €</li>
               <li className="flex flex-col items-center gap-1"><RotateCcw className="w-4 h-4" aria-hidden="true" />Devolución 14 días</li>
               <li className="flex flex-col items-center gap-1"><ShieldCheck className="w-4 h-4" aria-hidden="true" />Pago seguro</li>
             </ul>
@@ -342,7 +342,7 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
 
               <Section title="Envío y devoluciones">
                 <ul className="text-sm text-foreground space-y-1.5 list-disc pl-5">
-                  <li>{product.dropshipping ? 'Envío directo desde el almacén del fabricante en 3-5 días laborables.' : 'Envío en 24-72 h desde nuestro almacén.'}</li>
+                  <li>Entrega en {DELIVERY_ES} en España y {DELIVERY_EU} en el resto de la UE. Envío {SHIPPING_COST.toFixed(2).replace('.', ',')} €, gratis desde {FREE_SHIPPING_MIN} €.</li>
                   <li>14 días naturales para devolverlo, sin usar ni montar. Los gastos de la devolución corren por tu cuenta salvo producto defectuoso o error nuestro.</li>
                   <li>Pago seguro con tarjeta, Bizum o Klarna.</li>
                 </ul>

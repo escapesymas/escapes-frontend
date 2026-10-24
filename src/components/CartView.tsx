@@ -10,7 +10,7 @@ import { trackEvent as trackUmami } from '../lib/umami';
 import { useCart, CartItem } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import Link from 'next/link';
-import { MARKETING_TIERS, MAX_CART_DISCOUNT, FREE_SHIPPING_MIN, PHONE_REGEX, POSTCODE_REGEX, getImageUrl, formatOrderNumber, apiRequest } from '../lib/constants';
+import { MARKETING_TIERS, MAX_CART_DISCOUNT, FREE_SHIPPING_MIN, DELIVERY_ES, DELIVERY_EU, PHONE_REGEX, POSTCODE_REGEX, getImageUrl, formatOrderNumber, apiRequest } from '../lib/constants';
 import { Product } from '../types';
 import CartProgressBar from './CartProgressBar';
 import { Elements } from '@stripe/react-stripe-js';
@@ -1193,10 +1193,10 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
                   </div>
                   <div>
                     <h4 className="text-[10px] font-mono font-bold uppercase tracking-wider text-foreground">
-                      Garantía Oficial
+                      Garantía de 3 años
                     </h4>
                     <p className="text-[9px] text-text-muted leading-tight mt-0.5">
-                      Recambios originales del fabricante.
+                      Garantía legal para particulares.
                     </p>
                   </div>
                 </div>
@@ -1206,10 +1206,10 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
                   </div>
                   <div>
                     <h4 className="text-[10px] font-mono font-bold uppercase tracking-wider text-foreground">
-                      Envío 24-72h
+                      Entrega en {DELIVERY_ES.replace(' laborables', '')}
                     </h4>
                     <p className="text-[9px] text-text-muted leading-tight mt-0.5">
-                      Desde nuestro almacén a tu puerta.
+                      Días laborables en España; {DELIVERY_EU} en el resto de la UE.
                     </p>
                   </div>
                 </div>

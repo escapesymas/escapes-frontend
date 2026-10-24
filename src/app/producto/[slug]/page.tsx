@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
 import ProductDetailClient from './ProductDetailClient';
+import { DELIVERY_ES } from '../../../lib/constants';
 
 const API_BASE = process.env.API_URL || 'https://api.escapesymas.com';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://escapesymas.com';
@@ -45,7 +46,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 
   const price = (product.salePrice ?? product.price).toFixed(2);
-  const description = `${product.brand} ${product.name} a ${price}€. ${product.inStock ? 'En stock, envío 24-72h.' : 'Sin stock, vuelve pronto.'} Compatible con tu moto. Garantía oficial.`;
+  // Solo datos ciertos de la ficha: plazo de entrega igual que en Google Merchant Center y compatibilidad si la hay.
+  const compat = Array.isArray(product.compatibility) ? product.compatibility.length : 0;
+  const description = `${product.brand} ${product.name} a ${price}€. ${product.inStock ? `En stock, entrega en ${DELIVERY_ES}.` : 'Sin stock ahora mismo.'}${compat ? ` Compatible con ${compat} ${compat === 1 ? 'versión' : 'versiones'} de moto.` : ''} Garantía de 3 años.`;
   const imageUrl = product.image || `${SITE_URL}/og-image.png`;
   const pageUrl = `${SITE_URL}/producto/${slug}`;
 

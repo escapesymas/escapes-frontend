@@ -4,6 +4,9 @@
 /** Envío estándar y umbral de envío gratis (los reales vienen de shipping_methods). */
 export const SHIPPING_COST = 19.99;
 export const FREE_SHIPPING_MIN = 200;
+/** Plazo de entrega: el mismo que hay configurado en Google Merchant Center (decisión de Adrián, 24/10/2026). */
+export const DELIVERY_ES = '5-10 días laborables';
+export const DELIVERY_EU = '6-12 días laborables';
 
 export const MARKETING_TIERS = {
   BRONCE: { min: 0, discount: 0, label: 'BRONCE', shipping: SHIPPING_COST },

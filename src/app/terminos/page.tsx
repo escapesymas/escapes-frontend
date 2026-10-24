@@ -80,7 +80,7 @@ export default function TerminosPage() {
           <section>
             <h2 className="font-mono text-sm font-bold uppercase text-foreground mb-2">6. Envío y entrega</h2>
             <p>
-              Los plazos de entrega indicados son orientativos y dependen de la disponibilidad del producto y de la dirección de envío. Los pedidos se procesan en un plazo de 24 a 72 horas hábiles tras la confirmación del pago.
+              Los plazos de entrega indicados son orientativos y dependen de la disponibilidad del producto y de la dirección de envío. Los pedidos se procesan en un plazo de 24 a 72 horas hábiles tras la confirmación del pago y la entrega estimada es de 5 a 10 días laborables en España y de 6 a 12 días laborables en el resto de la Unión Europea.
             </p>
             <p>
               Escapes y Más envía a la Península Ibérica, Baleares, Canarias, Ceuta, Melilla y a países seleccionados de la Unión Europea. Los gastos y plazos de envío pueden variar según el destino.

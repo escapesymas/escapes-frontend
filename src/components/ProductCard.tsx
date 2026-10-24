@@ -9,6 +9,7 @@ import { useHoverPrefetch } from '../lib/useHoverPrefetch';
 import { trackEvent as trackUmami, short } from '../lib/umami';
 import { tiktokAddToCart } from '../lib/analytics';
 import { effectivePrice, formatEuro, optionsSummary } from '../lib/pricing';
+import { DELIVERY_ES } from '../lib/constants';
 
 interface ProductCardProps {
   product: Product;
@@ -99,17 +100,10 @@ export default function ProductCard({ product, onAddToCart, onNotifyMe, priority
           </div>
         )}
 
-        {product.dropshipping && !isOutOfStock && (
-          <div className="hidden sm:block absolute bottom-2 right-2 z-10">
-            <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-amber-100/90 text-amber-900 border border-amber-300/50 shadow-sm">
-              Envío 3-5 días
-            </span>
-          </div>
-        )}
-        {!product.dropshipping && !isOutOfStock && product.stock > 0 && (
+        {!isOutOfStock && (product.dropshipping || product.stock > 0) && (
           <div className="hidden sm:block absolute bottom-2 right-2 z-10">
             <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-emerald-100/90 text-emerald-900 border border-emerald-300/50 shadow-sm">
-              Envío 24h
+              Envío {DELIVERY_ES.replace(' laborables', '')}
             </span>
           </div>
         )}

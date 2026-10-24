@@ -42,7 +42,7 @@ export async function generateMetadata({
   return {
     title: name ? `${name}${sub && parent ? ` · ${parent.name}` : ''} — Escapes y Más` : 'Catálogo de recambios y accesorios para moto — Escapes y Más',
     description: name
-      ? `${name}${sub && parent ? ` (${parent.name})` : ''} para tu moto: precios con IVA, stock en tiempo real y envío rápido en Escapes y Más.`
+      ? `${name}${sub && parent ? ` (${parent.name})` : ''} para tu moto: precios con IVA, stock en tiempo real y envío gratis desde 200 € en Escapes y Más.`
       : 'Recambios, accesorios, cascos, neumáticos y equipamiento para moto. Busca por modelo, talla o medida.',
     alternates: { canonical: path },
     // Las combinaciones de filtros no se indexan (contenido duplicado de la categoría).
