@@ -7,6 +7,7 @@ import { IconExhaustITV, IconHelmetGear, IconChainTransmission, IconWaveBrake } 
 import BrandCarousel from './BrandCarousel';
 import FeaturedProductsList from './FeaturedProductsList';
 import { Product } from '../types';
+import { POPULAR_HOME_MOTOS } from '../lib/motoSeo';
 
 interface HomeUnselectedViewProps {
   onOpenSelector: () => void;
@@ -198,14 +199,54 @@ export default function HomeUnselectedView({
         </ScrollReveal>
       </div>
 
-      {/* ── 3. SECCIÓN EQUIPAMIENTO DESTACADO — CASCOS Y ROPA ── */}
+      {/* ── 3. ESCAPES POR MODELO — ENLAZADO DIRECTO A LAS MOTOS MÁS BUSCADAS ── */}
+      <section aria-labelledby="home-motos-populares" className="pt-2">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 mb-4">
+          <div>
+            <h2 id="home-motos-populares" className="font-mono font-bold text-base sm:text-lg uppercase text-foreground">
+              Escapes por Modelo — Motos más buscadas
+            </h2>
+            <p className="text-text-muted text-xs font-sans mt-0.5">
+              Entra directo al catálogo verificado de escapes homologados ITV y recambios para tu moto.
+            </p>
+          </div>
+          <Link
+            href="/escapes"
+            className="text-xs font-mono font-bold text-accent-text hover:underline shrink-0"
+          >
+            Ver todas las marcas y modelos →
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+          {POPULAR_HOME_MOTOS.map((moto) => (
+            <Link
+              key={moto.href}
+              href={moto.href}
+              className="group bg-card/70 hover:bg-card border border-card-border/80 hover:border-accent/60 rounded-xl px-3.5 py-3 transition-all flex items-center justify-between gap-2 no-underline"
+            >
+              <div className="min-w-0">
+                <span className="text-[10px] font-mono font-bold uppercase text-accent-text block">
+                  {moto.brandName}
+                </span>
+                <span className="font-mono font-bold text-xs sm:text-sm text-foreground group-hover:text-accent-text transition-colors block truncate">
+                  {moto.model}
+                </span>
+              </div>
+              <ArrowUpRight className="w-3.5 h-3.5 text-text-muted group-hover:text-accent shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* ── 4. SECCIÓN EQUIPAMIENTO DESTACADO — CASCOS Y ROPA ── */}
       <FeaturedProductsList
         onAddToCart={onAddToCart}
         onNotifyMe={onNotifyMe}
         ScrollReveal={ScrollReveal}
       />
 
-      {/* ── 4. CARRUSEL SECUNDARIO DE ESCAPES ── */}
+      {/* ── 5. CARRUSEL SECUNDARIO DE ESCAPES ── */}
       <section className="pt-4">
         <ScrollReveal animation="fade-up" delay={150}>
           <BrandCarousel brand="IXIL" title="IXIL — Escapes destacados" onAddToCart={onAddToCart} onNotifyMe={onNotifyMe} />

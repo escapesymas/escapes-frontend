@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import CookieSettingsButton from './CookieSettingsButton';
+import { POPULAR_FOOTER_BRANDS } from '../lib/motoSeo';
 
 function InstagramIcon() {
   return (
@@ -23,7 +24,31 @@ export default function Footer() {
   return (
     <footer className="bg-card border-t border-card-border mt-auto">
       <div className="max-w-[1400px] mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
+          <div>
+            <h4 className="text-[10px] font-mono font-bold uppercase text-foreground tracking-wider mb-3">
+              Escapes por Moto
+            </h4>
+            <ul className="grid grid-cols-2 gap-x-3 gap-y-1.5 mb-2.5">
+              {POPULAR_FOOTER_BRANDS.map((brand) => (
+                <li key={brand.href}>
+                  <Link
+                    href={brand.href}
+                    className="text-[10px] font-mono text-text-muted hover:text-foreground transition-colors"
+                  >
+                    Escapes {brand.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <Link
+              href="/escapes"
+              className="text-[10px] font-mono font-bold text-accent-text hover:underline"
+            >
+              Ver todas las marcas →
+            </Link>
+          </div>
+
           <div>
             <h4 className="text-[10px] font-mono font-bold uppercase text-foreground tracking-wider mb-3">
               Legal

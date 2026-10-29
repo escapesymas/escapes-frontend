@@ -34,6 +34,7 @@ export default function Header({ selectedBike, onCartClick, onTabChange, activeT
   const isHome = pathname === '/';
   const homeActive = isHome && (!activeTab || activeTab === 'shop');
   const catalogActive = pathname?.startsWith('/universales');
+  const escapesActive = pathname?.startsWith('/escapes');
   const garageActive = isHome && activeTab === 'garage';
   const navClass = (active: boolean) =>
     `text-xs font-mono font-bold uppercase tracking-wider cursor-pointer decoration-none transition-colors ${
@@ -115,7 +116,7 @@ export default function Header({ selectedBike, onCartClick, onTabChange, activeT
           </button>
 
           {/* Desktop únicamente: navegación */}
-          <nav className="hidden md:flex items-center gap-5 ml-2">
+          <nav className="hidden md:flex items-center gap-3.5 lg:gap-4 ml-2">
             <Link
               href="/"
               onClick={(e) => {
@@ -128,6 +129,14 @@ export default function Header({ selectedBike, onCartClick, onTabChange, activeT
               className={navClass(homeActive)}
             >
               Inicio
+            </Link>
+            <Link
+              href="/escapes"
+              title="Escapes y recambios por marca y modelo de moto"
+              aria-current={escapesActive ? 'page' : undefined}
+              className={navClass(Boolean(escapesActive))}
+            >
+              Escapes
             </Link>
             <Link
               href="/universales"
@@ -143,7 +152,7 @@ export default function Header({ selectedBike, onCartClick, onTabChange, activeT
             >
               <span>Mi Garaje</span>
               {selectedBike && (
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-accent/20 border border-accent/40 text-accent font-normal max-w-[120px] truncate">
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-accent/20 border border-accent/40 text-accent font-normal max-w-[96px] truncate">
                   {selectedBike}
                 </span>
               )}

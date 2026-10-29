@@ -45,9 +45,35 @@ async function products(part: number): Promise<Response> {
   }));
 }
 
+async function motos(): Promise<Response> {
+  const res = await fetch(`${API_BASE}/api/catalog/sitemap-motos`, { next: { revalidate: 3600 } });
+  if (!res.ok) return new Response('Sitemap no disponible', { status: 503 });
+  const data = (await res.json()) as {
+    brands?: { slug: string; escapeModelCount: number }[];
+    models?: { brandSlug: string; modelSlug: string; escapeCount: number }[];
+  };
+  const entries: Entry[] = [{ loc: `${SITE_URL}/escapes`, priority: 0.9 }];
+  for (const b of data.brands || []) {
+    if (!b.slug) continue;
+    entries.push({
+      loc: `${SITE_URL}/escapes/${encodeURIComponent(b.slug)}`,
+      priority: b.escapeModelCount > 0 ? 0.8 : 0.7,
+    });
+  }
+  for (const m of data.models || []) {
+    if (!m.brandSlug || !m.modelSlug) continue;
+    entries.push({
+      loc: `${SITE_URL}/escapes/${encodeURIComponent(m.brandSlug)}/${encodeURIComponent(m.modelSlug)}`,
+      priority: m.escapeCount > 0 ? 0.8 : 0.7,
+    });
+  }
+  return urlset(entries);
+}
+
 export async function GET(_req: Request, { params }: { params: Promise<{ file: string }> }) {
   const { file } = await params;
   if (file === 'pages.xml') return pages();
+  if (file === 'motos.xml') return motos();
   const m = file.match(/^(\d{1,3})\.xml$/);
   if (!m) return new Response('No encontrado', { status: 404 });
   return products(Number(m[1]));

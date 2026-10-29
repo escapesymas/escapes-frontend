@@ -1,7 +1,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { CompatRow } from './compat';
+import { resolveKnownBrandSlug } from '../../lib/motoSeo';
 
 interface Props {
   rows: CompatRow[];
@@ -61,15 +63,28 @@ export default function CompatibilityList({ rows }: Props) {
         <p className="text-xs text-text-muted py-2">Ningún vehículo coincide con la búsqueda.</p>
       ) : (
         <ul className="divide-y divide-card-border border border-card-border rounded">
-          {groups.slice(0, visible).map((g) => (
-            <li key={`${g.brand}|${g.model}|${g.cc}`} className="px-3 py-2 flex items-baseline justify-between gap-3">
-              <span className="text-sm text-foreground">
-                <span className="font-semibold">{g.brand}</span> {g.model}
-                {g.cc && <span className="text-text-muted text-xs"> · {g.cc} cc</span>}
-              </span>
-              <span className="text-xs font-mono text-text-muted text-right shrink-0">{yearRange(g.years)}</span>
-            </li>
-          ))}
+          {groups.slice(0, visible).map((g) => {
+            const brandSlug = resolveKnownBrandSlug(g.brand);
+            return (
+              <li key={`${g.brand}|${g.model}|${g.cc}`} className="px-3 py-2 flex items-baseline justify-between gap-3">
+                <span className="text-sm text-foreground">
+                  {brandSlug ? (
+                    <Link
+                      href={`/escapes/${brandSlug}`}
+                      className="font-semibold hover:text-accent-text hover:underline transition-colors"
+                    >
+                      {g.brand}
+                    </Link>
+                  ) : (
+                    <span className="font-semibold">{g.brand}</span>
+                  )}{' '}
+                  {g.model}
+                  {g.cc && <span className="text-text-muted text-xs"> · {g.cc} cc</span>}
+                </span>
+                <span className="text-xs font-mono text-text-muted text-right shrink-0">{yearRange(g.years)}</span>
+              </li>
+            );
+          })}
         </ul>
       )}
       {groups.length > visible && (

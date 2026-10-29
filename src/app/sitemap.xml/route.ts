@@ -2,10 +2,10 @@ import { SITE_URL, PRODUCTS_PER_SITEMAP, productCount, xmlResponse } from '../..
 
 export const revalidate = 3600;
 
-/** Índice: páginas y categorías + una parte por cada 5.000 productos. */
+/** Índice: páginas y categorías + directorio de motos + una parte por cada 5.000 productos. */
 export async function GET() {
   const parts = Math.ceil((await productCount()) / PRODUCTS_PER_SITEMAP);
-  const urls = ['pages', ...Array.from({ length: parts }, (_, i) => String(i))]
+  const urls = ['pages', 'motos', ...Array.from({ length: parts }, (_, i) => String(i))]
     .map((p) => `  <sitemap><loc>${SITE_URL}/sitemaps/${p}.xml</loc></sitemap>`);
   return xmlResponse(`<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</sitemapindex>`);
 }

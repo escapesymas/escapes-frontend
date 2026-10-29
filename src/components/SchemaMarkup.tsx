@@ -161,6 +161,74 @@ export function getBreadcrumbSchema(items: { name: string; url: string }[]): Bre
   };
 }
 
+export function getFaqSchema(items: { question: string; answer: string }[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: items.map((it) => ({
+      '@type': 'Question',
+      name: it.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: it.answer,
+      },
+    })),
+  };
+}
+
+export function getItemListSchema(params: {
+  name: string;
+  url: string;
+  items: {
+    name: string;
+    url: string;
+    image?: string;
+    price?: number;
+    inStock?: boolean;
+  }[];
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: params.name,
+    url: `${BASE_URL}${params.url}`,
+    numberOfItems: params.items.length,
+    itemListElement: params.items.map((item, index) => {
+      const fullUrl = /^https?:\/\//.test(item.url) ? item.url : `${BASE_URL}${item.url}`;
+      if (typeof item.price === 'number' && item.price > 0) {
+        const imgUrl = item.image
+          ? (/^https?:\/\//.test(item.image) ? item.image : `${BASE_URL}${item.image}`)
+          : undefined;
+        return {
+          '@type': 'ListItem',
+          position: index + 1,
+          item: {
+            '@type': 'Product',
+            name: item.name,
+            url: fullUrl,
+            ...(imgUrl ? { image: imgUrl } : {}),
+            offers: {
+              '@type': 'Offer',
+              price: Number(item.price.toFixed(2)),
+              priceCurrency: 'EUR',
+              availability: item.inStock !== false
+                ? 'https://schema.org/InStock'
+                : 'https://schema.org/OutOfStock',
+              url: fullUrl,
+            },
+          },
+        };
+      }
+      return {
+        '@type': 'ListItem',
+        position: index + 1,
+        name: item.name,
+        url: fullUrl,
+      };
+    }),
+  };
+}
+
 export default function SchemaMarkup() {
   const organizationSchema = getOrganizationSchema();
   const websiteSchema = getWebSiteSchema();
