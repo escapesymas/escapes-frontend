@@ -41,6 +41,17 @@ export interface RelatedManufacturerBrand {
   isEscapeSpecialist: boolean;
 }
 
+export interface BrandCompatibleMoto {
+  brandName: string;
+  brandSlug: string;
+  modelName: string;
+  modelSlug: string;
+  fullName: string;
+  productCount: number;
+  escapeCount: number;
+  href: string;
+}
+
 export interface ManufacturerBrandLandingData {
   brand: ManufacturerBrandEntry;
   products: Product[];
@@ -50,6 +61,7 @@ export interface ManufacturerBrandLandingData {
   page: number;
   perPage: number;
   relatedBrands: RelatedManufacturerBrand[];
+  compatibleMotos?: BrandCompatibleMoto[];
 }
 
 export type ManufacturerBrandApiResponse =

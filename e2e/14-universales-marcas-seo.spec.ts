@@ -216,4 +216,28 @@ test.describe('Indexación SEO de /universales, /marcas y Fichas de Comerciante 
     const text = (await res.text()).trim();
     expect(text).toBe('e9a4f682d3c1482098d5781a5a04e4c2');
   });
+
+  test('Malla triangular: /marcas/ixil enlaza a modelos de moto compatibles y /escapes/yamaha/mt-07 enlaza a marcas de fabricante', async ({
+    page,
+  }) => {
+    // 1. Landing de fabricante /marcas/ixil expone enlaces a motos compatibles
+    await page.goto('/marcas/ixil');
+    await expect(page.locator('a[href^="/escapes/"]').first()).toBeAttached();
+    await expect(page.locator('a[href="/escapes/yamaha/mt-09"]').first()).toBeAttached();
+
+    // 2. Landing de moto /escapes/yamaha/mt-07 expone enlaces a marcas de fabricante compatibles
+    await page.goto('/escapes/yamaha/mt-07');
+    await expect(page.locator('a[href^="/marcas/"]').first()).toBeAttached();
+    await expect(page.locator('a[href="/marcas/ixil"]').first()).toBeAttached();
+  });
+
+  test('robots.txt declara sitemaps dedicados de páginas, motos y marcas', async ({
+    request,
+  }) => {
+    const res = await request.get('/robots.txt');
+    expect(res.status()).toBe(200);
+    const text = await res.text();
+    expect(text).toContain('sitemaps/motos.xml');
+    expect(text).toContain('sitemaps/marcas.xml');
+  });
 });

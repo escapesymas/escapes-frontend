@@ -37,6 +37,31 @@ async function fetchProductBySlug(slug: string) {
   }
 }
 
+function cleanProductTitle(name: string): string {
+  const trimmed = String(name || '').trim();
+  if (!trimmed) return '';
+  if (trimmed !== trimmed.toUpperCase()) return trimmed;
+  const acronyms = new Set([
+    'IXIL', 'KTM', 'BMW', 'ABS', 'ITV', 'LED', 'CNC', 'EAN', 'DB-KILLER',
+    'NGK', 'AFAM', 'R&G', 'SHAD', 'ARAI', 'HMF', 'BMC', 'MRA', 'YSS', 'PBR', 'UFO',
+    'RST', 'RFX', 'SKF', 'NTN', 'RK', 'ITP', 'IRC', 'KMC', 'JMP', 'JBM', 'MFW',
+    'NOCO', 'ODI', 'EPI', 'AXP', 'ART', 'RAM', 'STM', 'TNK', 'HPX', 'TEXA', 'SIEM',
+    'ZECA', 'KOSO', 'SENA', 'BELL', 'BETA', 'SCAR', '2T', '4T', 'CC', 'GT', 'RR',
+    'SX', 'EXC', 'CBR', 'YZF', 'GSX', 'MT', 'Z', 'CB', 'ADV', 'GS', 'TMAX',
+    'XMAX', 'PCX', 'SH', 'FORZA', 'X-CAPE', 'TRK',
+  ]);
+  return trimmed
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word) => {
+      const upper = word.toUpperCase();
+      if (acronyms.has(upper)) return upper;
+      if (/^\d+[a-z]?$/i.test(word)) return upper;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const product = await fetchProductBySlug(slug);
@@ -50,20 +75,26 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   const publicBrand = product.brand && !isExcludedSupplierBrand(product.brand) ? product.brand : '';
   const price = (product.salePrice ?? product.price).toFixed(2);
-  // Solo datos ciertos de la ficha: plazo de entrega igual que en Google Merchant Center y compatibilidad si la hay.
   const compat = Array.isArray(product.compatibility) ? product.compatibility.length : 0;
-  const description = `${publicBrand ? `${publicBrand} ` : ''}${product.name} a ${price}€. ${product.inStock ? `En stock, entrega en ${DELIVERY_ES}.` : 'Sin stock ahora mismo.'}${compat ? ` Compatible con ${compat} ${compat === 1 ? 'versión' : 'versiones'} de moto.` : ''} Garantía de 3 años.`;
+  const cleanedName = cleanProductTitle(product.name);
+  const isEscape = /\b(escape|silencioso|silenciador|colector|tubo|linea)\b/i.test(product.name);
+  const titleBadge = isEscape ? ' · Homologado ITV' : '';
+  const title = `${publicBrand ? publicBrand + ' ' : ''}${cleanedName}${titleBadge} | Escapes y Más`;
+
+  const isFreeShip = Number(price) >= 200;
+  const shipBadge = isFreeShip ? 'Envío gratis.' : `Envío estándar en ${DELIVERY_ES}.`;
+  const description = `${publicBrand ? `${publicBrand} ` : ''}${cleanedName} a ${price}€. ${product.inStock ? `En stock. ${shipBadge}` : 'Sin stock ahora mismo.'}${compat ? ` Compatible con ${compat} ${compat === 1 ? 'modelo' : 'modelos'} de moto.` : ''} Garantía de 3 años.`;
   const imageUrl = product.image || `${SITE_URL}/og-image.png`;
   const canonicalSku = product.sku || slug;
   const pageUrl = `${SITE_URL}/producto/${encodeURIComponent(canonicalSku)}`;
 
   return {
-    title: `${publicBrand ? publicBrand + ' · ' : ''}${product.name} · Escapes y Más`,
+    title,
     description,
     keywords: [publicBrand, product.sku, product.category, product.category2, product.category3, 'moto', 'recambio'].filter(Boolean).join(', '),
     openGraph: {
       type: 'website',
-      title: `${publicBrand ? publicBrand + ' · ' : ''}${product.name}`,
+      title,
       description,
       url: pageUrl,
       siteName: 'Escapes y Más',
@@ -72,7 +103,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${publicBrand ? publicBrand + ' · ' : ''}${product.name}`,
+      title,
       description,
       images: [imageUrl],
     },

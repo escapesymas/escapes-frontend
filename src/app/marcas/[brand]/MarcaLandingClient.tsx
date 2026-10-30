@@ -57,7 +57,7 @@ export default function MarcaLandingClient({
     setSearchInput(initialQuery);
   }, [initialQuery]);
 
-  const { brand, products, total, refs, totalPages, page, relatedBrands } = data;
+  const { brand, products, total, refs, totalPages, page, relatedBrands, compatibleMotos = [] } = data;
   const basePath = `/marcas/${brand.slug}`;
 
   const buildHref = (overrides: {
@@ -329,6 +329,36 @@ export default function MarcaLandingClient({
             containIntrinsicSize: 'auto none auto 260px',
           }}
         >
+          {compatibleMotos.length > 0 && (
+            <div className="flex flex-col gap-2.5">
+              <div className="flex items-baseline justify-between gap-2">
+                <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-foreground">
+                  Motos más buscadas compatibles con {brand.name}
+                </h2>
+                <Link href="/escapes" className="text-xs font-mono font-bold text-accent-text hover:underline">
+                  Catálogo por moto →
+                </Link>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                {compatibleMotos.map((m) => (
+                  <Link
+                    key={m.href}
+                    href={m.href}
+                    className="p-3 rounded-lg bg-card border border-card-border hover:border-accent transition-all flex flex-col justify-between group shadow-sm"
+                  >
+                    <span className="text-xs font-semibold text-foreground group-hover:text-accent-text transition-colors">
+                      {m.fullName}
+                    </span>
+                    <span className="text-[10px] font-mono text-text-muted mt-1.5 flex items-center justify-between">
+                      <span>{m.escapeCount > 0 ? `${m.escapeCount} escapes` : `${m.productCount} piezas`}</span>
+                      <span className="text-accent-text group-hover:translate-x-0.5 transition-transform">→</span>
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
           {brand.topCategories.length > 0 && (
             <div className="flex flex-col gap-2">
               <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-foreground">

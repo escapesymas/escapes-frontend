@@ -27,6 +27,10 @@ export default function robots(): MetadataRoute.Robots {
         crawlDelay: 2,
       },
     ],
-    sitemap: 'https://escapesymas.com/sitemap.xml',
+    sitemap: [
+      'https://escapesymas.com/sitemap.xml',
+      'https://escapesymas.com/sitemaps/motos.xml',
+      'https://escapesymas.com/sitemaps/marcas.xml',
+    ],
   };
 }

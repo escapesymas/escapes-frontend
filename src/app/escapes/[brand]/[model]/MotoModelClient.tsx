@@ -55,7 +55,7 @@ export default function MotoModelClient({ data, faqs }: MotoModelClientProps) {
   const { addToCart } = useCart();
   const { user, isAuthenticated, syncGarage } = useAuth();
 
-  const { bike, categories, relatedModels } = data;
+  const { bike, categories, relatedModels, compatibleBrands = [] } = data;
   const primaryEscapes = data.primaryEscapes as EnrichedProduct[];
   const escapeAccessories = data.escapeAccessories as EnrichedProduct[];
   const allProducts = data.products as EnrichedProduct[];
@@ -581,6 +581,43 @@ export default function MotoModelClient({ data, faqs }: MotoModelClientProps) {
                         ? `${rm.yearFrom}${rm.yearTo && rm.yearTo !== rm.yearFrom ? `–${rm.yearTo}` : ''}`
                         : 'Ver piezas'}
                       {rm.escapeCount > 0 ? ` · ${rm.escapeCount} esc.` : ''}
+                    </span>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-text-muted group-hover:text-accent shrink-0" />
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Enlazado cruzado hacia marcas de fabricante con recambios o escapes para este modelo */}
+        {compatibleBrands.length > 0 && (
+          <section aria-labelledby="marcas-compatibles-heading" className="border-t border-card-border pt-8">
+            <div className="flex items-baseline justify-between gap-4 mb-4">
+              <h2 id="marcas-compatibles-heading" className="font-mono font-bold text-base sm:text-lg uppercase text-foreground">
+                Marcas de escape y recambios para {bike.brandName} {bike.model}
+              </h2>
+              <Link
+                href="/marcas"
+                className="text-xs font-mono font-bold text-accent-text hover:underline shrink-0"
+              >
+                Todas las marcas →
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+              {compatibleBrands.map((cb) => (
+                <Link
+                  key={cb.slug}
+                  href={cb.href}
+                  className="group bg-card border border-card-border hover:border-accent/60 rounded-xl px-3.5 py-3 transition-all flex items-center justify-between gap-2 shadow-sm"
+                >
+                  <div className="min-w-0">
+                    <span className="font-mono font-bold text-xs sm:text-sm text-foreground group-hover:text-accent-text transition-colors block truncate">
+                      {cb.name}
+                    </span>
+                    <span className="text-[10px] font-mono text-text-muted block">
+                      {cb.escapeCount > 0 ? `${cb.escapeCount} escapes` : `${cb.productCount} recambios`}
                     </span>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-text-muted group-hover:text-accent shrink-0" />

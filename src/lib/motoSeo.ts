@@ -70,6 +70,15 @@ export interface MotoRelatedModel {
   escapeCount: number;
 }
 
+export interface MotoCompatibleBrand {
+  name: string;
+  slug: string;
+  productCount: number;
+  escapeCount: number;
+  isEscapeSpecialist: boolean;
+  href: string;
+}
+
 export interface MotoModelData {
   bike: {
     brand: string;
@@ -91,6 +100,7 @@ export interface MotoModelData {
   totalEscapes: number;
   totalPrimaryEscapes: number;
   relatedModels: MotoRelatedModel[];
+  compatibleBrands?: MotoCompatibleBrand[];
 }
 
 export type MotoModelApiResponse =
