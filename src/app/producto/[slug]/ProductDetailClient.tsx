@@ -20,6 +20,7 @@ import ProductGallery from '../../../components/product/ProductGallery';
 import CompatibilityList from '../../../components/product/CompatibilityList';
 import { normalizeCompat, fitsBike, bikeLabel } from '../../../components/product/compat';
 import { effectivePrice, formatEuro } from '../../../lib/pricing';
+import { slugifyManufacturerBrand, isExcludedSupplierBrand } from '../../../lib/brandSeo';
 
 const FrequentlyBoughtTogether = dynamic(
   () => import('../../../components/FrequentlyBoughtTogether'),
@@ -133,8 +134,11 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
   const savingPct = onSale ? Math.round((1 - price / product.price) * 100) : 0;
   const images: ProductImageType[] = product.images?.length ? product.images : [{ src: product.image, alt: product.name } as ProductImageType];
   const description = product.description?.trim() || '';
+  const publicBrand = product.brand && !isExcludedSupplierBrand(product.brand) ? product.brand : '';
+  const brandSlug = publicBrand ? slugifyManufacturerBrand(publicBrand) : '';
+  const canonicalSku = encodeURIComponent(product.sku || slug);
   const specs: [string, string][] = [
-    ['Marca', product.brand],
+    ...(publicBrand ? [['Marca', publicBrand] as [string, string]] : []),
     ...Object.entries(product.attributes || {}),
     ...(product.weight_g ? [['Peso', product.weight_g >= 1000 ? `${(product.weight_g / 1000).toFixed(2)} kg` : `${product.weight_g} g`] as [string, string]] : []),
     ['Referencia', product.sku],
@@ -177,13 +181,18 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
         dangerouslySetInnerHTML={{
           __html: jsonLd(getProductSchema({
             name: product.name,
-            description: description.replace(/<[^>]+>/g, ' ').slice(0, 500) || product.name,
+            description: description || product.name,
             image: product.image,
+            images: product.images,
             sku: product.sku,
-            brand: product.brand,
+            mpn: product.mpn || product.supplierCode || product.supplier_code,
+            barcode: product.barcode,
+            brand: publicBrand,
             price,
-            url: `https://escapesymas.com/producto/${slug}`,
+            url: `https://escapesymas.com/producto/${canonicalSku}`,
             inStock,
+            averageRating: product.averageRating,
+            ratingCount: product.ratingCount,
           })),
         }}
       />
@@ -193,7 +202,8 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
           __html: jsonLd(getBreadcrumbSchema([
             { name: 'Inicio', url: '/' },
             ...crumbs.map((c) => ({ name: c.name, url: c.href })),
-            { name: product.name, url: `/producto/${slug}` },
+            ...(publicBrand && brandSlug ? [{ name: publicBrand, url: `/marcas/${brandSlug}` }] : []),
+            { name: product.name, url: `/producto/${canonicalSku}` },
           ])),
         }}
       />
@@ -215,7 +225,7 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
         </ol>
       </nav>
 
-      <main className="flex-grow w-full max-w-6xl mx-auto pb-28 md:pb-12 md:px-4 md:pt-6">
+      <main className="flex-grow w-full max-w-6xl mx-auto pb-12 md:px-4 md:pt-6">
         <div className="md:grid md:grid-cols-2 md:gap-10">
           <ProductGallery
             images={images}
@@ -229,12 +239,12 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
 
           <div className="px-4 md:px-0 pt-4 md:pt-0 flex flex-col gap-4">
             <div className="flex flex-col gap-1">
-              {product.brand && (
+              {publicBrand && brandSlug && (
                 <Link
-                  href={`/universales/buscar/${encodeURIComponent(product.brand)}`}
-                  className="text-[11px] font-mono font-bold uppercase tracking-wider text-accent-text self-start"
+                  href={`/marcas/${brandSlug}`}
+                  className="text-[11px] font-mono font-bold uppercase tracking-wider text-accent-text hover:underline self-start"
                 >
-                  {product.brand}
+                  {publicBrand}
                 </Link>
               )}
               <h1 className="text-xl md:text-2xl font-semibold leading-snug text-foreground">{product.name}</h1>
@@ -360,6 +370,8 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
           </section>
         </div>
       </main>
+
+      <div className="pb-20 md:pb-0" />
 
       {/* Barra de compra fija en móvil: precio siempre visible + botón */}
       <div

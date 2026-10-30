@@ -20,7 +20,8 @@ function normalizeImgSrc(url: string | undefined): string {
   if (!url) return '';
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
   if (url.startsWith('/')) {
-    const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'https://api.escapesymas.com').replace(/\/$/, '');
+    const raw = process.env.NEXT_PUBLIC_API_URL || 'https://api.escapesymas.com';
+    const baseUrl = raw.startsWith('http://') ? 'https://api.escapesymas.com' : raw.replace(/\/$/, '');
     return `${baseUrl}${url}`;
   }
   return url;

@@ -1,3 +1,6 @@
+import { SHIPPING_COST, FREE_SHIPPING_MIN } from '../lib/constants';
+import { isExcludedSupplierBrand } from '../lib/brandSeo';
+
 type OrganizationSchema = {
   '@context': 'https://schema.org';
   '@type': 'Organization';
@@ -34,6 +37,8 @@ type ProductSchema = {
   description: string;
   image: string[];
   sku: string;
+  mpn?: string;
+  gtin?: string;
   brand: {
     '@type': 'Brand';
     name: string;
@@ -42,8 +47,52 @@ type ProductSchema = {
     '@type': 'Offer';
     price: number;
     priceCurrency: string;
+    priceValidUntil: string;
+    itemCondition: string;
     availability: string;
     url: string;
+    shippingDetails: {
+      '@type': 'OfferShippingDetails';
+      shippingRate: {
+        '@type': 'MonetaryAmount';
+        value: number;
+        currency: 'EUR';
+      };
+      shippingDestination: {
+        '@type': 'DefinedRegion';
+        addressCountry: 'ES';
+      };
+      deliveryTime: {
+        '@type': 'ShippingDeliveryTime';
+        handlingTime: {
+          '@type': 'QuantitativeValue';
+          minValue: number;
+          maxValue: number;
+          unitCode: 'DAY';
+        };
+        transitTime: {
+          '@type': 'QuantitativeValue';
+          minValue: number;
+          maxValue: number;
+          unitCode: 'DAY';
+        };
+      };
+    };
+    hasMerchantReturnPolicy: {
+      '@type': 'MerchantReturnPolicy';
+      applicableCountry: 'ES';
+      returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow';
+      merchantReturnDays: number;
+      returnMethod: 'https://schema.org/ReturnByMail';
+      returnFees: 'https://schema.org/ReturnFeesCustomerResponsibility';
+    };
+  };
+  aggregateRating?: {
+    '@type': 'AggregateRating';
+    ratingValue: number;
+    reviewCount: number;
+    bestRating: 5;
+    worstRating: 1;
   };
 };
 
@@ -61,6 +110,23 @@ type BreadcrumbSchema = {
 };
 
 const BASE_URL = 'https://escapesymas.com';
+
+/** Valida códigos EAN/UPC (8, 12, 13 o 14 dígitos con dígito de control GS1) igual que en lib/google-feed.ts. */
+export function validGtin(code?: string | null): string | null {
+  const c = String(code || '').trim();
+  if (!/^(\d{8}|\d{12,14})$/.test(c)) return null;
+  const digits = c.split('').map(Number);
+  const check = digits.pop()!;
+  const sum = digits.reverse().reduce((acc, d, i) => acc + d * (i % 2 === 0 ? 3 : 1), 0);
+  return (10 - (sum % 10)) % 10 === check ? c : null;
+}
+
+function toAbsoluteUrl(url?: string | null): string {
+  const clean = String(url || '').trim();
+  if (!clean) return '';
+  if (/^https?:\/\//i.test(clean)) return clean;
+  return `${BASE_URL}${clean.startsWith('/') ? clean : `/${clean}`}`;
+}
 
 export function getOrganizationSchema(): OrganizationSchema {
   return {
@@ -102,34 +168,123 @@ export function getProductSchema(product: {
   name: string;
   description?: string;
   image?: string;
+  images?: { src?: string }[];
   sku?: string;
+  mpn?: string;
+  barcode?: string;
   brand?: string;
   price: number;
   url?: string;
   inStock?: boolean;
+  averageRating?: number;
+  ratingCount?: number;
 }): ProductSchema {
-  const imageUrls = product.image ? [/^https?:\/\//.test(product.image) ? product.image : `${BASE_URL}${product.image}`] : [];
+  const collectedImages: string[] = [];
+  if (product.image) {
+    const abs = toAbsoluteUrl(product.image);
+    if (abs) collectedImages.push(abs);
+  }
+  for (const img of product.images || []) {
+    const abs = toAbsoluteUrl(img?.src);
+    if (abs && !collectedImages.includes(abs)) collectedImages.push(abs);
+  }
+  // Evita la incidencia «Falta el campo "image"» en Fichas de comerciante de Search Console
+  // cuando una referencia del catálogo aún no tiene fotografía propia (p. ej. SKU 79900181).
+  if (collectedImages.length === 0) {
+    collectedImages.push(`${BASE_URL}/og-image.png`);
+  }
+
+  const safeBrand = product.brand && !isExcludedSupplierBrand(product.brand)
+    ? product.brand.trim()
+    : 'Escapes y Más';
+  const cleanDesc = plainText(product.description || '')
+    .split(/(?<=[.!?])\s+/)
+    .filter((sentence) => !/\bbihr\b/i.test(sentence))
+    .join(' ')
+    .slice(0, 5000)
+    .trim();
+
+  const roundedPrice = Number((Number(product.price) || 0).toFixed(2));
+  const shippingFee = roundedPrice >= FREE_SHIPPING_MIN ? 0 : SHIPPING_COST;
+  const gtin = validGtin(product.barcode);
+  const mpn = String(product.mpn || '').trim().slice(0, 70);
+  const priceValidUntil = `${new Date().getUTCFullYear() + 1}-12-31`;
+
+  const ratingCount = Number(product.ratingCount) || 0;
+  const averageRating = Number(product.averageRating) || 0;
 
   return {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.name,
-    description: plainText(product.description || '').slice(0, 5000) || `${product.name} en Escapes y Más`,
-    image: imageUrls,
+    description: cleanDesc || `${product.name} en Escapes y Más`,
+    image: collectedImages,
     sku: product.sku || '',
+    ...(mpn ? { mpn } : {}),
+    ...(gtin ? { gtin } : {}),
     brand: {
       '@type': 'Brand',
-      name: product.brand || 'Escapes y Más',
+      name: safeBrand,
     },
     offers: {
       '@type': 'Offer',
-      price: product.price,
+      price: roundedPrice,
       priceCurrency: 'EUR',
-      availability: product.inStock 
-        ? 'https://schema.org/InStock' 
+      priceValidUntil,
+      itemCondition: 'https://schema.org/NewCondition',
+      availability: product.inStock
+        ? 'https://schema.org/InStock'
         : 'https://schema.org/OutOfStock',
       url: product.url || BASE_URL,
+      // Política fija (AGENTS.md §1 y constants.ts): 19,99 € en España, gratis desde 200 €, entrega 5-10 días.
+      shippingDetails: {
+        '@type': 'OfferShippingDetails',
+        shippingRate: {
+          '@type': 'MonetaryAmount',
+          value: shippingFee,
+          currency: 'EUR',
+        },
+        shippingDestination: {
+          '@type': 'DefinedRegion',
+          addressCountry: 'ES',
+        },
+        deliveryTime: {
+          '@type': 'ShippingDeliveryTime',
+          handlingTime: {
+            '@type': 'QuantitativeValue',
+            minValue: 1,
+            maxValue: 3,
+            unitCode: 'DAY',
+          },
+          transitTime: {
+            '@type': 'QuantitativeValue',
+            minValue: 4,
+            maxValue: 7,
+            unitCode: 'DAY',
+          },
+        },
+      },
+      // Coincide con /devoluciones: 14 días naturales en España por correo, portes a cargo del comprador salvo defecto.
+      hasMerchantReturnPolicy: {
+        '@type': 'MerchantReturnPolicy',
+        applicableCountry: 'ES',
+        returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+        merchantReturnDays: 14,
+        returnMethod: 'https://schema.org/ReturnByMail',
+        returnFees: 'https://schema.org/ReturnFeesCustomerResponsibility',
+      },
     },
+    ...(ratingCount > 0 && averageRating > 0
+      ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: Number(Math.min(5, Math.max(1, averageRating)).toFixed(2)),
+            reviewCount: Math.round(ratingCount),
+            bestRating: 5,
+            worstRating: 1,
+          },
+        }
+      : {}),
   };
 }
 
@@ -198,7 +353,7 @@ export function getItemListSchema(params: {
       if (typeof item.price === 'number' && item.price > 0) {
         const imgUrl = item.image
           ? (/^https?:\/\//.test(item.image) ? item.image : `${BASE_URL}${item.image}`)
-          : undefined;
+          : `${BASE_URL}/og-image.png`;
         return {
           '@type': 'ListItem',
           position: index + 1,
@@ -206,7 +361,7 @@ export function getItemListSchema(params: {
             '@type': 'Product',
             name: item.name,
             url: fullUrl,
-            ...(imgUrl ? { image: imgUrl } : {}),
+            image: imgUrl,
             offers: {
               '@type': 'Offer',
               price: Number(item.price.toFixed(2)),

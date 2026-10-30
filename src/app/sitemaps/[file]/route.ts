@@ -1,9 +1,10 @@
 import { SITE_URL, API_BASE, PRODUCTS_PER_SITEMAP, xmlEscape, xmlResponse } from '../../../lib/sitemap';
 import type { Category3 } from '../../../types';
+import { isExcludedSupplierBrand } from '../../../lib/brandSeo';
 
 export const revalidate = 3600;
 
-const STATIC_PAGES = ['', '/universales', '/aviso-legal', '/politica-privacidad', '/politica-cookies', '/terminos', '/devoluciones'];
+const STATIC_PAGES = ['', '/universales', '/escapes', '/marcas', '/aviso-legal', '/politica-privacidad', '/politica-cookies', '/terminos', '/devoluciones'];
 
 type Entry = { loc: string; lastmod?: string; priority: number };
 
@@ -14,7 +15,10 @@ function urlset(entries: Entry[]): Response {
 }
 
 async function pages(): Promise<Response> {
-  const entries: Entry[] = STATIC_PAGES.map((p) => ({ loc: `${SITE_URL}${p}`, priority: p === '' ? 1 : p === '/universales' ? 0.9 : 0.3 }));
+  const entries: Entry[] = STATIC_PAGES.map((p) => ({
+    loc: `${SITE_URL}${p}`,
+    priority: p === '' ? 1 : (p === '/universales' || p === '/escapes' || p === '/marcas') ? 0.9 : 0.3,
+  }));
   try {
     const res = await fetch(`${API_BASE}/api/catalog/categories`, { next: { revalidate: 3600 } });
     const cats = (res.ok ? await res.json() : []) as Category3[];
@@ -70,10 +74,28 @@ async function motos(): Promise<Response> {
   return urlset(entries);
 }
 
+async function marcas(): Promise<Response> {
+  const res = await fetch(`${API_BASE}/api/catalog/sitemap-marcas`, { next: { revalidate: 3600 } });
+  if (!res.ok) return new Response('Sitemap no disponible', { status: 503 });
+  const data = (await res.json()) as {
+    brands?: { slug: string; productCount: number; inStockCount: number; isEscapeSpecialist?: boolean }[];
+  };
+  const entries: Entry[] = [{ loc: `${SITE_URL}/marcas`, priority: 0.9 }];
+  for (const b of data.brands || []) {
+    if (!b.slug || isExcludedSupplierBrand(b.slug)) continue;
+    entries.push({
+      loc: `${SITE_URL}/marcas/${encodeURIComponent(b.slug)}`,
+      priority: b.isEscapeSpecialist || b.inStockCount >= 50 ? 0.8 : 0.7,
+    });
+  }
+  return urlset(entries);
+}
+
 export async function GET(_req: Request, { params }: { params: Promise<{ file: string }> }) {
   const { file } = await params;
   if (file === 'pages.xml') return pages();
   if (file === 'motos.xml') return motos();
+  if (file === 'marcas.xml') return marcas();
   const m = file.match(/^(\d{1,3})\.xml$/);
   if (!m) return new Response('No encontrado', { status: 404 });
   return products(Number(m[1]));

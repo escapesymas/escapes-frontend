@@ -12,6 +12,7 @@ import {
   MotoModelSummary,
   POPULAR_HOME_MOTOS,
 } from '../../lib/motoSeo';
+import { slugifyManufacturerBrand, isExcludedSupplierBrand } from '../../lib/brandSeo';
 
 interface MotosHubClientProps {
   hub: MotosHubData | null;
@@ -255,20 +256,27 @@ export default function MotosHubClient({ hub, faqs }: MotosHubClientProps) {
         {/* Marcas fabricantes de escapes */}
         {hub && hub.topEscapeBrands.length > 0 && (
           <section aria-labelledby="fabricantes-escapes-heading" className="bg-card/60 border border-card-border rounded-xl p-5">
-            <h2 id="fabricantes-escapes-heading" className="font-mono font-bold text-xs uppercase tracking-wider text-text-muted mb-3">
-              Fabricantes de escapes y colectores en catálogo
-            </h2>
+            <div className="flex items-baseline justify-between gap-3 mb-3">
+              <h2 id="fabricantes-escapes-heading" className="font-mono font-bold text-xs uppercase tracking-wider text-text-muted">
+                Fabricantes de escapes y colectores en catálogo
+              </h2>
+              <Link href="/marcas" className="text-xs font-mono font-bold text-accent-text hover:underline shrink-0">
+                Ver todas las marcas →
+              </Link>
+            </div>
             <div className="flex flex-wrap gap-2">
-              {hub.topEscapeBrands.map((eb) => (
-                <Link
-                  key={eb.brand}
-                  href={`/universales/escapes?brand=${encodeURIComponent(eb.brand)}`}
-                  className="px-3 py-1.5 rounded-lg bg-card border border-card-border hover:border-accent text-xs font-mono text-foreground transition-colors inline-flex items-center gap-1.5"
-                >
-                  <span className="font-bold">{eb.brand}</span>
-                  <span className="text-[10px] text-text-muted">({eb.count})</span>
-                </Link>
-              ))}
+              {hub.topEscapeBrands
+                .filter((eb) => !isExcludedSupplierBrand(eb.brand))
+                .map((eb) => (
+                  <Link
+                    key={eb.brand}
+                    href={`/marcas/${slugifyManufacturerBrand(eb.brand)}`}
+                    className="px-3 py-1.5 rounded-lg bg-card border border-card-border hover:border-accent text-xs font-mono text-foreground transition-colors inline-flex items-center gap-1.5"
+                  >
+                    <span className="font-bold">{eb.brand}</span>
+                    <span className="text-[10px] text-text-muted">({eb.count})</span>
+                  </Link>
+                ))}
             </div>
           </section>
         )}

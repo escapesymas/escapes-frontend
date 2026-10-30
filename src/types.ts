@@ -68,6 +68,7 @@ export interface Product {
   parentCategorySlug?: string;
   brand: string;
   barcode: string;
+  mpn?: string;
   supplierCode: string;
   supplier_code?: string;
   oldPartNumber: string;   

@@ -17,8 +17,15 @@ import TyreFinder, { TYRE_KEYS, tyreSizeComplete } from '../../../components/cat
 import {
   CatalogUrlState, SORT_OPTIONS, CatalogSort, parseCatalogUrl, toApiParams, attrsToParam, hasActiveFilters, sizedKindFor,
 } from '../../../lib/catalogParams';
+import { POPULAR_FOOTER_BRANDS } from '../../../lib/motoSeo';
 
 type InitialProducts = { products: Product[]; total: number; totalPages: number } | null;
+
+interface BrandLinkItem {
+  name: string;
+  href: string;
+  count?: number;
+}
 
 interface Props {
   segments: string[];
@@ -30,6 +37,8 @@ interface Props {
   initialSearchTotalPages: number;
   initialSearchParamsStr: string;
   initialSearchMeta?: { fuzzy: boolean; corrected: string | null; refs?: number };
+  featuredBrandLinks?: BrandLinkItem[];
+  featuredTyreProducts?: Product[];
 }
 
 const isPromoCat = (c: { id: number; slug: string; name: string }) =>
@@ -38,6 +47,22 @@ const isPromoCat = (c: { id: number; slug: string; name: string }) =>
 const chip = 'shrink-0 px-3 py-1.5 rounded-full text-xs border transition-colors whitespace-nowrap';
 const chipOn = 'bg-accent text-slate-950 border-accent font-semibold';
 const chipOff = 'bg-card text-foreground border-card-border hover:border-accent';
+
+/** Ventana compacta de páginas: siempre incluye la 1, la última y las vecinas de la actual. */
+function getPaginationWindow(current: number, totalPages: number): (number | 'ellipsis-left' | 'ellipsis-right')[] {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+  const items: (number | 'ellipsis-left' | 'ellipsis-right')[] = [1];
+  const start = Math.max(2, current - 1);
+  const end = Math.min(totalPages - 1, current + 1);
+
+  if (start > 2) items.push('ellipsis-left');
+  for (let p = start; p <= end; p++) items.push(p);
+  if (end < totalPages - 1) items.push('ellipsis-right');
+  items.push(totalPages);
+  return items;
+}
 
 function CatalogContent({
   segments,
@@ -49,6 +74,8 @@ function CatalogContent({
   initialSearchTotalPages,
   initialSearchParamsStr,
   initialSearchMeta,
+  featuredBrandLinks = [],
+  featuredTyreProducts = [],
 }: Props) {
   const { addToCart } = useCart();
   const [selectedBike, setSelectedBike] = useState('');
@@ -58,7 +85,7 @@ function CatalogContent({
   const [totalPages, setTotalPages] = useState(initialSearchTotalPages);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [loadedPage, setLoadedPage] = useState(1);
+  const [loadedPage, setLoadedPage] = useState(() => parseCatalogUrl(initialSearchParamsStr).page);
   const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(initialFilterOptions);
   const [isFuzzy, setIsFuzzy] = useState(initialSearchMeta?.fuzzy || false);
   const [correctedQuery, setCorrectedQuery] = useState<string | null>(initialSearchMeta?.corrected || null);
@@ -83,6 +110,16 @@ function CatalogContent({
   const subcategories = parentCategory ? categories.filter((c) => c.parentId === parentCategory.id && !isPromoCat(c)) : [];
   const mainCategories = initialMainCategories.filter((c) => !isPromoCat(c));
 
+  // Árbol completo L1 → L2 para enlazado interno rastreable bajo el pliegue.
+  const categoryTree = useMemo(
+    () =>
+      mainCategories.map((root) => ({
+        ...root,
+        children: categories.filter((c) => c.parentId === root.id && !isPromoCat(c)),
+      })),
+    [mainCategories, categories],
+  );
+
   const urlState = useMemo(() => parseCatalogUrl(searchParamsStr), [searchParamsStr]);
   // Neumáticos, cámaras y mousses se buscan por medida (TyreFinder).
   const sizedKind = parentCategory && !isSearch ? sizedKindFor(parentCategory.slug, subCategory?.slug || null) : null;
@@ -93,7 +130,7 @@ function CatalogContent({
     sizedKind,
   }), [subCategory, parentCategory, parentSlug, isSearch, searchQuery, sizedKind]);
 
-  // Buscador por medida: los productos aparecen al completarla (o al buscar texto).
+  // Buscador por medida: los productos filtrados aparecen al completarla (o al buscar texto).
   const isTyreMode = !!sizedKind;
   const showProducts = !isTyreMode || tyreSizeComplete(urlState.attrs) || !!urlState.q;
   // Enlaces a las otras secciones de Neumáticos que no son del tipo actual.
@@ -161,6 +198,14 @@ function CatalogContent({
 
   const basePath = segments.length ? `/universales/${segments.join('/')}` : '/universales';
 
+  const buildPageHref = (targetPage: number): string => {
+    const p = new URLSearchParams(searchParamsStr);
+    if (targetPage <= 1) p.delete('page');
+    else p.set('page', String(targetPage));
+    const qs = p.toString();
+    return qs ? `${basePath}?${qs}` : basePath;
+  };
+
   const pushUrl = (params: URLSearchParams, scroll = true) => {
     const qs = params.toString();
     setSearchParamsStr(qs);
@@ -195,6 +240,13 @@ function CatalogContent({
     pushUrl(p);
   };
 
+  const onPageLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, targetPage: number) => {
+    if (!e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && e.button === 0) {
+      e.preventDefault();
+      setPage(targetPage);
+    }
+  };
+
   const clearFilters = () => applyFilters({ brands: [], minPrice: null, maxPrice: null, inStock: false, attrs: {} });
 
   // Móvil: "Ver más" añade la página siguiente sin perder lo ya visto.
@@ -220,7 +272,7 @@ function CatalogContent({
 
   const title = isSearch
     ? `“${searchQuery}”`
-    : subCategory?.name || parentCategory?.name || 'Catálogo';
+    : subCategory?.name || parentCategory?.name || 'Catálogo de recambios y accesorios';
 
   const removableChips: { key: string; label: string; remove: () => void }[] = [
     ...urlState.brands.map((b) => ({ key: `b:${b}`, label: b, remove: () => applyFilters({ brands: urlState.brands.filter((x) => x !== b) }) })),
@@ -236,6 +288,11 @@ function CatalogContent({
     <CatalogFilters key={searchParamsStr} options={filterOptions} state={urlState} onChange={applyFilters} onClear={clearFilters} />
   );
 
+  const pageItems = useMemo(
+    () => getPaginationWindow(urlState.page, Math.max(1, totalPages)),
+    [urlState.page, totalPages],
+  );
+
   return (
     <div className="bg-background text-foreground flex flex-col font-sans min-h-screen">
       <Header
@@ -245,26 +302,43 @@ function CatalogContent({
         onTabChange={(tab) => { window.location.href = `/?tab=${tab}`; }}
       />
 
-      <main className="flex-1 pb-28 md:pb-10">
+      <main className="flex-1 pb-10">
         <div className="max-w-[1400px] mx-auto px-4 pt-4 md:pt-6 flex flex-col gap-4">
           <SearchBar onSearch={handleSearch} isLoading={isLoading} initialValue={searchQuery || urlState.q} placeholder="¿Qué buscas? Ej.: casco, pastillas Brembo…" />
 
           {/* Migas + título */}
           <div className="flex flex-col gap-1">
-            {(parentCategory || isSearch) && (
-              <nav aria-label="Ruta" className="flex items-center gap-1.5 text-[11px] text-text-muted">
+            <nav aria-label="Ruta" className="flex items-center gap-1.5 text-[11px] text-text-muted">
+              <Link href="/" className="hover:text-foreground">Inicio</Link>
+              <span aria-hidden="true">›</span>
+              {(parentCategory || isSearch) ? (
                 <Link href="/universales" className="hover:text-foreground">Catálogo</Link>
-                {subCategory && parentCategory && (
-                  <>
-                    <span aria-hidden="true">›</span>
+              ) : (
+                <span className="text-foreground font-medium">Catálogo</span>
+              )}
+              {parentCategory && (
+                <>
+                  <span aria-hidden="true">›</span>
+                  {subCategory ? (
                     <Link href={`/universales/${parentCategory.slug}`} className="hover:text-foreground">{parentCategory.name}</Link>
-                  </>
-                )}
-              </nav>
-            )}
+                  ) : (
+                    <span className="text-foreground font-medium">{parentCategory.name}</span>
+                  )}
+                </>
+              )}
+              {subCategory && (
+                <>
+                  <span aria-hidden="true">›</span>
+                  <span className="text-foreground font-medium">{subCategory.name}</span>
+                </>
+              )}
+            </nav>
             <div className="flex items-baseline justify-between gap-3">
               <h1 className="text-xl md:text-2xl font-semibold leading-tight">
                 {isSearch ? <>Resultados para <span className="text-accent-text">{title}</span></> : title}
+                {!isSearch && urlState.page > 1 && (
+                  <span className="text-sm font-normal text-text-muted ml-2">· Página {urlState.page}</span>
+                )}
               </h1>
               {/* Cada tarjeta es un modelo; sus tallas y colores son referencias. */}
               {showProducts && <span className="text-xs text-text-muted shrink-0 text-right leading-tight">
@@ -321,6 +395,29 @@ function CatalogContent({
                   <>{' · '}<Link href="/universales/buscar/fondo%20llanta" className="underline hover:text-foreground">Fondos de llanta</Link></>
                 )}
               </p>
+
+              {/* Muestra SSR rastreable de modelos en stock antes de elegir medida */}
+              {!showProducts && featuredTyreProducts.length > 0 && (
+                <section aria-labelledby="tyre-featured-heading" className="mt-4">
+                  <div className="flex items-baseline justify-between gap-2 mb-3">
+                    <h2 id="tyre-featured-heading" className="text-sm font-mono font-bold uppercase tracking-wider text-foreground">
+                      Modelos destacados en stock
+                    </h2>
+                    <span className="text-xs text-text-muted">Selecciona tu medida arriba para filtrar exacto</span>
+                  </div>
+                  <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                    {featuredTyreProducts.map((product, idx) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        onAddToCart={(p) => addToCart(p)}
+                        onNotifyMe={setNotifyProduct}
+                        priority={idx < 2}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
             </>
           )}
 
@@ -420,12 +517,12 @@ function CatalogContent({
                         product={product}
                         onAddToCart={(p) => addToCart(p)}
                         onNotifyMe={setNotifyProduct}
-                        priority={idx < 4}
+                        priority={idx < 2}
                       />
                     ))}
                   </div>
 
-                  {/* Móvil: cargar más */}
+                  {/* Móvil: cargar más rápido sin perder tarjetas previas */}
                   {loadedPage < totalPages && (
                     <button
                       type="button"
@@ -438,37 +535,191 @@ function CatalogContent({
                     </button>
                   )}
 
-                  {/* Escritorio: paginación */}
+                  {/* Paginación HTML rastreable (<a href>) visible en móvil y escritorio para Googlebot Mobile-First */}
                   {totalPages > 1 && (
-                    <div className="hidden md:flex items-center justify-center gap-3 mt-8">
-                      <button
-                        type="button"
-                        disabled={urlState.page <= 1}
-                        onClick={() => setPage(urlState.page - 1)}
-                        className="p-2 border border-card-border rounded bg-card disabled:opacity-40 cursor-pointer"
-                        aria-label="Página anterior"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </button>
-                      <span className="text-xs text-text-muted">Página {urlState.page} de {totalPages.toLocaleString('es-ES')}</span>
-                      <button
-                        type="button"
-                        disabled={urlState.page >= totalPages}
-                        onClick={() => setPage(urlState.page + 1)}
-                        className="p-2 border border-card-border rounded bg-card disabled:opacity-40 cursor-pointer"
-                        aria-label="Página siguiente"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </div>
+                    <nav aria-label="Paginación del catálogo" className="flex flex-wrap items-center justify-center gap-1.5 mt-6 md:mt-8">
+                      {urlState.page > 1 ? (
+                        <Link
+                          href={buildPageHref(urlState.page - 1)}
+                          rel="prev"
+                          onClick={(e) => onPageLinkClick(e, urlState.page - 1)}
+                          className="p-2 border border-card-border rounded bg-card hover:border-accent transition-colors"
+                          aria-label="Página anterior"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </Link>
+                      ) : (
+                        <span className="p-2 border border-card-border rounded bg-card opacity-40" aria-disabled="true">
+                          <ChevronLeft className="w-4 h-4" />
+                        </span>
+                      )}
+
+                      {pageItems.map((item) => {
+                        if (item === 'ellipsis-left' || item === 'ellipsis-right') {
+                          return (
+                            <span key={item} className="px-2 py-1 text-xs text-text-muted select-none" aria-hidden="true">
+                              …
+                            </span>
+                          );
+                        }
+                        const isCurrent = item === urlState.page;
+                        return (
+                          <Link
+                            key={item}
+                            href={buildPageHref(item)}
+                            aria-current={isCurrent ? 'page' : undefined}
+                            onClick={(e) => onPageLinkClick(e, item)}
+                            className={`min-w-8 h-8 px-2.5 rounded border text-xs font-mono flex items-center justify-center transition-colors ${
+                              isCurrent
+                                ? 'bg-accent text-slate-950 border-accent font-bold'
+                                : 'bg-card text-foreground border-card-border hover:border-accent'
+                            }`}
+                          >
+                            {item.toLocaleString('es-ES')}
+                          </Link>
+                        );
+                      })}
+
+                      {urlState.page < totalPages ? (
+                        <Link
+                          href={buildPageHref(urlState.page + 1)}
+                          rel="next"
+                          onClick={(e) => onPageLinkClick(e, urlState.page + 1)}
+                          className="p-2 border border-card-border rounded bg-card hover:border-accent transition-colors"
+                          aria-label="Página siguiente"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </Link>
+                      ) : (
+                        <span className="p-2 border border-card-border rounded bg-card opacity-40" aria-disabled="true">
+                          <ChevronRight className="w-4 h-4" />
+                        </span>
+                      )}
+                    </nav>
                   )}
                 </>
               )}
             </section>
           </div>
           </>}
+
+          {/* Directorio SEO de enlazado interno bajo el pliegue (diferido con content-visibility: auto) */}
+          {!isSearch && (
+            <section
+              aria-labelledby="catalog-seo-directory"
+              className="mt-10 pt-8 border-t border-card-border flex flex-col gap-6"
+              style={{
+                contentVisibility: 'auto',
+                containIntrinsicSize: 'auto none auto 340px',
+              }}
+            >
+              <div className="flex flex-col gap-1">
+                <h2 id="catalog-seo-directory" className="text-sm font-mono font-bold uppercase tracking-wider text-foreground">
+                  {parentCategory
+                    ? `Explora más secciones de ${parentCategory.name} y del catálogo`
+                    : 'Índice completo de categorías y subcategorías para moto'}
+                </h2>
+                <p className="text-xs text-text-muted max-w-3xl">
+                  Navega directamente por nuestras familias de recambios, mantenimiento, neumáticos, escapes homologados y equipamiento para motorista, o filtra piezas específicas para tu modelo en el{' '}
+                  <Link href="/escapes" className="text-accent-text hover:underline font-medium">
+                    buscador de escapes y recambios por moto
+                  </Link>
+                  .
+                </p>
+              </div>
+
+              {!parentCategory ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {categoryTree.map((root) => (
+                    <div key={root.id} className="p-3.5 rounded-lg bg-card border border-card-border flex flex-col gap-2">
+                      <Link
+                        href={`/universales/${root.slug}`}
+                        className="text-xs font-mono font-bold uppercase tracking-wide text-foreground hover:text-accent-text transition-colors"
+                      >
+                        {root.name}
+                      </Link>
+                      {root.children.length > 0 && (
+                        <ul className="flex flex-wrap gap-x-2.5 gap-y-1">
+                          {root.children.map((sub) => (
+                            <li key={sub.id}>
+                              <Link
+                                href={`/universales/${root.slug}/${sub.slug}`}
+                                className="text-[11px] text-text-muted hover:text-foreground hover:underline transition-colors"
+                              >
+                                {sub.name}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {mainCategories.map((root) => (
+                    <Link
+                      key={root.id}
+                      href={`/universales/${root.slug}`}
+                      className={`${chip} ${root.id === parentCategory.id ? chipOn : chipOff}`}
+                    >
+                      {root.name}
+                    </Link>
+                  ))}
+                </div>
+              )}
+
+              {featuredBrandLinks.length > 0 && (
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-foreground">
+                      Fabricantes y marcas principales
+                    </h3>
+                    <Link href="/marcas" className="text-xs font-mono font-bold text-accent-text hover:underline">
+                      Ver todas las marcas →
+                    </Link>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {featuredBrandLinks.map((b) => (
+                      <Link
+                        key={b.href}
+                        href={b.href}
+                        className="px-2.5 py-1 rounded border border-card-border bg-card text-xs text-foreground hover:border-accent transition-colors"
+                      >
+                        {b.name}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-2">
+                <div className="flex items-baseline justify-between gap-2">
+                  <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-foreground">
+                    Escapes y recambios por marca de moto
+                  </h3>
+                  <Link href="/escapes" className="text-xs font-mono font-bold text-accent-text hover:underline">
+                    Todos los modelos de moto →
+                  </Link>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {POPULAR_FOOTER_BRANDS.map((m) => (
+                    <Link
+                      key={m.href}
+                      href={m.href}
+                      className="px-2.5 py-1 rounded border border-card-border bg-card text-xs text-text-muted hover:text-foreground hover:border-accent transition-colors"
+                    >
+                      Escapes {m.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
         </div>
       </main>
+
+      <div className="pb-20 md:pb-0" />
 
       {/* Filtros en móvil: panel a pantalla completa con resultado en vivo */}
       {filtersOpen && (
@@ -516,4 +767,3 @@ export default function CatalogClient(props: Props) {
     </Suspense>
   );
 }
-
