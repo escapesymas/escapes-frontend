@@ -101,11 +101,19 @@ test.describe('Landing Pages SEO de Escapes por Marca y Modelo de Moto', () => {
     const storedBike = await page.evaluate(() => localStorage.getItem('tg_selected_bike'));
     expect(storedBike).toBe('YAMAHA MT-07');
 
-    // Añadir un producto compatible en stock al carrito
+    // Añadir un producto compatible en stock al carrito y vaciarlo para no ensuciar la BD
     const addBtn = page.locator('button[aria-label="Añadir al carrito"]').first();
     if ((await addBtn.count()) > 0) {
       await addBtn.click();
       await expect(page.locator('header button[aria-label="Abrir carrito"] span')).toContainText('1');
+
+      // Limpia el carrito para no dejar carritos huérfanos de prueba en producción
+      await page.evaluate(() => {
+        localStorage.removeItem('escapesymas_cart');
+        window.dispatchEvent(new Event('escapes:user-changed'));
+      });
+      await expect(page.locator('header button[aria-label="Abrir carrito"] span')).toHaveCount(0);
+      await page.waitForTimeout(400);
     }
 
     // Honda CB 650 R (ediciones cosméticas NEO SPORTS CAFE unificadas al modelo base)
