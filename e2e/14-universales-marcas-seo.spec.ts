@@ -195,7 +195,10 @@ test.describe('Indexación SEO de /universales, /marcas y Fichas de Comerciante 
 
     // Localiza la sección de compatibilidad y verifica enlaces a marca y modelo
     const compatSection = page.locator('#compatibilidad');
-    await expect(compatSection).toBeVisible();
+    await expect(compatSection).toBeAttached();
+
+    // Despliega el acordeón <details id="compatibilidad">
+    await compatSection.locator('summary').click();
 
     const brandLink = compatSection.locator('a[href="/escapes/yamaha"]').first();
     await expect(brandLink).toBeVisible();
