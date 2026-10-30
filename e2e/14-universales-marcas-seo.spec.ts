@@ -186,4 +186,31 @@ test.describe('Indexación SEO de /universales, /marcas y Fichas de Comerciante 
     expect(marcasXml).toContain('/marcas/ixil</loc>');
     expect(marcasXml.toLowerCase()).not.toContain('/marcas/bihr');
   });
+
+  test('Ficha de producto con compatibilidades enlaza bidireccionalmente a la landing de moto (/escapes/marca/modelo)', async ({
+    page,
+  }) => {
+    const res = await page.goto('/producto/1155025');
+    expect(res?.status()).toBe(200);
+
+    // Localiza la sección de compatibilidad y verifica enlaces a marca y modelo
+    const compatSection = page.locator('#compatibilidad');
+    await expect(compatSection).toBeVisible();
+
+    const brandLink = compatSection.locator('a[href="/escapes/yamaha"]').first();
+    await expect(brandLink).toBeVisible();
+
+    const modelLink = compatSection.locator('a[href="/escapes/yamaha/mt-07"]').first();
+    await expect(modelLink).toBeVisible();
+    await expect(modelLink).toContainText(/MT-07/i);
+  });
+
+  test('Protocolo IndexNow: archivo de verificación accesible en /e9a4f682d3c1482098d5781a5a04e4c2.txt', async ({
+    request,
+  }) => {
+    const res = await request.get('/e9a4f682d3c1482098d5781a5a04e4c2.txt');
+    expect(res.status()).toBe(200);
+    const text = (await res.text()).trim();
+    expect(text).toBe('e9a4f682d3c1482098d5781a5a04e4c2');
+  });
 });

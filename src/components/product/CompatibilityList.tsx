@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { CompatRow } from './compat';
-import { resolveKnownBrandSlug } from '../../lib/motoSeo';
+import { resolveKnownBrandSlug, slugifyMoto } from '../../lib/motoSeo';
 
 interface Props {
   rows: CompatRow[];
@@ -65,6 +65,7 @@ export default function CompatibilityList({ rows }: Props) {
         <ul className="divide-y divide-card-border border border-card-border rounded">
           {groups.slice(0, visible).map((g) => {
             const brandSlug = resolveKnownBrandSlug(g.brand);
+            const modelSlug = brandSlug && g.model ? slugifyMoto(g.model) : null;
             return (
               <li key={`${g.brand}|${g.model}|${g.cc}`} className="px-3 py-2 flex items-baseline justify-between gap-3">
                 <span className="text-sm text-foreground">
@@ -78,7 +79,16 @@ export default function CompatibilityList({ rows }: Props) {
                   ) : (
                     <span className="font-semibold">{g.brand}</span>
                   )}{' '}
-                  {g.model}
+                  {brandSlug && modelSlug ? (
+                    <Link
+                      href={`/escapes/${brandSlug}/${modelSlug}`}
+                      className="text-foreground hover:text-accent-text hover:underline transition-colors"
+                    >
+                      {g.model}
+                    </Link>
+                  ) : (
+                    <span>{g.model}</span>
+                  )}
                   {g.cc && <span className="text-text-muted text-xs"> · {g.cc} cc</span>}
                 </span>
                 <span className="text-xs font-mono text-text-muted text-right shrink-0">{yearRange(g.years)}</span>

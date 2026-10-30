@@ -346,6 +346,9 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
 
               {compatRows.length > 0 && (
                 <Section id="compatibilidad" title={`Compatibilidad (${compatRows.length})`}>
+                  <p className="text-xs text-text-muted mb-3 leading-relaxed">
+                    Comprueba aquí los modelos verificados en los que monta este producto. Puedes pulsar en cualquier marca o modelo para ver el catálogo completo de escapes y recambios específicos.
+                  </p>
                   <CompatibilityList rows={compatRows} />
                 </Section>
               )}
