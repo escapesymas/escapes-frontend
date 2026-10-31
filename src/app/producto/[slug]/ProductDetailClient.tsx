@@ -176,37 +176,41 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: jsonLd(getProductSchema({
-            name: product.name,
-            description: description || product.name,
-            image: product.image,
-            images: product.images,
-            sku: product.sku,
-            mpn: product.mpn || product.supplierCode || product.supplier_code,
-            barcode: product.barcode,
-            brand: publicBrand,
-            price,
-            url: `https://escapesymas.com/producto/${canonicalSku}`,
-            inStock,
-            averageRating: product.averageRating,
-            ratingCount: product.ratingCount,
-          })),
-        }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: jsonLd(getBreadcrumbSchema([
-            { name: 'Inicio', url: '/' },
-            ...crumbs.map((c) => ({ name: c.name, url: c.href })),
-            ...(publicBrand && brandSlug ? [{ name: publicBrand, url: `/marcas/${brandSlug}` }] : []),
-            { name: product.name, url: `/producto/${canonicalSku}` },
-          ])),
-        }}
-      />
+      {!initialProduct && (
+        <>
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: jsonLd(getProductSchema({
+                name: product.name,
+                description: description || product.name,
+                image: product.image,
+                images: product.images,
+                sku: product.sku,
+                mpn: product.mpn || product.supplierCode || product.supplier_code,
+                barcode: product.barcode,
+                brand: publicBrand,
+                price,
+                url: `https://escapesymas.com/producto/${canonicalSku}`,
+                inStock,
+                averageRating: product.averageRating,
+                ratingCount: product.ratingCount,
+              })),
+            }}
+          />
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: jsonLd(getBreadcrumbSchema([
+                { name: 'Inicio', url: '/' },
+                ...crumbs.map((c) => ({ name: c.name, url: c.href })),
+                ...(publicBrand && brandSlug ? [{ name: publicBrand, url: `/marcas/${brandSlug}` }] : []),
+                { name: product.name, url: `/producto/${canonicalSku}` },
+              ])),
+            }}
+          />
+        </>
+      )}
       <Header
         selectedBike={selectedBike}
         onOpenBikeSelector={() => router.push('/?openSelector=true')}

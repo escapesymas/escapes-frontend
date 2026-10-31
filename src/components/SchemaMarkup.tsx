@@ -39,6 +39,10 @@ type ProductSchema = {
   sku: string;
   mpn?: string;
   gtin?: string;
+  gtin8?: string;
+  gtin12?: string;
+  gtin13?: string;
+  gtin14?: string;
   brand: {
     '@type': 'Brand';
     name: string;
@@ -47,6 +51,7 @@ type ProductSchema = {
     '@type': 'Offer';
     price: number;
     priceCurrency: string;
+    validFrom: string;
     priceValidUntil: string;
     itemCondition: string;
     availability: string;
@@ -85,6 +90,7 @@ type ProductSchema = {
       merchantReturnDays: number;
       returnMethod: 'https://schema.org/ReturnByMail';
       returnFees: 'https://schema.org/ReturnFeesCustomerResponsibility';
+      merchantReturnLink?: string;
     };
   };
   aggregateRating?: {
@@ -204,11 +210,18 @@ export function getProductSchema(product: {
     .slice(0, 5000)
     .trim();
 
+  // Fallback rico para evitar «Falta el campo "description"» en Search Console cuando la BD no tiene descripción o es muy escueta.
+  const fallbackDesc = `${safeBrand !== 'Escapes y Más' ? `${safeBrand} - ` : ''}${product.name}. Recambio y accesorio oficial de moto disponible en Escapes y Más. Garantía de 3 años, envío rápido a toda España y asesoramiento técnico especializado.`;
+  const description = cleanDesc && cleanDesc.length >= 30 ? cleanDesc : fallbackDesc;
+
   const roundedPrice = Number((Number(product.price) || 0).toFixed(2));
   const shippingFee = roundedPrice >= FREE_SHIPPING_MIN ? 0 : SHIPPING_COST;
   const gtin = validGtin(product.barcode);
-  const mpn = String(product.mpn || '').trim().slice(0, 70);
-  const priceValidUntil = `${new Date().getUTCFullYear() + 1}-12-31`;
+  const rawMpn = product.mpn || product.sku || '';
+  const mpn = String(rawMpn).trim().slice(0, 70);
+  const thisYear = new Date().getUTCFullYear();
+  const validFrom = `${thisYear}-01-01`;
+  const priceValidUntil = `${thisYear + 1}-12-31`;
 
   const ratingCount = Number(product.ratingCount) || 0;
   const averageRating = Number(product.averageRating) || 0;
@@ -217,11 +230,19 @@ export function getProductSchema(product: {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.name,
-    description: cleanDesc || `${product.name} en Escapes y Más`,
+    description,
     image: collectedImages,
     sku: product.sku || '',
     ...(mpn ? { mpn } : {}),
-    ...(gtin ? { gtin } : {}),
+    ...(gtin
+      ? {
+          gtin,
+          ...(gtin.length === 13 ? { gtin13: gtin } : {}),
+          ...(gtin.length === 8 ? { gtin8: gtin } : {}),
+          ...(gtin.length === 12 ? { gtin12: gtin } : {}),
+          ...(gtin.length === 14 ? { gtin14: gtin } : {}),
+        }
+      : {}),
     brand: {
       '@type': 'Brand',
       name: safeBrand,
@@ -230,6 +251,7 @@ export function getProductSchema(product: {
       '@type': 'Offer',
       price: roundedPrice,
       priceCurrency: 'EUR',
+      validFrom,
       priceValidUntil,
       itemCondition: 'https://schema.org/NewCondition',
       availability: product.inStock
@@ -272,6 +294,7 @@ export function getProductSchema(product: {
         merchantReturnDays: 14,
         returnMethod: 'https://schema.org/ReturnByMail',
         returnFees: 'https://schema.org/ReturnFeesCustomerResponsibility',
+        merchantReturnLink: `${BASE_URL}/devoluciones`,
       },
     },
     ...(ratingCount > 0 && averageRating > 0

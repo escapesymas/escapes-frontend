@@ -2,7 +2,9 @@ import type { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
 import ProductDetailClient from './ProductDetailClient';
 import { DELIVERY_ES } from '../../../lib/constants';
-import { isExcludedSupplierBrand } from '../../../lib/brandSeo';
+import { isExcludedSupplierBrand, slugifyManufacturerBrand } from '../../../lib/brandSeo';
+import { getProductSchema, getBreadcrumbSchema, jsonLd } from '../../../components/SchemaMarkup';
+import { effectivePrice } from '../../../lib/pricing';
 
 const API_BASE = process.env.API_URL || 'https://api.escapesymas.com';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://escapesymas.com';
@@ -118,5 +120,64 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   if (product?.redirectToPath) permanentRedirect(product.redirectToPath);
   // Producto inexistente: 404 de verdad (antes respondía 200 con "no encontrado").
   if (product?.missing) notFound();
-  return <ProductDetailClient slug={slug} initialProduct={product} />;
+
+  if (!product || !product.id) {
+    return <ProductDetailClient slug={slug} initialProduct={null} />;
+  }
+
+  const inStock = Boolean(product.inStock && (product.stock === undefined || product.stock > 0));
+  const price = effectivePrice(product);
+  const publicBrand = product.brand && !isExcludedSupplierBrand(product.brand) ? product.brand : '';
+  const brandSlug = publicBrand ? slugifyManufacturerBrand(publicBrand) : '';
+  const canonicalSku = encodeURIComponent(product.sku || slug);
+
+  // Catálogo › Raíz › Subcategoría
+  const path = (product.categoryPath || []).filter(
+    (c: { name: string; slug: string }, i: number, arr: { name: string; slug: string }[]) =>
+      i === 0 || c.name.toLowerCase() !== arr[i - 1].name.toLowerCase()
+  );
+  const crumbs = [
+    { name: 'Catálogo', href: '/universales' },
+    ...path.map((c: { name: string; slug: string }, i: number) => ({
+      name: c.name,
+      href: i === 0 ? `/universales/${c.slug}` : `/universales/${path[0].slug}/${path[Math.min(i, 1)].slug}`,
+    })),
+  ];
+
+  const productSchema = getProductSchema({
+    name: product.name,
+    description: product.description || product.name,
+    image: product.image,
+    images: product.images,
+    sku: product.sku,
+    mpn: product.mpn || product.supplierCode || product.supplier_code,
+    barcode: product.barcode,
+    brand: publicBrand,
+    price,
+    url: `${SITE_URL}/producto/${canonicalSku}`,
+    inStock,
+    averageRating: product.averageRating,
+    ratingCount: product.ratingCount,
+  });
+
+  const breadcrumbSchema = getBreadcrumbSchema([
+    { name: 'Inicio', url: '/' },
+    ...crumbs.map((c: { name: string; href: string }) => ({ name: c.name, url: c.href })),
+    ...(publicBrand && brandSlug ? [{ name: publicBrand, url: `/marcas/${brandSlug}` }] : []),
+    { name: product.name, url: `/producto/${canonicalSku}` },
+  ]);
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLd(productSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbSchema) }}
+      />
+      <ProductDetailClient slug={slug} initialProduct={product} />
+    </>
+  );
 }
