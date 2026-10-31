@@ -241,6 +241,9 @@ export default async function CatalogPage({
           url: canonicalUrlPath,
           items: listProducts.slice(0, 24).map((p) => ({
             name: p.name || p.title,
+            description: p.description || p.shortDescription || `${p.name || p.title} en Escapes y Más`,
+            brand: p.brand || undefined,
+            sku: p.sku || undefined,
             url: `/producto/${encodeURIComponent(p.slug || p.sku)}`,
             image: p.image || p.images?.[0]?.src,
             price: effectivePrice(p),

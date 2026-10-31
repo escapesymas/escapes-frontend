@@ -340,6 +340,9 @@ export function getItemListSchema(params: {
     image?: string;
     price?: number;
     inStock?: boolean;
+    description?: string;
+    brand?: string;
+    sku?: string;
   }[];
 }) {
   return {
@@ -354,14 +357,23 @@ export function getItemListSchema(params: {
         const imgUrl = item.image
           ? (/^https?:\/\//.test(item.image) ? item.image : `${BASE_URL}${item.image}`)
           : `${BASE_URL}/og-image.png`;
+        const rawDesc = item.description ? plainText(item.description) : '';
+        const description = rawDesc || `${item.name} disponible en Escapes y Más.`;
+        const safeBrand = item.brand && !isExcludedSupplierBrand(item.brand)
+          ? item.brand.trim()
+          : undefined;
+
         return {
           '@type': 'ListItem',
           position: index + 1,
           item: {
             '@type': 'Product',
             name: item.name,
+            description,
             url: fullUrl,
             image: imgUrl,
+            ...(safeBrand ? { brand: { '@type': 'Brand', name: safeBrand } } : {}),
+            ...(item.sku ? { sku: item.sku } : {}),
             offers: {
               '@type': 'Offer',
               price: Number(item.price.toFixed(2)),

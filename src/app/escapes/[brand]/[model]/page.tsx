@@ -149,6 +149,9 @@ export default async function MotoModelPage({
       : p.inStock !== false && (p.stock ?? 0) > 0;
     return {
       name: p.name,
+      description: p.description || p.shortDescription || `${p.name} compatible con ${fullName}`,
+      brand: p.brand || undefined,
+      sku: p.sku || undefined,
       url: `/producto/${encodeURIComponent(slug)}`,
       image: getImageUrl(p.image) || undefined,
       price,
