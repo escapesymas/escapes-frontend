@@ -366,8 +366,13 @@ export function getItemListSchema(params: {
     description?: string;
     brand?: string;
     sku?: string;
+    barcode?: string;
   }[];
 }) {
+  const thisYear = new Date().getUTCFullYear();
+  const validFrom = `${thisYear}-01-01`;
+  const priceValidUntil = `${thisYear + 1}-12-31`;
+
   return {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
@@ -381,10 +386,17 @@ export function getItemListSchema(params: {
           ? (/^https?:\/\//.test(item.image) ? item.image : `${BASE_URL}${item.image}`)
           : `${BASE_URL}/og-image.png`;
         const rawDesc = item.description ? plainText(item.description) : '';
-        const description = rawDesc || `${item.name} disponible en Escapes y Más.`;
         const safeBrand = item.brand && !isExcludedSupplierBrand(item.brand)
           ? item.brand.trim()
-          : undefined;
+          : 'Escapes y Más';
+        const fallbackDesc = `${safeBrand !== 'Escapes y Más' ? `${safeBrand} - ` : ''}${item.name}. Recambio y accesorio oficial de moto disponible en Escapes y Más. Garantía de 3 años, envío rápido a toda España y soporte técnico especializado.`;
+        const description = rawDesc && rawDesc.length >= 30 ? rawDesc : fallbackDesc;
+
+        const roundedPrice = Number(item.price.toFixed(2));
+        const shippingFee = roundedPrice >= FREE_SHIPPING_MIN ? 0 : SHIPPING_COST;
+        const rawMpn = item.sku || '';
+        const mpn = String(rawMpn).trim().slice(0, 70);
+        const gtin = validGtin(item.barcode);
 
         return {
           '@type': 'ListItem',
@@ -395,16 +407,68 @@ export function getItemListSchema(params: {
             description,
             url: fullUrl,
             image: imgUrl,
-            ...(safeBrand ? { brand: { '@type': 'Brand', name: safeBrand } } : {}),
+            brand: {
+              '@type': 'Brand',
+              name: safeBrand,
+            },
             ...(item.sku ? { sku: item.sku } : {}),
+            ...(mpn ? { mpn } : {}),
+            ...(gtin
+              ? {
+                  gtin,
+                  ...(gtin.length === 13 ? { gtin13: gtin } : {}),
+                  ...(gtin.length === 8 ? { gtin8: gtin } : {}),
+                  ...(gtin.length === 12 ? { gtin12: gtin } : {}),
+                  ...(gtin.length === 14 ? { gtin14: gtin } : {}),
+                }
+              : {}),
             offers: {
               '@type': 'Offer',
-              price: Number(item.price.toFixed(2)),
+              price: roundedPrice,
               priceCurrency: 'EUR',
+              validFrom,
+              priceValidUntil,
+              itemCondition: 'https://schema.org/NewCondition',
               availability: item.inStock !== false
                 ? 'https://schema.org/InStock'
                 : 'https://schema.org/OutOfStock',
               url: fullUrl,
+              shippingDetails: {
+                '@type': 'OfferShippingDetails',
+                shippingRate: {
+                  '@type': 'MonetaryAmount',
+                  value: shippingFee,
+                  currency: 'EUR',
+                },
+                shippingDestination: {
+                  '@type': 'DefinedRegion',
+                  addressCountry: 'ES',
+                },
+                deliveryTime: {
+                  '@type': 'ShippingDeliveryTime',
+                  handlingTime: {
+                    '@type': 'QuantitativeValue',
+                    minValue: 1,
+                    maxValue: 3,
+                    unitCode: 'DAY',
+                  },
+                  transitTime: {
+                    '@type': 'QuantitativeValue',
+                    minValue: 4,
+                    maxValue: 7,
+                    unitCode: 'DAY',
+                  },
+                },
+              },
+              hasMerchantReturnPolicy: {
+                '@type': 'MerchantReturnPolicy',
+                applicableCountry: 'ES',
+                returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+                merchantReturnDays: 14,
+                returnMethod: 'https://schema.org/ReturnByMail',
+                returnFees: 'https://schema.org/ReturnFeesCustomerResponsibility',
+                merchantReturnLink: `${BASE_URL}/devoluciones`,
+              },
             },
           },
         };

@@ -244,6 +244,7 @@ export default async function CatalogPage({
             description: p.description || p.shortDescription || `${p.name || p.title} en Escapes y Más`,
             brand: p.brand || undefined,
             sku: p.sku || undefined,
+            barcode: p.barcode || undefined,
             url: `/producto/${encodeURIComponent(p.slug || p.sku)}`,
             image: p.image || p.images?.[0]?.src,
             price: effectivePrice(p),

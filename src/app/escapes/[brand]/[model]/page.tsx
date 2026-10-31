@@ -152,6 +152,7 @@ export default async function MotoModelPage({
       description: p.description || p.shortDescription || `${p.name} compatible con ${fullName}`,
       brand: p.brand || undefined,
       sku: p.sku || undefined,
+      barcode: p.barcode || undefined,
       url: `/producto/${encodeURIComponent(slug)}`,
       image: getImageUrl(p.image) || undefined,
       price,

@@ -128,6 +128,7 @@ export default async function MarcaDetailPage({
       description: p.description || p.shortDescription || `${p.name || p.title} de la marca ${brand.name}`,
       brand: brand.name || p.brand || undefined,
       sku: p.sku || undefined,
+      barcode: p.barcode || undefined,
       url: `/producto/${encodeURIComponent(p.slug || p.sku)}`,
       image: p.image || p.images?.[0]?.src,
       price: effectivePrice(p),
