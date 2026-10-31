@@ -183,7 +183,7 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
             dangerouslySetInnerHTML={{
               __html: jsonLd(getProductSchema({
                 name: product.name,
-                description: description || product.name,
+                description: product.description,
                 image: product.image,
                 images: product.images,
                 sku: product.sku,

@@ -146,7 +146,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
 
   const productSchema = getProductSchema({
     name: product.name,
-    description: product.description || product.name,
+    description: product.description,
     image: product.image,
     images: product.images,
     sku: product.sku,
