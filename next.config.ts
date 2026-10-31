@@ -58,6 +58,30 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: '/producto',
+        destination: '/universales',
+        permanent: true,
+      },
+      {
+        source: '/community/:path*',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/producto/:slug(.*)/feed',
+        destination: '/producto/:slug',
+        permanent: true,
+      },
+      {
+        source: '/producto/:slug(.*bateria.*)',
+        destination: '/universales/electricidad/baterias',
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     const apiUrl = process.env.API_URL || 'https://api.escapesymas.com';
     return [
