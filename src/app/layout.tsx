@@ -10,6 +10,7 @@ import ChatWidget from "../components/ChatWidget";
 import Footer from "../components/Footer";
 import UmamiScript from "../components/UmamiScript";
 import TikTokPixel from "../components/TikTokPixel";
+import VisitorTracker from "../components/VisitorTracker";
 import { GtmScript, GtmNoScript } from "../lib/analytics";
 
 export const metadata: Metadata = {
@@ -77,6 +78,7 @@ export default function RootLayout({
         <GtmNoScript />
         <UmamiScript />
         <TikTokPixel />
+        <VisitorTracker />
         <SchemaMarkup />
         <ServiceWorkerRegistration />
         <a

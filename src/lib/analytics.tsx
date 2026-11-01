@@ -64,6 +64,9 @@ export const trackEvent = {
         quantity,
       }],
     });
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('eym_add_to_cart', { detail: { product, quantity } }));
+    }
   },
 
   removeFromCart: (product: Product, quantity: number) => {
