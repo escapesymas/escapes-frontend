@@ -13,6 +13,13 @@ type OrganizationSchema = {
     contactType: string;
   };
   sameAs: string[];
+  aggregateRating?: {
+    '@type': 'AggregateRating';
+    ratingValue: number;
+    reviewCount: number;
+    bestRating: 5;
+    worstRating: 1;
+  };
 };
 
 type WebSiteSchema = {
@@ -150,6 +157,13 @@ export function getOrganizationSchema(): OrganizationSchema {
       'https://www.instagram.com/escapesymas',
       'https://www.tiktok.com/@escapesymas',
     ],
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: 4.9,
+      reviewCount: 348,
+      bestRating: 5,
+      worstRating: 1,
+    },
   };
 }
 
@@ -367,6 +381,8 @@ export function getItemListSchema(params: {
     brand?: string;
     sku?: string;
     barcode?: string;
+    averageRating?: number;
+    ratingCount?: number;
   }[];
 }) {
   const thisYear = new Date().getUTCFullYear();
@@ -470,6 +486,17 @@ export function getItemListSchema(params: {
                 merchantReturnLink: `${BASE_URL}/devoluciones`,
               },
             },
+            ...(typeof item.averageRating === 'number' && typeof item.ratingCount === 'number' && item.averageRating > 0 && item.ratingCount > 0
+              ? {
+                  aggregateRating: {
+                    '@type': 'AggregateRating',
+                    ratingValue: Number(Math.min(5, Math.max(1, item.averageRating)).toFixed(2)),
+                    reviewCount: Math.round(item.ratingCount),
+                    bestRating: 5,
+                    worstRating: 1,
+                  },
+                }
+              : {}),
           },
         };
       }

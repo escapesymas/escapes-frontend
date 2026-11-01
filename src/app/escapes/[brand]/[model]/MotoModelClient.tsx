@@ -12,6 +12,7 @@ import {
   Plus,
   Search,
   ShieldCheck,
+  Sparkles,
   Truck,
   Wrench,
 } from 'lucide-react';
@@ -170,7 +171,7 @@ export default function MotoModelClient({ data, faqs }: MotoModelClientProps) {
   const hasTopEscapesSection = primaryEscapes.length > 0 || escapeAccessories.length > 0;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground pb-20 md:pb-8">
+    <div className="min-h-screen flex flex-col bg-background text-foreground pb-28 md:pb-8">
       <Header selectedBike={selectedBike} />
 
       <main className="container mx-auto px-4 md:px-6 py-6 max-w-6xl flex flex-col gap-9">
@@ -231,30 +232,47 @@ export default function MotoModelClient({ data, faqs }: MotoModelClientProps) {
               </div>
             </div>
 
-            {/* Botón Guardar en Mi Garaje */}
+            {/* Botón Guardar en Mi Garaje y Asesoría Técnica */}
             <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-2.5 shrink-0">
-              <button
-                type="button"
-                onClick={handleSaveToGarage}
-                className={`px-4 py-2.5 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm ${
-                  savedInGarage
-                    ? 'bg-emerald-500/15 border border-emerald-500/50 text-emerald-600 dark:text-emerald-400'
-                    : 'bg-accent text-slate-950 hover:bg-accent-hover'
-                }`}
-              >
-                {savedInGarage ? (
-                  <>
-                    <Check className="w-4 h-4 stroke-[2.5]" />
-                    <span>Moto activa en Mi Garaje</span>
-                  </>
-                ) : (
-                  <>
-                    <Bike className="w-4 h-4" />
-                    <span>Guardar en Mi Garaje</span>
-                    <Plus className="w-3.5 h-3.5" />
-                  </>
-                )}
-              </button>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={handleSaveToGarage}
+                  className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm ${
+                    savedInGarage
+                      ? 'bg-emerald-500/15 border border-emerald-500/50 text-emerald-600 dark:text-emerald-400'
+                      : 'bg-accent text-slate-950 hover:bg-accent-hover'
+                  }`}
+                >
+                  {savedInGarage ? (
+                    <>
+                      <Check className="w-4 h-4 stroke-[2.5]" />
+                      <span>En Mi Garaje</span>
+                    </>
+                  ) : (
+                    <>
+                      <Bike className="w-4 h-4" />
+                      <span>Guardar Moto</span>
+                      <Plus className="w-3.5 h-3.5" />
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.dispatchEvent(
+                      new CustomEvent('open-chat-advisor', {
+                        detail: `Hola, busco escape o recambios para mi ${bike.brandName} ${bike.model}. ¿Podéis asesorarme sobre compatibilidad y disponibilidad?`,
+                      })
+                    );
+                  }}
+                  className="px-3.5 py-2.5 rounded-xl bg-card border border-card-border hover:border-accent text-foreground font-mono text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                  title="Preguntar a un asesor técnico"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-accent" />
+                  <span>Asesoría</span>
+                </button>
+              </div>
               <span className="text-[10px] font-mono text-text-muted text-center lg:text-right">
                 Filtra automáticamente compatibilidades en toda la tienda
               </span>
@@ -327,6 +345,46 @@ export default function MotoModelClient({ data, faqs }: MotoModelClientProps) {
           </section>
         )}
 
+        {/* SECCIÓN ALTERNATIVA: Silenciosos Universales y Adaptables para modelos sin silencioso específico directo */}
+        {primaryEscapes.length === 0 && data.totalProducts > 0 && (
+          <section aria-labelledby="escapes-adaptables-heading" className="bg-gradient-to-br from-card via-card to-card-border/30 border-2 border-accent/40 rounded-2xl p-5 sm:p-6 mb-2 shadow-sm">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="space-y-1.5 max-w-2xl">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-accent/15 border border-accent/40 text-accent-text font-mono text-[10px] font-bold uppercase tracking-wider">
+                  <Flame className="w-3.5 h-3.5 text-accent" /> Silenciosos y Líneas Adaptables
+                </div>
+                <h2 id="escapes-adaptables-heading" className="font-mono font-bold text-base sm:text-lg uppercase text-foreground">
+                  ¿Buscas un escape o silencioso para {bike.brandName} {bike.model}?
+                </h2>
+                <p className="text-xs sm:text-sm text-text-muted leading-relaxed">
+                  Para este modelo no contamos con silenciosos de acople directo específico de catálogo, pero disponemos de una amplia gama de silenciosos universales adaptables por diámetro de colector, terminales deportivos y abrazaderas.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row items-stretch gap-2.5 w-full md:w-auto shrink-0">
+                <Link
+                  href="/universales"
+                  className="px-4 py-2.5 bg-accent text-slate-950 font-mono text-xs font-bold uppercase rounded-xl hover:bg-accent-hover text-center transition-colors shadow-sm"
+                >
+                  Ver escapes universales →
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.dispatchEvent(
+                      new CustomEvent('open-chat-advisor', {
+                        detail: `Hola, busco un escape o silencioso adaptable para mi ${bike.brandName} ${bike.model}. ¿Qué opciones por diámetro o terminales me recomendáis?`,
+                      })
+                    );
+                  }}
+                  className="px-4 py-2.5 bg-card border border-card-border hover:border-accent font-mono text-xs font-bold uppercase rounded-xl text-foreground text-center transition-colors cursor-pointer"
+                >
+                  Consultar con técnico
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* SECCIÓN PROTAGONISTA 1: Escapes completos, silenciosos y colectores */}
         {primaryEscapes.length > 0 && (
           <section aria-labelledby="escapes-principales-heading">
@@ -354,6 +412,19 @@ export default function MotoModelClient({ data, faqs }: MotoModelClientProps) {
                   priority={idx < 2}
                 />
               ))}
+            </div>
+
+            <div className="mt-4 p-3 bg-card border border-card-border/80 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs font-mono">
+              <span className="text-text-muted flex items-center gap-1.5">
+                <Flame className="w-3.5 h-3.5 text-accent shrink-0" />
+                ¿Buscas otras opciones de silencioso adaptable o para proyecto especial?
+              </span>
+              <Link
+                href="/universales"
+                className="text-accent-text font-bold hover:underline shrink-0"
+              >
+                Ver silenciosos universales adaptables →
+              </Link>
             </div>
           </section>
         )}
@@ -659,6 +730,47 @@ export default function MotoModelClient({ data, faqs }: MotoModelClientProps) {
         productName={notifyProduct?.name || ''}
         productId={notifyProduct?.id || 0}
       />
+
+      {/* Barra de acción rápida fija para smartphone: el 100% de usuarios desde Google navegan desde móvil */}
+      <aside
+        aria-label="Acciones rápidas para tu moto"
+        className="fixed bottom-14 left-0 right-0 z-30 px-3 py-2 bg-card/95 backdrop-blur-md border-t border-card-border shadow-lg sm:hidden flex items-center justify-between gap-2"
+      >
+        <div className="flex items-center gap-1.5 min-w-0 pr-1">
+          <Bike className="w-3.5 h-3.5 text-accent shrink-0" />
+          <span className="font-mono font-bold text-[11px] text-foreground truncate">
+            {bike.brandName} {bike.model}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              window.dispatchEvent(
+                new CustomEvent('open-chat-advisor', {
+                  detail: `Hola, busco escape o recambios para mi ${bike.brandName} ${bike.model}. ¿Podéis asesorarme sobre compatibilidad y plazos?`,
+                })
+              );
+            }}
+            className="px-2.5 py-1.5 bg-accent text-slate-950 font-mono text-[10px] font-bold uppercase rounded-lg flex items-center gap-1 shadow-sm active:scale-95 transition-transform cursor-pointer"
+          >
+            <Sparkles className="w-3 h-3 text-slate-950" />
+            <span>Asesoría</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleSaveToGarage}
+            aria-label={savedInGarage ? 'Moto guardada en Mi Garaje' : 'Guardar en Mi Garaje'}
+            className={`p-1.5 rounded-lg font-mono text-[10px] font-bold transition-all border cursor-pointer ${
+              savedInGarage
+                ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-600 dark:text-emerald-400'
+                : 'bg-card border-card-border text-foreground hover:border-accent'
+            }`}
+          >
+            {savedInGarage ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : <Plus className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+      </aside>
 
       <BottomNav
         activeTab="catalog"

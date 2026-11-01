@@ -51,6 +51,14 @@ function buildModelFaqs(data: MotoModelData): { question: string; answer: string
       question: `¿Cuánto cuesta y cuánto tarda el envío de piezas para ${fullName}?`,
       answer: `El envío estándar en España peninsular tiene un coste de ${SHIPPING_COST.toFixed(2).replace('.', ',')} € y es gratis en todos los pedidos a partir de ${FREE_SHIPPING_MIN} €. El plazo de entrega habitual es de ${DELIVERY_ES}.`,
     },
+    {
+      question: `¿Es necesario reprogramar la centralita al instalar un escape en ${fullName}?`,
+      answer: `En la mayoría de silenciosos homologados slip-on no es necesario reprogramar la centralita, ya que la inyección de serie compensa las variaciones de flujo manteniendo la mezcla óptima. En líneas completas de escape sin catalizador o preparaciones de circuito, sí se recomienda ajustar la inyección o instalar un mapa específico para maximizar el rendimiento.`,
+    },
+    {
+      question: `¿Qué garantía tienen los escapes y recambios para ${fullName}?`,
+      answer: `Todos los escapes y recambios comprados en Escapes y Más cuentan con 3 años de garantía oficial para particulares (1 año para empresas) frente a cualquier defecto de fabricación o ajuste, con soporte técnico directo en España.`,
+    },
   ];
 }
 
@@ -147,6 +155,8 @@ export default async function MotoModelPage({
     const inStock = hasVariants
       ? p.family?.inStock !== false
       : p.inStock !== false && (p.stock ?? 0) > 0;
+    const avgRat = (p as any).averageRating || (p as any).avg_rating ? Number((p as any).averageRating || (p as any).avg_rating) : undefined;
+    const ratCnt = (p as any).ratingCount || (p as any).review_count ? Number((p as any).ratingCount || (p as any).review_count) : undefined;
     return {
       name: p.name,
       description: p.description || p.shortDescription || `${p.name} compatible con ${fullName}`,
@@ -157,6 +167,8 @@ export default async function MotoModelPage({
       image: getImageUrl(p.image) || undefined,
       price,
       inStock,
+      averageRating: avgRat,
+      ratingCount: ratCnt,
     };
   });
 
