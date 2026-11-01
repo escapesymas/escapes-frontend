@@ -242,6 +242,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
 
     showToast({ message: `Añadido al carrito: ${itemTitle}`, type: 'success' });
+
+    if (typeof window !== 'undefined') {
+      const finalPrice = product.salePrice != null && product.salePrice > 0 && product.salePrice < product.price
+        ? product.salePrice
+        : product.price;
+      window.dispatchEvent(new CustomEvent('eym_add_to_cart', {
+        detail: {
+          product: {
+            id: product.id,
+            name: itemTitle,
+            price: finalPrice,
+          },
+          quantity,
+        }
+      }));
+    }
   };
 
   const updateQuantity = (id: number, delta: number) => {

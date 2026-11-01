@@ -607,6 +607,12 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
         cartTotal
       );
 
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('eym_payment_start', {
+          detail: { orderId: orderData.orderId, total: cartTotal }
+        }));
+      }
+
       const piRes = await apiRequest('/create-payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

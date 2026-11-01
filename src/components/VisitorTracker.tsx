@@ -31,6 +31,20 @@ function detectTrafficSource(): string {
   }
 }
 
+function getCartSummary(): { count: number; total: number; firstProduct?: string } {
+  try {
+    const raw = localStorage.getItem('escapesymas_cart');
+    if (!raw) return { count: 0, total: 0 };
+    const items = JSON.parse(raw);
+    if (!Array.isArray(items) || !items.length) return { count: 0, total: 0 };
+    const count = items.reduce((sum: number, it: any) => sum + (Number(it.quantity) || 1), 0);
+    const total = items.reduce((sum: number, it: any) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 1), 0);
+    return { count, total: Math.round(total * 100) / 100, firstProduct: items[0]?.title || items[0]?.name };
+  } catch {
+    return { count: 0, total: 0 };
+  }
+}
+
 function sendVisitorEvent(payload: Record<string, unknown>) {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') return;
   try {
@@ -64,15 +78,18 @@ function isStaffOrBot(): boolean {
 }
 
 /**
- * Rastreador discreto para notificar visitas nuevas y avance en la tienda
- * al panel de administración móvil. Filtra bots, recargas y personal interno.
+ * Rastreador para notificar al panel de administración:
+ * - Nuevas visitas reales con su origen
+ * - Productos añadidos al carrito
+ * - Inicio del proceso de pago
+ * - Salida de la tienda (con resumen de duración, páginas y carrito abandonado)
  */
 export default function VisitorTracker() {
   const pathname = usePathname();
   const initTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const productTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 1. Inicialización y visita inicial
+  // 1. Inicialización, avisos de visita, carrito, pago y salida
   useEffect(() => {
     if (isStaffOrBot()) return;
 
@@ -82,6 +99,9 @@ export default function VisitorTracker() {
       if (!sid) {
         sid = `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`;
         sessionStorage.setItem('eym_sid', sid);
+      }
+      if (!sessionStorage.getItem('eym_start_time')) {
+        sessionStorage.setItem('eym_start_time', String(Date.now()));
       }
     } catch {
       sid = `sid_${Date.now()}`;
@@ -115,6 +135,7 @@ export default function VisitorTracker() {
       const product = customEvent.detail?.product;
       const price = product?.salePrice ?? product?.price;
       const currentSid = sessionStorage.getItem('eym_sid') || sid;
+      const cart = getCartSummary();
 
       sendVisitorEvent({
         event: 'engaged',
@@ -122,15 +143,79 @@ export default function VisitorTracker() {
         action: 'add_to_cart',
         productName: product?.name || 'Producto',
         productPrice: price,
+        cartTotal: cart.total,
         page: window.location.pathname,
       });
     };
 
+    // Escuchar inicio de pago en checkout
+    const handlePaymentStart = (e: Event) => {
+      if (isStaffOrBot()) return;
+      const ce = e as CustomEvent<{ orderId?: number | string; total?: number }>;
+      const currentSid = sessionStorage.getItem('eym_sid') || sid;
+      sendVisitorEvent({
+        event: 'engaged',
+        sessionId: currentSid,
+        action: 'checkout',
+        cartTotal: ce.detail?.total,
+        page: window.location.pathname,
+      });
+    };
+
+    // Notificar cuando el visitante se marcha (cierre de pestaña o navegación externa)
+    const handleLeave = () => {
+      if (isStaffOrBot()) return;
+      if (sessionStorage.getItem('eym_leave_sent')) return;
+
+      const currentSid = sessionStorage.getItem('eym_sid');
+      if (!currentSid) return;
+
+      const startTime = parseInt(sessionStorage.getItem('eym_start_time') || '0', 10);
+      const durationSeconds = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+      const pageCount = parseInt(sessionStorage.getItem('eym_pcount') || '1', 10);
+      const cart = getCartSummary();
+
+      // Solo avisar de salida si estuvo al menos 8s o vio varias páginas o interactuó con carrito
+      if (durationSeconds < 8 && pageCount <= 1 && cart.count === 0) return;
+
+      sessionStorage.setItem('eym_leave_sent', '1');
+
+      const payload = {
+        event: 'leave',
+        sessionId: currentSid,
+        durationSeconds,
+        pageCount,
+        lastPage: window.location.pathname,
+        cartCount: cart.count,
+        cartTotal: cart.total,
+        cartProduct: cart.firstProduct,
+      };
+
+      const url = getApiUrl('/push/visitor-event');
+      const body = JSON.stringify(payload);
+
+      if (typeof navigator.sendBeacon === 'function') {
+        const blob = new Blob([body], { type: 'application/json' });
+        navigator.sendBeacon(url, blob);
+      } else {
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+          keepalive: true,
+        }).catch(() => {});
+      }
+    };
+
     window.addEventListener('eym_add_to_cart', handleAddToCart);
+    window.addEventListener('eym_payment_start', handlePaymentStart);
+    window.addEventListener('pagehide', handleLeave);
 
     return () => {
       if (initTimer.current) clearTimeout(initTimer.current);
       window.removeEventListener('eym_add_to_cart', handleAddToCart);
+      window.removeEventListener('eym_payment_start', handlePaymentStart);
+      window.removeEventListener('pagehide', handleLeave);
     };
   }, []);
 
