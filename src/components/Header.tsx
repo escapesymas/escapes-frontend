@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import TopAnnouncementBar from './TopAnnouncementBar';
 
 interface HeaderProps {
   selectedBike?: string;
@@ -43,6 +44,7 @@ export default function Header({ selectedBike, onCartClick, onTabChange, activeT
 
   return (
     <header className="sticky top-0 z-50 w-full bg-background border-b border-card-border relative">
+      <TopAnnouncementBar />
       <div className="container mx-auto px-4 md:px-6 h-14 flex items-center justify-between gap-3">
 
         {/* IZQUIERDA (móvil y pantallas medianas): Logo / (pantalla grande): placeholder invisible */}

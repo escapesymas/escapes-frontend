@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import Image from 'next/image';
-/* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps, @next/next/no-img-element, @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
-import { Trash2, Plus, Minus, ShoppingBag, Truck, ArrowLeft, ArrowRight, AlertCircle, RotateCcw, Loader2, Package, ShieldCheck, Lock, Repeat } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag, Truck, ArrowLeft, ArrowRight, AlertCircle, RotateCcw, Loader2, Package, ShieldCheck, Lock, Repeat, Gift } from 'lucide-react';
 import { trackEvent } from '../lib/analytics';
 import { tiktokServerContext } from '../lib/tiktok';
 import { trackEvent as trackUmami } from '../lib/umami';
@@ -101,6 +100,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
   const [promoValue, setPromoValue] = useState<number>(0);
   const [promoCodeInput, setPromoCodeInput] = useState('');
   const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoRequiresAuth, setPromoRequiresAuth] = useState(false);
   const [promoSuccessMsg, setPromoSuccessMsg] = useState<string | null>(null);
   const [recoveryMessage, setRecoveryMessage] = useState<string | null>(null);
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
@@ -408,6 +408,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
 
   const applyPromoCode = async (code: string) => {
     setPromoError(null);
+    setPromoRequiresAuth(false);
     setPromoSuccessMsg(null);
     const upperCode = code.trim().toUpperCase();
 
@@ -423,11 +424,14 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
         setPromoType(data.type);
         setPromoValue(data.value);
         setPromoSuccessMsg(`Cupón ${data.code} aplicado con éxito.`);
+        setPromoRequiresAuth(false);
       } else {
         setPromoError(data.error || 'Cupón no válido');
+        setPromoRequiresAuth(Boolean(data.requiresAuth));
       }
     } catch {
       setPromoError('Error al validar el cupón. Inténtalo de nuevo.');
+      setPromoRequiresAuth(false);
     }
   };
 
@@ -437,6 +441,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
     setPromoValue(0);
     setPromoSuccessMsg(null);
     setPromoError(null);
+    setPromoRequiresAuth(false);
     setPromoCodeInput('');
   };
 
@@ -1342,7 +1347,11 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
                             type="text"
                             placeholder="Introduce tu cupón"
                             value={promoCodeInput}
-                            onChange={(e) => setPromoCodeInput(e.target.value)}
+                            onChange={(e) => {
+                              setPromoCodeInput(e.target.value);
+                              if (promoError) setPromoError(null);
+                              if (promoRequiresAuth) setPromoRequiresAuth(false);
+                            }}
                             className="bg-background border border-card-border rounded py-2 px-3 text-xs text-foreground placeholder-text-muted focus:outline-none focus:border-accent flex-1 uppercase font-mono font-semibold"
                           />
                           <button
@@ -1354,9 +1363,31 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
                           </button>
                         </div>
                         {promoError && (
-                          <p className="text-red-500 text-[10px] font-mono font-semibold mt-1 flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3" /> {promoError}
-                          </p>
+                          <div className="mt-1.5 space-y-1">
+                            <p className="text-red-500 text-[10px] font-mono font-semibold flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3 shrink-0" /> {promoError}
+                            </p>
+                            {promoRequiresAuth && (
+                              <Link
+                                href="/login?tab=register&from=/checkout"
+                                className="inline-flex items-center gap-1 text-[11px] font-mono text-accent font-bold hover:underline mt-1"
+                              >
+                                <Gift className="w-3.5 h-3.5" />
+                                <span>Crear cuenta gratis para aplicar 5% DTO →</span>
+                              </Link>
+                            )}
+                          </div>
+                        )}
+                        {!isAuthenticated && !appliedPromo && !promoError && (
+                          <div className="mt-2.5 p-2.5 rounded bg-accent/10 border border-accent/30 flex items-center justify-between gap-2 text-[10px] font-mono">
+                            <div className="flex items-center gap-1.5 text-foreground min-w-0">
+                              <Gift className="w-3.5 h-3.5 text-accent shrink-0" />
+                              <span className="truncate">¿Primera compra? Usa <strong>BIENVENIDA5</strong> al registrarte.</span>
+                            </div>
+                            <Link href="/login?tab=register&from=/checkout" className="text-accent font-bold hover:underline shrink-0">
+                              Crear cuenta →
+                            </Link>
+                          </div>
                         )}
                       </>
                     )}

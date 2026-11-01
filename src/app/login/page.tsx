@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { isValidRedirect } from '../../lib/constants';
 import { AuthError, apiResendVerification } from '../../lib/api';
-import { Bike, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, MailCheck } from 'lucide-react';
+import { Bike, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, MailCheck, Gift, Sparkles } from 'lucide-react';
 import Header from '../../components/Header';
 import BottomNav from '../../components/BottomNav';
 
@@ -288,7 +288,30 @@ function LoginPageContent() {
 
             {/* ── REGISTER ── */}
             {tab === 'register' && (
-              <form onSubmit={handleRegister} className="flex flex-col gap-4">
+              <>
+                <div className="mb-4 bg-gradient-to-br from-accent/15 via-accent/5 to-card border border-accent/40 rounded-lg p-3.5 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1 rounded bg-accent text-slate-950">
+                      <Gift className="w-3.5 h-3.5 stroke-[2.5]" />
+                    </span>
+                    <span className="font-mono font-bold text-xs uppercase tracking-wider text-foreground">
+                      5% DTO en tu primera compra
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-text-muted leading-relaxed">
+                    Crea tu cuenta gratis hoy y activa el cupón <strong className="text-foreground font-mono bg-background px-1.5 py-0.5 rounded border border-card-border">BIENVENIDA5</strong> en tu primer pedido.
+                  </p>
+                  <div className="pt-1.5 border-t border-accent/20 flex flex-col gap-1 text-[10px] font-mono text-text-muted">
+                    <span className="flex items-center gap-1.5 text-foreground">
+                      ✓ Guarda tu moto en Mi Garaje y filtra compatibilidad automática.
+                    </span>
+                    <span className="flex items-center gap-1.5 text-foreground">
+                      ✓ Facturas descargables y seguimiento de envíos en tiempo real.
+                    </span>
+                  </div>
+                </div>
+
+                <form onSubmit={handleRegister} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="reg-username" className="text-[10px] font-mono font-bold uppercase tracking-wider text-text-muted">
                     Nombre de usuario *
@@ -437,21 +460,24 @@ function LoginPageContent() {
                   {isSubmitting ? 'Creando cuenta...' : 'Crear cuenta gratis'}
                 </button>
               </form>
-            )}
-          </div>
+            </>
+          )}
+        </div>
 
-          {/* Footer */}
-          <p className="text-center text-[10px] text-text-muted font-mono mt-4">
-            {tab === 'login' ? (
-              <>¿Aún no tienes cuenta?{' '}
-                <button onClick={() => switchTab('register')} className="text-accent hover:underline cursor-pointer">Regístrate</button>
-              </>
-            ) : (
-              <>¿Ya tienes cuenta?{' '}
-                <button onClick={() => switchTab('login')} className="text-accent hover:underline cursor-pointer">Inicia sesión</button>
-              </>
-            )}
-          </p>
+        {/* Footer */}
+        <p className="text-center text-[10px] text-text-muted font-mono mt-4">
+          {tab === 'login' ? (
+            <>¿Aún no tienes cuenta?{' '}
+              <button onClick={() => switchTab('register')} className="text-accent hover:underline cursor-pointer font-bold">
+                Regístrate y llévate un 5% de descuento →
+              </button>
+            </>
+          ) : (
+            <>¿Ya tienes cuenta?{' '}
+              <button onClick={() => switchTab('login')} className="text-accent hover:underline cursor-pointer font-bold">Inicia sesión</button>
+            </>
+          )}
+        </p>
         </div>
       </main>
 
