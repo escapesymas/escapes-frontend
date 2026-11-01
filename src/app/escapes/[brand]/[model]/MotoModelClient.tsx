@@ -171,7 +171,7 @@ export default function MotoModelClient({ data, faqs }: MotoModelClientProps) {
   const hasTopEscapesSection = primaryEscapes.length > 0 || escapeAccessories.length > 0;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground pb-28 md:pb-8">
+    <div className="min-h-screen flex flex-col bg-background text-foreground pb-20 md:pb-8">
       <Header selectedBike={selectedBike} />
 
       <main className="container mx-auto px-4 md:px-6 py-6 max-w-6xl flex flex-col gap-9">
@@ -731,46 +731,6 @@ export default function MotoModelClient({ data, faqs }: MotoModelClientProps) {
         productId={notifyProduct?.id || 0}
       />
 
-      {/* Barra de acción rápida fija para smartphone: el 100% de usuarios desde Google navegan desde móvil */}
-      <aside
-        aria-label="Acciones rápidas para tu moto"
-        className="fixed bottom-14 left-0 right-0 z-30 px-3 py-2 bg-card/95 backdrop-blur-md border-t border-card-border shadow-lg sm:hidden flex items-center justify-between gap-2"
-      >
-        <div className="flex items-center gap-1.5 min-w-0 pr-1">
-          <Bike className="w-3.5 h-3.5 text-accent shrink-0" />
-          <span className="font-mono font-bold text-[11px] text-foreground truncate">
-            {bike.brandName} {bike.model}
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          <button
-            type="button"
-            onClick={() => {
-              window.dispatchEvent(
-                new CustomEvent('open-chat-advisor', {
-                  detail: `Hola, busco escape o recambios para mi ${bike.brandName} ${bike.model}. ¿Podéis asesorarme sobre compatibilidad y plazos?`,
-                })
-              );
-            }}
-            className="px-2.5 py-1.5 bg-accent text-slate-950 font-mono text-[10px] font-bold uppercase rounded-lg flex items-center gap-1 shadow-sm active:scale-95 transition-transform cursor-pointer"
-          >
-            <Sparkles className="w-3 h-3 text-slate-950" />
-            <span>Asesoría</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleSaveToGarage}
-            aria-label={savedInGarage ? 'Moto guardada en Mi Garaje' : 'Guardar en Mi Garaje'}
-            className={`p-1.5 rounded-lg font-mono text-[10px] font-bold transition-all border cursor-pointer ${
-              savedInGarage
-                ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-600 dark:text-emerald-400'
-                : 'bg-card border-card-border text-foreground hover:border-accent'
-            }`}
-          >
-            {savedInGarage ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : <Plus className="w-3.5 h-3.5" />}
-          </button>
-        </div>
-      </aside>
 
       <BottomNav
         activeTab="catalog"
