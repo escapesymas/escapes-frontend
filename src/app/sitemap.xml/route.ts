@@ -5,7 +5,8 @@ export const revalidate = 3600;
 /** Índice: páginas y categorías + directorio de motos + fabricantes + una parte por cada 5.000 productos. */
 export async function GET() {
   const parts = Math.ceil((await productCount()) / PRODUCTS_PER_SITEMAP);
+  const today = new Date().toISOString().slice(0, 10);
   const urls = ['pages', 'motos', 'marcas', ...Array.from({ length: parts }, (_, i) => String(i))]
-    .map((p) => `  <sitemap><loc>${SITE_URL}/sitemaps/${p}.xml</loc></sitemap>`);
+    .map((p) => `  <sitemap><loc>${SITE_URL}/sitemaps/${p}.xml</loc><lastmod>${today}</lastmod></sitemap>`);
   return xmlResponse(`<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</sitemapindex>`);
 }
