@@ -1,4 +1,4 @@
-import { SHIPPING_COST, FREE_SHIPPING_MIN } from '../lib/constants';
+import { SHIPPING_COST, FREE_SHIPPING_MIN, DELIVERY_ES } from '../lib/constants';
 import { isExcludedSupplierBrand } from '../lib/brandSeo';
 
 type OrganizationSchema = {
@@ -157,13 +157,8 @@ export function getOrganizationSchema(): OrganizationSchema {
       'https://www.instagram.com/escapesymas',
       'https://www.tiktok.com/@escapesymas',
     ],
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: 4.9,
-      reviewCount: 348,
-      bestRating: 5,
-      worstRating: 1,
-    },
+    // Sin aggregateRating: las valoraciones de la propia tienda no son reales (0 reseñas) y Google no admite
+    // valoraciones de la organización sobre sí misma. Las estrellas van solo en cada producto con reseñas reales.
   };
 }
 
@@ -225,7 +220,7 @@ export function getProductSchema(product: {
     .trim();
 
   // Fallback rico para evitar «Falta el campo "description"» en Search Console cuando la BD no tiene descripción o es muy escueta.
-  const fallbackDesc = `${safeBrand !== 'Escapes y Más' ? `${safeBrand} - ` : ''}${product.name}. Recambio y accesorio oficial de moto disponible en Escapes y Más. Garantía de 3 años, envío rápido a toda España y asesoramiento técnico especializado.`;
+  const fallbackDesc = `${safeBrand !== 'Escapes y Más' ? `${safeBrand} - ` : ''}${product.name}. Disponible en Escapes y Más con garantía de 3 años y entrega en ${DELIVERY_ES} en España.`;
   const description = cleanDesc && cleanDesc.length >= 30 ? cleanDesc : fallbackDesc;
 
   const roundedPrice = Number((Number(product.price) || 0).toFixed(2));

@@ -45,7 +45,7 @@ function buildModelFaqs(data: MotoModelData): { question: string; answer: string
     },
     {
       question: `¿Cómo comprobar si un escape para ${fullName} pasa la ITV?`,
-      answer: `Para circular por vía pública y superar la ITV en España con tu ${fullName}, el silencioso o línea completa debe contar con homologación europea (Euro 3, Euro 4 o Euro 5 / Euro 5+ según el año de tu moto), mantener el dB-killer instalado y conservar el catalizador homologado cuando el escape sustituya al colector original. En la descripción de cada ficha indicamos si es homologado o de uso racing en circuito.`,
+      answer: `Para circular por vía pública y superar la ITV en España con tu ${fullName}, el silencioso o línea completa debe contar con homologación europea (Euro 3, Euro 4 o Euro 5 / Euro 5+ según el año de tu moto), mantener el dB-killer instalado y conservar el catalizador homologado cuando el escape sustituya al colector original. Si la ficha de un producto no indica su homologación, consúltanos antes de comprar.`,
     },
     {
       question: `¿Cuánto cuesta y cuánto tarda el envío de piezas para ${fullName}?`,
@@ -53,7 +53,7 @@ function buildModelFaqs(data: MotoModelData): { question: string; answer: string
     },
     {
       question: `¿Es necesario reprogramar la centralita al instalar un escape en ${fullName}?`,
-      answer: `En la mayoría de silenciosos homologados slip-on no es necesario reprogramar la centralita, ya que la inyección de serie compensa las variaciones de flujo manteniendo la mezcla óptima. En líneas completas de escape sin catalizador o preparaciones de circuito, sí se recomienda ajustar la inyección o instalar un mapa específico para maximizar el rendimiento.`,
+      answer: `Depende de la moto y del escape. En motos con inyección, muchos silenciosos slip-on homologados funcionan sin cambiar el mapa, pero con una línea completa o un escape de competición conviene ajustar la inyección. En motos de carburador y en las de dos tiempos hay que revisar el reglaje (calibrados y mezcla) tras cambiar el escape. Escríbenos con tu modelo y año y te orientamos antes de comprar.`,
     },
     {
       question: `¿Qué garantía tienen los escapes y recambios para ${fullName}?`,
