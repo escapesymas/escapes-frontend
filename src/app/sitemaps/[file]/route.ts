@@ -1,4 +1,4 @@
-import { SITE_URL, API_BASE, PRODUCTS_PER_SITEMAP, xmlEscape, xmlResponse } from '../../../lib/sitemap';
+import { SITE_URL, API_BASE, PRODUCTS_PER_SITEMAP, ESCAPES_SITEMAP_LIMIT, xmlEscape, xmlResponse } from '../../../lib/sitemap';
 import type { Category3 } from '../../../types';
 import { isExcludedSupplierBrand } from '../../../lib/brandSeo';
 
@@ -36,8 +36,10 @@ async function pages(): Promise<Response> {
   return urlset(entries);
 }
 
-async function products(part: number): Promise<Response> {
-  const res = await fetch(`${API_BASE}/api/catalog/sitemap-skus?page=${part + 1}&limit=${PRODUCTS_PER_SITEMAP}`, { next: { revalidate: 3600 } });
+/** Productos con stock y foto propia. segment «escapes» = todos los escapes (un solo sitemap); «resto» = el resto, por partes. */
+async function products(part: number, segment: 'escapes' | 'resto'): Promise<Response> {
+  const limit = segment === 'escapes' ? ESCAPES_SITEMAP_LIMIT : PRODUCTS_PER_SITEMAP;
+  const res = await fetch(`${API_BASE}/api/catalog/sitemap-skus?segment=${segment}&page=${part + 1}&limit=${limit}`, { next: { revalidate: 3600 } });
   if (!res.ok) return new Response('Sitemap no disponible', { status: 503 });
   const rows = (await res.json()) as { sku?: string; updated_at?: string }[];
   if (!rows.length) return new Response('No encontrado', { status: 404 });
@@ -46,7 +48,7 @@ async function products(part: number): Promise<Response> {
     return {
       loc: `${SITE_URL}/producto/${encodeURIComponent(r.sku!)}`,
       lastmod: d && !Number.isNaN(d.getTime()) ? d.toISOString().slice(0, 10) : undefined,
-      priority: 0.6,
+      priority: segment === 'escapes' ? 0.8 : 0.6,
     };
   }));
 }
@@ -98,7 +100,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ file: s
   if (file === 'pages.xml') return pages();
   if (file === 'motos.xml') return motos();
   if (file === 'marcas.xml') return marcas();
+  if (file === 'escapes.xml') return products(0, 'escapes');
   const m = file.match(/^(\d{1,3})\.xml$/);
   if (!m) return new Response('No encontrado', { status: 404 });
-  return products(Number(m[1]));
+  return products(Number(m[1]), 'resto');
 }

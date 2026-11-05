@@ -6,6 +6,7 @@ import { isExcludedSupplierBrand, slugifyManufacturerBrand } from '../../../lib/
 import { getProductSchema, getBreadcrumbSchema, jsonLd } from '../../../components/SchemaMarkup';
 import { effectivePrice } from '../../../lib/pricing';
 import { roadHomologation } from '../../../lib/homologation';
+import RelatedProductLinks, { type RelatedLink } from '../../../components/product/RelatedProductLinks';
 
 const API_BASE = process.env.API_URL || 'https://api.escapesymas.com';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://escapesymas.com';
@@ -65,6 +66,18 @@ function cleanProductTitle(name: string): string {
     .join(' ');
 }
 
+/** Enlaces a otras fichas (siguientes de su categoría y de su marca) para el HTML del servidor. Si falla, la ficha sale sin ellos. */
+async function fetchRelatedLinks(sku: string): Promise<RelatedLink[]> {
+  try {
+    const res = await fetch(`${API_BASE}/api/catalog/related-links/${encodeURIComponent(sku)}`, { next: { revalidate: 3600 } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const product = await fetchProductBySlug(slug);
@@ -89,7 +102,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   const isFreeShip = Number(price) >= 200;
   const shipBadge = isFreeShip ? 'Envío gratis.' : `Envío estándar en ${DELIVERY_ES}.`;
-  const description = `${brandPrefix}${cleanedName} a ${price}€. ${product.inStock ? `En stock. ${shipBadge}` : 'Sin stock ahora mismo.'}${compat ? ` Compatible con ${compat} ${compat === 1 ? 'modelo' : 'modelos'} de moto.` : ''} Garantía de 3 años.`;
+  const refText = product.sku && !product.name.toUpperCase().includes(String(product.sku).toUpperCase()) ? ` Ref. ${product.sku}.` : '';
+  const description = `${brandPrefix}${cleanedName} a ${price}€.${refText} ${product.inStock ? `En stock. ${shipBadge}` : 'Sin stock ahora mismo.'}${compat ? ` Compatible con ${compat} ${compat === 1 ? 'modelo' : 'modelos'} de moto.` : ''} Garantía de 3 años.`;
   const imageUrl = product.image || `${SITE_URL}/og-image.png`;
   const canonicalSku = product.sku || slug;
   const pageUrl = `${SITE_URL}/producto/${encodeURIComponent(canonicalSku)}`;
@@ -148,6 +162,8 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     })),
   ];
 
+  const related = await fetchRelatedLinks(product.sku || slug);
+
   const productSchema = getProductSchema({
     name: product.name,
     description: product.description,
@@ -182,6 +198,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbSchema) }}
       />
       <ProductDetailClient slug={slug} initialProduct={product} />
+      <RelatedProductLinks items={related} />
     </>
   );
 }
