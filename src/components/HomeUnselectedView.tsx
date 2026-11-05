@@ -121,7 +121,7 @@ export default function HomeUnselectedView({
                   ESCAPES & ITV
                 </h3>
                 <p className="text-text-muted text-xs sm:text-sm font-sans leading-relaxed max-w-lg">
-                  Homologación 100% legal Euro 4 y Euro 5 con certificado de marca para pasar ITV sin problemas.
+                  Escapes homologados y de competición. Consulta la homologación en cada ficha o pregúntanos antes de comprar.
                 </p>
               </div>
             </div>
@@ -207,7 +207,7 @@ export default function HomeUnselectedView({
               Escapes por Modelo — Motos más buscadas
             </h2>
             <p className="text-text-muted text-xs font-sans mt-0.5">
-              Entra directo al catálogo verificado de escapes homologados ITV y recambios para tu moto.
+              Entra directo al catálogo de escapes (homologados y de competición) y recambios para tu moto.
             </p>
           </div>
           <Link

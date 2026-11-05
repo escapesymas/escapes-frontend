@@ -16,7 +16,7 @@ import { GtmScript, GtmNoScript } from "../lib/analytics";
 export const metadata: Metadata = {
   metadataBase: new URL('https://escapesymas.com'),
   title: "Escapes y Más — Escapes de Moto de Alto Rendimiento",
-  description: "Encuentra escapes homologados y recambios oficiales para tu moto. Compatible con las marcas más exigentes del mercado.",
+  description: "Encuentra escapes homologados y de competición y recambios para tu moto, con compatibilidad por modelo y año.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     title: "Escapes y Más — Escapes de Moto de Alto Rendimiento",
-    description: "Encuentra escapes homologados y recambios oficiales para tu moto. Compatible con las marcas más exigentes del mercado.",
+    description: "Encuentra escapes homologados y de competición y recambios para tu moto, con compatibilidad por modelo y año.",
     url: 'https://escapesymas.com',
     siteName: 'Escapes y Más',
     locale: 'es_ES',
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: "Escapes y Más — Escapes de Moto de Alto Rendimiento",
-    description: "Encuentra escapes homologados y recambios oficiales para tu moto.",
+    description: "Encuentra escapes homologados y de competición y recambios para tu moto.",
     images: ['https://escapesymas.com/og-image.png'],
   },
   // Sin canonical global: lo heredaban todas las páginas sin el suyo (catálogo,

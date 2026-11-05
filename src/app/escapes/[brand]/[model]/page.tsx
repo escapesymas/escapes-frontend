@@ -57,7 +57,7 @@ function buildModelFaqs(data: MotoModelData): { question: string; answer: string
     },
     {
       question: `¿Qué garantía tienen los escapes y recambios para ${fullName}?`,
-      answer: `Todos los escapes y recambios comprados en Escapes y Más cuentan con 3 años de garantía oficial para particulares (1 año para empresas) frente a cualquier defecto de fabricación o ajuste, con soporte técnico directo en España.`,
+      answer: `Todos los escapes y recambios comprados en Escapes y Más cuentan con 3 años de garantía legal para particulares (1 año para empresas) frente a cualquier defecto de fabricación o ajuste, con soporte técnico directo en España.`,
     },
   ];
 }
@@ -96,8 +96,8 @@ export async function generateMetadata({
   let description: string;
 
   if (totalPrimaryEscapes > 0) {
-    title = `Escapes ${fullName}${yearSpan ? ` (${yearSpan})` : ''} — Homologados ITV y Recambios | Escapes y Más`;
-    description = `Compra escapes completos, silenciosos homologados ITV y ${totalProducts} recambios compatibles con ${fullName}${yearSpan ? ` (${yearSpan})` : ''}. Stock real y envío gratis desde ${FREE_SHIPPING_MIN} €.`;
+    title = `Escapes ${fullName}${yearSpan ? ` (${yearSpan})` : ''} — Silenciosos y Recambios | Escapes y Más`;
+    description = `Compra escapes completos, silenciosos (homologados y de competición) y ${totalProducts} recambios compatibles con ${fullName}${yearSpan ? ` (${yearSpan})` : ''}. Stock real y envío gratis desde ${FREE_SHIPPING_MIN} €.`;
   } else if (totalEscapes > 0) {
     title = `Recambios y Accesorios de Escape ${fullName}${yearSpan ? ` (${yearSpan})` : ''} | Escapes y Más`;
     description = `${totalProducts} recambios verificados y accesorios de escape compatibles con ${fullName}${yearSpan ? ` (${yearSpan})` : ''}: frenos, motor, transmisión y mantenimiento. Envío gratis desde ${FREE_SHIPPING_MIN} €.`;

@@ -69,13 +69,13 @@ export default function MotoBrandClient({ data }: MotoBrandClientProps) {
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div className="max-w-3xl">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-accent/15 border border-accent/40 text-accent-text font-mono text-[10px] font-bold uppercase tracking-wider mb-3">
-                <Bike className="w-3.5 h-3.5" /> Catálogo oficial compatible {brand.name}
+                <Bike className="w-3.5 h-3.5" /> Catálogo compatible {brand.name}
               </span>
               <h1 className="font-mono font-black uppercase tracking-tight text-2xl sm:text-4xl text-foreground mb-2">
                 Escapes y Recambios para {brand.name}
               </h1>
               <p className="text-xs sm:text-sm text-text-muted leading-relaxed">
-                Selecciona tu modelo de {brand.name} para ver todos los escapes homologados ITV, silenciosos, colectores y recambios específicos compatibles con su año de fabricación.
+                Selecciona tu modelo de {brand.name} para ver todos los escapes (homologados y de competición), silenciosos, colectores y recambios específicos compatibles con su año de fabricación.
                 {' '}Envío gratis desde {FREE_SHIPPING_MIN} € ({DELIVERY_ES}).
               </p>
             </div>

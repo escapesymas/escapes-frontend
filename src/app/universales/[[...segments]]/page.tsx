@@ -64,7 +64,7 @@ export async function generateMetadata({
     description = `Compra ${parent.name.toLowerCase()} para moto en Escapes y Más: precios con IVA incluido, stock en tiempo real, garantía de 3 años y envío gratis desde 200 €.`;
   } else {
     title = `Catálogo de Recambios, Escapes, Cascos y Accesorios de Moto${pageSuffix} — Escapes y Más`;
-    description = 'Explora nuestro catálogo completo de recambios, escapes homologados, cascos, frenos, neumáticos y equipamiento para moto con envío gratis desde 200 €.';
+    description = 'Explora nuestro catálogo completo de recambios, escapes, cascos, frenos, neumáticos y equipamiento para moto con envío gratis desde 200 €.';
   }
 
   return {

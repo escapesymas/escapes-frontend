@@ -67,7 +67,7 @@ export default function OfflinePage() {
         </div>
 
         <p className="text-[10px] font-mono text-text-muted uppercase tracking-wider pt-4">
-          Escapes y Más · distribuidor oficial
+          Escapes y Más · escapes y recambios de moto
         </p>
       </div>
     </main>

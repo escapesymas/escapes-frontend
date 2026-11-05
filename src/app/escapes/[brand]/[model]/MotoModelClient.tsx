@@ -397,7 +397,7 @@ export default function MotoModelClient({ data, faqs }: MotoModelClientProps) {
                   </span>
                 </h2>
                 <p className="text-xs text-text-muted mt-0.5">
-                  Líneas completas, silenciosos homologados Euro 4 / Euro 5 para ITV y escapes deportivos compatibles.
+                  Líneas completas, silenciosos homologados y escapes de competición compatibles.
                 </p>
               </div>
             </div>

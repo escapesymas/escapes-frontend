@@ -98,7 +98,7 @@ export default function MotosHubClient({ hub, faqs }: MotosHubClientProps) {
               Escapes y Recambios por Marca y Modelo de Moto
             </h1>
             <p className="text-text-muted text-xs sm:text-sm leading-relaxed mb-6 max-w-2xl">
-              Encuentra escapes completos, silenciosos homologados Euro 4 / Euro 5 para ITV, colectores y recambios específicos compatibles con tu moto.
+              Encuentra escapes completos, silenciosos homologados y de competición, colectores y recambios específicos compatibles con tu moto.
               {hub ? ` Catálogo activo para ${hub.totalActiveModels.toLocaleString('es-ES')} modelos de ${hub.totalActiveBrands} marcas.` : ''}
             </p>
 
@@ -169,7 +169,7 @@ export default function MotosHubClient({ hub, faqs }: MotosHubClientProps) {
             {/* Garantías */}
             <div className="mt-5 flex flex-wrap items-center gap-4 text-[11px] font-mono text-text-muted">
               <span className="inline-flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-emerald-500" /> Homologación ITV disponible
+                <ShieldCheck className="w-4 h-4 text-emerald-500" /> Homologados y de competición
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <Truck className="w-4 h-4 text-accent" /> Envío {SHIPPING_COST.toFixed(2).replace('.', ',')} € · Gratis desde {FREE_SHIPPING_MIN} € ({DELIVERY_ES})

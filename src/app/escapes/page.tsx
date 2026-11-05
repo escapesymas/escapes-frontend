@@ -12,9 +12,9 @@ import { DELIVERY_ES, FREE_SHIPPING_MIN, SHIPPING_COST } from '../../lib/constan
 export const revalidate = 1800;
 
 export const metadata: Metadata = {
-  title: 'Escapes por Marca y Modelo de Moto — Homologados ITV y Racing | Escapes y Más',
+  title: 'Escapes por Marca y Modelo de Moto — Homologados y Racing | Escapes y Más',
   description:
-    'Encuentra escapes completos, silenciosos homologados Euro 4 y Euro 5 para ITV, colectores y recambios verificados para tu marca, modelo y año de moto. Envío gratis desde 200 €.',
+    'Encuentra escapes completos, silenciosos homologados y de competición, colectores y recambios verificados para tu marca, modelo y año de moto. Envío gratis desde 200 €.',
   alternates: {
     canonical: '/escapes',
   },
@@ -36,7 +36,7 @@ const HUB_FAQS = [
   {
     question: '¿Los escapes que vendéis están homologados para pasar la ITV en España?',
     answer:
-      'Disponemos tanto de líneas y silenciosos homologados Euro 3, Euro 4 y Euro 5 / Euro 5+ con contraseña de homologación grabada y certificado para ITV, como de escapes y supresores de catalizador de uso exclusivo en circuito. En la ficha de cada escape se especifica su homologación.',
+      'Tenemos líneas y silenciosos con homologación y también escapes y supresores de catalizador de uso exclusivo en circuito. Cuando el fabricante informa de la homologación, la ficha la muestra; si una ficha no la indica, consúltanos antes de comprar.',
   },
   {
     question: '¿Cuánto cuesta el envío y cuánto tarda en llegar un escape?',

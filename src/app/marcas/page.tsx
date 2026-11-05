@@ -12,9 +12,9 @@ import { DELIVERY_ES, FREE_SHIPPING_MIN, SHIPPING_COST } from '../../lib/constan
 export const revalidate = 1800;
 
 export const metadata: Metadata = {
-  title: 'Marcas de Escapes, Recambios y Equipamiento de Moto — Catálogo Oficial | Escapes y Más',
+  title: 'Marcas de Escapes, Recambios y Equipamiento de Moto — Catálogo | Escapes y Más',
   description:
-    'Directorio completo de más de 200 fabricantes oficiales de escapes homologados, frenos, kits de transmisión, cascos y neumáticos de moto: IXIL, Yasuni, Tecnigas, Yoshimura, Brembo, Arai, AFAM y Michelin.',
+    'Directorio completo de más de 200 fabricantes de escapes, frenos, kits de transmisión, cascos y neumáticos de moto: IXIL, Yasuni, Tecnigas, Yoshimura, Brembo, Arai, AFAM y Michelin.',
   alternates: {
     canonical: '/marcas',
   },
@@ -29,9 +29,9 @@ export const metadata: Metadata = {
 
 const MARCAS_FAQS = [
   {
-    question: '¿Son originales todos los productos de las marcas del catálogo?',
+    question: '¿Qué garantía tienen los productos de las marcas del catálogo?',
     answer:
-      'Sí. En Escapes y Más comercializamos únicamente recambios, sistemas de escape, neumáticos y equipamiento 100 % originales de cada fabricante, con referencia oficial, código EAN verificable y garantía legal de 3 años en España.',
+      'Todos los productos tienen garantía legal de 3 años para particulares (1 año para empresas) en España, con factura con IVA. Cada ficha indica la referencia del producto y, cuando el fabricante la facilita, su compatibilidad por moto, modelo y año.',
   },
   {
     question: '¿Qué fabricantes de escapes homologados y racing trabajáis?',

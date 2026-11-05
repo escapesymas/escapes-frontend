@@ -61,7 +61,7 @@ export default function TopAnnouncementBar() {
               </span>
               <span className="hidden sm:inline">·</span>
               <span className="hidden sm:inline-flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> Garantía oficial en escapes homologados
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> Garantía de 3 años
               </span>
             </div>
           )}

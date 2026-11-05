@@ -620,7 +620,7 @@ function CatalogContent({
                     : 'Índice completo de categorías y subcategorías para moto'}
                 </h2>
                 <p className="text-xs text-text-muted max-w-3xl">
-                  Navega directamente por nuestras familias de recambios, mantenimiento, neumáticos, escapes homologados y equipamiento para motorista, o filtra piezas específicas para tu modelo en el{' '}
+                  Navega directamente por nuestras familias de recambios, mantenimiento, neumáticos, escapes y equipamiento para motorista, o filtra piezas específicas para tu modelo en el{' '}
                   <Link href="/escapes" className="text-accent-text hover:underline font-medium">
                     buscador de escapes y recambios por moto
                   </Link>

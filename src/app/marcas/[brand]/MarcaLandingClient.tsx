@@ -117,7 +117,7 @@ export default function MarcaLandingClient({
                 <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
                   {brand.isEscapeSpecialist
                     ? `Escapes y recambios ${brand.name} para moto`
-                    : `Catálogo oficial ${brand.name} para moto`}
+                    : `Recambios y equipamiento ${brand.name} para moto`}
                   {page > 1 && <span className="text-base font-normal text-text-muted ml-2">· Página {page}</span>}
                 </h1>
                 {brand.isEscapeSpecialist && (
@@ -127,9 +127,9 @@ export default function MarcaLandingClient({
                 )}
               </div>
               <p className="text-xs md:text-sm text-text-muted leading-relaxed">
-                Explora {brand.modelCount.toLocaleString('es-ES')} modelos ({brand.productCount.toLocaleString('es-ES')} referencias) originales de <strong className="text-foreground">{brand.name}</strong>
+                Explora {brand.modelCount.toLocaleString('es-ES')} modelos ({brand.productCount.toLocaleString('es-ES')} referencias) de la marca <strong className="text-foreground">{brand.name}</strong>
                 {brand.inStockCount > 0 ? `, con ${brand.inStockCount.toLocaleString('es-ES')} unidades disponibles en stock` : ''}.
-                Envío gratis desde 200 € y garantía oficial de 3 años.
+                Envío gratis desde 200 € y garantía de 3 años.
               </p>
             </div>
 

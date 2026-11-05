@@ -400,7 +400,7 @@ export function getItemListSchema(params: {
         const safeBrand = item.brand && !isExcludedSupplierBrand(item.brand)
           ? item.brand.trim()
           : 'Escapes y Más';
-        const fallbackDesc = `${safeBrand !== 'Escapes y Más' ? `${safeBrand} - ` : ''}${item.name}. Recambio y accesorio oficial de moto disponible en Escapes y Más. Garantía de 3 años, envío rápido a toda España y soporte técnico especializado.`;
+        const fallbackDesc = `${safeBrand !== 'Escapes y Más' ? `${safeBrand} - ` : ''}${item.name}. Disponible en Escapes y Más con garantía de 3 años y entrega en ${DELIVERY_ES} en España.`;
         const description = rawDesc && rawDesc.length >= 30 ? rawDesc : fallbackDesc;
 
         const roundedPrice = Number(item.price.toFixed(2));

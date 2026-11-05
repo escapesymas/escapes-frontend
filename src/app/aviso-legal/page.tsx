@@ -21,7 +21,7 @@ export default function AvisoLegalPage() {
               <li><strong>Denominación comercial:</strong> Escapes y Más</li>
               <li><strong>Sitio Web:</strong> https://escapesymas.com</li>
               <li><strong>Atención al Cliente:</strong> info@escapesymas.com</li>
-              <li><strong>Actividad:</strong> Venta de recambios, escapes y accesorios homologados para motocicletas.</li>
+              <li><strong>Actividad:</strong> Venta de recambios, escapes y accesorios para motocicletas.</li>
             </ul>
           </section>
 

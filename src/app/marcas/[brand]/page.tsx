@@ -56,11 +56,11 @@ export async function generateMetadata({
 
   const title = brand.isEscapeSpecialist
     ? `Escapes ${brand.name} para Moto${pageSuffix} — Silenciosos y Colectores | Escapes y Más`
-    : `${brand.name} Moto${pageSuffix} — Catálogo Oficial${topCatsText ? ` (${topCatsText})` : ''} | Escapes y Más`;
+    : `${brand.name} Moto${pageSuffix} — Catálogo${topCatsText ? ` (${topCatsText})` : ''} | Escapes y Más`;
 
   const description = brand.isEscapeSpecialist
-    ? `Compra escapes completos, silenciosos homologados y colectores ${brand.name} para moto (${brand.modelCount.toLocaleString('es-ES')} modelos disponibles). Precios con IVA, stock real y envío gratis desde ${FREE_SHIPPING_MIN} €.`
-    : `Catálogo oficial ${brand.name} para moto en Escapes y Más: ${brand.modelCount.toLocaleString('es-ES')} modelos${topCatsText ? ` en ${topCatsText.toLowerCase()}` : ''} con precios con IVA, garantía de 3 años y envío gratis desde ${FREE_SHIPPING_MIN} €.`;
+    ? `Compra escapes completos, silenciosos y colectores ${brand.name} para moto (${brand.modelCount.toLocaleString('es-ES')} modelos disponibles). Precios con IVA, stock real y envío gratis desde ${FREE_SHIPPING_MIN} €.`
+    : `Catálogo ${brand.name} para moto en Escapes y Más: ${brand.modelCount.toLocaleString('es-ES')} modelos${topCatsText ? ` en ${topCatsText.toLowerCase()}` : ''} con precios con IVA, garantía de 3 años y envío gratis desde ${FREE_SHIPPING_MIN} €.`;
 
   return {
     title,
@@ -121,7 +121,7 @@ export default async function MarcaDetailPage({
   const itemListSchema = getItemListSchema({
     name: brand.isEscapeSpecialist
       ? `Escapes y recambios ${brand.name} para moto`
-      : `Catálogo oficial ${brand.name} para moto`,
+      : `Recambios y equipamiento ${brand.name} para moto`,
     url: canonicalPath,
     items: products.slice(0, 24).map((p) => ({
       name: p.name || p.title,
@@ -139,8 +139,8 @@ export default async function MarcaDetailPage({
   const topCatNames = brand.topCategories.slice(0, 4).map((c) => c.name.toLowerCase()).join(', ');
   const faqs = [
     {
-      question: `¿Son originales los productos ${brand.name} que vendéis en Escapes y Más?`,
-      answer: `Sí, todas nuestras referencias ${brand.name} (${brand.productCount.toLocaleString('es-ES')} referencias en catálogo${topCatNames ? `, destacando ${topCatNames}` : ''}) son 100 % originales del fabricante e incluyen 3 años de garantía legal en España.`,
+      question: `¿Qué garantía tienen los productos ${brand.name}?`,
+      answer: `Los productos ${brand.name} (${brand.productCount.toLocaleString('es-ES')} referencias en catálogo${topCatNames ? `, destacando ${topCatNames}` : ''}) tienen garantía legal de 3 años para particulares (1 año para empresas) en España.`,
     },
     {
       question: `¿Cómo sé qué referencia de ${brand.name} es compatible con mi modelo y año de moto?`,

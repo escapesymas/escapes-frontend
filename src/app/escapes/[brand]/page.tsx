@@ -45,7 +45,7 @@ export async function generateMetadata({
     ...(!hasActiveModels ? { robots: { index: false, follow: true } } : {}),
     openGraph: {
       title: `Escapes y Recambios para ${brand.name} | Escapes y Más`,
-      description: `Busca tu modelo de ${brand.name}: escapes completos, silenciosos homologados ITV y recambios específicos con stock real.`,
+      description: `Busca tu modelo de ${brand.name}: escapes completos, silenciosos (homologados y de competición) y recambios específicos con stock real.`,
       url: `https://escapesymas.com${canonical}`,
       type: 'website',
     },

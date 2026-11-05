@@ -82,7 +82,7 @@ export default function MarcasDirectoryClient({ directory, faqs }: Props) {
                 Marcas de escapes, recambios y equipamiento de moto
               </h1>
               <p className="text-sm text-text-muted leading-relaxed">
-                Trabajamos con <strong className="text-foreground">{(directory?.totalBrands || 214).toLocaleString('es-ES')} fabricantes oficiales</strong> de sistemas de escape homologados, frenos, transmisión, motor, neumáticos y equipamiento para motorista, con stock actualizado en tiempo real y garantía de 3 años.
+                Trabajamos con <strong className="text-foreground">{(directory?.totalBrands || 214).toLocaleString('es-ES')} fabricantes</strong> de sistemas de escape, frenos, transmisión, motor, neumáticos y equipamiento para motorista, con stock actualizado en tiempo real y garantía de 3 años.
               </p>
             </div>
 
