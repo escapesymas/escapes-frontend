@@ -5,6 +5,7 @@ import { DELIVERY_ES } from '../../../lib/constants';
 import { isExcludedSupplierBrand, slugifyManufacturerBrand } from '../../../lib/brandSeo';
 import { getProductSchema, getBreadcrumbSchema, jsonLd } from '../../../components/SchemaMarkup';
 import { effectivePrice } from '../../../lib/pricing';
+import { roadHomologation } from '../../../lib/homologation';
 
 const API_BASE = process.env.API_URL || 'https://api.escapesymas.com';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://escapesymas.com';
@@ -80,12 +81,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const compat = Array.isArray(product.compatibility) ? product.compatibility.length : 0;
   const cleanedName = cleanProductTitle(product.name);
   const isEscape = /\b(escape|silencioso|silenciador|colector|tubo|linea)\b/i.test(product.name);
-  const titleBadge = isEscape ? ' · Homologado ITV' : '';
-  const title = `${publicBrand ? publicBrand + ' ' : ''}${cleanedName}${titleBadge} | Escapes y Más`;
+  // Solo si la ficha dice que está homologado: antes todos los escapes salían «Homologado ITV», también los de circuito.
+  const titleBadge = isEscape && roadHomologation(product.attributes) === 'yes' ? ' · Homologado CE' : '';
+  // La marca va delante solo si el nombre no la lleva ya («AFAM Kit de cadena AFAM…»).
+  const brandPrefix = publicBrand && !cleanedName.toLowerCase().includes(publicBrand.toLowerCase()) ? `${publicBrand} ` : '';
+  const title = `${brandPrefix}${cleanedName}${titleBadge} | Escapes y Más`;
 
   const isFreeShip = Number(price) >= 200;
   const shipBadge = isFreeShip ? 'Envío gratis.' : `Envío estándar en ${DELIVERY_ES}.`;
-  const description = `${publicBrand ? `${publicBrand} ` : ''}${cleanedName} a ${price}€. ${product.inStock ? `En stock. ${shipBadge}` : 'Sin stock ahora mismo.'}${compat ? ` Compatible con ${compat} ${compat === 1 ? 'modelo' : 'modelos'} de moto.` : ''} Garantía de 3 años.`;
+  const description = `${brandPrefix}${cleanedName} a ${price}€. ${product.inStock ? `En stock. ${shipBadge}` : 'Sin stock ahora mismo.'}${compat ? ` Compatible con ${compat} ${compat === 1 ? 'modelo' : 'modelos'} de moto.` : ''} Garantía de 3 años.`;
   const imageUrl = product.image || `${SITE_URL}/og-image.png`;
   const canonicalSku = product.sku || slug;
   const pageUrl = `${SITE_URL}/producto/${encodeURIComponent(canonicalSku)}`;

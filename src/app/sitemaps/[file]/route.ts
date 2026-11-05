@@ -14,11 +14,11 @@ function urlset(entries: Entry[]): Response {
   return xmlResponse(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body.join('\n')}\n</urlset>`);
 }
 
+// Sin <lastmod> en páginas, motos y marcas: no hay fecha real de cambio y poner «hoy» en todas hace que Google
+// deje de fiarse del campo. Los productos sí llevan la fecha de su última actualización.
 async function pages(): Promise<Response> {
-  const today = new Date().toISOString().slice(0, 10);
   const entries: Entry[] = STATIC_PAGES.map((p) => ({
     loc: `${SITE_URL}${p}`,
-    lastmod: today,
     priority: p === '' ? 1 : (p === '/universales' || p === '/escapes' || p === '/marcas') ? 0.9 : 0.3,
   }));
   try {
@@ -27,9 +27,9 @@ async function pages(): Promise<Response> {
     const live = cats.filter((c) => !c.slug.startsWith('old-') && !/promocional/i.test(c.slug));
     const byId = new Map(live.map((c) => [c.id, c]));
     for (const c of live) {
-      if (!c.parentId) entries.push({ loc: `${SITE_URL}/universales/${c.slug}`, lastmod: today, priority: 0.8 });
+      if (!c.parentId) entries.push({ loc: `${SITE_URL}/universales/${c.slug}`, priority: 0.8 });
       else if (byId.get(c.parentId) && !byId.get(c.parentId)!.parentId) {
-        entries.push({ loc: `${SITE_URL}/universales/${byId.get(c.parentId)!.slug}/${c.slug}`, lastmod: today, priority: 0.7 });
+        entries.push({ loc: `${SITE_URL}/universales/${byId.get(c.parentId)!.slug}/${c.slug}`, priority: 0.7 });
       }
     }
   } catch { /* solo estáticas */ }
@@ -58,13 +58,11 @@ async function motos(): Promise<Response> {
     brands?: { slug: string; escapeModelCount: number }[];
     models?: { brandSlug: string; modelSlug: string; escapeCount: number }[];
   };
-  const today = new Date().toISOString().slice(0, 10);
-  const entries: Entry[] = [{ loc: `${SITE_URL}/escapes`, lastmod: today, priority: 0.9 }];
+  const entries: Entry[] = [{ loc: `${SITE_URL}/escapes`, priority: 0.9 }];
   for (const b of data.brands || []) {
     if (!b.slug) continue;
     entries.push({
       loc: `${SITE_URL}/escapes/${encodeURIComponent(b.slug)}`,
-      lastmod: today,
       priority: b.escapeModelCount > 0 ? 0.8 : 0.7,
     });
   }
@@ -72,7 +70,6 @@ async function motos(): Promise<Response> {
     if (!m.brandSlug || !m.modelSlug) continue;
     entries.push({
       loc: `${SITE_URL}/escapes/${encodeURIComponent(m.brandSlug)}/${encodeURIComponent(m.modelSlug)}`,
-      lastmod: today,
       priority: m.escapeCount > 0 ? 0.8 : 0.7,
     });
   }
@@ -85,13 +82,11 @@ async function marcas(): Promise<Response> {
   const data = (await res.json()) as {
     brands?: { slug: string; productCount: number; inStockCount: number; isEscapeSpecialist?: boolean }[];
   };
-  const today = new Date().toISOString().slice(0, 10);
-  const entries: Entry[] = [{ loc: `${SITE_URL}/marcas`, lastmod: today, priority: 0.9 }];
+  const entries: Entry[] = [{ loc: `${SITE_URL}/marcas`, priority: 0.9 }];
   for (const b of data.brands || []) {
     if (!b.slug || isExcludedSupplierBrand(b.slug)) continue;
     entries.push({
       loc: `${SITE_URL}/marcas/${encodeURIComponent(b.slug)}`,
-      lastmod: today,
       priority: b.isEscapeSpecialist || b.inStockCount >= 50 ? 0.8 : 0.7,
     });
   }

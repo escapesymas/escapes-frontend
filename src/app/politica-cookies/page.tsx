@@ -22,7 +22,7 @@ export default function PoliticaCookiesPage() {
             <p>En <strong>escapesymas.com</strong> utilizamos las siguientes categorías de cookies:</p>
             <ul className="list-disc pl-5 mt-2 space-y-2">
               <li><strong>Cookies estrictamente necesarias:</strong> imprescindibles para el funcionamiento del sitio web, como la gestión del carrito de la compra, la autenticación de usuarios y la seguridad. Estas cookies no requieren consentimiento.</li>
-              <li><strong>Cookies de análisis (opcionales):</strong> nos permiten medir y analizar la navegación de los usuarios en el sitio para mejorar nuestros servicios. Solo se activan con tu consentimiento.</li>
+              <li><strong>Cookies de análisis (opcionales):</strong> nos permiten medir y analizar la navegación de los usuarios en el sitio para mejorar nuestros servicios y avisar a nuestro equipo de la actividad en la tienda (visita, producto visto, carrito, salida). Solo se activan con tu consentimiento. La estadística agregada de la web no usa cookies.</li>
               <li><strong>Cookies de marketing (opcionales):</strong> las usa el píxel de TikTok para medir las compras y visitas que llegan desde nuestras publicaciones y anuncios en TikTok. Solo se activan si aceptas la categoría «Marketing» en el aviso de cookies.</li>
               <li><strong>Cookies de funcionalidad (opcionales):</strong> permiten recordar tus preferencias (idioma, configuración del selector de moto, productos favoritos) para ofrecerte una experiencia personalizada.</li>
             </ul>
@@ -51,6 +51,12 @@ export default function PoliticaCookiesPage() {
                   <td className="py-2">Estrictamente necesaria</td>
                   <td className="py-2">Identificador de carrito persistente (guest)</td>
                   <td className="py-2">30 días</td>
+                </tr>
+                <tr className="border-b border-card-border/50">
+                  <td className="py-2">eym_sid, eym_*</td>
+                  <td className="py-2">Análisis (solo con tu consentimiento)</td>
+                  <td className="py-2">Identificador de la visita, páginas vistas y tiempo, para avisar a nuestro equipo de la actividad en la tienda. Se guardan en la pestaña y se borran al cerrarla</td>
+                  <td className="py-2">Sesión</td>
                 </tr>
                 <tr className="border-b border-card-border/50">
                   <td className="py-2">tg_selected_bike</td>

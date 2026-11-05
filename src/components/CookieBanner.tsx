@@ -16,7 +16,7 @@ interface ConsentState {
 
 const CATEGORIES = [
   { id: 'necessary', label: 'Necesarias', desc: 'Carrito, sesión y seguridad. Siempre activas.', locked: true },
-  { id: 'analytics', label: 'Analítica', desc: 'Mejoramos el sitio midiendo uso agregado.', locked: false },
+  { id: 'analytics', label: 'Analítica', desc: 'Mejoramos el sitio midiendo cómo se usa (páginas, tiempo y carrito) y avisamos a nuestro equipo de la actividad, sin identificarte.', locked: false },
   { id: 'marketing', label: 'Marketing', desc: 'Medir visitas y compras que llegan desde TikTok (píxel de TikTok).', locked: false },
 ];
 

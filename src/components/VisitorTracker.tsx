@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { getApiUrl } from '../lib/constants';
+import { clearVisitorStorage, hasAnalyticsConsent } from '../lib/consent';
 
 function detectTrafficSource(): string {
   if (typeof window === 'undefined') return 'Directo';
@@ -78,6 +79,9 @@ function isStaffOrBot(): boolean {
 }
 
 /**
+ * Solo funciona si el visitante acepta las cookies de analítica del aviso (CookieBanner), igual que el píxel de
+ * TikTok con las de marketing: sin permiso no se guarda ningún identificador ni se envía nada. Si lo retira, se borra.
+ *
  * Rastreador para notificar al panel de administración:
  * - Nuevas visitas reales con su origen
  * - Productos añadidos al carrito
@@ -88,10 +92,23 @@ export default function VisitorTracker() {
   const pathname = usePathname();
   const initTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const productTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [consent, setConsent] = useState(false);
+
+  // 0. Permiso de analítica (al cargar y cuando se cambia en el aviso de cookies)
+  useEffect(() => {
+    const sync = () => {
+      const ok = hasAnalyticsConsent();
+      if (!ok) clearVisitorStorage();
+      setConsent(ok);
+    };
+    sync();
+    window.addEventListener('cookie_consent_update', sync);
+    return () => window.removeEventListener('cookie_consent_update', sync);
+  }, []);
 
   // 1. Inicialización, avisos de visita, carrito, pago y salida
   useEffect(() => {
-    if (isStaffOrBot()) return;
+    if (!consent || isStaffOrBot()) return;
 
     let sid = '';
     try {
@@ -217,11 +234,11 @@ export default function VisitorTracker() {
       window.removeEventListener('eym_payment_start', handlePaymentStart);
       window.removeEventListener('pagehide', handleLeave);
     };
-  }, []);
+  }, [consent]);
 
   // 2. Avance en la navegación (cambio de ruta)
   useEffect(() => {
-    if (!pathname || isStaffOrBot()) return;
+    if (!consent || !pathname || isStaffOrBot()) return;
 
     let sid = '';
     let pageCount = 1;
@@ -280,7 +297,7 @@ export default function VisitorTracker() {
     return () => {
       if (productTimer.current) clearTimeout(productTimer.current);
     };
-  }, [pathname]);
+  }, [pathname, consent]);
 
   return null;
 }

@@ -27,10 +27,7 @@ export default function robots(): MetadataRoute.Robots {
         crawlDelay: 2,
       },
     ],
-    sitemap: [
-      'https://escapesymas.com/sitemap.xml',
-      'https://escapesymas.com/sitemaps/motos.xml',
-      'https://escapesymas.com/sitemaps/marcas.xml',
-    ],
+    // Un solo índice: de él cuelgan pages, motos, marcas y productos.
+    sitemap: 'https://escapesymas.com/sitemap.xml',
   };
 }
