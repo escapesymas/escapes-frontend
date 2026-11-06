@@ -11,6 +11,15 @@ import RelatedProductLinks, { type RelatedLink } from '../../../components/produ
 const API_BASE = process.env.API_URL || 'https://api.escapesymas.com';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://escapesymas.com';
 
+/** Next entrega el segmento sin decodificar (AND-ALMG%20608Y): sin esto el SKU con espacio o «+» se codifica dos veces y la ficha da 404. */
+function decodeSlug(raw: string): string {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
 /** null = no se pudo consultar (se intenta en el cliente); { missing } = no existe (404). */
 async function fetchProductBySlug(slug: string) {
   try {
@@ -79,7 +88,7 @@ async function fetchRelatedLinks(sku: string): Promise<RelatedLink[]> {
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const { slug } = await params;
+  const slug = decodeSlug((await params).slug);
   const product = await fetchProductBySlug(slug);
   if (!product || product.redirectTo || product.redirectToPath || product.missing) {
     return {
@@ -132,7 +141,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
+  const slug = decodeSlug((await params).slug);
   const product = await fetchProductBySlug(slug);
   if (product?.redirectTo) permanentRedirect(`/producto/${encodeURIComponent(product.redirectTo)}`);
   if (product?.redirectToPath) permanentRedirect(product.redirectToPath);
