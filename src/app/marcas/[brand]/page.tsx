@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
 import MarcaLandingClient from './MarcaLandingClient';
 import { fetchBrandLanding } from '../../../lib/brandSeo';
+import { getBrandContent } from '../../../lib/brandContent';
 import {
   getBreadcrumbSchema,
   getFaqSchema,
@@ -54,11 +55,15 @@ export async function generateMetadata({
     .map((c) => c.name)
     .join(', ');
 
-  const title = brand.isEscapeSpecialist
-    ? `Escapes ${brand.name} para Moto${pageSuffix} — Silenciosos y Colectores | Escapes y Más`
-    : `${brand.name} Moto${pageSuffix} — Catálogo${topCatsText ? ` (${topCatsText})` : ''} | Escapes y Más`;
+  // Marcas con texto propio (lib/brandContent.ts): título y descripción pensados para lo que busca la gente.
+  const own = getBrandContent(brand.slug);
+  const title = own
+    ? `${own.title}${pageSuffix} | Escapes y Más`
+    : brand.isEscapeSpecialist
+      ? `Escapes ${brand.name} para Moto${pageSuffix} — Silenciosos y Colectores | Escapes y Más`
+      : `${brand.name} Moto${pageSuffix} — Catálogo${topCatsText ? ` (${topCatsText})` : ''} | Escapes y Más`;
 
-  const description = brand.isEscapeSpecialist
+  const description = own ? own.description : brand.isEscapeSpecialist
     ? `Compra escapes completos, silenciosos y colectores ${brand.name} para moto (${brand.modelCount.toLocaleString('es-ES')} modelos disponibles). Precios con IVA, stock real y envío gratis desde ${FREE_SHIPPING_MIN} €.`
     : `Catálogo ${brand.name} para moto en Escapes y Más: ${brand.modelCount.toLocaleString('es-ES')} modelos${topCatsText ? ` en ${topCatsText.toLowerCase()}` : ''} con precios con IVA, garantía de 3 años y envío gratis desde ${FREE_SHIPPING_MIN} €.`;
 
@@ -152,6 +157,8 @@ export default async function MarcaDetailPage({
     },
   ];
 
+  const content = getBrandContent(brand.slug);
+  if (content) faqs.unshift(...content.faqs);
   const faqSchema = getFaqSchema(faqs);
 
   return (
@@ -175,6 +182,7 @@ export default async function MarcaDetailPage({
         initialSort={sort}
         initialQuery={q}
         faqs={faqs}
+        content={content}
       />
     </>
   );

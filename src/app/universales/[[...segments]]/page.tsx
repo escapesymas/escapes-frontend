@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { redirect, notFound } from 'next/navigation';
 import CatalogClient from './CatalogClient';
 import { Category3, Product, FilterOptions } from '../../../types';
@@ -30,6 +31,29 @@ function parsePositivePage(raw: string | string[] | undefined): number {
   return Number.isFinite(n) && n > 1 ? n : 1;
 }
 
+/**
+ * Categorías con texto propio, elegidas con el Planificador de palabras clave de Google (6/11/2026): lo que hay en
+ * tienda y lo que más se busca. Las marcas y modelos son los del catálogo; la homologación va en cada ficha.
+ */
+const CATEGORY_COPY: Record<string, {
+  title: string; description: string; heading: string; text: string; brands: { name: string; slug: string }[];
+}> = {
+  'equipamiento-piloto/guantes': {
+    title: 'Guantes de moto: RST, Troy Lee Designs y Fly Racing',
+    description: 'Guantes de moto de carretera (sport, urbano, touring, adventure, vintage) y de motocross y enduro: RST, Troy Lee Designs y Fly Racing, también de mujer e infantiles. Envío gratis desde 200 €.',
+    heading: 'Guantes de moto para carretera y para motocross',
+    text: 'Los guantes de RST son de moto de carretera (sport, urbano, competición, vintage, touring y adventure), con modelos de mujer e impermeables. Los de Troy Lee Designs y Fly Racing son de motocross y enduro, y hay también infantiles. En cada ficha verás la talla, el color y la homologación que informa el fabricante.',
+    brands: [{ name: 'RST', slug: 'rst' }, { name: 'Troy Lee Designs', slug: 'troy-lee-designs' }, { name: 'Fly Racing', slug: 'fly-racing' }],
+  },
+  cascos: {
+    title: 'Cascos de moto: Arai, Bell, Troy Lee Designs y Fly Racing',
+    description: 'Cascos de moto Arai, Bell, Troy Lee Designs y Fly Racing para carretera, motocross y enduro, con recambios, pantallas Pinlock e intercomunicadores Sena. Envío gratis desde 200 €.',
+    heading: 'Cascos de moto, recambios e intercomunicadores',
+    text: 'Cascos Arai (RX-7V, Tour-X5, Quantic, MX-V, SZ-R, Concept-XE), Bell, Troy Lee Designs y Fly Racing para carretera, motocross y enduro. También hay recambios de casco (viseras, pantallas, interiores, carrilleras), pantallas antivaho Pinlock e intercomunicadores Sena. La ficha de cada casco indica la homologación que informa el fabricante.',
+    brands: [{ name: 'Arai', slug: 'arai' }, { name: 'Bell', slug: 'bell' }, { name: 'Troy Lee Designs', slug: 'troy-lee-designs' }, { name: 'Fly Racing', slug: 'fly-racing' }, { name: 'Sena', slug: 'sena' }, { name: 'Pinlock', slug: 'pinlock' }],
+  },
+};
+
 export async function generateMetadata({
   params,
   searchParams,
@@ -54,9 +78,13 @@ export async function generateMetadata({
   const canonical = !filtered && page > 1 ? `${path}?page=${page}` : path;
   const pageSuffix = !filtered && page > 1 ? ` · Página ${page}` : '';
 
+  const copy = CATEGORY_COPY[segments.length ? segments.join('/') : ''];
   let title: string;
   let description: string;
-  if (sub && parent) {
+  if (copy) {
+    title = `${copy.title}${pageSuffix} | Escapes y Más`;
+    description = copy.description;
+  } else if (sub && parent) {
     title = `${sub.name} · ${parent.name} para Moto${pageSuffix} — Escapes y Más`;
     description = `${sub.name} (${parent.name}) para tu moto: primeras marcas, precios con IVA, stock en tiempo real y envío gratis desde 200 € en Escapes y Más.`;
   } else if (parent) {
@@ -216,6 +244,9 @@ export default async function CatalogPage({
         }))
       : POPULAR_FOOTER_MANUFACTURER_BRANDS.map((b) => ({ name: b.name, href: b.href }));
 
+  // Texto de categoría (solo sin filtros ni paginación): lo que hay en tienda, con enlaces a las marcas.
+  const categoryCopy = !isSearch && urlState.page === 1 && Object.keys(sp).length === 0 ? CATEGORY_COPY[segs.join('/')] : undefined;
+
   const initialSearchParamsStr = spParams.toString();
   const basePath = `/universales${segs.length ? `/${segs.join('/')}` : ''}`;
   const canonicalUrlPath = urlState.page > 1 ? `${basePath}?page=${urlState.page}` : basePath;
@@ -303,6 +334,25 @@ export default async function CatalogPage({
           featuredTyreProducts={featuredTyreProducts}
         />
       </Suspense>
+      {categoryCopy && (
+        <section aria-labelledby="categoria-texto" className="max-w-[1400px] w-full mx-auto px-4 pb-16 -mt-6 flex flex-col gap-3">
+          <h2 id="categoria-texto" className="text-xs font-mono font-bold uppercase tracking-wider text-foreground">
+            {categoryCopy.heading}
+          </h2>
+          <p className="text-sm text-text-muted leading-relaxed max-w-3xl">{categoryCopy.text}</p>
+          <div className="flex flex-wrap gap-2">
+            {categoryCopy.brands.map((b) => (
+              <Link
+                key={b.slug}
+                href={`/marcas/${b.slug}`}
+                className="px-3 py-1.5 rounded-md bg-card border border-card-border text-xs text-foreground hover:border-accent transition-colors"
+              >
+                {b.name}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </>
   );
 }

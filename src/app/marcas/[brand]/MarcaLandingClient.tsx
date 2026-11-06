@@ -12,6 +12,7 @@ import { useCart } from '../../../context/CartContext';
 import { SORT_OPTIONS } from '../../../lib/catalogParams';
 import type { Product } from '../../../types';
 import type { ManufacturerBrandLandingData } from '../../../lib/brandSeo';
+import type { BrandContent } from '../../../lib/brandContent';
 
 interface Props {
   data: ManufacturerBrandLandingData;
@@ -20,6 +21,7 @@ interface Props {
   initialSort: string;
   initialQuery: string;
   faqs: { question: string; answer: string }[];
+  content?: BrandContent;
 }
 
 function getPaginationWindow(current: number, totalPages: number): (number | 'ellipsis-left' | 'ellipsis-right')[] {
@@ -41,6 +43,7 @@ export default function MarcaLandingClient({
   initialSort,
   initialQuery,
   faqs,
+  content,
 }: Props) {
   const router = useRouter();
   const { addToCart } = useCart();
@@ -115,9 +118,11 @@ export default function MarcaLandingClient({
             <div className="flex flex-col gap-1.5 max-w-3xl">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
-                  {brand.isEscapeSpecialist
-                    ? `Escapes y recambios ${brand.name} para moto`
-                    : `Recambios y equipamiento ${brand.name} para moto`}
+                  {content
+                    ? content.h1
+                    : brand.isEscapeSpecialist
+                      ? `Escapes y recambios ${brand.name} para moto`
+                      : `Recambios y equipamiento ${brand.name} para moto`}
                   {page > 1 && <span className="text-base font-normal text-text-muted ml-2">· Página {page}</span>}
                 </h1>
                 {brand.isEscapeSpecialist && (
@@ -126,6 +131,9 @@ export default function MarcaLandingClient({
                   </span>
                 )}
               </div>
+              {content && page === 1 && !hasFilters && (
+                <p className="text-sm text-foreground leading-relaxed">{content.intro}</p>
+              )}
               <p className="text-xs md:text-sm text-text-muted leading-relaxed">
                 Explora {brand.modelCount.toLocaleString('es-ES')} modelos ({brand.productCount.toLocaleString('es-ES')} referencias) de la marca <strong className="text-foreground">{brand.name}</strong>
                 {brand.inStockCount > 0 ? `, con ${brand.inStockCount.toLocaleString('es-ES')} unidades disponibles en stock` : ''}.
@@ -138,6 +146,28 @@ export default function MarcaLandingClient({
               {refs && refs > total ? <> · {refs.toLocaleString('es-ES')} ref.</> : null}
             </div>
           </div>
+
+          {/* Enlaces por tipo de producto de la marca (texto propio: lib/brandContent.ts) */}
+          {content && content.groups.length > 0 && (
+            <div className="flex flex-col gap-2.5 pt-1">
+              {content.groups.map((g) => (
+                <div key={g.heading} className="flex flex-col gap-1.5">
+                  <h2 className="text-[11px] font-mono font-bold uppercase tracking-wider text-text-muted">{g.heading}</h2>
+                  <div className="flex flex-wrap gap-1.5">
+                    {g.links.map((l) => (
+                      <Link
+                        key={`${g.heading}-${l.q}`}
+                        href={buildHref({ q: l.q, categoryId: null, page: 1 })}
+                        className="px-3 py-1.5 rounded-full text-xs border bg-background text-foreground border-card-border hover:border-accent transition-colors"
+                      >
+                        {l.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Especialidades por categoría (filtro dentro de la marca) */}
           {brand.topCategories.length > 0 && (
