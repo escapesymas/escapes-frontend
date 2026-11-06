@@ -134,6 +134,11 @@ export function validGtin(code?: string | null): string | null {
   return (10 - (sum % 10)) % 10 === check ? c : null;
 }
 
+/** Search Console da «el valor del campo sku no es válido» a los que llevan espacios (AND-ALMG 608Y): en el marcado va con guiones; el enlace y el feed siguen con el sku real. */
+export function schemaSku(sku?: string | null): string {
+  return String(sku || '').trim().replace(/\s+/g, '-');
+}
+
 function toAbsoluteUrl(url?: string | null): string {
   const clean = String(url || '').trim();
   if (!clean) return '';
@@ -241,7 +246,7 @@ export function getProductSchema(product: {
     name: product.name,
     description,
     image: collectedImages,
-    sku: product.sku || '',
+    sku: schemaSku(product.sku),
     ...(mpn ? { mpn } : {}),
     ...(gtin
       ? {
@@ -422,7 +427,7 @@ export function getItemListSchema(params: {
               '@type': 'Brand',
               name: safeBrand,
             },
-            ...(item.sku ? { sku: item.sku } : {}),
+            ...(item.sku ? { sku: schemaSku(item.sku) } : {}),
             ...(mpn ? { mpn } : {}),
             ...(gtin
               ? {
