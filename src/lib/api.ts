@@ -79,7 +79,7 @@ export async function fetchProduct(id: number) {
   return res.json();
 }
 
-export async function refreshProductStock(id: number): Promise<{ stock: number; inStock: boolean } | null> {
+export async function refreshProductStock(id: number): Promise<{ stock: number; inStock: boolean; restockDate?: string | null; restocking?: boolean } | null> {
   const res = await apiFetch(`/catalog/product/${id}/refresh-stock`, {
     method: 'POST',
   });

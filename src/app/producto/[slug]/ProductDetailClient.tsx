@@ -45,6 +45,17 @@ function Section({ title, children, defaultOpen = false, id }: { title: React.Re
   );
 }
 
+/** «previsto el 21 de diciembre (en 5 semanas)»: la fecha que da Bihr, sin prometer más de lo que sabemos. */
+function restockLabel(iso: string): string {
+  const d = new Date(`${iso}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return 'sin fecha confirmada';
+  const days = Math.round((d.getTime() - Date.now()) / 86_400_000);
+  const when = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+  if (days <= 0) return `previsto para ${when}`;
+  const weeks = Math.max(1, Math.round(days / 7));
+  return `previsto el ${when} (en ${weeks} ${weeks === 1 ? 'semana' : 'semanas'})`;
+}
+
 export default function ProductDetailClient({ slug, initialProduct }: { slug: string; initialProduct?: Product | null }) {
   const router = useRouter();
   const { addToCart } = useCart();
@@ -80,16 +91,16 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
     return () => { cancelled = true; };
   }, [slug, initialProduct]);
 
-  // Stock en tiempo real del proveedor para productos de dropshipping/bajo pedido.
+  // Stock en tiempo real del proveedor (Bihr o Andreani): lo que guarda la BD puede ir por detrás.
   useEffect(() => {
-    if (!product || (!product.dropshipping && !product.ondemand)) return;
+    if (!product) return;
     let active = true;
     const timer = setTimeout(async () => {
       try {
         const data = await refreshProductStock(product.id);
         if (active && data && typeof data.stock === 'number') {
-          setProduct((prev) => (prev && (prev.stock !== data.stock || prev.inStock !== data.inStock)
-            ? { ...prev, stock: data.stock, inStock: data.inStock } : prev));
+          setProduct((prev) => (prev && (prev.stock !== data.stock || prev.inStock !== data.inStock || prev.restockDate !== data.restockDate)
+            ? { ...prev, stock: data.stock, inStock: data.inStock, restockDate: data.restockDate ?? null, restocking: !!data.restocking } : prev));
         }
       } catch { /* el stock mostrado sigue siendo el de la BD */ }
     }, 1000);
@@ -145,9 +156,14 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
     ...(product.barcode ? [['EAN', product.barcode] as [string, string]] : []),
   ].filter(([, v]) => v) as [string, string][];
 
+  // Sin stock pero con fecha prevista de Bihr: «en reaprovisionamiento».
+  const restocking = !inStock && !!product.restocking && !!product.restockDate;
+  const restockText = restocking ? restockLabel(product.restockDate as string) : '';
   const availability = inStock
     ? { dot: 'bg-emerald-500', text: `${product.dropshipping ? 'Disponible' : 'En stock'} · entrega en ${DELIVERY_ES}` }
-    : { dot: 'bg-red-500', text: 'Agotado' };
+    : restocking
+      ? { dot: 'bg-amber-500', text: `En reaprovisionamiento · ${restockText}` }
+      : { dot: 'bg-red-500', text: 'Agotado' };
 
   // Catálogo › Raíz › Subcategoría › (tercer nivel, sin página propia: se
   // enlaza a su subcategoría).
@@ -235,7 +251,9 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
             images={images}
             alt={product.name}
             badge={!inStock ? (
-              <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-red-600 text-white">Agotado</span>
+              restocking
+                ? <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-amber-500 text-slate-950">Reaprovisionando</span>
+                : <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-red-600 text-white">Agotado</span>
             ) : onSale && product.onPromotion ? (
               <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-accent text-slate-950">Oferta</span>
             ) : undefined}

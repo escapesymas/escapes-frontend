@@ -45,6 +45,9 @@ export interface Product {
   images: ProductImage[];
   inStock: boolean;
   stock: number;
+  /** Sin stock pero con fecha prevista de Bihr: «en reaprovisionamiento» (AAAA-MM-DD). */
+  restockDate?: string | null;
+  restocking?: boolean;
   category: string;
   categorySlug: string;
   categoryId: number;

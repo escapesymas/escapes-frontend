@@ -78,9 +78,15 @@ export default function ProductCard({ product, onAddToCart, onNotifyMe, priority
 
         {isOutOfStock && (
           <div className="absolute top-2 right-2 z-10">
-            <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-red-600/90 text-white border border-red-400/50 shadow-sm">
-              Agotado
-            </span>
+            {!hasVariants && product.restocking ? (
+              <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-amber-500 text-slate-950 border border-amber-300 shadow-sm">
+                Reaprovisionando
+              </span>
+            ) : (
+              <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-red-600/90 text-white border border-red-400/50 shadow-sm">
+                Agotado
+              </span>
+            )}
           </div>
         )}
 
