@@ -10,6 +10,7 @@ import { trackEvent as trackUmami, short } from '../lib/umami';
 import { tiktokAddToCart } from '../lib/analytics';
 import { effectivePrice, formatEuro, optionsSummary } from '../lib/pricing';
 import { DELIVERY_ES } from '../lib/constants';
+import { useLiveStock } from '../lib/liveStock';
 
 interface ProductCardProps {
   product: Product;
@@ -24,7 +25,9 @@ function pickImage(img: ProductImageType) {
   return { src, mobileSrc };
 }
 
-export default function ProductCard({ product, onAddToCart, onNotifyMe, priority = false }: ProductCardProps) {
+export default function ProductCard({ product: listed, onAddToCart, onNotifyMe, priority = false }: ProductCardProps) {
+  // La lista trae el stock de la última copia; al verse la tarjeta se contrasta con el del proveedor (lib/liveStock.ts).
+  const { product, ref: cardRef } = useLiveStock(listed);
   const family = product.family;
   const hasVariants = !!family && (family.variantCount || 0) > 1;
   // Un modelo con variantes está agotado solo si lo están todas.
@@ -53,6 +56,7 @@ export default function ProductCard({ product, onAddToCart, onNotifyMe, priority
   return (
     <a
       key={product.id}
+      ref={cardRef}
       href={`/producto/${productSlug}`}
       className="bg-card border rounded-md overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-md transition-all group cursor-pointer snap-start shrink-0 w-full mx-auto"
       style={{ borderColor: product.isCompatible ? 'var(--badge-border)' : 'var(--card-border)' }}
