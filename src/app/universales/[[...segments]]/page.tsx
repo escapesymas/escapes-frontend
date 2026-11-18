@@ -215,10 +215,16 @@ export default async function CatalogPage({
   ]);
 
   const corrHeader = prodRes?.headers.get('X-Search-Corrected');
+  const vehicleHeader = prodRes?.headers.get('X-Search-Vehicle');
+  const categoryHeader = prodRes?.headers.get('X-Search-Category');
   const initialSearchMeta = {
     fuzzy: prodRes?.headers.get('X-Search-Fuzzy') === '1',
     corrected: corrHeader ? decodeURIComponent(corrHeader) : null,
     refs: Number(prodRes?.headers.get('X-Total-Refs') || 0) || undefined,
+    // Búsqueda sin resultados que se ha entendido como una moto y/o una categoría (el backend lo explica en estas cabeceras).
+    vehicle: vehicleHeader ? decodeURIComponent(vehicleHeader) : null,
+    relaxed: prodRes?.headers.get('X-Search-Relaxed') === '1',
+    category: categoryHeader ? decodeURIComponent(categoryHeader) : null,
   };
 
   if (prodRes?.ok) {

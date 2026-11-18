@@ -36,7 +36,7 @@ interface Props {
   initialSearchTotal: number;
   initialSearchTotalPages: number;
   initialSearchParamsStr: string;
-  initialSearchMeta?: { fuzzy: boolean; corrected: string | null; refs?: number };
+  initialSearchMeta?: { fuzzy: boolean; corrected: string | null; refs?: number; vehicle?: string | null; relaxed?: boolean; category?: string | null };
   featuredBrandLinks?: BrandLinkItem[];
   featuredTyreProducts?: Product[];
 }
@@ -89,6 +89,10 @@ function CatalogContent({
   const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(initialFilterOptions);
   const [isFuzzy, setIsFuzzy] = useState(initialSearchMeta?.fuzzy || false);
   const [correctedQuery, setCorrectedQuery] = useState<string | null>(initialSearchMeta?.corrected || null);
+  // Lo que el buscador ha entendido cuando la búsqueda no daba nada: una moto («WOTTAN») y/o una categoría.
+  const [understood, setUnderstood] = useState<{ vehicle: string | null; relaxed: boolean; category: string | null }>({
+    vehicle: initialSearchMeta?.vehicle || null, relaxed: !!initialSearchMeta?.relaxed, category: initialSearchMeta?.category || null,
+  });
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [notifyProduct, setNotifyProduct] = useState<Product | null>(null);
   const [searchParamsStr, setSearchParamsStr] = useState(initialSearchParamsStr);
@@ -186,6 +190,13 @@ function CatalogContent({
         setIsFuzzy(res.headers.get('X-Search-Fuzzy') === '1');
         const corr = res.headers.get('X-Search-Corrected');
         setCorrectedQuery(corr ? decodeURIComponent(corr) : null);
+        const veh = res.headers.get('X-Search-Vehicle');
+        const cat = res.headers.get('X-Search-Category');
+        setUnderstood({
+          vehicle: veh ? decodeURIComponent(veh) : null,
+          relaxed: res.headers.get('X-Search-Relaxed') === '1',
+          category: cat ? decodeURIComponent(cat) : null,
+        });
       } catch (e) {
         if ((e as Error)?.name !== 'AbortError') console.warn('[CATALOG] Error cargando productos:', (e as Error)?.message);
       } finally {
@@ -475,6 +486,16 @@ function CatalogContent({
 
           {correctedQuery && !isLoading && products.length > 0 && (
             <p className="text-sm text-text-muted">Mostrando resultados para <strong className="text-foreground">“{correctedQuery}”</strong></p>
+          )}
+          {!isLoading && products.length > 0 && understood.vehicle && (
+            <p className="text-sm text-text-muted">
+              {understood.relaxed
+                ? <>No tenemos justo lo que buscas para <strong className="text-foreground">{understood.vehicle}</strong>: te enseñamos lo que es compatible con ella.</>
+                : <>Resultados compatibles con <strong className="text-foreground">{understood.vehicle}</strong>.</>}
+            </p>
+          )}
+          {!isLoading && products.length > 0 && !understood.vehicle && understood.category && (
+            <p className="text-sm text-text-muted">Mostrando también productos de la categoría <strong className="text-foreground">{understood.category}</strong>.</p>
           )}
           {isFuzzy && !correctedQuery && !isLoading && products.length > 0 && (
             <p className="text-sm text-text-muted">No hay coincidencias exactas: mostrando resultados parecidos.</p>
