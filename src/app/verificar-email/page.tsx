@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import Header from '../../components/Header';
 import { useAuth } from '../../context/AuthContext';
+import { readPending } from '../../lib/chatPending';
 
 /** Destino del enlace del correo de registro: confirma el email e inicia sesión. */
 function VerifyEmailContent() {
@@ -23,7 +24,8 @@ function VerifyEmailContent() {
     verifyEmail(token)
       .then(() => {
         setState('ok');
-        setTimeout(() => router.replace('/perfil'), 1500);
+        // Si venía de pedir un asesor en el chat, se vuelve al chat (que le preguntará); si no, a su perfil.
+        setTimeout(() => router.replace(readPending() ? '/?chat=1' : '/perfil'), 1500);
       })
       .catch((err) => {
         setState('error');
@@ -43,7 +45,7 @@ function VerifyEmailContent() {
         <>
           <CheckCircle2 className="w-8 h-8 text-emerald-500" />
           <h1 className="text-lg font-semibold">Email confirmado</h1>
-          <p className="text-sm text-text-muted">Tu cuenta ya está activa. Entrando en tu perfil…</p>
+          <p className="text-sm text-text-muted">Tu cuenta ya está activa. Te llevamos de vuelta…</p>
         </>
       )}
       {state === 'error' && (

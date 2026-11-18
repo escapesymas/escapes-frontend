@@ -14,6 +14,9 @@ import {
 } from '../lib/chatApi';
 import { tiktokAddToCart, trackEvent } from '../lib/analytics';
 import ProductCardMessage from './chat/ProductCardMessage';
+import AdvisorAccountCard from './chat/AdvisorAccountCard';
+import { apiResendVerification } from '../lib/api';
+import { canAutoResume, clearPending, readPending, savePending } from '../lib/chatPending';
 
 const SUGGESTIONS = [
   'Pastillas de freno para mi moto',
@@ -85,7 +88,6 @@ const STORAGE_KEY = 'tg_chat_v1';
 // Conversación con asesor ya cerrada que el cliente ha dejado atrás.
 const DISMISSED_LIVE_KEY = 'tg_chat_live_dismissed';
 // Petición de asesor hecha sin sesión: se cumple al volver tras iniciar sesión.
-const PENDING_ADVISOR_KEY = 'tg_chat_pending_advisor';
 
 /** Identificador de una conversación con la IA (el servidor guarda cada turno en ella). */
 const newSessionId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -129,7 +131,7 @@ function ChatText({ text }: { text: string }) {
 }
 
 export default function ChatWidget() {
-  const { isAuthenticated, user, isLoading } = useAuth();
+  const { isAuthenticated, user, isLoading, login, register } = useAuth();
   const { addToCart } = useCart();
   const { showToast } = useToast();
   const pathname = usePathname();
@@ -289,6 +291,16 @@ export default function ChatWidget() {
   // «Hablar con un asesor» desde otras partes de la web (openAdvisorChat):
   // la petición se guarda y la cumple el efecto de abajo.
   const [pendingAdvisor, setPendingAdvisor] = useState(false);
+  /** Qué quería el invitado: hablar con un asesor o dejar un mensaje (sin asesores conectados). */
+  const [pendingKind, setPendingKind] = useState<'advisor' | 'message'>('advisor');
+  /** Tras confirmar el correo (más de unos minutos después) se pregunta antes de pasar con un asesor. */
+  const [resumeOffer, setResumeOffer] = useState<string | null>(null);
+  // Al aparecer la tarjeta de cuenta (o la de «¿te paso con un asesor?») se baja hasta ella: va al final de la conversación.
+  useEffect(() => {
+    if (!pendingAdvisor && resumeOffer === null) return;
+    const t = setTimeout(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, 50);
+    return () => clearTimeout(t);
+  }, [pendingAdvisor, resumeOffer]);
   const [advisorRequest, setAdvisorRequest] = useState<string | null>(null);
   useEffect(() => {
     const onAdvisor = (e: Event) => {
@@ -301,18 +313,21 @@ export default function ChatWidget() {
   // Al volver de iniciar sesión, la petición que quedó pendiente.
   useEffect(() => {
     if (isLoading || !isAuthenticated) return;
-    let pending: string | null = null;
-    try { pending = sessionStorage.getItem(PENDING_ADVISOR_KEY); sessionStorage.removeItem(PENDING_ADVISOR_KEY); } catch {}
-    if (pending === null) return;
+    const pending = readPending();
+    if (!pending) return;
+    clearPending();
     setPendingAdvisor(false);
     setOpen(true);
-    setAdvisorRequest(pending.trim());
+    // Entró hace un momento desde el propio chat: se le pasa con el asesor. Si confirmó el correo más tarde, se le pregunta.
+    if (canAutoResume(pending)) setAdvisorRequest(pending.ctx.trim());
+    else setResumeOffer(pending.ctx.trim());
   }, [isAuthenticated, isLoading]);
   useEffect(() => {
     if (advisorRequest === null || isLoading) return;
     if (!isAuthenticated) {
       // Sin sesión: se pide al volver de iniciar sesión.
-      try { sessionStorage.setItem(PENDING_ADVISOR_KEY, advisorRequest || ' '); } catch {}
+      savePending(advisorRequest || ' ');
+      setPendingKind('advisor');
       setPendingAdvisor(true);
     } else {
       talkToAdvisor(advisorRequest);
@@ -407,9 +422,11 @@ export default function ChatWidget() {
   };
 
   const startHandoff = async (offline = false, transcript: ChatMessage[] = messages) => {
-    // Hablar con un asesor necesita cuenta (para avisarle y que vea su pedido): se pide y se cumple al volver de iniciar sesión.
+    // Hablar con un asesor necesita cuenta (para avisarle y que vea su pedido): el chat ofrece crearla o entrar sin salir de la conversación
+    // y la petición se retoma cuando hay sesión.
     if (!isAuthenticated) {
-      try { sessionStorage.setItem(PENDING_ADVISOR_KEY, ' '); } catch {}
+      savePending(' ');
+      setPendingKind(offline ? 'message' : 'advisor');
       setPendingAdvisor(true);
       return;
     }
@@ -614,27 +631,6 @@ export default function ChatWidget() {
           </div>
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-background">
-            {!isAuthenticated && pendingAdvisor && (
-              <div className="space-y-3 text-sm bg-card border border-accent/40 rounded-xl p-3">
-                <p className="text-xs text-foreground">
-                  Para pasarte con un asesor necesitas iniciar sesión: así podrá prepararte el pedido y avisarte cuando te responda. Tu conversación con el asistente se mantiene.
-                </p>
-                <Link
-                  href="/login?tab=login"
-                  onClick={() => setOpen(false)}
-                  className="block text-center px-3 py-2 bg-accent text-accent-foreground rounded-lg text-xs font-mono uppercase font-bold"
-                >
-                  Iniciar sesión
-                </Link>
-                <Link
-                  href="/login?tab=register"
-                  onClick={() => setOpen(false)}
-                  className="block text-center text-xs text-muted-foreground hover:text-foreground underline"
-                >
-                  Crear una cuenta
-                </Link>
-              </div>
-            )}
             {live && (
               <div className="space-y-2.5">
                 {liveMessages.map((m) => (
@@ -835,6 +831,35 @@ export default function ChatWidget() {
                 </div>
               </div>
             ))}
+            {!isAuthenticated && !isLoading && pendingAdvisor && (
+              <AdvisorAccountCard
+                kind={pendingKind}
+                onRegister={(firstName, email, password) => register('', email, password, firstName, '', '')}
+                onLogin={async (identifier, password) => {
+                  // Entra desde la propia tarjeta: se renueva la hora de la petición para que, con sesión, se retome sola (sin preguntar).
+                  savePending(readPending()?.ctx ?? ' ');
+                  await login(identifier, password);
+                }}
+                onResend={apiResendVerification}
+                onClose={() => { clearPending(); setPendingAdvisor(false); }}
+              />
+            )}
+            {isAuthenticated && resumeOffer !== null && !liveActive && (
+              <div className="space-y-2.5 text-sm bg-card border border-accent/40 rounded-xl p-3">
+                <p className="text-xs font-semibold text-foreground">Ya puedes hablar con un asesor</p>
+                <p className="text-xs text-foreground">Pediste hablar con un asesor y ya tienes sesión iniciada. ¿Te pasamos ahora? Le avisaremos y te responderá por aquí.</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { const ctx = resumeOffer; setResumeOffer(null); talkToAdvisor(ctx); }}
+                    disabled={handoffBusy}
+                    className="flex-1 px-3 py-2.5 rounded-lg bg-accent text-slate-950 text-xs font-mono uppercase font-bold disabled:opacity-60"
+                  >
+                    Pasar con un asesor
+                  </button>
+                  <button onClick={() => setResumeOffer(null)} className="px-3 py-2.5 text-xs text-text-muted hover:text-foreground underline">Ahora no</button>
+                </div>
+              </div>
+            )}
             {error && (
               <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
                 {error}
