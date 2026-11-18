@@ -23,6 +23,11 @@ export default function ProductCardMessage({ product, onAddToCart, onView }: Pro
   const price = product.sale_price ?? product.price;
   const hasDiscount = product.sale_price != null && product.sale_price < product.price;
   const isInStock = product.in_stock;
+  // «25 de noviembre»: solo si la fecha es futura o de hoy (una pasada ya no dice nada).
+  const restock = product.restock_date ? new Date(`${product.restock_date.slice(0, 10)}T12:00:00`) : null;
+  const restockLabel = restock && !Number.isNaN(restock.getTime()) && restock.getTime() >= Date.now() - 86400000
+    ? restock.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })
+    : null;
 
   const handleAdd = () => {
     onAddToCart(product);
@@ -70,6 +75,9 @@ export default function ProductCardMessage({ product, onAddToCart, onView }: Pro
           <p className="text-xs font-medium text-foreground line-clamp-2 leading-tight mb-1">
             {product.name}
           </p>
+          {!isInStock && restockLabel && (
+            <p className="text-[10px] text-muted-foreground mb-0.5">En reaprovisionamiento: previsto el {restockLabel}</p>
+          )}
           <div className="flex items-baseline gap-1.5">
             <span className="text-sm font-bold text-foreground">
               {formatPrice(price)}€

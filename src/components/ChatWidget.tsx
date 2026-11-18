@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
@@ -19,6 +20,20 @@ const SUGGESTIONS = [
   '¿Cuánto cuesta el envío?',
   '¿Cómo va mi pedido?',
   '¿Cómo hago una devolución?',
+];
+// Sin sesión no puede ver sus pedidos: se le sugiere algo que sí puedo responder.
+const SUGGESTIONS_ANON = [
+  'Pastillas de freno para mi moto',
+  '¿Cuánto cuesta el envío?',
+  '¿Cuánto tarda en llegar un pedido?',
+  '¿Cómo hago una devolución?',
+];
+// Con una ficha de producto abierta, lo que más se pregunta en preventa.
+const SUGGESTIONS_PRODUCT = [
+  '¿Me sirve para mi moto?',
+  '¿Hay stock? ¿Cuándo llega?',
+  '¿Cuánto cuesta el envío?',
+  '¿Puedo devolverlo si no me gusta?',
 ];
 
 const eur = (cents: number) => `${(cents / 100).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
@@ -117,6 +132,8 @@ export default function ChatWidget() {
   const { isAuthenticated, user, isLoading } = useAuth();
   const { addToCart } = useCart();
   const { showToast } = useToast();
+  const pathname = usePathname();
+  const onProductPage = /^\/producto\/[^/]+\/?$/.test(pathname || '');
   const [open, setOpen] = useState(false);
   const [proactiveBike, setProactiveBike] = useState<string | null>(null);
   const [dismissedProactive, setDismissedProactive] = useState(false);
@@ -241,18 +258,31 @@ export default function ChatWidget() {
   const restoredRef = useRef(false);
   // Conversación actual con la IA (se crea con el primer mensaje).
   const sessionIdRef = useRef('');
+  // El asistente atiende también sin sesión: la conversación se conserva igual (y al iniciar sesión sigue, para que
+  // el asesor la vea). Al cerrar sesión se olvida.
+  const prevAuthRef = useRef<boolean | null>(null);
   useEffect(() => {
     if (isLoading) return;
+    const was = prevAuthRef.current;
+    prevAuthRef.current = isAuthenticated;
     try {
-      if (!isAuthenticated) { sessionStorage.removeItem(STORAGE_KEY); return; }
+      if (was === true && !isAuthenticated) {
+        sessionStorage.removeItem(STORAGE_KEY);
+        sessionIdRef.current = '';
+        setMessages([]); setProductsByMessage({}); setOffer(null); setLive(null); setLiveMessages([]);
+        return;
+      }
+      // Al iniciar sesión sigue la conversación, pero con otra clave: la del visitante no es de ninguna cuenta.
+      if (was === false && isAuthenticated) { sessionIdRef.current = ''; return; }
       const saved = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || 'null');
       if (saved && Array.isArray(saved.messages)) {
         setMessages(saved.messages);
         setProductsByMessage(saved.products || {});
-        if (typeof saved.sessionId === 'string') sessionIdRef.current = saved.sessionId;
+        // La clave solo vale si se creó con la misma situación (con o sin sesión).
+        if (typeof saved.sessionId === 'string' && saved.auth === isAuthenticated) sessionIdRef.current = saved.sessionId;
       }
     } catch {} finally {
-      restoredRef.current = isAuthenticated;
+      restoredRef.current = true;
     }
   }, [isAuthenticated, isLoading]);
 
@@ -292,10 +322,10 @@ export default function ChatWidget() {
   }, [advisorRequest, isAuthenticated, isLoading]);
 
   useEffect(() => {
-    if (streaming || !isAuthenticated || isLoading || !restoredRef.current) return;
+    if (streaming || isLoading || !restoredRef.current) return;
     try {
       if (messages.length === 0) sessionStorage.removeItem(STORAGE_KEY);
-      else sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ messages: messages.slice(-30), products: productsByMessage, sessionId: sessionIdRef.current }));
+      else sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ messages: messages.slice(-30), products: productsByMessage, sessionId: sessionIdRef.current, auth: isAuthenticated }));
     } catch {}
   }, [messages, productsByMessage, streaming, isAuthenticated, isLoading]);
 
@@ -377,6 +407,12 @@ export default function ChatWidget() {
   };
 
   const startHandoff = async (offline = false, transcript: ChatMessage[] = messages) => {
+    // Hablar con un asesor necesita cuenta (para avisarle y que vea su pedido): se pide y se cumple al volver de iniciar sesión.
+    if (!isAuthenticated) {
+      try { sessionStorage.setItem(PENDING_ADVISOR_KEY, ' '); } catch {}
+      setPendingAdvisor(true);
+      return;
+    }
     setHandoffBusy(true);
     setError(null);
     // Los avisos no se piden aquí: primero se explica para qué se usan (tarjeta
@@ -578,15 +614,10 @@ export default function ChatWidget() {
           </div>
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-background">
-            {!isAuthenticated && (
-              <div className="space-y-3 text-sm">
-                <p className="text-foreground">
-                  Te ayudo a encontrar recambios compatibles con tu moto, a seguir tus pedidos y con envíos o devoluciones.
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {pendingAdvisor
-                    ? 'Inicia sesión y te pasamos con un asesor: así podrá prepararte el pedido y avisarte cuando te responda.'
-                    : 'Inicia sesión para usar el asistente: así puedo consultar tus pedidos y las motos de tu garaje.'}
+            {!isAuthenticated && pendingAdvisor && (
+              <div className="space-y-3 text-sm bg-card border border-accent/40 rounded-xl p-3">
+                <p className="text-xs text-foreground">
+                  Para pasarte con un asesor necesitas iniciar sesión: así podrá prepararte el pedido y avisarte cuando te responda. Tu conversación con el asistente se mantiene.
                 </p>
                 <Link
                   href="/login?tab=login"
@@ -715,12 +746,20 @@ export default function ChatWidget() {
                 )}
               </div>
             )}
-            {!live && isAuthenticated && messages.length === 0 && (
+            {!live && messages.length === 0 && (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground mb-3">
-                  Estoy aquí para ayudarte con catálogo, pedidos y soporte de la web.
+                  {onProductPage
+                    ? 'Pregúntame lo que quieras de este producto: compatibilidad con tu moto, stock, envío…'
+                    : 'Estoy aquí para ayudarte con catálogo, pedidos y soporte de la web.'}
+                  {!isAuthenticated && (
+                    <>
+                      {' '}<Link href="/login?tab=login" onClick={() => setOpen(false)} className="underline hover:text-foreground">Inicia sesión</Link>
+                      {' '}y también consulto tus pedidos y las motos de tu garaje.
+                    </>
+                  )}
                 </p>
-                {SUGGESTIONS.map((s) => (
+                {(onProductPage ? SUGGESTIONS_PRODUCT : isAuthenticated ? SUGGESTIONS : SUGGESTIONS_ANON).map((s) => (
                   <button
                     key={s}
                     onClick={() => send(s)}
@@ -803,7 +842,7 @@ export default function ChatWidget() {
             )}
           </div>
 
-          {isAuthenticated && !(live && !liveActive) && <form onSubmit={handleSubmit} className="p-3 border-t border-card-border bg-card">
+          {!(live && !liveActive) && <form onSubmit={handleSubmit} className="p-3 border-t border-card-border bg-card">
             <div className="flex gap-2">
               {liveActive && (
                 <>
@@ -845,7 +884,7 @@ export default function ChatWidget() {
               </button>
             </div>
             <p className="text-[9px] text-muted-foreground mt-1.5 text-center">
-              {liveActive ? 'Hablas con una persona del equipo de Escapes y Más.' : 'Solo responde sobre catálogo, pedidos y soporte web.'}
+              {liveActive ? 'Hablas con una persona del equipo de Escapes y Más.' : 'Solo responde sobre catálogo, pedidos y soporte web. Guardamos la conversación para mejorar el servicio.'}
             </p>
           </form>}
         </div>

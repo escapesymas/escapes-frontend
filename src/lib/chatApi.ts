@@ -16,6 +16,8 @@ export interface ChatProduct {
   image: string | null;
   slug: string | null;
   in_stock: boolean;
+  /** Sin stock: fecha prevista de reaprovisionamiento (AAAA-MM-DD) si el proveedor la da. */
+  restock_date?: string | null;
 }
 
 const SESSION_KEY = 'tg_session';
@@ -42,6 +44,22 @@ function getSelectedBike(): string | null {
   }
 }
 
+/**
+ * Producto que el cliente tiene abierto (/producto/<sku>): el asistente lo usa para «¿me sirve?», «¿hay stock?»…
+ * Se lee al enviar, no al abrir el chat, para que siga a la página aunque cambie de ficha con el chat abierto.
+ */
+export function getPageProduct(): { sku: string } | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const m = window.location.pathname.match(/^\/producto\/([^/]+)\/?$/);
+    if (!m) return null;
+    const sku = decodeURIComponent(m[1]).trim();
+    return sku && sku.length <= 80 ? { sku } : null;
+  } catch {
+    return null;
+  }
+}
+
 export interface ChatStreamHandlers {
   onDelta: (delta: string) => void;
   onProducts: (products: ChatProduct[]) => void;
@@ -59,25 +77,26 @@ export async function sendChatMessage(
   /** Identificador de la conversación: el servidor guarda cada turno en ella. */
   sessionId?: string
 ): Promise<void> {
+  // El asistente atiende también a quien no ha iniciado sesión (sin pedidos ni garaje); con sesión, además los ve.
   const token = getToken();
-  if (!token) {
-    handlers.onError('No has iniciado sesión. Inicia sesión para usar el asistente.');
-    return;
-  }
 
   const res = await fetch(`${API_BASE}/chat/message`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     // La moto elegida en la web («Mi garaje» de la cabecera) tiene prioridad.
-    body: JSON.stringify({ messages, selectedBike: getSelectedBike(), sessionId }),
+    body: JSON.stringify({ messages, selectedBike: getSelectedBike(), sessionId, page: getPageProduct() }),
   });
 
   if (res.status === 401) {
-    window.dispatchEvent(new CustomEvent('session-expired'));
-    handlers.onError('Tu sesión ha expirado. Inicia sesión de nuevo.');
+    if (token) {
+      window.dispatchEvent(new CustomEvent('session-expired'));
+      handlers.onError('Tu sesión ha expirado. Inicia sesión de nuevo.');
+    } else {
+      handlers.onError('Inicia sesión para usar el asistente.');
+    }
     return;
   }
 

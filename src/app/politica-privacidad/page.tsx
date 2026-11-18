@@ -68,7 +68,8 @@ export default function PoliticaPrivacidadPage() {
             <h2 className="font-mono text-sm font-bold uppercase text-foreground mb-2">6. Chat de atención y notificaciones</h2>
             <p>
               Cuando hablas con nuestro asistente o con un asesor, guardamos los mensajes y las fotos que envías para poder
-              atenderte y para el seguimiento de tu consulta y de los pedidos que te preparemos.
+              atenderte y para el seguimiento de tu consulta y de los pedidos que te preparemos. Si hablas con el asistente sin haber
+              iniciado sesión, la conversación se guarda sin asociarla a ninguna cuenta.
             </p>
             <p className="mt-2">
               Si activas los avisos del chat, usaremos las notificaciones de tu navegador o móvil <strong>solo para la atención</strong>:
