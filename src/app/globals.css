@@ -143,3 +143,109 @@ body {
   }
 }
 
+
+/* ═══════════════════ Movimiento (motion graphics) ═══════════════════
+   Reglas para que el movimiento no cueste velocidad ni posicionamiento:
+   · Solo se animan `transform` y `opacity`: no mueven el diseño (no empeoran el CLS).
+   · Nada decorativo oculta ni retrasa lo primero que se pinta (LCP): el logo y los títulos se ven desde el primer fotograma.
+   · EL LOGOTIPO NO SE TOCA JAMÁS (orden de Adrián): ni animaciones ni efectos encima ni cambios.
+   · Las entradas al hacer scroll (`.reveal`) son CSS puro con `animation-timeline: view()`: donde el navegador no lo soporta
+     el contenido se ve igual, sin animar. El HTML nunca se oculta (Google lo lee entero).
+   · Todo va dentro de `prefers-reduced-motion: no-preference`: quien pide menos movimiento no ve nada de esto. */
+:root {
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes motion-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes motion-pop { from { opacity: 0; transform: translateY(8px) scale(0.94); } to { opacity: 1; transform: none; } }
+@keyframes motion-bump { 0% { transform: scale(1); } 35% { transform: scale(1.45); } 100% { transform: scale(1); } }
+@keyframes motion-sweep { from { transform: translateX(-100%); opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } to { transform: translateX(340%); opacity: 0; } }
+@keyframes motion-ping { 0% { transform: scale(1); opacity: 0.55; } 100% { transform: scale(1.9); opacity: 0; } }
+@keyframes motion-up { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
+@keyframes motion-right { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes motion-pop-spring { from { opacity: 0; transform: scale(0.55); } to { opacity: 1; transform: none; } }
+@keyframes motion-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes motion-sheet { from { opacity: 0.7; transform: translateY(100%); } to { opacity: 1; transform: none; } }
+/* Entra por un extremo (abajo al bajar, arriba al subir) y sale por el otro: el recorrido es el mismo en los dos sentidos. */
+@keyframes motion-reveal-both {
+  0% { opacity: 0; transform: translateY(46px) scale(0.97); }
+  16% { opacity: 1; transform: none; }
+  84% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-46px) scale(0.97); }
+}
+@keyframes motion-reveal-block {
+  0% { opacity: 0; transform: translateY(32px); }
+  12% { opacity: 1; transform: none; }
+  88% { opacity: 1; transform: none; }
+  100% { opacity: 0.35; transform: translateY(-16px); }
+}
+@keyframes motion-typing { 0%, 80%, 100% { transform: translateY(0); opacity: 0.4; } 40% { transform: translateY(-3px); opacity: 1; } }
+
+
+
+@media (prefers-reduced-motion: no-preference) {
+  .motion-rise { animation: motion-rise 480ms var(--ease-out) both; }
+  .motion-pop { animation: motion-pop 240ms var(--ease-out) both; }
+  .motion-bump { animation: motion-bump 420ms var(--ease-spring); }
+  /* El panel del chat sale de su botón (el que ya usaba el chat, que no estaba definido). */
+  .animate-scale-up { transform-origin: bottom right; animation: motion-pop 260ms var(--ease-out) both; }
+
+  /* Línea de «telemetría» que cruza la cabecera una vez al cargar. */
+  .header-sweep { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; overflow: hidden; pointer-events: none; }
+  .header-sweep::after {
+    content: ''; position: absolute; top: 0; left: 0; width: 30%; height: 100%;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    animation: motion-sweep 1400ms var(--ease-out) 700ms 1 both;
+  }
+
+
+  /* Anillo que avisa del botón del chat, dos veces, y se queda quieto. */
+  .motion-ping::before {
+    content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    border: 2px solid var(--accent); animation: motion-ping 1500ms ease-out 6s 2 both;
+  }
+  /* Puntos de «escribiendo…» del asistente. */
+  .typing-dot { display: inline-block; width: 5px; height: 5px; border-radius: 9999px; background: currentColor; animation: motion-typing 1100ms ease-in-out infinite; }
+  .typing-dot:nth-child(2) { animation-delay: 150ms; }
+  .typing-dot:nth-child(3) { animation-delay: 300ms; }
+
+  /* Scroll de las tarjetas, en los dos sentidos (CSS puro, solo donde hay `animation-timeline`): la animación va ligada a la posición,
+     así que al bajar la tarjeta sube y aparece por abajo, y al subir baja y aparece por arriba; al salir por el otro lado se
+     desvanece un poco. Lo que ya está a la vista al cargar aparece completo desde el primer fotograma. Los efectos del ratón
+     (subir, zoom) usan las propiedades `translate` y `scale` de Tailwind 4: no chocan con el `transform` de esta animación. */
+  @supports (animation-timeline: view()) {
+    .reveal { animation: motion-reveal-both linear both; animation-timeline: view(); animation-range: cover 0% cover 100%; }
+    /* Bloques grandes (carruseles, secciones): mismo vaivén, más suave. */
+    .reveal-block { animation: motion-reveal-block linear both; animation-timeline: view(); animation-range: cover 0% cover 100%; }
+  }
+
+  /* Aparición de widgets: cada uno entra de una forma que encaja con donde está. `backwards` (no `both`): al terminar vuelven a
+     su estilo normal y no se quedan con el `transform` de la animación (la barra inferior lleva uno propio para iOS). */
+  .widget-up { animation: motion-up 380ms var(--ease-out) var(--d, 0s) backwards; }
+  .widget-right { animation: motion-right 340ms var(--ease-out) backwards; }
+  .widget-pop { animation: motion-pop-spring 520ms var(--ease-spring) var(--d, 0s) backwards; }
+  .overlay-in { animation: motion-fade 220ms ease-out backwards; }
+  .modal-in { animation: motion-pop 280ms var(--ease-out) 40ms backwards; }
+  .sheet-in { animation: motion-sheet 320ms var(--ease-out) backwards; }
+}
+
+/* Portada: dos rayas de luz amarilla cruzan el bloque una vez, como una moto que pasa. Decoración pura: van detrás del texto,
+   dentro del bloque (`overflow-hidden`), no ocupan sitio ni tapan nada y son invisibles si no hay animación (reducir movimiento). */
+@keyframes motion-streak {
+  0% { transform: translateX(-70%) skewX(-35deg); opacity: 0; }
+  14% { opacity: 1; }
+  72% { opacity: 1; }
+  100% { transform: translateX(430%) skewX(-35deg); opacity: 0; }
+}
+.hero-streak {
+  position: absolute; left: 0; width: 26%; height: 2px; pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 85%, white) 60%, transparent);
+  box-shadow: 0 0 10px 1px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.hero-streak-a { top: 36%; }
+.hero-streak-b { top: 64%; width: 18%; }
+@media (prefers-reduced-motion: no-preference) {
+  .hero-streak { animation: motion-streak 950ms cubic-bezier(0.55, 0.05, 0.35, 1) 800ms 1 both; }
+  .hero-streak-b { animation-duration: 820ms; animation-delay: 960ms; }
+}

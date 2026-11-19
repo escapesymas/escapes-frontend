@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { ChatProduct } from '../../lib/chatApi';
+import { flyToCart } from '../../lib/flyToCart';
 
 interface ProductCardMessageProps {
   product: ChatProduct;
@@ -29,7 +30,8 @@ export default function ProductCardMessage({ product, onAddToCart, onView }: Pro
     ? restock.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })
     : null;
 
-  const handleAdd = () => {
+  const handleAdd = (source?: Element | null) => {
+    flyToCart(source);
     onAddToCart(product);
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
@@ -93,7 +95,7 @@ export default function ProductCardMessage({ product, onAddToCart, onView }: Pro
 
       <div className="flex border-t border-card-border divide-x divide-card-border">
         <button
-          onClick={handleAdd}
+          onClick={(e) => handleAdd(e.currentTarget)}
           disabled={!isInStock || added}
           className="flex-1 px-3 py-2 text-xs font-mono uppercase font-bold text-accent hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
           aria-label={`Añadir ${product.name} al carrito`}

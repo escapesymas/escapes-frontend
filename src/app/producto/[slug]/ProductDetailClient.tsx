@@ -21,6 +21,7 @@ import CompatibilityList from '../../../components/product/CompatibilityList';
 import { normalizeCompat, fitsBike, bikeLabel } from '../../../components/product/compat';
 import { effectivePrice, formatEuro } from '../../../lib/pricing';
 import { slugifyManufacturerBrand, isExcludedSupplierBrand } from '../../../lib/brandSeo';
+import { flyToCart } from '../../../lib/flyToCart';
 
 const FrequentlyBoughtTogether = dynamic(
   () => import('../../../components/FrequentlyBoughtTogether'),
@@ -177,8 +178,9 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
     })),
   ];
 
-  const handleBuy = () => {
+  const handleBuy = (source?: Element | null) => {
     if (inStock) {
+      flyToCart(source);
       addToCart(product);
       trackEvent.addToCart(product, 1);
     } else {
@@ -319,7 +321,7 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
 
             <button
               type="button"
-              onClick={handleBuy}
+              onClick={(e) => handleBuy(e.currentTarget)}
               className="hidden md:flex w-full py-3 bg-accent text-slate-950 rounded font-mono text-xs font-bold uppercase tracking-wider hover:bg-accent-hover transition-all items-center justify-center gap-2 cursor-pointer"
             >
               {buyLabel}
@@ -400,7 +402,7 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
 
       {/* Barra de compra fija en móvil: precio siempre visible + botón */}
       <div
-        className="fixed bottom-0 inset-x-0 md:hidden bg-card border-t border-card-border px-4 pt-3 z-40 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] flex items-center gap-3"
+        className="fixed bottom-0 inset-x-0 md:hidden bg-card border-t border-card-border px-4 pt-3 z-40 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] flex items-center gap-3 widget-up"
         style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
       >
         <div className="flex flex-col leading-tight">
@@ -411,7 +413,7 @@ export default function ProductDetailClient({ slug, initialProduct }: { slug: st
         </div>
         <button
           type="button"
-          onClick={handleBuy}
+          onClick={(e) => handleBuy(e.currentTarget)}
           className="flex-1 py-3 bg-accent text-slate-950 rounded font-mono text-xs font-bold uppercase tracking-wider active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
         >
           {buyLabel}

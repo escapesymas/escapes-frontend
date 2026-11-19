@@ -532,13 +532,14 @@ export default function ChatWidget() {
   return (
     <>
       <div
-        className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] right-4 md:bottom-6 md:right-20 z-40 group"
+        className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] right-4 md:bottom-6 md:right-20 z-40 group widget-pop"
+        style={{ '--d': '1.1s' } as React.CSSProperties}
         role="presentation"
       >
         <div className="relative">
           {proactiveBike && !open && (
             <div
-              className="absolute -top-12 right-0 md:-top-10 z-10 w-max max-w-[calc(100vw-2rem)] flex items-center gap-1.5"
+              className="absolute -top-12 right-0 md:-top-10 z-10 w-max max-w-[calc(100vw-2rem)] flex items-center gap-1.5 widget-pop"
             >
               <button
                 type="button"
@@ -568,7 +569,7 @@ export default function ChatWidget() {
           <button
             type="button"
             onClick={() => setOpen((v) => { if (!v) trackEvent.chatInteraction('open'); return !v; })}
-            className="bg-accent hover:bg-accent/90 text-accent-foreground rounded-full p-3.5 shadow-lg transition-all duration-300 group-hover:scale-110 cursor-pointer"
+            className="relative motion-ping bg-accent hover:bg-accent/90 text-accent-foreground rounded-full p-3.5 shadow-lg transition-all duration-300 group-hover:scale-110 cursor-pointer"
             aria-label="Abrir asistente IA"
             aria-expanded={open}
           >
@@ -583,7 +584,7 @@ export default function ChatWidget() {
 
       {open && (
         <div
-          className="fixed bottom-[calc(8.5rem+env(safe-area-inset-bottom,0px))] md:bottom-24 right-4 md:right-20 z-40 w-[calc(100vw-2rem)] max-w-sm h-[70vh] max-h-[640px] flex flex-col bg-card border border-card-border rounded-2xl shadow-2xl overflow-hidden animate-fade-in"
+          className="fixed bottom-[calc(8.5rem+env(safe-area-inset-bottom,0px))] md:bottom-24 right-4 md:right-20 z-40 w-[calc(100vw-2rem)] max-w-sm h-[70vh] max-h-[640px] flex flex-col bg-card border border-card-border rounded-2xl shadow-2xl overflow-hidden animate-scale-up"
           role="dialog"
           aria-label="Asistente IA de Escapes y Más"
         >
@@ -778,7 +779,7 @@ export default function ChatWidget() {
               </div>
             )}
             {!live && messages.map((m, i) => (
-              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div key={i} className={`flex motion-pop ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
                   className={`max-w-[90%] ${
                     m.role === 'user'
@@ -789,10 +790,10 @@ export default function ChatWidget() {
                   {m.role === 'assistant' ? (
                     <>
                       {!m.content && streaming && i === messages.length - 1 && (
-                        <div className="px-3 py-2 bg-card border border-card-border rounded-2xl inline-flex gap-1">
-                          <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        <div className="px-3 py-2.5 bg-card border border-card-border rounded-2xl inline-flex items-center gap-1 text-text-muted" role="status" aria-label="El asistente está escribiendo">
+                          <span className="typing-dot" />
+                          <span className="typing-dot" />
+                          <span className="typing-dot" />
                         </div>
                       )}
                       {m.content && (

@@ -69,12 +69,12 @@ export default function AvatarCropModal({ imageSrc, isSaving, onCancel, onConfir
   const stepZoom = (delta: number) => setZoom((z) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, +(z + delta).toFixed(2))));
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-fade-in">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs overlay-in">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="avatar-crop-title"
-        className="bg-card border border-card-border rounded-2xl shadow-2xl w-full max-w-md p-5 flex flex-col gap-4"
+        className="bg-card border border-card-border rounded-2xl shadow-2xl w-full max-w-md p-5 flex flex-col gap-4 modal-in"
       >
         <div className="flex items-center justify-between">
           <h3 id="avatar-crop-title" className="font-mono font-bold text-foreground uppercase text-sm">Recorta tu foto</h3>

@@ -95,7 +95,7 @@ export default function AdvisorAccountCard({ kind, onRegister, onLogin, onResend
   const backToForm = (t: Tab) => { setSentTo(null); setResend({ state: 'idle', msg: '' }); setTab(t); setError(''); setPassword(''); };
 
   return (
-    <section aria-label="Cuenta para hablar con un asesor" className="space-y-3 text-sm bg-card border border-accent/40 rounded-xl p-3">
+    <section aria-label="Cuenta para hablar con un asesor" className="space-y-3 text-sm bg-card border border-accent/40 rounded-xl p-3 motion-pop">
       {sentTo ? (
         <div className="space-y-3">
           <div className="flex items-start gap-2">

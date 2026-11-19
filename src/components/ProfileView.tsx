@@ -1079,7 +1079,7 @@ export default function ProfileView() {
       {/* Modal de Imagen de Avatar Ampliada */}
       {isImageModalOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overlay-in"
           onClick={() => setIsImageModalOpen(false)}
         >
           <div

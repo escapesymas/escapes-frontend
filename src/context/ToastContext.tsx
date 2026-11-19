@@ -91,7 +91,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           <div
             id={`toast-${toast.id}`}
             key={toast.id}
-            className="pointer-events-auto font-sans text-xs font-bold uppercase tracking-wider rounded shadow-lg shadow-black/50 flex items-center gap-3 min-w-[280px] max-w-[400px] overflow-hidden transition-all duration-300 ease-out"
+            className="pointer-events-auto font-sans text-xs font-bold uppercase tracking-wider rounded shadow-lg shadow-black/50 flex items-center gap-3 min-w-[280px] max-w-[400px] overflow-hidden transition-all duration-300 ease-out widget-right"
             style={{
               transform: `translateX(${index === 0 ? '0' : `${index * 8}px`})`,
               opacity: 1 - index * 0.08,

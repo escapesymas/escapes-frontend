@@ -713,8 +713,8 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
         </div>
       )}
       {proposalChoice && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-card border border-card-border rounded-lg max-w-md w-full p-6 space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overlay-in">
+          <div className="bg-card border border-card-border rounded-lg max-w-md w-full p-6 space-y-4 shadow-2xl modal-in">
             <div>
               <p className="font-mono font-bold uppercase text-foreground">Pedido preparado por {proposalChoice.agentName}</p>
               <p className="text-sm text-text-muted mt-1">
@@ -1431,8 +1431,8 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
 
       {/* Stripe Payment Modal */}
       {showPaymentModal && clientSecret && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-card border border-card-border p-6 rounded shadow-xl max-w-md w-full relative overflow-hidden backdrop-blur-md">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 flex items-center justify-center p-4 overlay-in">
+          <div className="bg-card border border-card-border p-6 rounded shadow-xl max-w-md w-full relative overflow-hidden backdrop-blur-md modal-in">
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-card-border mb-6">
               <div className="flex items-center gap-2">

@@ -4,6 +4,7 @@ import React from 'react';
 import { ShoppingBag, Bike, Cpu, MessageSquare, User, LogIn, Library } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
+import { useAppearOnce } from '../lib/appearOnce';
 
 interface BottomNavProps {
   activeTab: string;
@@ -12,6 +13,7 @@ interface BottomNavProps {
 }
 
 export default function BottomNav({ activeTab, onTabChange, selectedBike }: BottomNavProps) {
+  const appear = useAppearOnce('bottom-nav', 'widget-up');
   const { user, isAuthenticated } = useAuth();
 
   const navItems = [
@@ -26,7 +28,7 @@ export default function BottomNav({ activeTab, onTabChange, selectedBike }: Bott
   return (
     <>
       <nav
-        className="md:hidden fixed inset-x-0 bottom-0 z-50 bg-card border-t border-card-border shadow-[0_-4px_24px_rgba(0,0,0,0.12)] pb-[env(safe-area-inset-bottom,0px)] after:content-[''] after:absolute after:top-full after:left-0 after:right-0 after:h-[200px] after:bg-card"
+        className={`md:hidden fixed inset-x-0 bottom-0 z-50 bg-card border-t border-card-border shadow-[0_-4px_24px_rgba(0,0,0,0.12)] pb-[env(safe-area-inset-bottom,0px)] after:content-[''] after:absolute after:top-full after:left-0 after:right-0 after:h-[200px] after:bg-card ${appear}`}
         style={{ transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}
       >
 

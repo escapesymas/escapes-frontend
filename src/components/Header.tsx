@@ -45,6 +45,7 @@ export default function Header({ selectedBike, onCartClick, onTabChange, activeT
   return (
     <header className="sticky top-0 z-50 w-full bg-background border-b border-card-border relative">
       <TopAnnouncementBar />
+      <span aria-hidden="true" className="header-sweep" />
       <div className="container mx-auto px-4 md:px-6 h-14 flex items-center justify-between gap-3">
 
         {/* IZQUIERDA (móvil y pantallas medianas): Logo / (pantalla grande): placeholder invisible */}
@@ -108,10 +109,12 @@ export default function Header({ selectedBike, onCartClick, onTabChange, activeT
             onClick={() => (onCartClick ? onCartClick() : router.push('/?tab=cart'))}
             className="relative cursor-pointer p-1.5 text-text-muted hover:text-foreground transition-colors border-0 bg-transparent focus:outline-none"
             aria-label="Abrir carrito"
+            data-cart-target
           >
             <ShoppingCart className="w-5 h-5" />
             {cartCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-accent text-slate-950 text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-background">
+              // `key`: al cambiar el número el contador se vuelve a montar y «rebota» (ver .motion-bump).
+              <span key={cartCount} className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-accent text-slate-950 text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-background motion-bump">
                 {cartCount}
               </span>
             )}

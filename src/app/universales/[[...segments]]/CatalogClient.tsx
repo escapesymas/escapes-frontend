@@ -744,7 +744,7 @@ function CatalogContent({
 
       {/* Filtros en móvil: panel a pantalla completa con resultado en vivo */}
       {filtersOpen && (
-        <div className="md:hidden fixed inset-0 z-[70] bg-background flex flex-col" role="dialog" aria-modal="true" aria-label="Filtros">
+        <div className="md:hidden fixed inset-0 z-[70] bg-background flex flex-col sheet-in" role="dialog" aria-modal="true" aria-label="Filtros">
           <div className="flex items-center justify-between px-4 py-3 border-b border-card-border">
             <h2 className="text-base font-semibold">Filtros</h2>
             <button type="button" onClick={() => setFiltersOpen(false)} aria-label="Cerrar filtros" className="p-2 -mr-2 cursor-pointer">

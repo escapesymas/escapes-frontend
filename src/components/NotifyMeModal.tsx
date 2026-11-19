@@ -52,8 +52,8 @@ export default function NotifyMeModal({ isOpen, onClose, productName, productId 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-card border border-card-border rounded-md shadow-xl w-full max-w-sm relative animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overlay-in">
+      <div className="bg-card border border-card-border rounded-md shadow-xl w-full max-w-sm relative modal-in">
         <button
           onClick={onClose}
           className="absolute top-3 right-3 p-1 rounded hover:bg-icon-box/40 transition-colors cursor-pointer text-text-muted hover:text-foreground"

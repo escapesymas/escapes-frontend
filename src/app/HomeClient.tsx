@@ -439,6 +439,9 @@ export default function Home() {
                 {selectedBike ? (
                   <>
                     <section className="relative overflow-hidden bg-card border border-card-border rounded-md py-10 px-6 md:py-14 md:px-10 shadow-sm">
+                      {/* Destello de velocidad: dos rayas de luz cruzan el bloque una vez al cargar (decorativo, detrás del texto). */}
+                      <span aria-hidden="true" className="hero-streak hero-streak-a" />
+                      <span aria-hidden="true" className="hero-streak hero-streak-b" />
                       <div className="absolute right-0 top-0 bottom-0 w-1/3 pointer-events-none hidden md:block" aria-hidden="true">
                         <div className="absolute inset-0 bg-gradient-to-l from-accent/5 to-transparent" />
                         <div className="absolute right-8 top-1/2 -translate-y-1/2 grid grid-cols-4 gap-2 opacity-10">
@@ -479,7 +482,7 @@ export default function Home() {
                       </div>
                     </section>
 
-                    <section>
+                    <section className="reveal-block">
                       <CompatibleProducts
                         selectedBike={selectedBike}
                         onAddToCart={handleAddToCart}
@@ -487,7 +490,7 @@ export default function Home() {
                       />
                     </section>
 
-                    <section className="mt-8">
+                    <section className="mt-8 reveal-block">
                       <BrandCarousel
                         brand={['RST', 'ARAI', 'BELL', 'SCORPION', 'SHAD']}
                         title="Equipamiento destacado para el piloto"
@@ -496,7 +499,7 @@ export default function Home() {
                         onNotifyMe={handleNotifyMe}
                       />
                     </section>
-                    <section className="mt-8">
+                    <section className="mt-8 reveal-block">
                       <BrandCarousel brand="IXIL" title="IXIL — Escapes" onAddToCart={handleAddToCart} onNotifyMe={handleNotifyMe} />
                     </section>
                   </>

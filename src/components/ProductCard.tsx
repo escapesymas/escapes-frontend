@@ -11,6 +11,7 @@ import { tiktokAddToCart } from '../lib/analytics';
 import { effectivePrice, formatEuro, optionsSummary } from '../lib/pricing';
 import { DELIVERY_ES } from '../lib/constants';
 import { useLiveStock } from '../lib/liveStock';
+import { flyToCart } from '../lib/flyToCart';
 
 interface ProductCardProps {
   product: Product;
@@ -58,7 +59,7 @@ export default function ProductCard({ product: listed, onAddToCart, onNotifyMe, 
       key={product.id}
       ref={cardRef}
       href={`/producto/${productSlug}`}
-      className="bg-card border rounded-md overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-md transition-all group cursor-pointer snap-start shrink-0 w-full mx-auto"
+      className="bg-card border rounded-md overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group cursor-pointer snap-start shrink-0 w-full mx-auto reveal"
       style={{ borderColor: product.isCompatible ? 'var(--badge-border)' : 'var(--card-border)' }}
       {...hoverPrefetchProps}
     >
@@ -123,7 +124,7 @@ export default function ProductCard({ product: listed, onAddToCart, onNotifyMe, 
           srcMobile={current.mobileSrc || undefined}
           alt={product.name}
           className="w-full h-full object-contain p-2"
-          wrapperClassName="w-full h-full absolute inset-0"
+          wrapperClassName="w-full h-full absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-105"
           priority={priority}
         />
 
@@ -210,6 +211,7 @@ export default function ProductCard({ product: listed, onAddToCart, onNotifyMe, 
                   source: 'listado',
                 });
                 tiktokAddToCart(product, 1);
+                flyToCart(e.currentTarget);
                 onAddToCart(product);
               }}
               className="p-2 rounded bg-accent text-slate-950 hover:bg-accent-hover active:scale-95 transition-all shadow-sm cursor-pointer"
