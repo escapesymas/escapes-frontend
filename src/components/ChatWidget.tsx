@@ -584,7 +584,10 @@ export default function ChatWidget() {
 
       {open && (
         <div
-          className="fixed bottom-[calc(8.5rem+env(safe-area-inset-bottom,0px))] md:bottom-24 right-4 md:right-20 z-40 w-[calc(100vw-2rem)] max-w-sm h-[70vh] max-h-[640px] flex flex-col bg-card border border-card-border rounded-2xl shadow-2xl overflow-hidden animate-scale-up"
+          // Móvil: el panel va anclado entre la cabecera y los botones (arriba y abajo), sin altura en `vh`: en iOS `vh` es la altura SIN las barras
+          // del navegador y, con la barra inferior visible, el panel salía más alto que el hueco real y la cabecera de la web le tapaba el título.
+          // Escritorio y tablet: 70 % del alto visible (`dvh`, que sí sigue a las barras), con tope de 640 px.
+          className="fixed top-[calc(6.5rem+env(safe-area-inset-top,0px))] bottom-[calc(8.5rem+env(safe-area-inset-bottom,0px))] md:top-auto md:bottom-24 right-4 md:right-20 z-40 w-[calc(100vw-2rem)] max-w-sm md:h-[min(70dvh,640px)] max-h-[640px] flex flex-col bg-card border border-card-border rounded-2xl shadow-2xl overflow-hidden animate-scale-up"
           role="dialog"
           aria-label="Asistente IA de Escapes y Más"
         >
