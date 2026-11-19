@@ -218,6 +218,9 @@ body {
     .reveal { animation: motion-reveal-both linear both; animation-timeline: view(); animation-range: cover 0% cover 100%; }
     /* Bloques grandes (carruseles, secciones): mismo vaivén, más suave. */
     .reveal-block { animation: motion-reveal-block linear both; animation-timeline: view(); animation-range: cover 0% cover 100%; }
+    /* En el móvil las tarjetas van en carruseles horizontales: ahí su `view()` mira al carrusel, que no se desplaza en vertical,
+       y no animaba nunca. Con cientos de tarjetas (motos con 500+ piezas) solo costaba una animación por tarjeta: se quita. */
+    @media (max-width: 767px) { .snap-x .reveal { animation: none; } }
   }
 
   /* Aparición de widgets: cada uno entra de una forma que encaja con donde está. `backwards` (no `both`): al terminar vuelven a

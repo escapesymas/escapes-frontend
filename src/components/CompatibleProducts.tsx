@@ -10,6 +10,13 @@ import { openAdvisorChat } from '../lib/chatApi';
 import ProductCard from './ProductCard';
 import MotoAlertButton from './MotoAlertButton';
 
+/**
+ * Tarjetas que se pintan al principio en cada carrusel de «Recambios compatibles». Con motos muy completas (p. ej. una KTM 125 SX
+ * trae 566 piezas) pintarlas todas de golpe eran ~18.000 elementos y ~575 imágenes: el iPhone se quedaba sin memoria, mataba la
+ * pestaña y la recargaba una y otra vez (19/11/2026). El resto se despliega con «Ver las N restantes».
+ */
+const GROUP_PREVIEW = 10;
+
 interface CompatibleProductsProps {
   selectedBike?: string;
   onAddToCart: (product: Product) => void;
@@ -22,6 +29,8 @@ export default function CompatibleProducts({ selectedBike, onAddToCart, onNotify
   const [error, setError] = useState('');
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
   const [collapsedSubcategories, setCollapsedSubcategories] = useState<Record<string, boolean>>({});
+  // Subgrupos en los que el cliente ha pedido ver todas las tarjetas (por defecto solo las primeras, ver GROUP_PREVIEW).
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [categoriesById, setCategoriesById] = useState<Record<number, { id: number; parentId: number; name: string; slug: string }>>({});
 
   useEffect(() => {
@@ -153,6 +162,7 @@ export default function CompatibleProducts({ selectedBike, onAddToCart, onNotify
       setError('');
       setCollapsedCategories({});
       setCollapsedSubcategories({});
+      setExpandedGroups({});
       try {
         if (selectedBike) {
           const { brand, model, year } = parseBike(selectedBike);
@@ -341,7 +351,7 @@ export default function CompatibleProducts({ selectedBike, onAddToCart, onNotify
           </div>
         ) : (
           <>
-          {sortedCategories.map(([categoryName, subgroups]) => {
+          {sortedCategories.map(([categoryName, subgroups], catIdx) => {
             const isCollapsed = !!collapsedCategories[categoryName];
             const totalCount = Object.values(subgroups).reduce((sum, list) => sum + list.length, 0);
             return (
@@ -367,9 +377,11 @@ export default function CompatibleProducts({ selectedBike, onAddToCart, onNotify
 
                 {!isCollapsed && (
                   <div className="p-3 flex flex-col gap-4">
-                    {Object.entries(subgroups).map(([subName, subProducts]) => {
+                    {Object.entries(subgroups).map(([subName, subProducts], subIdx) => {
                       const subKey = `${categoryName}-${subName}`;
                       const isSubCollapsed = !!collapsedSubcategories[subKey];
+                      const isExpanded = !!expandedGroups[subKey] || subProducts.length <= GROUP_PREVIEW + 2;
+                      const shownProducts = isExpanded ? subProducts : subProducts.slice(0, GROUP_PREVIEW);
                       return (
                         <div key={subName} className="border-b border-card-border/30 pb-3 last:border-b-0 last:pb-0">
                           <button
@@ -390,9 +402,20 @@ export default function CompatibleProducts({ selectedBike, onAddToCart, onNotify
 
                           {!isSubCollapsed && (
                             <div className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth pb-2 gap-3 md:grid md:grid-cols-2 lg:grid-cols-4 md:overflow-visible no-scrollbar">
-                              {subProducts.map((product, idx) => (
-                                <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} onNotifyMe={onNotifyMe} priority={idx < 4} />
+                              {shownProducts.map((product, idx) => (
+                                // Solo las primeras fotos de la primera fila cargan con prioridad: el resto está más abajo o fuera del carrusel.
+                                <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} onNotifyMe={onNotifyMe} priority={catIdx === 0 && subIdx === 0 && idx < 4} />
                               ))}
+                              {!isExpanded && (
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedGroups((prev) => ({ ...prev, [subKey]: true }))}
+                                  className="snap-start shrink-0 w-full md:col-span-full mx-auto flex flex-col items-center justify-center gap-1 min-h-[120px] rounded-md border border-dashed border-card-border text-text-muted hover:text-foreground hover:border-accent transition-colors"
+                                >
+                                  <span className="text-xs font-mono uppercase font-bold text-accent-text">Ver las {subProducts.length - GROUP_PREVIEW} restantes</span>
+                                  <span className="text-[10px] font-mono lowercase">de {subName}</span>
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
