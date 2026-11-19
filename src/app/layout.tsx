@@ -5,6 +5,7 @@ import { CartProvider } from "../context/CartContext";
 import { ToastProvider } from "../context/ToastContext";
 import SchemaMarkup from "../components/SchemaMarkup";
 import ServiceWorkerRegistration from "../components/ServiceWorkerRegistration";
+import ScrollFxGate from "../components/ScrollFxGate";
 import CookieBanner from "../components/CookieBanner";
 import ChatWidget from "../components/ChatWidget";
 import Footer from "../components/Footer";
@@ -81,6 +82,7 @@ export default function RootLayout({
         <VisitorTracker />
         <SchemaMarkup />
         <ServiceWorkerRegistration />
+        <ScrollFxGate />
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:bg-accent focus:text-slate-950 focus:px-4 focus:py-2 focus:rounded focus:font-mono focus:bold text-xs focus:uppercase focus:tracking-wider"

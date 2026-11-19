@@ -149,8 +149,8 @@ body {
    · Solo se animan `transform` y `opacity`: no mueven el diseño (no empeoran el CLS).
    · Nada decorativo oculta ni retrasa lo primero que se pinta (LCP): el logo y los títulos se ven desde el primer fotograma.
    · EL LOGOTIPO NO SE TOCA JAMÁS (orden de Adrián): ni animaciones ni efectos encima ni cambios.
-   · Las entradas al hacer scroll (`.reveal`) son CSS puro con `animation-timeline: view()`: donde el navegador no lo soporta
-     el contenido se ve igual, sin animar. El HTML nunca se oculta (Google lo lee entero).
+   · Las entradas al hacer scroll (`.reveal`) son CSS puro con `animation-timeline: view()`, y solo en Chromium (`html.scroll-fx`, ver
+     `ScrollFxGate`): en el iPhone tumbaban la web. Donde no se activan el contenido se ve igual, sin animar. El HTML nunca se oculta (Google lo lee entero).
    · Todo va dentro de `prefers-reduced-motion: no-preference`: quien pide menos movimiento no ve nada de esto. */
 :root {
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -214,13 +214,15 @@ body {
      así que al bajar la tarjeta sube y aparece por abajo, y al subir baja y aparece por arriba; al salir por el otro lado se
      desvanece un poco. Lo que ya está a la vista al cargar aparece completo desde el primer fotograma. Los efectos del ratón
      (subir, zoom) usan las propiedades `translate` y `scale` de Tailwind 4: no chocan con el `transform` de esta animación. */
+  /* SOLO con la clase `scroll-fx` en <html>, que pone `ScrollFxGate` únicamente en un Chromium de verdad: en el WebKit del iPhone
+     (Safari, Chrome y Brave) la web se caía en cuanto estas animaciones se activaban (19/11/2026). NO las quites de ahí. */
   @supports (animation-timeline: view()) {
-    .reveal { animation: motion-reveal-both linear both; animation-timeline: view(); animation-range: cover 0% cover 100%; }
+    .scroll-fx .reveal { animation: motion-reveal-both linear both; animation-timeline: view(); animation-range: cover 0% cover 100%; }
     /* Bloques grandes (carruseles, secciones): mismo vaivén, más suave. */
-    .reveal-block { animation: motion-reveal-block linear both; animation-timeline: view(); animation-range: cover 0% cover 100%; }
+    .scroll-fx .reveal-block { animation: motion-reveal-block linear both; animation-timeline: view(); animation-range: cover 0% cover 100%; }
     /* En el móvil las tarjetas van en carruseles horizontales: ahí su `view()` mira al carrusel, que no se desplaza en vertical,
        y no animaba nunca. Con cientos de tarjetas (motos con 500+ piezas) solo costaba una animación por tarjeta: se quita. */
-    @media (max-width: 767px) { .snap-x .reveal { animation: none; } }
+    @media (max-width: 767px) { .scroll-fx .snap-x .reveal { animation: none; } }
   }
 
   /* Aparición de widgets: cada uno entra de una forma que encaja con donde está. `backwards` (no `both`): al terminar vuelven a
