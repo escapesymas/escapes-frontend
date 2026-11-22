@@ -44,6 +44,8 @@ const nextConfig: NextConfig = {
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          // Entorno de pruebas (NEXT_PUBLIC_APP_ENV=staging al compilar): nunca indexable.
+          ...(process.env.NEXT_PUBLIC_APP_ENV === 'staging' ? [{ key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' }] : []),
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(self "https://js.stripe.com" "https://pay.google.com" "https://applepay.cdn-apple.com")' },
         ],
       },

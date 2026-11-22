@@ -15,6 +15,7 @@ import CartProgressBar from './CartProgressBar';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import StripePaymentForm from './StripePaymentForm';
+import { IS_STAGING } from '../lib/appEnv';
 import OrderSuccessView from './OrderSuccessView';
 import EmptyCartView from './EmptyCartView';
 
@@ -23,6 +24,11 @@ import EmptyCartView from './EmptyCartView';
 // from NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY at build time. If it is missing we
 // surface a clear runtime error instead of silently falling back to a secret.
 const getStripeKey = (overrideKey?: string) => {
+  // Entorno de pruebas: nunca se admite una clave publicable en vivo (pk_live_), venga de donde venga.
+  if (IS_STAGING && ((overrideKey || '').startsWith('pk_live_') || (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '').startsWith('pk_live_'))) {
+    console.error('[STRIPE] Entorno de pruebas con una clave de Stripe en vivo: bloqueada.');
+    return null;
+  }
   if (overrideKey && typeof overrideKey === 'string' && overrideKey.startsWith('pk_')) {
     return overrideKey;
   }

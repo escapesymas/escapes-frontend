@@ -1,5 +1,7 @@
 'use client';
 
+import { IS_STAGING } from './appEnv';
+
 /**
  * Píxel de TikTok. Solo se carga si el visitante acepta las cookies de
  * marketing del aviso (CookieBanner): sin ese permiso no se pide nada a TikTok.
@@ -8,7 +10,8 @@
  * pedido, con el mismo event_id para que TikTok no la cuente dos veces.
  */
 
-export const TIKTOK_PIXEL_ID = process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID || 'DB4IV33C77U89E740R6G';
+// En el entorno de pruebas no hay píxel (el identificador por defecto es el real y mandaría visitas falsas a TikTok).
+export const TIKTOK_PIXEL_ID = IS_STAGING ? '' : (process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID || 'DB4IV33C77U89E740R6G');
 
 const CONSENT_KEY = 'cookie_consent';
 const TTCLID_KEY = 'tt_ttclid';

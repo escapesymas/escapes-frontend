@@ -1,4 +1,5 @@
 import { MetadataRoute } from 'next';
+import { IS_STAGING } from '../lib/appEnv';
 
 // /_next/ (CSS y JS) debe poder leerse para que Google renderice las páginas,
 // y las fotos de producto se sirven por /api/image-proxy.
@@ -10,6 +11,8 @@ const DISALLOW = [
 ];
 
 export default function robots(): MetadataRoute.Robots {
+  // Entorno de pruebas: nada se rastrea ni se indexa.
+  if (IS_STAGING) return { rules: [{ userAgent: '*', disallow: '/' }] };
   return {
     rules: [
       {
