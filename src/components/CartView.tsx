@@ -6,7 +6,7 @@ import { Trash2, Plus, Minus, ShoppingBag, Truck, ArrowLeft, ArrowRight, AlertCi
 import { trackEvent } from '../lib/analytics';
 import { tiktokServerContext } from '../lib/tiktok';
 import { trackEvent as trackUmami } from '../lib/umami';
-import { useCart, CartItem } from '../context/CartContext';
+import { useCart, CartItem, CartProductInput } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import Link from 'next/link';
 import { MARKETING_TIERS, MAX_CART_DISCOUNT, FREE_SHIPPING_MIN, DELIVERY_ES, DELIVERY_EU, PHONE_REGEX, POSTCODE_REGEX, getImageUrl, formatOrderNumber, apiRequest } from '../lib/constants';
@@ -60,6 +60,24 @@ interface SavedAddress {
   postcode: string;
   phone: string;
   nif?: string;
+}
+
+// Lo que `addToCart` acepta; los pedidos recuperados y las propuestas del chat llegan con otra forma y se convierten aquí.
+type CartProductArg = CartProductInput;
+
+/** Línea de un pedido preparado por un asesor, tal como la devuelve la API del chat (precios en céntimos). */
+interface ProposalItem {
+  id: number;
+  name: string;
+  slug?: string;
+  sku?: string;
+  price: number;
+  sale_price?: number | null;
+  image?: string;
+  in_stock?: boolean;
+  stock?: number;
+  brand?: string;
+  quantity: number;
 }
 
 export default function CartView({ onContinueShopping, initialStep = 'cart' }: CartViewProps) {
@@ -135,7 +153,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
   const [completedOrder, setCompletedOrder] = useState<{ orderId: string; total?: number } | null>(null);
   const [billingDifferent, setBillingDifferent] = useState(false);
   const [billingData, setBillingData] = useState({
-    companyName: (user?.billing as any)?.company || '',
+    companyName: (user?.billing as { company?: string } | undefined)?.company || '',
     nif: user?.billing?.nif || '',
     address1: user?.billing?.address_1 || '',
     city: user?.billing?.city || '',
@@ -144,7 +162,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
 
   // Stripe payment state
   const initialStripeKey = getStripeKey();
-  const [stripePromise, setStripePromise] = useState<Promise<any> | null>(() =>
+  const [stripePromise, setStripePromise] = useState<ReturnType<typeof loadStripe> | null>(() =>
     initialStripeKey ? loadStripe(initialStripeKey) : null
   );
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -234,7 +252,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
             categorySlug: it.categorySlug || '',
             image: it.image || it.src || '',
             title: it.name || it.title || 'Producto',
-          } as any, Math.max(1, parseInt(it.quantity) || 1));
+          } as unknown as CartProductArg, Math.max(1, parseInt(it.quantity) || 1));
         }
         sessionStorage.setItem(`recovered_${recoverToken}`, '1');
         setRecoveryMessage(data.already_recovered
@@ -250,7 +268,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
         url.searchParams.delete('recover');
         window.history.replaceState({}, '', url.toString());
         clearLinkPending();
-      } catch (err: any) {
+      } catch {
         setRecoveryError('Error de conexión al recuperar carrito');
       }
     })();
@@ -258,7 +276,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
   }, []);
 
   // Pedido preparado por un asesor en el chat (/checkout?propuesta=token).
-  const proposalToCart = (items: any[]): CartItem[] => items.map((it) => ({
+  const proposalToCart = (items: ProposalItem[]): CartItem[] => items.map((it) => ({
     id: it.id, title: it.name, name: it.name, slug: it.slug || it.sku || '', sku: it.sku || '',
     price: (it.sale_price ?? it.price) / 100, regularPrice: it.price / 100, image: it.image || '',
     inStock: !!it.in_stock, stock: it.stock, category: it.brand || '', categorySlug: '', quantity: it.quantity,
@@ -275,7 +293,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
     if (mode === 'solo') {
       setProposalCart(items);
     } else {
-      for (const it of items) addToCart(it as any, it.quantity);
+      for (const it of items) addToCart(it as unknown as CartProductArg, it.quantity);
     }
     setProposalChoice(null);
     clearLinkPending();
@@ -614,7 +632,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
 
       const cartTotal = cart.reduce((sum, it) => sum + it.price * it.quantity, 0);
       trackEvent.beginCheckout(
-        cart.map((it) => ({ product: it as any, quantity: it.quantity })),
+        cart.map((it) => ({ product: it as unknown as Product, quantity: it.quantity })),
         cartTotal
       );
 

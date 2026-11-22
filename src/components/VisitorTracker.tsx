@@ -38,8 +38,8 @@ function getCartSummary(): { count: number; total: number; firstProduct?: string
     if (!raw) return { count: 0, total: 0 };
     const items = JSON.parse(raw);
     if (!Array.isArray(items) || !items.length) return { count: 0, total: 0 };
-    const count = items.reduce((sum: number, it: any) => sum + (Number(it.quantity) || 1), 0);
-    const total = items.reduce((sum: number, it: any) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 1), 0);
+    const count = items.reduce((sum: number, it: { quantity?: unknown }) => sum + (Number(it.quantity) || 1), 0);
+    const total = items.reduce((sum: number, it: { price?: unknown; quantity?: unknown }) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 1), 0);
     return { count, total: Math.round(total * 100) / 100, firstProduct: items[0]?.title || items[0]?.name };
   } catch {
     return { count: 0, total: 0 };

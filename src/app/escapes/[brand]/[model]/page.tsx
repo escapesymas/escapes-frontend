@@ -155,8 +155,9 @@ export default async function MotoModelPage({
     const inStock = hasVariants
       ? p.family?.inStock !== false
       : p.inStock !== false && (p.stock ?? 0) > 0;
-    const avgRat = (p as any).averageRating || (p as any).avg_rating ? Number((p as any).averageRating || (p as any).avg_rating) : undefined;
-    const ratCnt = (p as any).ratingCount || (p as any).review_count ? Number((p as any).ratingCount || (p as any).review_count) : undefined;
+    const rated = p as typeof p & { averageRating?: number | string; avg_rating?: number | string; ratingCount?: number | string; review_count?: number | string };
+    const avgRat = rated.averageRating || rated.avg_rating ? Number(rated.averageRating || rated.avg_rating) : undefined;
+    const ratCnt = rated.ratingCount || rated.review_count ? Number(rated.ratingCount || rated.review_count) : undefined;
     return {
       name: p.name,
       description: p.description || p.shortDescription || `${p.name} compatible con ${fullName}`,

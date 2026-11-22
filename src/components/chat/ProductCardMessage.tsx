@@ -20,13 +20,14 @@ function formatPrice(cents: number): string {
 export default function ProductCardMessage({ product, onAddToCart, onView }: ProductCardMessageProps) {
   const [imageError, setImageError] = useState(false);
   const [added, setAdded] = useState(false);
+  const [nowMs] = useState(() => Date.now());
 
   const price = product.sale_price ?? product.price;
   const hasDiscount = product.sale_price != null && product.sale_price < product.price;
   const isInStock = product.in_stock;
   // «25 de noviembre»: solo si la fecha es futura o de hoy (una pasada ya no dice nada).
   const restock = product.restock_date ? new Date(`${product.restock_date.slice(0, 10)}T12:00:00`) : null;
-  const restockLabel = restock && !Number.isNaN(restock.getTime()) && restock.getTime() >= Date.now() - 86400000
+  const restockLabel = restock && !Number.isNaN(restock.getTime()) && restock.getTime() >= nowMs - 86400000
     ? restock.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })
     : null;
 
