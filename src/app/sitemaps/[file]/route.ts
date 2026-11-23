@@ -4,7 +4,7 @@ import { isExcludedSupplierBrand } from '../../../lib/brandSeo';
 
 export const revalidate = 3600;
 
-const STATIC_PAGES = ['', '/universales', '/escapes', '/marcas', '/aviso-legal', '/politica-privacidad', '/politica-cookies', '/terminos', '/devoluciones'];
+const STATIC_PAGES = ['', '/universales', '/escapes', '/marcas', '/aviso-legal', '/politica-privacidad', '/politica-cookies', '/terminos', '/devoluciones', '/contacto'];
 
 type Entry = { loc: string; lastmod?: string; priority: number };
 

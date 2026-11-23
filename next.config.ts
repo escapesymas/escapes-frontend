@@ -72,6 +72,9 @@ const nextConfig: NextConfig = {
         destination: '/',
         permanent: true,
       },
+      // URLs del contacto de la tienda antigua: se buscaban y daban 404.
+      { source: '/contact', destination: '/contacto', permanent: true },
+      { source: '/contact-us', destination: '/contacto', permanent: true },
       {
         source: '/producto/:slug(.*)/feed',
         destination: '/producto/:slug',

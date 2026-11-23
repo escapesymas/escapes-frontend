@@ -359,6 +359,13 @@ export default function MotoModelClient({ data, faqs }: MotoModelClientProps) {
                 <p className="text-xs sm:text-sm text-text-muted leading-relaxed">
                   Para este modelo no contamos con silenciosos de acople directo específico de catálogo, pero disponemos de una amplia gama de silenciosos universales adaptables por diámetro de colector, terminales deportivos y abrazaderas.
                 </p>
+                {/* El aviso por correo estaba al final de la página: de las visitas que llegan de Google a una moto sin escape (10 de las 18 más visitadas en noviembre) casi nadie lo veía. */}
+                <div className="pt-2 max-w-xs">
+                  <p className="text-[11px] font-mono text-text-muted mb-2">
+                    ¿Prefieres esperar al escape específico? Te avisamos en cuanto llegue para tu {bike.brandName} {bike.model}.
+                  </p>
+                  <MotoAlertButton bike={bikeGarageLabel} variant="primary" />
+                </div>
               </div>
               <div className="flex flex-col sm:flex-row items-stretch gap-2.5 w-full md:w-auto shrink-0">
                 <Link

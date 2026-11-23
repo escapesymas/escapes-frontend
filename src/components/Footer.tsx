@@ -106,6 +106,14 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2">
               <li>
+                <Link
+                  href="/contacto"
+                  className="text-[10px] font-mono text-text-muted hover:text-foreground transition-colors"
+                >
+                  Formulario de contacto
+                </Link>
+              </li>
+              <li>
                 <a
                   href="mailto:info@escapesymas.com"
                   className="text-[10px] font-mono text-text-muted hover:text-foreground transition-colors"

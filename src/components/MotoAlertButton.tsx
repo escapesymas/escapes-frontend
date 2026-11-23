@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Bell, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { apiRequest } from '../lib/constants';
 import { useAuth } from '../context/AuthContext';
+import { trackEvent as trackUmami, short } from '../lib/umami';
 
 interface MotoAlertButtonProps {
   bike: string;
@@ -39,7 +40,7 @@ export default function MotoAlertButton({ bike, variant = 'primary' }: MotoAlert
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) setError(data.error || 'No se pudo guardar el aviso');
-      else setDone(data.email || email.trim());
+      else { setDone(data.email || email.trim()); trackUmami('moto_alert_done', { bike: short(bike) }); }
     } catch {
       setError('Error de conexión. Inténtalo de nuevo.');
     } finally {
@@ -47,7 +48,7 @@ export default function MotoAlertButton({ bike, variant = 'primary' }: MotoAlert
     }
   };
 
-  const start = () => (isAuthenticated ? submit() : setOpen(true));
+  const start = () => { trackUmami('moto_alert_start', { bike: short(bike) }); if (isAuthenticated) submit(); else setOpen(true); };
 
   if (done) {
     return (
@@ -124,7 +125,7 @@ export default function MotoAlertButton({ bike, variant = 'primary' }: MotoAlert
           type="button"
           onClick={start}
           disabled={sending}
-          className="px-4 py-2.5 text-xs font-mono uppercase font-bold rounded bg-accent text-accent-foreground hover:opacity-90 transition-opacity flex items-center gap-2 cursor-pointer disabled:opacity-50"
+          className="px-4 py-2.5 text-xs font-mono uppercase font-bold rounded bg-accent text-slate-950 hover:opacity-90 transition-opacity flex items-center gap-2 cursor-pointer disabled:opacity-50"
         >
           {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />} Avísame cuando haya piezas
         </button>

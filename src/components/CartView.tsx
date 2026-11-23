@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { Trash2, Plus, Minus, ShoppingBag, Truck, ArrowLeft, ArrowRight, AlertCircle, RotateCcw, Loader2, Package, ShieldCheck, Lock, Repeat, Gift } from 'lucide-react';
 import { trackEvent } from '../lib/analytics';
 import { tiktokServerContext } from '../lib/tiktok';
-import { trackEvent as trackUmami } from '../lib/umami';
+import { trackEvent as trackUmami, short } from '../lib/umami';
 import { useCart, CartItem, CartProductInput } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import Link from 'next/link';
@@ -363,6 +363,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
         trackEvent.clearBeginCheckoutEventId();
       } else {
         setOrderError('El pago no se completó. Ha sido cancelado o rechazado por el banco.');
+        trackUmami('payment_error', { reason: 'rechazado_o_cancelado_en_el_banco' });
         setShowPaymentModal(false);
       }
     } catch (e) {
@@ -394,6 +395,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
         const errData = await finalizeRes.json();
         setPaymentError(errData.error || 'Error al confirmar el pago en el servidor.');
         setOrderError(errData.error || 'Error al confirmar el pago en el servidor.');
+        trackUmami('payment_error', { reason: short(errData.error || 'confirmar_pago_servidor') });
       }
     } catch {
       setPaymentError('Error de red al confirmar el pago.');
@@ -574,10 +576,11 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
   const isFreeShipping = quote ? quote.shipping === 0 : localFreeShipping;
   const shippingCost = quote ? quote.shipping : baseShippingCost;
   const discountAmount = quote ? quote.discount : tierDiscount + promoDiscount;
-  const effectiveShippingCostInCart = (!isCheckingOut && !isFreeShipping) ? 0 : shippingCost;
+  // El envío se enseña y se suma ya en el carrito (23/11/2026): antes ponía «se calculará en la pantalla de pago» y el total no lo llevaba, así que el cliente
+  // veía los 19,99 € por primera vez en el último paso (carrito mediano de 27 €: 6 de las 7 personas que pulsaron «Tramitar pedido» en noviembre se fueron al momento).
   const total = quote
-    ? Math.max(0, quote.total - (effectiveShippingCostInCart === 0 ? quote.shipping : 0))
-    : Math.max(0, subtotal + effectiveShippingCostInCart - discountAmount);
+    ? Math.max(0, quote.total)
+    : Math.max(0, subtotal + shippingCost - discountAmount);
   // Sin IVA (Canarias, Ceuta, Melilla): el subtotal se muestra ya sin IVA.
   const taxExempt = !!quote && quote.taxRate === 0;
   const shownSubtotal = quote ? quote.subtotal : subtotal;
@@ -597,16 +600,19 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
 
     if (!POSTCODE_REGEX.test(shippingData.postcode)) {
       setOrderError('El código postal debe tener 5 dígitos (ej. 28001).');
+      trackUmami('checkout_error', { step: 'formulario', reason: 'codigo_postal' });
       setIsSubmittingOrder(false);
       return;
     }
     if (!PHONE_REGEX.test(shippingData.phone)) {
       setOrderError('El teléfono no es válido (ej. 600123456).');
+      trackUmami('checkout_error', { step: 'formulario', reason: 'telefono' });
       setIsSubmittingOrder(false);
       return;
     }
     if (!user && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(shippingData.email)) {
       setOrderError('Introduce un email válido para enviarte la confirmación y la factura.');
+      trackUmami('checkout_error', { step: 'formulario', reason: 'email' });
       setIsSubmittingOrder(false);
       return;
     }
@@ -671,6 +677,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
 
     } catch (err) {
       setOrderError(err instanceof Error ? err.message : 'Error de conexión');
+      trackUmami('checkout_error', { step: 'pedido', reason: short(err instanceof Error ? err.message : 'conexion') });
     } finally {
       setIsSubmittingOrder(false);
     }
@@ -767,7 +774,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
         // Checkout simulator drawer
         <div data-testid="checkout-form" className="max-w-2xl mx-auto bg-card border border-card-border p-6 md:p-8 rounded shadow-xl">
           <button
-            onClick={() => setIsCheckingOut(false)}
+            onClick={() => { trackUmami('checkout_back'); setIsCheckingOut(false); }}
             className="text-text-muted hover:text-foreground text-xs font-mono font-bold uppercase tracking-widest transition-colors flex items-center gap-2 mb-6 cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" /> Volver al Carrito
@@ -1324,12 +1331,17 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
                       className={
                         isFreeShipping
                           ? 'text-emerald-500 font-bold italic'
-                          : 'text-text-muted text-[10px] font-sans font-normal text-right normal-case tracking-normal'
+                          : 'text-foreground font-mono'
                       }
                     >
-                      {isFreeShipping ? 'GRATIS' : 'Se calcularán en la pantalla de pago'}
+                      {isFreeShipping ? 'GRATIS' : formatPrice(shippingCost)}
                     </span>
                   </div>
+                  {!isFreeShipping && (
+                    <p className="text-[10px] leading-snug text-text-muted normal-case -mt-1">
+                      Envío gratis a partir de {formatPrice(FREE_SHIPPING_MIN)}.
+                    </p>
+                  )}
 
                   {/* Promo Code Section */}
                   <div className="border-t border-card-border pt-4 mt-2">
@@ -1428,7 +1440,7 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
                         {formatPrice(total)}
                       </span>
                       <span className="text-text-muted text-[8px] uppercase tracking-widest font-bold mt-1.5 block">
-                        {isFreeShipping ? 'IVA Incluido' : 'IVA Incluido · Envío a calcular al pagar'}
+                        {isFreeShipping ? 'IVA Incluido · Envío gratis' : 'IVA Incluido · Envío incluido'}
                       </span>
                     </div>
                   </div>
@@ -1489,8 +1501,8 @@ export default function CartView({ onContinueShopping, initialStep = 'cart' }: C
                 orderId={stripePaymentOrderId}
                 clientSecret={clientSecret}
                 onSuccess={stripePaymentOnSuccess}
-                onError={setPaymentError}
-                onCancel={() => setShowPaymentModal(false)}
+                onError={(m) => { setPaymentError(m); trackUmami('payment_error', { reason: short(m) }); }}
+                onCancel={() => { trackUmami('payment_cancel'); setShowPaymentModal(false); }}
               />
             </Elements>
 
