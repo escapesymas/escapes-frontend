@@ -74,7 +74,7 @@ export default function ContactoPage() {
             <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
             <div>
               <p className="font-mono font-bold text-sm uppercase text-foreground">Mensaje enviado</p>
-              <p className="text-xs text-text-muted mt-1">Gracias, {name.trim() || 'te'} contestaremos a <strong className="text-foreground">{email.trim()}</strong> lo antes posible.</p>
+              <p className="text-xs text-text-muted mt-1">Gracias{name.trim() ? `, ${name.trim()}` : ''}. Te contestaremos a <strong className="text-foreground">{email.trim()}</strong> lo antes posible.</p>
             </div>
           </div>
         ) : (
